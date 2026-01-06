@@ -1,0 +1,13 @@
+/**
+ * Layout Components Barrel Export
+ *
+ * Centralized exports for shared layout components
+ */
+
+export { Header } from './app-header'
+export { Main } from './main'
+export { TopNav, type TopNavLink } from './top-nav'
+export { AppSidebar } from './app-sidebar'
+export { NavGroup } from './nav-group'
+export { NavUser } from './nav-user'
+export { TeamSwitcher } from './team-switcher'

@@ -1,0 +1,407 @@
+# Project Context - Next.js 16 Application
+
+> **Quick Reference**: Essential project rules. Details in [`.claude/`](.claude/) directory.
+
+## 📋 Project Overview
+
+Modern Next.js 16 with internationalization (en/vi/ar), RTL support, Zustand auth, and shadcn/ui. Feature-based architecture with `src/` directory.
+
+**Status**: Production-ready • TypeScript strict • React Compiler • Turbopack
+
+## 🛠️ Tech Stack
+
+**Core:**
+- Next.js 16 (App Router, Turbopack, Server Components) • [Docs](https://nextjs.org/docs)
+- React 19 with Server Components • [Docs](https://react.dev)
+- TypeScript (strict mode)
+- Node.js 20+
+
+**UI & Styling:**
+- shadcn/ui - Radix UI-based components • [Docs](https://ui.shadcn.com)
+- Tailwind CSS with CSS Variables • [Docs](https://tailwindcss.com)
+- CVA (class-variance-authority) for variants
+- cn() utility for conditional classes
+- Geist & Geist Mono fonts
+
+**i18n:**
+- Custom proxy (Next.js 16): locale detection
+- Locales: `en`, `vi`, `ar`
+- RTL: ar, he, fa, ur
+- Cookie + header injection
+
+**State & Forms:**
+- Zustand → Global state (auth)
+- React Context → UI state (theme, direction, layout, search)
+- React Hook Form + Zod validation
+- Server Actions for mutations
+
+**Dev:**
+- ESLint + Prettier
+- Path alias: `@/*` → `./src/*`
+
+## 📁 Project Structure
+
+```
+project/
+├── src/
+│   ├── app/                        # Next.js App Router
+│   │   ├── (auth)/                # Route group: auth
+│   │   ├── (dashboard)/           # Route group: dashboard
+│   │   ├── api/                   # API routes
+│   │   ├── providers.tsx          # Providers wrapper
+│   │   ├── layout.tsx             # Root layout
+│   │   └── globals.css            # Global styles
+│   │
+│   ├── config/                     # 🔧 App-level configuration
+│   │   ├── sidebar-data.ts        # Navigation config
+│   │   └── index.ts               # Barrel export
+│   │
+│   ├── features/                   # 🎯 Business logic
+│   │   └── [name]/
+│   │       ├── components/        # Feature components
+│   │       ├── actions/           # Server Actions
+│   │       ├── schemas/           # Zod validation
+│   │       ├── types/             # Types
+│   │       ├── hooks/             # Hooks
+│   │       └── lib/               # Utils
+│   │
+│   ├── components/                 # Shared only
+│   │   ├── ui/                    # shadcn/ui
+│   │   └── layout/                # Layout components
+│   │
+│   ├── context/                    # React Context providers
+│   ├── stores/                     # Zustand stores
+│   ├── lib/                        # Utilities
+│   ├── hooks/                      # Global hooks
+│   ├── types/                      # Global types
+│   └── assets/                     # Static assets
+│
+├── proxy.ts                        # Next.js 16 Proxy (replaces middleware.ts)
+└── public/                         # Static files
+```
+
+**See [architecture.md](.claude/architecture.md) for detailed explanation.**
+
+## ⚡ Core Conventions
+
+### 1. Import Paths
+```tsx
+// ✅ Always use @/* alias
+import { Button } from "@/components/ui/button"
+import { createUser } from "@/features/users/actions/user-actions"
+
+// ❌ Never relative from src/
+import { Button } from "../../components/ui/button"
+```
+
+### 2. Feature Organization
+- **Rule**: One feature = one folder in `src/features/`
+- Structure: `components/`, `actions/`, `schemas/`, `types/`, `hooks/`, `lib/`
+- **If used ONLY in one feature** → put in that feature
+
+### 3. File Naming
+```
+Components:     user-card.tsx      (kebab-case)
+Actions:        user-actions.ts    (suffix: -actions)
+Schemas:        user.schema.ts     (suffix: .schema)
+Types:          user.types.ts      (suffix: .types)
+Hooks:          use-user.ts        (prefix: use-)
+```
+
+### 4. Component Types
+```tsx
+// Default: Server Component (no directive)
+export default async function Page() {
+  const data = await fetchData()
+  return <div>{data}</div>
+}
+
+// Client: "use client" (hooks, events, browser APIs)
+"use client"
+export function Form() {
+  const [state, setState] = useState()
+}
+
+// Server Action: "use server" (mutations)
+"use server"
+export async function create(formData: FormData) {
+  await db.create(...)
+  revalidatePath("/path")
+}
+```
+
+### 5. App Router Files
+- `page.tsx` - Route content
+- `layout.tsx` - Shared UI (persistent)
+- `loading.tsx` - Loading state
+- `error.tsx` - Error boundary (must be Client)
+- `not-found.tsx` - 404 page
+- `route.ts` - API endpoint
+
+### 6. Styling
+```tsx
+import { cn } from "@/lib/utils"
+
+// ✅ Use cn() for conditional classes
+<button className={cn(
+  "px-4 py-2 rounded-md",
+  variant === "primary" && "bg-blue-500",
+  className
+)}>
+
+// ✅ shadcn/ui with variants
+<Button variant="outline" size="lg">Click</Button>
+
+// ✅ Tailwind utilities (no custom CSS unless needed)
+// ✅ Mobile-first • CSS variables for theming
+// ❌ NO EMOJI in code/JSX (use text or icons)
+```
+
+No Emoji Rule:
+```tsx
+// ❌ WRONG - No emoji in UI
+<Button>Save 💾</Button>
+<h1>Welcome 👋</h1>
+
+// ✅ CORRECT - Use text or icon components
+<Button>Save</Button>
+<h1>Welcome</h1>
+
+// ✅ CORRECT - Use icon libraries (lucide-react, etc.)
+import { Save } from "lucide-react"
+<Button><Save className="mr-2" />Save</Button>
+```
+
+### 7. State Management
+```tsx
+// ✅ Zustand for GLOBAL (auth)
+const { user, accessToken, logout } = useAuthStore()
+
+// ✅ Context for UI (theme, direction, layout, search)
+const { theme, setTheme } = useTheme()
+const { direction } = useDirection()
+```
+
+### 8. i18n
+```tsx
+// Server Component
+const locale = (await headers()).get("x-locale") || "en"
+
+// Client Component (if context created)
+const { locale } = useLocale()
+
+// Locales: en, vi, ar • RTL: ar, he, fa, ur
+// Cookie + header injection via middleware
+```
+
+### 9. Data Fetching
+```tsx
+// ✅ Server Components (default)
+async function getData() {
+  return await fetch('...', { next: { revalidate: 3600 } })
+}
+
+// ✅ Server Actions (mutations)
+"use server"
+export async function update(formData: FormData) {
+  await db.update(...)
+  revalidatePath("/path")
+  return { success: true }
+}
+
+// ✅ Client (only when needed)
+const { data } = useSWR('/api/data')
+```
+
+### 10. Validation & Errors
+- ✅ Always validate server-side (Zod)
+- ✅ Server Actions return: `{ success: boolean, error?: string, data?: T }`
+- ✅ Every route group needs `error.tsx`
+- ✅ Toast notifications via sonner
+
+## 🎯 When to Create Feature
+
+**✅ Create Feature When:**
+- 2+ related components
+- Distinct business domain
+- Could be independent module
+- Examples: auth, users, products, orders
+
+**❌ Don't Create Feature:**
+- 1-2 simple components → `components/`
+- Pure UI → `components/ui/`
+- Utils → `lib/`
+- Layouts → `components/layouts/`
+
+## 🌍 Internationalization
+
+**Flow:**
+```
+Request → Proxy → Cookie/Header → x-locale injection
+→ Root layout → dir="ltr|rtl" → Components
+```
+
+**Implementation:**
+```tsx
+// proxy.ts (Next.js 16 - replaces middleware.ts)
+export function proxy(request: NextRequest) {
+  const locale = getLocale(request)
+  const response = NextResponse.next()
+  response.cookies.set("locale", locale)
+  response.headers.set("x-locale", locale)
+  return response
+}
+
+// Root layout
+const dir = ["ar","he","fa","ur"].includes(locale) ? "rtl" : "ltr"
+<html lang={locale} dir={dir}>
+```
+
+**See [i18n.md](.claude/i18n.md) for complete guide.**
+
+## 🔐 Authentication
+
+```tsx
+// Zustand store: src/stores/auth-store.ts
+interface User {
+  accountNo: string
+  email: string
+  role: string
+  exp: number
+}
+
+// ⚠️ TODO PRODUCTION: Change cookie key from test value
+// Current: 'thisisjustarandomstring' → Use secure key
+
+// Usage
+const { user, accessToken, setAuth, logout } = useAuthStore()
+```
+
+## 🎨 UI & Theming
+
+```tsx
+// Theme
+const { theme, setTheme } = useTheme() // "light"|"dark"|"system"
+
+// Direction  
+const { direction } = useDirection() // "ltr"|"rtl"
+
+// Components
+import { Button, Dialog, Input } from "@/components/ui/..."
+
+// Toasts
+import { toast } from "sonner"
+toast.success("Done!")
+toast.error("Failed!")
+```
+
+## 🔧 Project-Specific
+
+**React Compiler:**
+- Enabled in `next.config.ts`
+- Auto-optimizes → No manual memoization needed
+
+**Providers:**
+- Wrapped in `src/app/providers.tsx`
+- Order: Theme → Direction → Layout → Search
+
+**TypeScript:**
+- Strict mode • Explicit return types
+- No `any` (use `unknown`)
+- Generate types from DB schema
+
+## 📚 Documentation
+
+**Guides:**
+- [architecture.md](.claude/architecture.md) - Structure deep dive
+- [patterns.md](.claude/patterns.md) - Code patterns & examples
+- [i18n.md](.claude/i18n.md) - Internationalization guide
+- [troubleshooting.md](.claude/troubleshooting.md) - Common issues
+
+**External:**
+- [Next.js 16](https://nextjs.org/docs) • [shadcn/ui](https://ui.shadcn.com)
+- [Zustand](https://zustand-demo.pmnd.rs/) • [Tailwind](https://tailwindcss.com/docs)
+
+## 💡 Commands
+
+```bash
+npm run dev          # Dev server (Turbopack)
+npm run build        # Production build
+npm run lint         # ESLint
+npm run type-check   # TypeScript
+```
+
+## 🚀 Claude Code Usage
+
+| Task | Prompt | Result |
+|------|--------|--------|
+| **New feature** | "Create feature [name] following structure" | `src/features/[name]/{...}` |
+| **i18n component** | "Create localized [X] with locale detection" | Includes header reading |
+| **Auth page** | "Create protected [X] checking auth" | Includes Zustand check |
+| **Themed component** | "Create [X] with theme support" | Uses useTheme hook |
+| **Pattern help** | "Show CRUD pattern" | Links to patterns.md |
+| **RTL help** | "How to handle RTL?" | Links to i18n.md |
+
+## 📝 Commits
+
+```
+feat: add user profile page
+fix: resolve login redirect issue
+docs: update README
+style: format code with prettier
+refactor: simplify auth logic
+perf: optimize image loading
+test: add button tests
+chore: update dependencies
+```
+
+---
+
+## ⚠️ Next.js 16 Breaking Changes
+
+### Proxy replaces Middleware
+
+**IMPORTANT**: Next.js 16 deprecated `middleware.ts` in favor of `proxy.ts`.
+
+| Next.js 15 | Next.js 16 |
+|------------|------------|
+| `middleware.ts` | `proxy.ts` |
+| `export function middleware()` | `export function proxy()` |
+| Edge Runtime | Node.js Runtime |
+
+**Migration:**
+```bash
+# Rename file
+mv middleware.ts proxy.ts
+```
+
+```tsx
+// proxy.ts
+import { NextRequest, NextResponse } from 'next/server'
+
+// Change function name from middleware → proxy
+export function proxy(req: NextRequest) {
+  // ... your logic
+  return NextResponse.next()
+}
+
+export const config = {
+  matcher: ['/', '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)'],
+}
+```
+
+**Best Practices (Next.js 16):**
+- Keep `proxy.ts` lightweight - only routing/coarse checks
+- NO database calls or JWT verification in proxy
+- Detailed auth should be in Server Components/Actions
+- Use Node.js compatible libraries (not Edge-only)
+
+**References:**
+- [Next.js 16 Blog](https://nextjs.org/blog/next-16)
+- [Auth0: What's New in Next.js 16](https://auth0.com/blog/whats-new-nextjs-16/)
+
+---
+
+**Note**: Keep under 12KB. For patterns, examples, troubleshooting → see `.claude/`
+
+**Last Updated**: 2025-12-15

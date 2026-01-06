@@ -1,0 +1,124 @@
+# ==============================================================================
+# Docker Compose Configuration
+# ==============================================================================
+# Easy deployment of Next.js application with Nginx reverse proxy
+#
+# Usage:
+#   Development:
+#     docker-compose up --build
+#
+#   Production:
+#     docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+#   Stop:
+#     docker-compose down
+#
+#   View logs:
+#     docker-compose logs -f
+# ==============================================================================
+
+version: '3.8'
+
+services:
+  # ----------------------------------------------------------------------------
+  # Next.js Application
+  # ----------------------------------------------------------------------------
+  nextjs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Build-time environment variables (NEXT_PUBLIC_*)
+        # These are baked into the build and visible in browser
+        NEXT_PUBLIC_KEYCLOAK_URL: ${NEXT_PUBLIC_KEYCLOAK_URL}
+        NEXT_PUBLIC_KEYCLOAK_REALM: ${NEXT_PUBLIC_KEYCLOAK_REALM}
+        NEXT_PUBLIC_KEYCLOAK_CLIENT_ID: ${NEXT_PUBLIC_KEYCLOAK_CLIENT_ID}
+        NEXT_PUBLIC_KEYCLOAK_REDIRECT_URI: ${NEXT_PUBLIC_KEYCLOAK_REDIRECT_URI}
+        NEXT_PUBLIC_AUTH_COOKIE_NAME: ${NEXT_PUBLIC_AUTH_COOKIE_NAME}
+        NEXT_PUBLIC_REFRESH_COOKIE_NAME: ${NEXT_PUBLIC_REFRESH_COOKIE_NAME}
+        NEXT_PUBLIC_BACKEND_API_URL: ${NEXT_PUBLIC_BACKEND_API_URL}
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
+        NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN}
+
+    container_name: nextjs-app
+
+    # Runtime environment variables (server-side only)
+    # These are NOT visible in browser
+    environment:
+      - NODE_ENV=production
+      - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET}
+      - BACKEND_API_URL=${BACKEND_API_URL}
+      - CSRF_SECRET=${CSRF_SECRET}
+      - SECURE_COOKIES=${SECURE_COOKIES:-true}
+      - COOKIE_MAX_AGE=${COOKIE_MAX_AGE:-604800}
+      - ENABLE_TOKEN_REFRESH=${ENABLE_TOKEN_REFRESH:-true}
+      - TOKEN_REFRESH_BEFORE_EXPIRY=${TOKEN_REFRESH_BEFORE_EXPIRY:-300}
+      - API_TIMEOUT=${API_TIMEOUT:-30000}
+
+    # Port mapping (internal only - accessed via Nginx)
+    # Comment out 'ports' in production and use Nginx instead
+    ports:
+      - "3000:3000"
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 40s
+
+    # Restart policy
+    restart: unless-stopped
+
+    # Networks
+    networks:
+      - app-network
+
+    # Resource limits (adjust based on your needs)
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # ----------------------------------------------------------------------------
+  # Nginx Reverse Proxy (Optional - Recommended for Production)
+  # ----------------------------------------------------------------------------
+  # Uncomment this section to use Nginx reverse proxy with SSL
+
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: nginx-proxy
+  #
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #
+  #   volumes:
+  #     - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+  #     - ./nginx/ssl:/etc/nginx/ssl:ro
+  #
+  #   depends_on:
+  #     - nextjs
+  #
+  #   restart: unless-stopped
+  #
+  #   networks:
+  #     - app-network
+
+# ==============================================================================
+# Networks
+# ==============================================================================
+networks:
+  app-network:
+    driver: bridge
+
+# ==============================================================================
+# Volumes (if needed)
+# ==============================================================================
+# volumes:
+#   node_modules:
