@@ -174,7 +174,7 @@ export function FindingHeader({
       </div>
 
       {/* Meta Row */}
-      <div className="text-muted-foreground flex flex-wrap items-center gap-4 text-sm">
+      <div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
         {/* Assignee */}
         <div className="flex items-center gap-2">
           {finding.assignee ? (

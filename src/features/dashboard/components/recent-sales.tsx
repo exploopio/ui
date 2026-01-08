@@ -6,7 +6,7 @@
  * - Mock data for demonstration (should be replaced with real API data)
  */
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 
 // MOCK DATA - Replace with real API integration (see docs/API_INTEGRATION.md)
 const salesData = [
@@ -14,7 +14,6 @@ const salesData = [
     id: '1',
     name: 'Olivia Martin',
     email: 'olivia.martin@email.com',
-    avatar: '/avatars/01.png',
     initials: 'OM',
     amount: '+$1,999.00',
   },
@@ -22,7 +21,6 @@ const salesData = [
     id: '2',
     name: 'Jackson Lee',
     email: 'jackson.lee@email.com',
-    avatar: '/avatars/02.png',
     initials: 'JL',
     amount: '+$39.00',
   },
@@ -30,7 +28,6 @@ const salesData = [
     id: '3',
     name: 'Isabella Nguyen',
     email: 'isabella.nguyen@email.com',
-    avatar: '/avatars/03.png',
     initials: 'IN',
     amount: '+$299.00',
   },
@@ -38,7 +35,6 @@ const salesData = [
     id: '4',
     name: 'William Kim',
     email: 'will@email.com',
-    avatar: '/avatars/04.png',
     initials: 'WK',
     amount: '+$99.00',
   },
@@ -46,7 +42,6 @@ const salesData = [
     id: '5',
     name: 'Sofia Davis',
     email: 'sofia.davis@email.com',
-    avatar: '/avatars/05.png',
     initials: 'SD',
     amount: '+$39.00',
   },
@@ -58,7 +53,6 @@ export function RecentSales() {
       {salesData.map((sale) => (
         <div key={sale.id} className='flex items-center gap-4'>
           <Avatar className='h-9 w-9'>
-            <AvatarImage src={sale.avatar} alt={sale.name} />
             <AvatarFallback>{sale.initials}</AvatarFallback>
           </Avatar>
           <div className='flex flex-1 flex-wrap items-center justify-between'>

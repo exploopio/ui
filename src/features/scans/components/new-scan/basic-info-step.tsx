@@ -64,7 +64,7 @@ export function BasicInfoStep({ data, onChange }: BasicInfoStepProps) {
               workflowId: value === "single" ? undefined : data.workflowId,
             })
           }
-          className="grid grid-cols-2 gap-3"
+          className="grid grid-cols-1 gap-3 sm:grid-cols-2"
         >
           <div
             className={`flex items-start space-x-3 rounded-lg border p-4 transition-colors cursor-pointer ${

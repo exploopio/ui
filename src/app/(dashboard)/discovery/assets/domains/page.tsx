@@ -460,7 +460,7 @@ export default function DomainsPage() {
   return (
     <>
       <Header fixed>
-        <div className="ms-auto flex items-center space-x-4">
+        <div className="ms-auto flex items-center gap-2 sm:gap-4">
           <Search />
           <ThemeSwitch />
           <ProfileDropdown />
@@ -558,7 +558,7 @@ export default function DomainsPage() {
             </Tabs>
 
             {/* Search and Actions */}
-            <div className="flex items-center justify-between gap-4 mb-4">
+            <div className="flex flex-col gap-4 mb-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="relative flex-1 max-w-sm">
                 <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -594,7 +594,7 @@ export default function DomainsPage() {
             </div>
 
             {/* Table */}
-            <div className="rounded-md border">
+            <div className="rounded-md border overflow-x-auto">
               <Table>
                 <TableHeader>
                   {table.getHeaderGroups().map((headerGroup) => (
@@ -737,7 +737,7 @@ export default function DomainsPage() {
 
                 <TabsContent value="overview" className="space-y-4 mt-0">
                   {/* Stats */}
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div className="rounded-xl border p-4 bg-card">
                       <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-lg bg-orange-500/10 flex items-center justify-center">
@@ -765,7 +765,7 @@ export default function DomainsPage() {
                   {/* Domain Info */}
                   <div className="rounded-xl border p-4 bg-card space-y-3">
                     <h4 className="text-sm font-medium">Domain Information</h4>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
                       <div>
                         <p className="text-muted-foreground">Registrar</p>
                         <p className="font-medium">{selectedDomain.metadata.registrar || "-"}</p>
@@ -929,7 +929,7 @@ export default function DomainsPage() {
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="registrar">Registrar</Label>
                 <Input
@@ -1029,7 +1029,7 @@ export default function DomainsPage() {
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="edit-registrar">Registrar</Label>
                 <Input

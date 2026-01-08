@@ -353,7 +353,7 @@ export default function WorkflowsPage() {
   return (
     <>
       <Header fixed>
-        <div className="ms-auto flex items-center space-x-4">
+        <div className="ms-auto flex items-center gap-2 sm:gap-4">
           <Search />
           <ThemeSwitch />
           <ProfileDropdown />

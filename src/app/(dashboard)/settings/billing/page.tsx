@@ -126,7 +126,7 @@ export default function BillingPage() {
   return (
     <>
       <Header fixed>
-        <div className="ms-auto flex items-center space-x-4">
+        <div className="ms-auto flex items-center gap-2 sm:gap-4">
           <Search />
           <ThemeSwitch />
           <ProfileDropdown />
@@ -258,11 +258,11 @@ export default function BillingPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {plans.map((plan) => (
                 <div
                   key={plan.name}
-                  className={`relative rounded-lg border p-6 ${
+                  className={`relative rounded-lg border p-4 sm:p-6 ${
                     plan.highlighted ? "border-primary ring-2 ring-primary" : ""
                   }`}
                 >

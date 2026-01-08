@@ -143,7 +143,7 @@ export function FindingDetailDrawer({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="flex w-full flex-col p-0 sm:max-w-xl">
         {/* Header */}
-        <SheetHeader className="space-y-3 border-b px-6 py-4 text-left">
+        <SheetHeader className="space-y-3 border-b px-4 sm:px-6 py-4 text-left">
           <div className="space-y-1">
             <p className="text-muted-foreground font-mono text-xs">
               {finding.id}
@@ -175,7 +175,7 @@ export function FindingDetailDrawer({
         </SheetHeader>
 
         {/* Quick Actions Bar */}
-        <div className="flex flex-wrap items-center gap-2 border-b px-6 py-3 bg-muted/30">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 border-b px-3 sm:px-6 py-3 bg-muted/30">
           {/* Status Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -342,7 +342,7 @@ export function FindingDetailDrawer({
         <div className="flex-1 overflow-y-auto">
           <div className="space-y-5 p-6">
             {/* Meta Info */}
-            <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+            <div className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
               <div className="space-y-0.5">
                 <p className="text-muted-foreground text-xs">CVSS Score</p>
                 <p className="text-sm font-semibold font-mono">
@@ -459,7 +459,7 @@ export function FindingDetailDrawer({
                       {finding.evidence.length}
                     </Badge>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     {finding.evidence.slice(0, 4).map((ev) => (
                       <div
                         key={ev.id}

@@ -157,7 +157,7 @@ export function NewScanDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-h-[90vh] overflow-hidden p-0 sm:max-w-[600px]">
+      <DialogContent className="max-h-[90vh] overflow-hidden p-0 w-full sm:max-w-[600px]">
         <DialogHeader className="border-b px-6 py-4">
           <DialogTitle>New Scan</DialogTitle>
           <DialogDescription>
@@ -171,7 +171,7 @@ export function NewScanDialog({
         </div>
 
         {/* Step Content */}
-        <div className="max-h-[50vh] overflow-y-auto">{renderStep()}</div>
+        <div className="max-h-[50vh] overflow-y-auto overflow-x-hidden">{renderStep()}</div>
 
         {/* Footer */}
         <div className="flex items-center justify-between border-t px-6 py-4">

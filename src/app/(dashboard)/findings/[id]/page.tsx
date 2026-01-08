@@ -74,7 +74,7 @@ export default function FindingDetailPage() {
             {finding.id}
           </span>
         </div>
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           <ThemeSwitch />
           <ProfileDropdown />
         </div>
@@ -82,7 +82,7 @@ export default function FindingDetailPage() {
 
       <Main fixed>
         {/* Two-panel layout */}
-        <div className="flex h-full gap-6">
+        <div className="flex h-full gap-4 lg:gap-6">
           {/* Left Panel - Main Content */}
           <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
             {/* Finding Header Card */}
@@ -125,7 +125,7 @@ export default function FindingDetailPage() {
           </div>
 
           {/* Right Panel - Activity */}
-          <Card className="hidden w-[380px] flex-shrink-0 overflow-hidden lg:flex lg:flex-col">
+          <Card className="hidden w-[320px] flex-shrink-0 overflow-hidden xl:w-[380px] lg:flex lg:flex-col">
             <CardHeader className="flex-shrink-0 pb-2">
               <CardTitle className="text-base">Activity</CardTitle>
             </CardHeader>

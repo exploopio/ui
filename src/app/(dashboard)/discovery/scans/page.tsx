@@ -399,7 +399,7 @@ export default function ScansPage() {
   return (
     <>
       <Header fixed>
-        <div className="ms-auto flex items-center space-x-4">
+        <div className="ms-auto flex items-center gap-2 sm:gap-4">
           <Search />
           <ThemeSwitch />
           <ProfileDropdown />
@@ -514,7 +514,7 @@ export default function ScansPage() {
             </Tabs>
 
             {/* Search and Filters */}
-            <div className="flex items-center justify-between gap-4 mb-4">
+            <div className="flex flex-col gap-4 mb-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="relative flex-1 max-w-sm">
                 <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -538,7 +538,7 @@ export default function ScansPage() {
                       )}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-80" align="end">
+                  <PopoverContent className="w-72 sm:w-80" align="end">
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
                         <h4 className="font-medium">Filters</h4>
@@ -622,7 +622,7 @@ export default function ScansPage() {
             )}
 
             {/* Table */}
-            <div className="rounded-md border">
+            <div className="rounded-md border overflow-x-auto">
               <Table>
                 <TableHeader>
                   {table.getHeaderGroups().map((headerGroup) => (
@@ -822,7 +822,7 @@ export default function ScansPage() {
                 {/* Overview Tab */}
                 <TabsContent value="overview" className="space-y-4 mt-0">
                   {/* Stats Cards */}
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div className="rounded-xl border p-4 bg-card">
                       <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -937,7 +937,7 @@ export default function ScansPage() {
                 {/* Configuration Tab */}
                 <TabsContent value="config" className="space-y-4 mt-0">
                   {/* Scan Type & Intensity */}
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div className="rounded-xl border p-4 bg-card">
                       <p className="text-xs text-muted-foreground mb-1">Scan Type</p>
                       <p className="font-medium">{SCAN_TYPE_LABELS[selectedScan.type]}</p>
@@ -951,7 +951,7 @@ export default function ScansPage() {
                   {/* Scan Modules */}
                   <div className="rounded-xl border p-4 bg-card">
                     <h4 className="text-sm font-medium mb-3">Scan Modules</h4>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                       {Object.entries(selectedScan.options).map(([key, value]) => (
                         <div
                           key={key}
