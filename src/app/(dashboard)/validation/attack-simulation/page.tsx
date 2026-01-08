@@ -174,7 +174,7 @@ const resultConfig: Record<string, string> = {
 };
 
 export default function AttackSimulationPage() {
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [_activeCategory, _setActiveCategory] = useState<string | null>(null);
 
   return (
     <>

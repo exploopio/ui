@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback } from "react";
 import {
   ReactFlow,
   Background,
@@ -41,22 +41,17 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import {
   Workflow,
   Play,
-  Settings,
   Plus,
-  Clock,
   CheckCircle,
   XCircle,
-  AlertTriangle,
   Zap,
   GitBranch,
   Mail,
-  MessageSquare,
   RefreshCw,
   Save,
   Trash2,
@@ -64,6 +59,7 @@ import {
   MoreHorizontal,
   Pencil,
   Copy,
+  Clock,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -303,7 +299,6 @@ export default function WorkflowsPage() {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [selectedWorkflow, setSelectedWorkflow] = useState<typeof workflows[0] | null>(null);
-  const [isBuilderMode, setIsBuilderMode] = useState(false);
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge({ ...params, animated: true }, eds)),
@@ -370,7 +365,7 @@ export default function WorkflowsPage() {
           title="Automation Workflows"
           description="Create and manage automated security response workflows"
         >
-          <Button onClick={() => setIsBuilderMode(true)}>
+          <Button>
             <Plus className="mr-2 h-4 w-4" />
             New Workflow
           </Button>
@@ -480,7 +475,7 @@ export default function WorkflowsPage() {
                                 <Eye className="mr-2 h-4 w-4" />
                                 View Details
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => setIsBuilderMode(true)}>
+                              <DropdownMenuItem>
                                 <Pencil className="mr-2 h-4 w-4" />
                                 Edit in Builder
                               </DropdownMenuItem>
@@ -700,10 +695,7 @@ export default function WorkflowsPage() {
                   <Play className="mr-2 h-4 w-4" />
                   Run Now
                 </Button>
-                <Button variant="outline" onClick={() => {
-                  setSelectedWorkflow(null);
-                  setIsBuilderMode(true);
-                }}>
+                <Button variant="outline" onClick={() => setSelectedWorkflow(null)}>
                   <Pencil className="mr-2 h-4 w-4" />
                   Edit
                 </Button>

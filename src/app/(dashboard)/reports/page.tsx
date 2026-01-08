@@ -34,8 +34,6 @@ import {
   Send,
   Eye,
   MoreHorizontal,
-  Shield,
-  AlertTriangle,
   TrendingUp,
 } from "lucide-react";
 

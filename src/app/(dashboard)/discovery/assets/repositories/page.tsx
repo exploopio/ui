@@ -40,7 +40,6 @@ import {
 import {
   Sheet,
   SheetContent,
-  SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
 import {
@@ -104,7 +103,6 @@ import {
   ExternalLink,
   Github,
   GitlabIcon,
-  Code2,
 } from "lucide-react";
 import { getRepositories, type Asset } from "@/features/assets";
 import { mockAssetGroups } from "@/features/asset-groups";

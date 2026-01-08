@@ -30,7 +30,7 @@ import {
   Bot,
   Paperclip,
   Send,
-  Image,
+  Image as ImageIcon,
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
@@ -435,7 +435,7 @@ export function ActivityPanel({ activities, onAddComment }: ActivityPanelProps) 
                 <Paperclip className="h-4 w-4" />
               </Button>
               <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                <Image className="h-4 w-4" />
+                <ImageIcon className="h-4 w-4" />
               </Button>
               <Button
                 variant={isInternal ? "secondary" : "ghost"}

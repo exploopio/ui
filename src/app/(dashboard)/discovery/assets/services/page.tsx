@@ -40,7 +40,6 @@ import {
 import {
   Sheet,
   SheetContent,
-  SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
 import {
@@ -99,9 +98,6 @@ import {
   Copy,
   RefreshCw,
   Network,
-  Wifi,
-  Globe,
-  Database,
 } from "lucide-react";
 import { getServices, type Asset } from "@/features/assets";
 import { mockAssetGroups } from "@/features/asset-groups";

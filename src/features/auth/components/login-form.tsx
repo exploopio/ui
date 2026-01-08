@@ -9,7 +9,7 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useSyncExternalStore } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import Link from 'next/link'
@@ -72,9 +72,16 @@ export function LoginForm({
   ...props
 }: LoginFormProps) {
   const [isLoading, setIsLoading] = useState(false)
-  const [isDevMode, setIsDevMode] = useState(false)
   const router = useRouter()
   const login = useAuthStore((state) => state.login)
+
+  // Check dev mode using useSyncExternalStore to avoid hydration mismatch
+  // and prevent cascading renders from setState in useEffect
+  const isDevMode = useSyncExternalStore(
+    () => () => {}, // subscribe (no-op - value doesn't change)
+    isDevAuthEnabled, // getSnapshot (client)
+    () => false // getServerSnapshot (SSR)
+  )
 
   // Form setup with centralized schema
   const form = useForm<LoginInput>({
@@ -85,15 +92,13 @@ export function LoginForm({
     },
   })
 
-  // Check dev mode and pre-fill credentials after mount to avoid hydration mismatch
+  // Pre-fill dev credentials after mount
   useEffect(() => {
-    const devEnabled = isDevAuthEnabled()
-    setIsDevMode(devEnabled)
-    if (devEnabled) {
+    if (isDevMode) {
       form.setValue('email', DEV_CREDENTIALS.email)
       form.setValue('password', DEV_CREDENTIALS.password)
     }
-  }, [form])
+  }, [isDevMode, form])
 
   /**
    * Handle form submission

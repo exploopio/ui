@@ -28,7 +28,6 @@ import {
   ExternalLink,
   X,
   SlidersHorizontal,
-  ArrowUpDown,
   Tags,
 } from "lucide-react";
 import {
@@ -56,8 +55,6 @@ import {
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
-  SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
@@ -137,7 +134,7 @@ export default function AssetGroupsPage() {
   const [editGroup, setEditGroup] = useState<AssetGroup | null>(null);
   const [deleteGroup, setDeleteGroup] = useState<AssetGroup | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [bulkActionType, setBulkActionType] = useState<string | null>(null);
+  const [_bulkActionType, setBulkActionType] = useState<string | null>(null);
 
   // Form state for create/edit
   const [formData, setFormData] = useState({
@@ -310,8 +307,8 @@ export default function AssetGroupsPage() {
     }
   };
 
-  const columns: ColumnDef<AssetGroup>[] = useMemo(
-    () => [
+  // React Compiler handles memoization automatically
+  const columns: ColumnDef<AssetGroup>[] = [
       {
         id: "select",
         header: ({ table }) => (
@@ -447,9 +444,7 @@ export default function AssetGroupsPage() {
           );
         },
       },
-    ],
-    []
-  );
+    ];
 
   return (
     <>
