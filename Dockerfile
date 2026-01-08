@@ -12,7 +12,7 @@
 # Stage 1: Dependencies
 # ------------------------------------------------------------------------------
 # Install production dependencies only
-FROM node:20-alpine AS deps
+FROM node:22-alpine AS deps
 
 # Add libc6-compat for compatibility
 RUN apk add --no-cache libc6-compat
@@ -30,7 +30,7 @@ RUN npm ci
 # Stage 2: Builder
 # ------------------------------------------------------------------------------
 # Build the application
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
@@ -53,6 +53,8 @@ ARG NEXT_PUBLIC_APP_URL
 ARG NEXT_PUBLIC_SENTRY_DSN
 
 # Set environment variables for build
+# DOCKER_BUILD=true tells env.ts to skip validation during build
+ENV DOCKER_BUILD=true
 ENV NEXT_PUBLIC_KEYCLOAK_URL=$NEXT_PUBLIC_KEYCLOAK_URL
 ENV NEXT_PUBLIC_KEYCLOAK_REALM=$NEXT_PUBLIC_KEYCLOAK_REALM
 ENV NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=$NEXT_PUBLIC_KEYCLOAK_CLIENT_ID
@@ -73,7 +75,7 @@ RUN npm run build
 # Stage 3: Runner (Production)
 # ------------------------------------------------------------------------------
 # Create minimal production image
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 
 WORKDIR /app
 
@@ -83,7 +85,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 # Create non-root user for security
 RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 nextjs
+  adduser --system --uid 1001 nextjs
 
 # Copy public assets
 COPY --from=builder /app/public ./public
