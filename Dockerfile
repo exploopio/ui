@@ -1,47 +1,79 @@
 # ==============================================================================
-# Multi-Stage Docker Build for Next.js 16 Application
+# Multi-Stage Dockerfile for Next.js 16
 # ==============================================================================
-# This Dockerfile creates an optimized production image using multi-stage build
-# to minimize the final image size and improve security.
+# Single Dockerfile with targets for both development and production.
 #
-# Build: docker build -t nextjs-app .
-# Run:   docker run -p 3000:3000 nextjs-app
+# Development (with hot reload):
+#   docker-compose up
+#   OR: docker build --target development -t rediver-ui:dev .
+#
+# Production:
+#   docker-compose -f docker-compose.prod.yml up --build
+#   OR: docker build --target production -t rediver-ui:prod .
 # ==============================================================================
 
-# ------------------------------------------------------------------------------
-# Stage 1: Dependencies
-# ------------------------------------------------------------------------------
-# Install production dependencies only
-FROM node:22-alpine AS deps
+# ==============================================================================
+# BASE STAGE - Common dependencies
+# ==============================================================================
+FROM node:22-alpine AS base
 
-# Add libc6-compat for compatibility
+# Add libc6-compat for Alpine compatibility with some npm packages
 RUN apk add --no-cache libc6-compat
 
 WORKDIR /app
 
+# ==============================================================================
+# DEPS STAGE - Install dependencies
+# ==============================================================================
+FROM base AS deps
+
 # Copy package files
 COPY package.json package-lock.json* ./
 
-# Install dependencies
-# Use --production=false to install devDependencies needed for build
+# Install all dependencies
 RUN npm ci
 
-# ------------------------------------------------------------------------------
-# Stage 2: Builder
-# ------------------------------------------------------------------------------
-# Build the application
-FROM node:22-alpine AS builder
+# ==============================================================================
+# DEVELOPMENT STAGE - Hot reload enabled
+# ==============================================================================
+FROM base AS development
 
 WORKDIR /app
 
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
 
-# Copy all source files
+# Copy package.json for scripts
+COPY package.json ./
+
+# Set development environment
+ENV NODE_ENV=development
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Enable file watching in Docker (required for hot reload)
+ENV WATCHPACK_POLLING=true
+ENV CHOKIDAR_USEPOLLING=true
+
+# Expose port
+EXPOSE 3000
+
+# Start development server with Turbopack
+CMD ["npm", "run", "dev"]
+
+# ==============================================================================
+# BUILDER STAGE - Build production application
+# ==============================================================================
+FROM base AS builder
+
+WORKDIR /app
+
+# Copy dependencies
+COPY --from=deps /app/node_modules ./node_modules
+
+# Copy source code
 COPY . .
 
-# Build arguments for environment variables
-# These are needed at build time for NEXT_PUBLIC_ variables
+# Build-time environment variables (NEXT_PUBLIC_*)
 ARG NEXT_PUBLIC_KEYCLOAK_URL
 ARG NEXT_PUBLIC_KEYCLOAK_REALM
 ARG NEXT_PUBLIC_KEYCLOAK_CLIENT_ID
@@ -49,12 +81,16 @@ ARG NEXT_PUBLIC_KEYCLOAK_REDIRECT_URI
 ARG NEXT_PUBLIC_AUTH_COOKIE_NAME
 ARG NEXT_PUBLIC_REFRESH_COOKIE_NAME
 ARG NEXT_PUBLIC_BACKEND_API_URL
+ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_APP_URL
 ARG NEXT_PUBLIC_SENTRY_DSN
 
-# Set environment variables for build
-# DOCKER_BUILD=true tells env.ts to skip validation during build
+# Set environment for build
 ENV DOCKER_BUILD=true
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Pass build args to env
 ENV NEXT_PUBLIC_KEYCLOAK_URL=$NEXT_PUBLIC_KEYCLOAK_URL
 ENV NEXT_PUBLIC_KEYCLOAK_REALM=$NEXT_PUBLIC_KEYCLOAK_REALM
 ENV NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=$NEXT_PUBLIC_KEYCLOAK_CLIENT_ID
@@ -62,52 +98,49 @@ ENV NEXT_PUBLIC_KEYCLOAK_REDIRECT_URI=$NEXT_PUBLIC_KEYCLOAK_REDIRECT_URI
 ENV NEXT_PUBLIC_AUTH_COOKIE_NAME=$NEXT_PUBLIC_AUTH_COOKIE_NAME
 ENV NEXT_PUBLIC_REFRESH_COOKIE_NAME=$NEXT_PUBLIC_REFRESH_COOKIE_NAME
 ENV NEXT_PUBLIC_BACKEND_API_URL=$NEXT_PUBLIC_BACKEND_API_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 ENV NEXT_PUBLIC_SENTRY_DSN=$NEXT_PUBLIC_SENTRY_DSN
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
 
-# Build Next.js application
-# This creates .next/standalone directory with minimal dependencies
+# Build application
 RUN npm run build
 
-# ------------------------------------------------------------------------------
-# Stage 3: Runner (Production)
-# ------------------------------------------------------------------------------
-# Create minimal production image
-FROM node:22-alpine AS runner
+# ==============================================================================
+# PRODUCTION STAGE - Minimal production image
+# ==============================================================================
+FROM base AS production
 
 WORKDIR /app
 
-# Set to production
+# Set production environment
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
 
 # Create non-root user for security
 RUN addgroup --system --gid 1001 nodejs && \
-  adduser --system --uid 1001 nextjs
+    adduser --system --uid 1001 nextjs
 
 # Copy public assets
 COPY --from=builder /app/public ./public
 
+# Create .next directory with correct permissions
+RUN mkdir .next && chown nextjs:nodejs .next
+
 # Copy standalone build output
-# Next.js creates a minimal standalone version in .next/standalone
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 # Switch to non-root user
 USER nextjs
 
-# Expose port 3000
+# Expose port
 EXPOSE 3000
 
-# Set hostname to accept connections from anywhere
-ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
-
 # Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1
 
-# Start the application
+# Start application
 CMD ["node", "server.js"]
