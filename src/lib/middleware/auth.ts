@@ -57,15 +57,27 @@ export function requiresAuth(pathname: string): boolean {
 /**
  * Check if user is authenticated
  * Looks for refresh token in HttpOnly cookie
+ * In dev mode, also checks for dev auth cookie
  */
 export function isAuthenticated(req: NextRequest): boolean {
+  // Check for Keycloak refresh token (production)
   const cookieName =
     process.env.NEXT_PUBLIC_REFRESH_COOKIE_NAME || 'kc_refresh_token'
   const refreshToken = req.cookies.get(cookieName)
 
-  // If refresh token exists, user is authenticated
-  // Note: For stronger security, validate token signature in production
-  return !!refreshToken?.value
+  if (refreshToken?.value) {
+    return true
+  }
+
+  // Check for dev auth cookie (development only)
+  if (process.env.NODE_ENV === 'development') {
+    const devAuthToken = req.cookies.get('dev_auth_token')
+    if (devAuthToken?.value) {
+      return true
+    }
+  }
+
+  return false
 }
 
 // ============================================

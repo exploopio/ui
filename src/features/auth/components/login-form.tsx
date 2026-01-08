@@ -9,16 +9,25 @@
 
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import Link from 'next/link'
 import { Loader2, LogIn } from 'lucide-react'
 import { toast } from 'sonner'
 
+import { useRouter } from 'next/navigation'
 import { IconFacebook, IconGithub } from '@/assets/brand-icons'
 import { cn } from '@/lib/utils'
 import { redirectToLogin } from '@/lib/keycloak'
+import {
+  isDevAuthEnabled,
+  validateDevCredentials,
+  generateDevToken,
+  setDevAuthCookie,
+  DEV_CREDENTIALS,
+} from '@/lib/dev-auth'
+import { useAuthStore } from '@/stores/auth-store'
 import { Button } from '@/components/ui/button'
 import {
   Form,
@@ -41,7 +50,7 @@ import { loginSchema, type LoginInput } from '../schemas/auth.schema'
 interface LoginFormProps extends React.HTMLAttributes<HTMLFormElement> {
   /**
    * URL to redirect to after successful login
-   * @default '/dashboard'
+   * @default '/'
    */
   redirectTo?: string
 
@@ -58,11 +67,14 @@ interface LoginFormProps extends React.HTMLAttributes<HTMLFormElement> {
 
 export function LoginForm({
   className,
-  redirectTo = '/dashboard',
+  redirectTo = '/',
   showSocialLogin = true,
   ...props
 }: LoginFormProps) {
   const [isLoading, setIsLoading] = useState(false)
+  const [isDevMode, setIsDevMode] = useState(false)
+  const router = useRouter()
+  const login = useAuthStore((state) => state.login)
 
   // Form setup with centralized schema
   const form = useForm<LoginInput>({
@@ -73,26 +85,44 @@ export function LoginForm({
     },
   })
 
+  // Check dev mode and pre-fill credentials after mount to avoid hydration mismatch
+  useEffect(() => {
+    const devEnabled = isDevAuthEnabled()
+    setIsDevMode(devEnabled)
+    if (devEnabled) {
+      form.setValue('email', DEV_CREDENTIALS.email)
+      form.setValue('password', DEV_CREDENTIALS.password)
+    }
+  }, [form])
+
   /**
    * Handle form submission
-   * Redirects to Keycloak for OAuth2 authentication
+   * In dev mode: validates against dev credentials
+   * In production: Redirects to Keycloak for OAuth2 authentication
    */
   function onSubmit(data: LoginInput) {
     setIsLoading(true)
 
-    // For development: Log attempt (remove in production)
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Login attempt:', { email: data.email })
+    // Development mode: Use dev auth bypass
+    if (isDevMode) {
+      console.log('Dev login attempt:', { email: data.email })
+
+      if (validateDevCredentials(data.email, data.password)) {
+        const token = generateDevToken()
+        login(token)
+        setDevAuthCookie() // Set cookie for middleware to recognize
+        toast.success('Logged in successfully (Dev Mode)')
+        router.push(redirectTo)
+      } else {
+        setIsLoading(false)
+        toast.error('Invalid credentials. Use admin@rediver.io / admin123')
+      }
+      return
     }
 
+    // Production mode: Redirect to Keycloak
     try {
-      // Redirect to Keycloak login page
-      // After successful login, Keycloak will redirect back to /auth/callback
-      // which will then redirect to the specified redirectTo URL
       redirectToLogin(redirectTo)
-
-      // Note: This toast might not show because of redirect
-      // The actual success toast should be in the callback page
       toast.loading('Redirecting to login...')
     } catch (error) {
       setIsLoading(false)
@@ -175,6 +205,13 @@ export function LoginForm({
             </FormItem>
           )}
         />
+
+        {/* Dev Mode Indicator */}
+        {isDevMode && (
+          <div className='bg-amber-500/10 border border-amber-500/20 text-amber-500 rounded-md px-3 py-2 text-xs'>
+            <strong>Dev Mode:</strong> Use admin@rediver.io / admin123
+          </div>
+        )}
 
         {/* Submit Button */}
         <Button className='mt-2' disabled={isLoading} type='submit'>

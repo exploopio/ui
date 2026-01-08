@@ -14,6 +14,7 @@ import { useEffect, useState, type HTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
+import { BreadcrumbNav } from "./breadcrumb-nav";
 
 interface HeaderProps extends HTMLAttributes<HTMLElement> {
   /**
@@ -21,9 +22,20 @@ interface HeaderProps extends HTMLAttributes<HTMLElement> {
    * @default false
    */
   fixed?: boolean;
+  /**
+   * Whether to show the breadcrumb navigation
+   * @default true
+   */
+  showBreadcrumb?: boolean;
 }
 
-export function Header({ className, fixed, children, ...props }: HeaderProps) {
+export function Header({
+  className,
+  fixed,
+  showBreadcrumb = true,
+  children,
+  ...props
+}: HeaderProps) {
   const [offset, setOffset] = useState(0);
 
   useEffect(() => {
@@ -53,8 +65,9 @@ export function Header({ className, fixed, children, ...props }: HeaderProps) {
             "after:absolute after:inset-0 after:-z-10 after:bg-background/40 after:backdrop-blur-md"
         )}
       >
-        <SidebarTrigger variant='outline' className='max-md:scale-125' />
-        <Separator orientation='vertical' className='h-6' />
+        <SidebarTrigger variant="outline" className="max-md:scale-125" />
+        <Separator orientation="vertical" className="h-6" />
+        {showBreadcrumb && <BreadcrumbNav className="hidden md:flex" />}
         {children}
       </div>
     </header>

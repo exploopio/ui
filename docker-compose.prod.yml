@@ -7,8 +7,6 @@
 #   docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 # ==============================================================================
 
-version: '3.8'
-
 services:
   nextjs:
     # Don't expose port directly in production (use Nginx instead)
