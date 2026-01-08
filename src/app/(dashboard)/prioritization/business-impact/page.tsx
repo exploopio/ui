@@ -27,7 +27,6 @@ import {
   Building2,
   DollarSign,
   Users,
-  Clock,
   TrendingUp,
   AlertTriangle,
   Shield,

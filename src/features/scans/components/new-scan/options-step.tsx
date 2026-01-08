@@ -21,14 +21,12 @@ import type {
   ScanIntensity,
   ScanOptions,
 } from "../../types";
-import { SCAN_OPTIONS_CONFIG, SCAN_INTENSITY_CONFIG } from "../../types";
+import { SCAN_OPTIONS_CONFIG } from "../../types";
 
 interface OptionsStepProps {
   data: NewScanFormData;
   onChange: (data: Partial<NewScanFormData>) => void;
 }
-
-const INTENSITY_VALUES: ScanIntensity[] = ["low", "medium", "high"];
 
 export function OptionsStep({ data, onChange }: OptionsStepProps) {
   const handleOptionToggle = (

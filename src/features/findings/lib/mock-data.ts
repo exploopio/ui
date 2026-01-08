@@ -8,9 +8,7 @@ import type {
   Finding,
   FindingDetail,
   FindingStats,
-  FindingStatus,
 } from "../types";
-import type { Severity } from "@/features/shared/types";
 
 // Helper to generate dates
 const daysAgo = (days: number) => {

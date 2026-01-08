@@ -40,7 +40,6 @@ import {
 import {
   Sheet,
   SheetContent,
-  SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
 import {
@@ -86,7 +85,6 @@ import {
   Play,
   Pause,
   Trash2,
-  Settings,
   Terminal,
   Activity,
   CheckCircle,

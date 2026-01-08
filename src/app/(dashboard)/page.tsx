@@ -20,10 +20,8 @@ import {
   TrendingUp,
   TrendingDown,
   Plus,
-  Radar,
   FileWarning,
   ArrowRight,
-  Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";

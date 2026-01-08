@@ -25,7 +25,6 @@ import {
   Pencil,
   Trash2,
   UserPlus,
-  Clock,
   CheckCircle,
   AlertTriangle,
   ArrowRight,
@@ -95,8 +94,6 @@ import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { toast } from "sonner";
 import {
   mockRemediationTasks,
-  getTaskStats,
-  getTasksByStatus,
   TASK_STATUS_LABELS,
   TASK_PRIORITY_LABELS,
 } from "@/features/remediation";

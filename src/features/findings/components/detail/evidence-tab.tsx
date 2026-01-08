@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
-  Image,
+  Image as ImageIcon,
   Video,
   FileText,
   ArrowUpRight,
@@ -26,7 +26,7 @@ interface EvidenceTabProps {
 }
 
 const EVIDENCE_ICONS: Record<EvidenceType, React.ReactNode> = {
-  screenshot: <Image className="h-4 w-4" />,
+  screenshot: <ImageIcon className="h-4 w-4" />,
   video: <Video className="h-4 w-4" />,
   log: <FileText className="h-4 w-4" />,
   request: <ArrowUpRight className="h-4 w-4" />,
@@ -77,7 +77,7 @@ export function EvidenceTab({ evidence }: EvidenceTabProps) {
         return (
           <div className="bg-muted/30 rounded-lg border p-4">
             <div className="flex aspect-video items-center justify-center rounded bg-neutral-800/50">
-              <Image className="text-muted-foreground h-12 w-12" />
+              <ImageIcon className="text-muted-foreground h-12 w-12" />
               <span className="text-muted-foreground ml-2 text-sm">
                 [Screenshot Preview]
               </span>

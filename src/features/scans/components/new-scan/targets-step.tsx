@@ -14,7 +14,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Search } from "lucide-react";
-import type { NewScanFormData, TargetType, ScanTargets } from "../../types";
+import type { NewScanFormData, TargetType } from "../../types";
 import { mockAssetGroups } from "@/features/asset-groups";
 
 interface TargetsStepProps {

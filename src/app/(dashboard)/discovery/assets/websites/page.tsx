@@ -40,7 +40,6 @@ import {
 import {
   Sheet,
   SheetContent,
-  SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
 import {
@@ -101,11 +100,8 @@ import {
   RefreshCw,
   ShieldCheck,
   ShieldX,
-  Globe,
-  Server,
   Zap,
   Lock,
-  Unlock,
 } from "lucide-react";
 import { getWebsites, type Asset } from "@/features/assets";
 import { mockAssetGroups } from "@/features/asset-groups";

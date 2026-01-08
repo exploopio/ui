@@ -21,7 +21,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Card,
@@ -41,7 +40,6 @@ import {
 import {
   Sheet,
   SheetContent,
-  SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
 import {
@@ -76,11 +74,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { toast } from "sonner";
@@ -88,7 +81,6 @@ import {
   Plus,
   Globe,
   Search as SearchIcon,
-  Filter,
   MoreHorizontal,
   Eye,
   Pencil,
@@ -99,14 +91,11 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Download,
-  Upload,
   ExternalLink,
-  Calendar,
   Shield,
   AlertTriangle,
   CheckCircle,
   Clock,
-  Server,
   Copy,
   RefreshCw,
 } from "lucide-react";
@@ -467,9 +456,6 @@ export default function DomainsPage() {
     a.click();
     toast.success("Domains exported");
   };
-
-  // Active filters count
-  const activeFiltersCount = [statusFilter !== "all"].filter(Boolean).length;
 
   return (
     <>

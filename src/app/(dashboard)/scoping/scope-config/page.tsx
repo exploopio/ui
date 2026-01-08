@@ -50,7 +50,6 @@ import {
   Ban,
   Calendar,
   Play,
-  Pause,
 } from "lucide-react";
 
 // Mock data for scope targets

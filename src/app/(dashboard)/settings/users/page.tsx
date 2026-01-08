@@ -84,7 +84,6 @@ import {
   Mail,
   MoreHorizontal,
   Key,
-  UserCog,
   Trash2,
   Send,
   Ban,
@@ -102,7 +101,6 @@ import {
   Activity,
   Calendar,
   Building,
-  AlertCircle,
 } from "lucide-react";
 
 // Types
