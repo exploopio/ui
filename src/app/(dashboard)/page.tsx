@@ -66,7 +66,7 @@ export default function Dashboard() {
   return (
     <>
       <Header fixed>
-        <div className="ms-auto flex items-center space-x-4">
+        <div className="ms-auto flex items-center gap-2 sm:gap-4">
           <Search />
           <ThemeSwitch />
           <ProfileDropdown />
@@ -75,9 +75,9 @@ export default function Dashboard() {
 
       <Main>
         {/* Quick Actions & Process Stepper */}
-        <section className="mb-6 grid gap-4 lg:grid-cols-4">
+        <section className="mb-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {/* Quick Actions */}
-          <Card className="lg:col-span-1">
+          <Card className="md:col-span-1">
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Quick Actions</CardTitle>
             </CardHeader>
@@ -110,7 +110,7 @@ export default function Dashboard() {
           </Card>
 
           {/* Process Stepper */}
-          <Card className="lg:col-span-3">
+          <Card className="md:col-span-1 lg:col-span-3">
             <CardHeader className="pb-2">
               <CardTitle className="text-base">CTEM Process</CardTitle>
               <CardDescription>

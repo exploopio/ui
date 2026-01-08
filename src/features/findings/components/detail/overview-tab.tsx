@@ -36,7 +36,7 @@ export function OverviewTab({ finding }: OverviewTabProps) {
 
           <p className="text-muted-foreground mb-4 text-sm">{aiTriage.summary}</p>
 
-          <div className="mb-4 grid grid-cols-2 gap-4 md:grid-cols-4">
+          <div className="mb-4 grid grid-cols-2 gap-2 sm:gap-4 md:grid-cols-4">
             <div>
               <p className="text-muted-foreground text-xs">Risk Level</p>
               <p
@@ -93,7 +93,7 @@ export function OverviewTab({ finding }: OverviewTabProps) {
           <Shield className="h-4 w-4" />
           Technical Details
         </h3>
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-4 md:grid-cols-3">
           {finding.cvss !== undefined && (
             <div>
               <p className="text-muted-foreground text-xs">CVSS Score</p>
@@ -101,9 +101,9 @@ export function OverviewTab({ finding }: OverviewTabProps) {
             </div>
           )}
           {finding.cvssVector && (
-            <div className="col-span-2">
+            <div className="sm:col-span-2">
               <p className="text-muted-foreground text-xs">CVSS Vector</p>
-              <p className="font-mono text-sm">{finding.cvssVector}</p>
+              <p className="font-mono text-xs sm:text-sm break-all">{finding.cvssVector}</p>
             </div>
           )}
           {finding.cve && (

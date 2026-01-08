@@ -43,7 +43,7 @@ export const sidebarData: SidebarData = {
   user: {
     name: "Nguyen Van An",
     email: "an.nguyen@company.vn",
-    avatar: "/avatars/default.jpg",
+    avatar: "",
   },
   teams: [
     {

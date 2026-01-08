@@ -569,7 +569,7 @@ export default function UsersPage() {
   return (
     <>
       <Header fixed>
-        <div className="ms-auto flex items-center space-x-4">
+        <div className="ms-auto flex items-center gap-2 sm:gap-4">
           <Search />
           <ThemeSwitch />
           <ProfileDropdown />
@@ -740,7 +740,7 @@ export default function UsersPage() {
             </Tabs>
 
             {/* Search and Filters */}
-            <div className="flex items-center justify-between gap-4 mb-4">
+            <div className="flex flex-col gap-4 mb-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="relative flex-1 max-w-sm">
                 <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -764,7 +764,7 @@ export default function UsersPage() {
                       )}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-80" align="end">
+                  <PopoverContent className="w-72 sm:w-80" align="end">
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
                         <h4 className="font-medium">Filters</h4>
@@ -848,7 +848,7 @@ export default function UsersPage() {
             )}
 
             {/* Table */}
-            <div className="rounded-md border">
+            <div className="rounded-md border overflow-x-auto">
               <Table>
                 <TableHeader>
                   {table.getHeaderGroups().map((headerGroup) => (
@@ -995,7 +995,7 @@ export default function UsersPage() {
 
               <div className="space-y-6 mt-6">
                 {/* Stats Grid */}
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                   <div className="rounded-lg border p-3 text-center">
                     <Target className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
                     <p className="text-lg font-bold">{selectedUser.assignedFindings}</p>

@@ -304,7 +304,7 @@ export default function FindingsPage() {
   return (
     <>
       <Header fixed>
-        <div className="ms-auto flex items-center space-x-4">
+        <div className="ms-auto flex items-center gap-2 sm:gap-4">
           <Search />
           <ThemeSwitch />
           <ProfileDropdown />
@@ -390,7 +390,7 @@ export default function FindingsPage() {
         )}
 
         {/* Stats Cards */}
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="mt-6 grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-5">
           <Card>
             <CardHeader className="pb-2">
               <CardDescription>Critical</CardDescription>
