@@ -235,9 +235,9 @@ rediver-ui/
 │   └── stores/                   # Zustand stores
 ├── docs/                         # Documentation
 ├── nginx/                        # Nginx configuration
-├── Dockerfile                    # Multi-stage Docker build
-├── docker-compose.yml            # Development setup
-└── docker-compose.prod.yml       # Production with Nginx
+├── Dockerfile                    # Multi-stage build (dev & prod targets)
+├── docker-compose.yml            # Development with hot reload
+└── docker-compose.prod.yml       # Production deployment
 ```
 
 ---
@@ -291,15 +291,24 @@ See [Deployment Guide](./docs/DEPLOYMENT.md#vercel) for details.
 ### Option 2: Docker (Recommended for production)
 
 ```bash
-# Build image
-docker-compose build
+# Development (with hot reload)
+docker compose up --build
 
-# Run (development)
-docker-compose up
+# Production
+docker compose -f docker-compose.prod.yml up --build -d
 
-# Run (production)
-docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# View logs
+docker compose logs -f nextjs
+
+# Stop
+docker compose down
 ```
+
+**Docker Image Sizes:**
+| Target | Size | Use Case |
+|--------|------|----------|
+| development | ~1.3GB | Local dev with hot reload |
+| production | ~341MB | Optimized production |
 
 See [Docker Setup Guide](./docs/DOCKER_SENTRY_SETUP.md) for details.
 
