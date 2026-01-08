@@ -77,6 +77,11 @@ const nextConfig: NextConfig = {
     'http://10.29.243.85:3000',
     'http://localhost:3000',
     'http://127.0.0.1:3000',
+    'https://app.rediver.io',
+    'https://app.rediver.io:3000',
+    'http://app.rediver.io:3000',
+    'https://app.rediver.io:443',
+    'http://app.rediver.io:80',
   ],
 }
 
