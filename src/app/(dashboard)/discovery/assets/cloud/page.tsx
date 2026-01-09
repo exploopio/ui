@@ -104,7 +104,7 @@ import {
   Globe,
   MapPin,
 } from "lucide-react";
-import { getCloudAssets, getAssetRelationships, type Asset } from "@/features/assets";
+import { getCloudAssets, getAssetRelationships, ClassificationBadges, type Asset } from "@/features/assets";
 import { mockAssetGroups } from "@/features/asset-groups";
 import type { Status } from "@/features/shared/types";
 
@@ -348,6 +348,18 @@ export default function CloudPage() {
       cell: ({ row }) => <StatusBadge status={row.original.status} />,
     },
     {
+      id: "classification",
+      header: "Classification",
+      cell: ({ row }) => (
+        <ClassificationBadges
+          scope={row.original.scope}
+          exposure={row.original.exposure}
+          size="sm"
+          showTooltips
+        />
+      ),
+    },
+    {
       accessorKey: "findingCount",
       header: ({ column }) => (
         <Button
@@ -474,6 +486,8 @@ export default function CloudPage() {
       name: formData.name,
       description: formData.description,
       status: "active",
+      scope: "cloud",
+      exposure: "private",
       riskScore: 0,
       findingCount: 0,
       groupId: formData.groupId,

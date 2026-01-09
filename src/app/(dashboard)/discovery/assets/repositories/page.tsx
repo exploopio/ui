@@ -104,7 +104,7 @@ import {
   Github,
   GitlabIcon,
 } from "lucide-react";
-import { getRepositories, getAssetRelationships, type Asset } from "@/features/assets";
+import { getRepositories, getAssetRelationships, ClassificationBadges, type Asset } from "@/features/assets";
 import { mockAssetGroups } from "@/features/asset-groups";
 import type { Status } from "@/features/shared/types";
 
@@ -320,6 +320,18 @@ export default function RepositoriesPage() {
       cell: ({ row }) => <StatusBadge status={row.original.status} />,
     },
     {
+      id: "classification",
+      header: "Classification",
+      cell: ({ row }) => (
+        <ClassificationBadges
+          scope={row.original.scope}
+          exposure={row.original.exposure}
+          size="sm"
+          showTooltips
+        />
+      ),
+    },
+    {
       accessorKey: "findingCount",
       header: ({ column }) => (
         <Button
@@ -459,6 +471,8 @@ export default function RepositoriesPage() {
       name: formData.name,
       description: formData.description,
       status: "active",
+      scope: "internal",
+      exposure: "restricted",
       riskScore: 0,
       findingCount: 0,
       groupId: formData.groupId,

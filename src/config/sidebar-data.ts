@@ -45,6 +45,11 @@ import {
   Boxes,
   Database,
   Smartphone,
+  Crosshair,
+  ClipboardList,
+  Bug,
+  RotateCcw,
+  BookTemplate,
 } from "lucide-react";
 import { type SidebarData } from "@/components/types";
 
@@ -216,6 +221,38 @@ export const sidebarData: SidebarData = {
     {
       title: "Validation",
       items: [
+        {
+          title: "Penetration Testing",
+          icon: Crosshair,
+          items: [
+            {
+              title: "Campaigns",
+              url: "/validation/pentest/campaigns",
+              icon: ClipboardList,
+            },
+            {
+              title: "Findings",
+              url: "/validation/pentest/findings",
+              icon: Bug,
+              badge: "12",
+            },
+            {
+              title: "Retests",
+              url: "/validation/pentest/retests",
+              icon: RotateCcw,
+            },
+            {
+              title: "Reports",
+              url: "/validation/pentest/reports",
+              icon: FileText,
+            },
+            {
+              title: "Templates",
+              url: "/validation/pentest/templates",
+              icon: BookTemplate,
+            },
+          ],
+        },
         {
           title: "Attack Simulation",
           url: "/validation/attack-simulation",

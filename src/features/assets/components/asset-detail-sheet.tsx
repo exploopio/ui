@@ -27,6 +27,7 @@ import {
   TagsSection,
 } from "./sheet-sections";
 import { RelationshipSection, RelationshipPreview } from "./relationships";
+import { ClassificationBadges } from "./classification-badges";
 import type { Asset } from "../types/asset.types";
 import type { AssetRelationship } from "../types/relationship.types";
 
@@ -190,6 +191,16 @@ export function AssetDetailSheet<T extends Asset>({
               </p>
             </div>
             <StatusBadge status={asset.status} />
+          </div>
+
+          {/* Classification Badges */}
+          <div className="flex items-center gap-2 mb-2">
+            <ClassificationBadges
+              scope={asset.scope}
+              exposure={asset.exposure}
+              size="md"
+              showTooltips
+            />
           </div>
 
           {/* Quick Actions */}

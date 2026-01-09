@@ -4,7 +4,94 @@
  * Vietnamese company mock data for development and testing
  */
 
-import type { Asset, AssetType, K8sCluster, K8sWorkload, ContainerImage, AssetFinding, Api, ApiEndpoint } from "../types";
+import type { Asset, AssetType, AssetScope, ExposureLevel, K8sCluster, K8sWorkload, ContainerImage, AssetFinding, Api, ApiEndpoint } from "../types";
+
+/**
+ * Derive scope and exposure based on asset characteristics
+ * This simulates how a real system would classify assets
+ */
+const deriveScopeAndExposure = (
+  type: AssetType,
+  name: string,
+  tags?: string[],
+  metadata?: Record<string, unknown>
+): { scope: AssetScope; exposure: ExposureLevel } => {
+  const tagsSet = new Set(tags || []);
+  const nameLC = name.toLowerCase();
+
+  // Determine scope
+  let scope: AssetScope = "internal";
+
+  if (metadata?.cloudProvider || type === "cloud") {
+    scope = "cloud";
+  } else if (tagsSet.has("vendor") || tagsSet.has("third-party") || nameLC.includes("vendor")) {
+    scope = "vendor";
+  } else if (tagsSet.has("partner") || nameLC.includes("partner")) {
+    scope = "partner";
+  } else if (tagsSet.has("shadow") || tagsSet.has("unknown")) {
+    scope = "shadow";
+  } else if (
+    type === "domain" ||
+    type === "website" ||
+    type === "api" ||
+    tagsSet.has("customer-facing") ||
+    tagsSet.has("public")
+  ) {
+    scope = "external";
+  }
+
+  // Determine exposure
+  let exposure: ExposureLevel = "private";
+
+  if (type === "domain" || type === "website") {
+    exposure = "public";
+  } else if (type === "api" && (nameLC.includes("public") || tagsSet.has("public"))) {
+    exposure = "public";
+  } else if (type === "api") {
+    exposure = "restricted";
+  } else if (type === "mobile") {
+    exposure = "public"; // Apps are distributed publicly
+  } else if (
+    type === "service" &&
+    (tagsSet.has("customer-facing") || nameLC.includes("gateway") || nameLC.includes("api"))
+  ) {
+    exposure = "restricted";
+  } else if (type === "repository" && metadata?.visibility === "public") {
+    exposure = "public";
+  } else if (type === "repository") {
+    exposure = "restricted";
+  } else if (type === "credential") {
+    exposure = "isolated"; // Credentials should be highly protected
+  } else if (
+    type === "database" ||
+    type === "container" ||
+    type === "host"
+  ) {
+    exposure = nameLC.includes("staging") || nameLC.includes("dev") ? "private" : "private";
+  }
+
+  // Override for critical/banking assets
+  if (tagsSet.has("critical") || tagsSet.has("banking") || tagsSet.has("pci-dss")) {
+    // Critical assets might be isolated or restricted
+    if (exposure === "public" && type !== "domain" && type !== "website") {
+      exposure = "restricted";
+    }
+  }
+
+  return { scope, exposure };
+};
+
+type BaseAsset = Omit<Asset, "scope" | "exposure">;
+
+const enrichAsset = (asset: BaseAsset): Asset => {
+  const { scope, exposure } = deriveScopeAndExposure(
+    asset.type,
+    asset.name,
+    asset.tags,
+    asset.metadata as Record<string, unknown>
+  );
+  return { ...asset, scope, exposure };
+};
 
 // Helper to generate dates
 const daysAgo = (days: number) => {
@@ -14,7 +101,7 @@ const daysAgo = (days: number) => {
 };
 
 // Vietnamese domain assets
-const domainAssets: Asset[] = [
+const domainAssets: BaseAsset[] = [
   {
     id: "dom-001",
     type: "domain",
@@ -123,7 +210,7 @@ const domainAssets: Asset[] = [
 ];
 
 // Website assets
-const websiteAssets: Asset[] = [
+const websiteAssets: BaseAsset[] = [
   {
     id: "web-001",
     type: "website",
@@ -237,7 +324,7 @@ const websiteAssets: Asset[] = [
 ];
 
 // Service assets
-const serviceAssets: Asset[] = [
+const serviceAssets: BaseAsset[] = [
   {
     id: "svc-001",
     type: "service",
@@ -347,7 +434,7 @@ const serviceAssets: Asset[] = [
 ];
 
 // Repository assets
-const repositoryAssets: Asset[] = [
+const repositoryAssets: BaseAsset[] = [
   {
     id: "repo-001",
     type: "repository",
@@ -461,7 +548,7 @@ const repositoryAssets: Asset[] = [
 ];
 
 // Cloud assets
-const cloudAssets: Asset[] = [
+const cloudAssets: BaseAsset[] = [
   {
     id: "cloud-001",
     type: "cloud",
@@ -570,7 +657,7 @@ const cloudAssets: Asset[] = [
 ];
 
 // Host assets
-const hostAssets: Asset[] = [
+const hostAssets: BaseAsset[] = [
   {
     id: "host-001",
     type: "host",
@@ -713,7 +800,7 @@ const hostAssets: Asset[] = [
 ];
 
 // Container assets
-const containerAssets: Asset[] = [
+const containerAssets: BaseAsset[] = [
   {
     id: "container-001",
     type: "container",
@@ -866,7 +953,7 @@ const containerAssets: Asset[] = [
 ];
 
 // Database assets
-const databaseAssets: Asset[] = [
+const databaseAssets: BaseAsset[] = [
   {
     id: "db-001",
     type: "database",
@@ -1009,7 +1096,7 @@ const databaseAssets: Asset[] = [
 ];
 
 // Mobile app assets
-const mobileAssets: Asset[] = [
+const mobileAssets: BaseAsset[] = [
   {
     id: "mobile-001",
     type: "mobile",
@@ -1160,7 +1247,7 @@ const mobileAssets: Asset[] = [
 ];
 
 // Credential leak assets
-const credentialAssets: Asset[] = [
+const credentialAssets: BaseAsset[] = [
   {
     id: "cred-001",
     type: "credential",
@@ -1265,6 +1352,216 @@ const credentialAssets: Asset[] = [
     lastSeen: daysAgo(0),
     createdAt: daysAgo(45),
     updatedAt: daysAgo(1),
+  },
+  {
+    id: "cred-006",
+    type: "credential",
+    name: "aws-access-key-prod",
+    description: "AWS access key exposed in CI logs",
+    status: "active",
+    riskScore: 92,
+    findingCount: 1,
+    groupId: "grp-006",
+    groupName: "Cloud Infrastructure",
+    metadata: {
+      source: "CI/CD Pipeline logs",
+      username: "aws-service-account",
+      leakDate: "2024-11-15",
+    },
+    tags: ["critical", "aws-key-leak"],
+    firstSeen: daysAgo(30),
+    lastSeen: daysAgo(0),
+    createdAt: daysAgo(30),
+    updatedAt: daysAgo(0),
+  },
+  {
+    id: "cred-007",
+    type: "credential",
+    name: "support@momo.vn",
+    description: "Customer support credentials found in phishing database",
+    status: "active",
+    riskScore: 70,
+    findingCount: 1,
+    groupId: "grp-003",
+    groupName: "Production - API Gateway",
+    metadata: {
+      source: "Phishing database",
+      username: "support@momo.vn",
+      leakDate: "2024-10-20",
+    },
+    tags: ["high", "credential-leak"],
+    firstSeen: daysAgo(55),
+    lastSeen: daysAgo(0),
+    createdAt: daysAgo(55),
+    updatedAt: daysAgo(2),
+  },
+  {
+    id: "cred-008",
+    type: "credential",
+    name: "jenkins-admin",
+    description: "Jenkins admin credentials in public Gist",
+    status: "pending",
+    riskScore: 85,
+    findingCount: 1,
+    groupId: "grp-007",
+    groupName: "Internal Tools",
+    metadata: {
+      source: "GitHub Gist",
+      username: "jenkins-admin",
+      leakDate: "2024-09-05",
+    },
+    tags: ["critical", "credential-leak"],
+    firstSeen: daysAgo(100),
+    lastSeen: daysAgo(0),
+    createdAt: daysAgo(100),
+    updatedAt: daysAgo(5),
+  },
+  {
+    id: "cred-009",
+    type: "credential",
+    name: "slack-webhook-token",
+    description: "Slack webhook URL leaked in npm package",
+    status: "completed",
+    riskScore: 35,
+    findingCount: 1,
+    groupId: "grp-007",
+    groupName: "Internal Tools",
+    metadata: {
+      source: "npm package analysis",
+      username: "slack-integration",
+      leakDate: "2024-07-20",
+    },
+    tags: ["medium", "webhook-leak"],
+    firstSeen: daysAgo(160),
+    lastSeen: daysAgo(60),
+    createdAt: daysAgo(160),
+    updatedAt: daysAgo(60),
+  },
+  {
+    id: "cred-010",
+    type: "credential",
+    name: "root@db-primary.internal",
+    description: "Database root password in Confluence page",
+    status: "active",
+    riskScore: 98,
+    findingCount: 1,
+    groupId: "grp-001",
+    groupName: "Production - Core Banking",
+    metadata: {
+      source: "Internal documentation leak",
+      username: "root",
+      leakDate: "2024-11-10",
+    },
+    tags: ["critical", "database-credential"],
+    firstSeen: daysAgo(35),
+    lastSeen: daysAgo(0),
+    createdAt: daysAgo(35),
+    updatedAt: daysAgo(0),
+  },
+  {
+    id: "cred-011",
+    type: "credential",
+    name: "stripe-api-key-live",
+    description: "Stripe live API key in client-side code",
+    status: "active",
+    riskScore: 90,
+    findingCount: 1,
+    groupId: "grp-002",
+    groupName: "Production - E-commerce",
+    metadata: {
+      source: "Client-side JavaScript",
+      username: "stripe-service",
+      leakDate: "2024-10-25",
+    },
+    tags: ["critical", "api-key-leak", "payment"],
+    firstSeen: daysAgo(50),
+    lastSeen: daysAgo(0),
+    createdAt: daysAgo(50),
+    updatedAt: daysAgo(1),
+  },
+  {
+    id: "cred-012",
+    type: "credential",
+    name: "hr-system@company.vn",
+    description: "HR system credentials in email attachment",
+    status: "pending",
+    riskScore: 60,
+    findingCount: 1,
+    groupId: "grp-007",
+    groupName: "Internal Tools",
+    metadata: {
+      source: "Email attachment scan",
+      username: "hr-system@company.vn",
+      leakDate: "2024-08-30",
+    },
+    tags: ["medium", "credential-leak"],
+    firstSeen: daysAgo(110),
+    lastSeen: daysAgo(0),
+    createdAt: daysAgo(110),
+    updatedAt: daysAgo(10),
+  },
+  {
+    id: "cred-013",
+    type: "credential",
+    name: "gitlab-deploy-token",
+    description: "GitLab deploy token exposed in docker-compose",
+    status: "completed",
+    riskScore: 40,
+    findingCount: 1,
+    groupId: "grp-007",
+    groupName: "Internal Tools",
+    metadata: {
+      source: "Docker Hub public image",
+      username: "gitlab-ci",
+      leakDate: "2024-05-15",
+    },
+    tags: ["medium", "token-leak"],
+    firstSeen: daysAgo(200),
+    lastSeen: daysAgo(90),
+    createdAt: daysAgo(200),
+    updatedAt: daysAgo(90),
+  },
+  {
+    id: "cred-014",
+    type: "credential",
+    name: "sysadmin@datacenter.vn",
+    description: "Datacenter admin credentials in breach dump",
+    status: "inactive",
+    riskScore: 55,
+    findingCount: 1,
+    groupId: "grp-006",
+    groupName: "Cloud Infrastructure",
+    metadata: {
+      source: "Data breach compilation",
+      username: "sysadmin@datacenter.vn",
+      leakDate: "2024-04-10",
+    },
+    tags: ["medium", "credential-leak"],
+    firstSeen: daysAgo(240),
+    lastSeen: daysAgo(120),
+    createdAt: daysAgo(240),
+    updatedAt: daysAgo(120),
+  },
+  {
+    id: "cred-015",
+    type: "credential",
+    name: "mongodb-atlas-key",
+    description: "MongoDB Atlas connection string in env file",
+    status: "active",
+    riskScore: 82,
+    findingCount: 1,
+    groupId: "grp-003",
+    groupName: "Production - API Gateway",
+    metadata: {
+      source: "Public .env file",
+      username: "mongodb-service",
+      leakDate: "2024-11-05",
+    },
+    tags: ["critical", "database-credential"],
+    firstSeen: daysAgo(40),
+    lastSeen: daysAgo(0),
+    createdAt: daysAgo(40),
+    updatedAt: daysAgo(0),
   },
 ];
 
@@ -2574,8 +2871,8 @@ export const getK8sWorkloads = (clusterId?: string) =>
   clusterId ? k8sWorkloads.filter((w) => w.clusterId === clusterId) : k8sWorkloads;
 export const getContainerImages = () => containerImages;
 
-// Combine all assets
-export const mockAssets: Asset[] = [
+// Combine all assets and enrich with scope/exposure
+const baseAssets: BaseAsset[] = [
   ...domainAssets,
   ...websiteAssets,
   ...serviceAssets,
@@ -2587,6 +2884,8 @@ export const mockAssets: Asset[] = [
   ...mobileAssets,
   ...credentialAssets,
 ];
+
+export const mockAssets: Asset[] = baseAssets.map(enrichAsset);
 
 // Filter functions
 export const getAssetsByType = (type: AssetType): Asset[] =>
