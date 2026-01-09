@@ -65,6 +65,17 @@ export function NavGroup({ title, items }: NavGroupProps) {
 }
 
 function NavBadge({ children }: { children: ReactNode }) {
+	// Special styling for "Soon" badge to indicate Coming Soon pages
+	if (children === "Soon") {
+		return (
+			<Badge
+				variant="outline"
+				className="rounded-full px-1.5 py-0 text-[10px] text-muted-foreground border-dashed"
+			>
+				{children}
+			</Badge>
+		);
+	}
 	return <Badge className="rounded-full px-1 py-0 text-xs">{children}</Badge>;
 }
 
