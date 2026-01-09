@@ -16,6 +16,12 @@ import { ProfileDropdown } from "@/components/profile-dropdown";
 import { Search } from "@/components/search";
 import { ThemeSwitch } from "@/components/theme-switch";
 import { PageHeader, StatusBadge, RiskScoreBadge } from "@/features/shared";
+import {
+  AssetDetailSheet,
+  StatCardCentered,
+  StatsGrid,
+  SectionTitle,
+} from "@/features/assets";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,11 +43,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Sheet,
-  SheetContent,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import {
   Dialog,
   DialogContent,
@@ -74,8 +75,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import {
   Plus,
@@ -804,220 +804,92 @@ export default function ServicesPage() {
       </Main>
 
       {/* Service Details Sheet */}
-      <Sheet
+      <AssetDetailSheet
+        asset={selectedService}
         open={!!selectedService && !editDialogOpen}
         onOpenChange={() => setSelectedService(null)}
-      >
-        <SheetContent className="sm:max-w-xl overflow-y-auto p-0">
-          <VisuallyHidden>
-            <SheetTitle>Service Details</SheetTitle>
-          </VisuallyHidden>
-          {selectedService && (
-            <>
-              {/* Header */}
-              <div className="px-6 pt-6 pb-4 bg-gradient-to-br from-blue-500/20 via-blue-500/10 to-transparent">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="h-12 w-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
-                    <Server className="h-6 w-6 text-blue-500" />
-                  </div>
-                  <div className="flex-1">
-                    <h2 className="text-xl font-bold">{selectedService.name}</h2>
-                    <p className="text-sm text-muted-foreground">
-                      {selectedService.groupName}
-                    </p>
-                  </div>
-                  <StatusBadge status={selectedService.status} />
+        icon={Server}
+        iconColor="text-blue-500"
+        gradientFrom="from-blue-500/20"
+        gradientVia="via-blue-500/10"
+        assetTypeName="Service"
+        onEdit={() => selectedService && handleOpenEdit(selectedService)}
+        onDelete={() => {
+          if (selectedService) {
+            setServiceToDelete(selectedService);
+            setDeleteDialogOpen(true);
+            setSelectedService(null);
+          }
+        }}
+        quickActions={
+          selectedService && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleCopyService(selectedService)}
+            >
+              <Copy className="mr-2 h-4 w-4" />
+              Copy
+            </Button>
+          )
+        }
+        statsContent={
+          selectedService && (
+            <StatsGrid columns={3}>
+              <StatCardCentered
+                icon={Network}
+                iconBg="bg-blue-500/10"
+                iconColor="text-blue-500"
+                value={selectedService.metadata.port || "-"}
+                label="Port"
+              />
+              <StatCardCentered
+                icon={Shield}
+                iconBg="bg-orange-500/10"
+                iconColor="text-orange-500"
+                value={selectedService.riskScore}
+                label="Risk"
+              />
+              <StatCardCentered
+                icon={AlertTriangle}
+                iconBg="bg-red-500/10"
+                iconColor="text-red-500"
+                value={selectedService.findingCount}
+                label="Findings"
+              />
+            </StatsGrid>
+          )
+        }
+        overviewContent={
+          selectedService && (
+            <div className="rounded-xl border p-4 bg-card space-y-3">
+              <SectionTitle>Service Information</SectionTitle>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-muted-foreground">Protocol</p>
+                  <Badge variant="secondary">
+                    {selectedService.metadata.protocol?.toUpperCase() || "TCP"}
+                  </Badge>
                 </div>
-
-                {/* Quick Actions */}
-                <div className="flex gap-2 mt-4">
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => handleOpenEdit(selectedService)}
-                  >
-                    <Pencil className="mr-2 h-4 w-4" />
-                    Edit
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleCopyService(selectedService)}
-                  >
-                    <Copy className="mr-2 h-4 w-4" />
-                    Copy
-                  </Button>
+                <div>
+                  <p className="text-muted-foreground">Version</p>
+                  <p className="font-medium">
+                    {selectedService.metadata.version || "-"}
+                  </p>
                 </div>
               </div>
-
-              {/* Content */}
-              <Tabs defaultValue="overview" className="px-6 pb-6">
-                <TabsList className="grid w-full grid-cols-2 mb-4">
-                  <TabsTrigger value="overview">Overview</TabsTrigger>
-                  <TabsTrigger value="details">Details</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="overview" className="space-y-4 mt-0">
-                  {/* Stats */}
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="rounded-xl border p-4 bg-card">
-                      <div className="flex flex-col items-center text-center">
-                        <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center mb-2">
-                          <Network className="h-5 w-5 text-blue-500" />
-                        </div>
-                        <p className="text-xl font-bold font-mono">
-                          {selectedService.metadata.port}
-                        </p>
-                        <p className="text-xs text-muted-foreground">Port</p>
-                      </div>
-                    </div>
-                    <div className="rounded-xl border p-4 bg-card">
-                      <div className="flex flex-col items-center text-center">
-                        <div className="h-10 w-10 rounded-lg bg-orange-500/10 flex items-center justify-center mb-2">
-                          <Shield className="h-5 w-5 text-orange-500" />
-                        </div>
-                        <p className="text-xl font-bold">
-                          {selectedService.riskScore}
-                        </p>
-                        <p className="text-xs text-muted-foreground">Risk</p>
-                      </div>
-                    </div>
-                    <div className="rounded-xl border p-4 bg-card">
-                      <div className="flex flex-col items-center text-center">
-                        <div className="h-10 w-10 rounded-lg bg-red-500/10 flex items-center justify-center mb-2">
-                          <AlertTriangle className="h-5 w-5 text-red-500" />
-                        </div>
-                        <p className="text-xl font-bold">
-                          {selectedService.findingCount}
-                        </p>
-                        <p className="text-xs text-muted-foreground">Findings</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Service Info */}
-                  <div className="rounded-xl border p-4 bg-card space-y-3">
-                    <h4 className="text-sm font-medium">Service Information</h4>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <p className="text-muted-foreground">Protocol</p>
-                        <Badge variant="secondary">
-                          {selectedService.metadata.protocol?.toUpperCase() || "TCP"}
-                        </Badge>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Version</p>
-                        <p className="font-medium">
-                          {selectedService.metadata.version || "-"}
-                        </p>
-                      </div>
-                    </div>
-                    {selectedService.metadata.banner && (
-                      <div>
-                        <p className="text-muted-foreground text-sm mb-1">Banner</p>
-                        <code className="block text-xs bg-muted p-2 rounded overflow-x-auto">
-                          {selectedService.metadata.banner}
-                        </code>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Tags */}
-                  {selectedService.tags && selectedService.tags.length > 0 && (
-                    <div className="rounded-xl border p-4 bg-card">
-                      <h4 className="text-sm font-medium mb-2">Tags</h4>
-                      <div className="flex flex-wrap gap-1">
-                        {selectedService.tags.map((tag) => (
-                          <Badge key={tag} variant="outline">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </TabsContent>
-
-                <TabsContent value="details" className="space-y-4 mt-0">
-                  {/* Timeline */}
-                  <div className="rounded-xl border p-4 bg-card">
-                    <h4 className="text-sm font-medium mb-3">Timeline</h4>
-                    <div className="space-y-3">
-                      <div className="flex items-start gap-3">
-                        <div className="h-6 w-6 rounded-full bg-green-500/20 flex items-center justify-center mt-0.5">
-                          <CheckCircle className="h-3.5 w-3.5 text-green-500" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">First Seen</p>
-                          <p className="text-xs text-muted-foreground">
-                            {new Date(selectedService.firstSeen).toLocaleString()}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <div className="h-6 w-6 rounded-full bg-blue-500/20 flex items-center justify-center mt-0.5">
-                          <Clock className="h-3.5 w-3.5 text-blue-500" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">Last Seen</p>
-                          <p className="text-xs text-muted-foreground">
-                            {new Date(selectedService.lastSeen).toLocaleString()}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Technical Details */}
-                  <div className="rounded-xl border p-4 bg-card">
-                    <h4 className="text-sm font-medium mb-3">Technical Details</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">ID</span>
-                        <code className="text-xs bg-muted px-2 py-1 rounded">
-                          {selectedService.id}
-                        </code>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Type</span>
-                        <span className="font-medium">Service</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Group ID</span>
-                        <code className="text-xs bg-muted px-2 py-1 rounded">
-                          {selectedService.groupId}
-                        </code>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Danger Zone */}
-                  <div className="rounded-xl border border-red-500/30 p-4 bg-red-500/5">
-                    <h4 className="text-sm font-medium text-red-500 mb-2">
-                      Danger Zone
-                    </h4>
-                    <p className="text-xs text-muted-foreground mb-3">
-                      Permanently delete this service from your inventory.
-                    </p>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      className="w-full"
-                      onClick={() => {
-                        setServiceToDelete(selectedService);
-                        setDeleteDialogOpen(true);
-                        setSelectedService(null);
-                      }}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete Service
-                    </Button>
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
+              {selectedService.metadata.banner && (
+                <div>
+                  <p className="text-muted-foreground text-sm mb-1">Banner</p>
+                  <code className="block text-xs bg-muted p-2 rounded overflow-x-auto">
+                    {selectedService.metadata.banner}
+                  </code>
+                </div>
+              )}
+            </div>
+          )
+        }
+      />
 
       {/* Add Service Dialog */}
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
