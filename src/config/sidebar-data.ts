@@ -95,18 +95,18 @@ export const sidebarData: SidebarData = {
       items: [
         {
           title: "Attack Surface",
-          url: "/scoping/attack-surface",
+          url: "/attack-surface",
           icon: Target,
         },
         {
           title: "Asset Groups",
-          url: "/scoping/asset-groups",
+          url: "/asset-groups",
           icon: FolderKanban,
           badge: "9",
         },
         {
           title: "Scope Config",
-          url: "/scoping/scope-config",
+          url: "/scope-config",
           icon: Settings2,
         },
       ],
@@ -121,12 +121,12 @@ export const sidebarData: SidebarData = {
       items: [
         {
           title: "Scan Management",
-          url: "/discovery/scans",
+          url: "/scans",
           icon: Radar,
         },
         {
           title: "Runners",
-          url: "/discovery/runners",
+          url: "/runners",
           icon: Play,
         },
         {
@@ -135,59 +135,59 @@ export const sidebarData: SidebarData = {
           items: [
             {
               title: "Domains",
-              url: "/discovery/assets/domains",
+              url: "/assets/domains",
               icon: Globe,
             },
             {
               title: "Websites",
-              url: "/discovery/assets/websites",
+              url: "/assets/websites",
               icon: MonitorSmartphone,
             },
             {
               title: "Services",
-              url: "/discovery/assets/services",
+              url: "/assets/services",
               icon: Zap,
             },
             {
               title: "Repositories",
-              url: "/discovery/assets/repositories",
+              url: "/assets/repositories",
               icon: GitBranch,
             },
             {
               title: "Cloud",
-              url: "/discovery/assets/cloud",
+              url: "/assets/cloud",
               icon: Cloud,
             },
             {
               title: "Hosts",
-              url: "/discovery/assets/hosts",
+              url: "/assets/hosts",
               icon: Server,
             },
             {
               title: "Kubernetes",
-              url: "/discovery/assets/containers",
+              url: "/assets/containers",
               icon: Boxes,
             },
             {
               title: "Databases",
-              url: "/discovery/assets/databases",
+              url: "/assets/databases",
               icon: Database,
             },
             {
               title: "Mobile Apps",
-              url: "/discovery/assets/mobile",
+              url: "/assets/mobile",
               icon: Smartphone,
             },
             {
               title: "APIs",
-              url: "/discovery/assets/apis",
+              url: "/assets/apis",
               icon: Zap,
             },
           ],
         },
         {
           title: "Credential Leaks",
-          url: "/discovery/credentials",
+          url: "/credentials",
           icon: KeyRound,
           badge: "7",
         },
@@ -203,12 +203,12 @@ export const sidebarData: SidebarData = {
       items: [
         {
           title: "Risk Analysis",
-          url: "/prioritization/risk-analysis",
+          url: "/risk-analysis",
           icon: BarChart3,
         },
         {
           title: "Business Impact",
-          url: "/prioritization/business-impact",
+          url: "/business-impact",
           icon: Building2,
         },
       ],
@@ -227,40 +227,40 @@ export const sidebarData: SidebarData = {
           items: [
             {
               title: "Campaigns",
-              url: "/validation/pentest/campaigns",
+              url: "/pentest/campaigns",
               icon: ClipboardList,
             },
             {
               title: "Findings",
-              url: "/validation/pentest/findings",
+              url: "/pentest/findings",
               icon: Bug,
               badge: "12",
             },
             {
               title: "Retests",
-              url: "/validation/pentest/retests",
+              url: "/pentest/retests",
               icon: RotateCcw,
             },
             {
               title: "Reports",
-              url: "/validation/pentest/reports",
+              url: "/pentest/reports",
               icon: FileText,
             },
             {
               title: "Templates",
-              url: "/validation/pentest/templates",
+              url: "/pentest/templates",
               icon: BookTemplate,
             },
           ],
         },
         {
           title: "Attack Simulation",
-          url: "/validation/attack-simulation",
+          url: "/attack-simulation",
           icon: Swords,
         },
         {
           title: "Control Testing",
-          url: "/validation/control-testing",
+          url: "/control-testing",
           icon: ShieldCheck,
         },
       ],
@@ -275,13 +275,13 @@ export const sidebarData: SidebarData = {
       items: [
         {
           title: "Remediation Tasks",
-          url: "/mobilization/remediation",
+          url: "/remediation",
           icon: ListChecks,
           badge: "24",
         },
         {
           title: "Workflows",
-          url: "/mobilization/workflows",
+          url: "/workflows",
           icon: Workflow,
         },
       ],
