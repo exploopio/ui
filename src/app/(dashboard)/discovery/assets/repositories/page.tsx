@@ -16,6 +16,12 @@ import { ProfileDropdown } from "@/components/profile-dropdown";
 import { Search } from "@/components/search";
 import { ThemeSwitch } from "@/components/theme-switch";
 import { PageHeader, StatusBadge, RiskScoreBadge } from "@/features/shared";
+import {
+  AssetDetailSheet,
+  StatCardCentered,
+  StatsGrid,
+  SectionTitle,
+} from "@/features/assets";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,11 +43,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Sheet,
-  SheetContent,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import {
   Dialog,
   DialogContent,
@@ -74,8 +75,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import {
   Plus,
@@ -843,234 +843,114 @@ export default function RepositoriesPage() {
       </Main>
 
       {/* Repository Details Sheet */}
-      <Sheet
+      <AssetDetailSheet
+        asset={selectedRepo}
         open={!!selectedRepo && !editDialogOpen}
         onOpenChange={() => setSelectedRepo(null)}
-      >
-        <SheetContent className="sm:max-w-xl overflow-y-auto p-0">
-          <VisuallyHidden>
-            <SheetTitle>Repository Details</SheetTitle>
-          </VisuallyHidden>
-          {selectedRepo && (
+        icon={GitBranch}
+        iconColor="text-purple-500"
+        gradientFrom="from-purple-500/20"
+        gradientVia="via-purple-500/10"
+        assetTypeName="Repository"
+        onEdit={() => selectedRepo && handleOpenEdit(selectedRepo)}
+        onDelete={() => {
+          if (selectedRepo) {
+            setRepoToDelete(selectedRepo);
+            setDeleteDialogOpen(true);
+            setSelectedRepo(null);
+          }
+        }}
+        quickActions={
+          selectedRepo && (
             <>
-              {/* Header */}
-              <div className="px-6 pt-6 pb-4 bg-gradient-to-br from-purple-500/20 via-purple-500/10 to-transparent">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="h-12 w-12 rounded-xl bg-purple-500/20 flex items-center justify-center">
-                    {getProviderIcon(selectedRepo.metadata.provider)}
-                  </div>
-                  <div className="flex-1">
-                    <h2 className="text-xl font-bold">{selectedRepo.name}</h2>
-                    <p className="text-sm text-muted-foreground">
-                      {selectedRepo.groupName}
-                    </p>
-                  </div>
-                  <StatusBadge status={selectedRepo.status} />
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleOpenExternal(selectedRepo)}
+              >
+                <ExternalLink className="mr-2 h-4 w-4" />
+                Open
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleCopyRepo(selectedRepo)}
+              >
+                <Copy className="mr-2 h-4 w-4" />
+                Copy
+              </Button>
+            </>
+          )
+        }
+        statsContent={
+          selectedRepo && (
+            <StatsGrid columns={3}>
+              <StatCardCentered
+                icon={Star}
+                iconBg="bg-yellow-500/10"
+                iconColor="text-yellow-500"
+                value={selectedRepo.metadata.stars?.toLocaleString() || 0}
+                label="Stars"
+              />
+              <StatCardCentered
+                icon={Shield}
+                iconBg="bg-orange-500/10"
+                iconColor="text-orange-500"
+                value={selectedRepo.riskScore}
+                label="Risk"
+              />
+              <StatCardCentered
+                icon={AlertTriangle}
+                iconBg="bg-red-500/10"
+                iconColor="text-red-500"
+                value={selectedRepo.findingCount}
+                label="Findings"
+              />
+            </StatsGrid>
+          )
+        }
+        overviewContent={
+          selectedRepo && (
+            <div className="rounded-xl border p-4 bg-card space-y-3">
+              <SectionTitle>Repository Information</SectionTitle>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-muted-foreground">Provider</p>
+                  <Badge variant="outline" className="capitalize">
+                    {selectedRepo.metadata.provider}
+                  </Badge>
                 </div>
-
-                {/* Quick Actions */}
-                <div className="flex gap-2 mt-4">
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => handleOpenEdit(selectedRepo)}
-                  >
-                    <Pencil className="mr-2 h-4 w-4" />
-                    Edit
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleOpenExternal(selectedRepo)}
-                  >
-                    <ExternalLink className="mr-2 h-4 w-4" />
-                    Open
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleCopyRepo(selectedRepo)}
-                  >
-                    <Copy className="mr-2 h-4 w-4" />
-                    Copy
-                  </Button>
+                <div>
+                  <p className="text-muted-foreground">Visibility</p>
+                  <span className="flex items-center gap-1">
+                    {selectedRepo.metadata.visibility === "private" ? (
+                      <>
+                        <Lock className="h-3 w-3" /> Private
+                      </>
+                    ) : (
+                      <>
+                        <Globe className="h-3 w-3" /> Public
+                      </>
+                    )}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Language</p>
+                  <Badge variant="secondary">
+                    {selectedRepo.metadata.language || "-"}
+                  </Badge>
                 </div>
               </div>
-
-              {/* Content */}
-              <Tabs defaultValue="overview" className="px-6 pb-6">
-                <TabsList className="grid w-full grid-cols-2 mb-4">
-                  <TabsTrigger value="overview">Overview</TabsTrigger>
-                  <TabsTrigger value="details">Details</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="overview" className="space-y-4 mt-0">
-                  {/* Stats */}
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="rounded-xl border p-4 bg-card">
-                      <div className="flex flex-col items-center text-center">
-                        <div className="h-10 w-10 rounded-lg bg-yellow-500/10 flex items-center justify-center mb-2">
-                          <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
-                        </div>
-                        <p className="text-xl font-bold">
-                          {selectedRepo.metadata.stars?.toLocaleString() || 0}
-                        </p>
-                        <p className="text-xs text-muted-foreground">Stars</p>
-                      </div>
-                    </div>
-                    <div className="rounded-xl border p-4 bg-card">
-                      <div className="flex flex-col items-center text-center">
-                        <div className="h-10 w-10 rounded-lg bg-orange-500/10 flex items-center justify-center mb-2">
-                          <Shield className="h-5 w-5 text-orange-500" />
-                        </div>
-                        <p className="text-xl font-bold">{selectedRepo.riskScore}</p>
-                        <p className="text-xs text-muted-foreground">Risk</p>
-                      </div>
-                    </div>
-                    <div className="rounded-xl border p-4 bg-card">
-                      <div className="flex flex-col items-center text-center">
-                        <div className="h-10 w-10 rounded-lg bg-red-500/10 flex items-center justify-center mb-2">
-                          <AlertTriangle className="h-5 w-5 text-red-500" />
-                        </div>
-                        <p className="text-xl font-bold">{selectedRepo.findingCount}</p>
-                        <p className="text-xs text-muted-foreground">Findings</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Repo Info */}
-                  <div className="rounded-xl border p-4 bg-card space-y-3">
-                    <h4 className="text-sm font-medium">Repository Information</h4>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <p className="text-muted-foreground">Provider</p>
-                        <Badge variant="outline" className="capitalize">
-                          {selectedRepo.metadata.provider}
-                        </Badge>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Visibility</p>
-                        <span className="flex items-center gap-1">
-                          {selectedRepo.metadata.visibility === "private" ? (
-                            <>
-                              <Lock className="h-3 w-3" /> Private
-                            </>
-                          ) : (
-                            <>
-                              <Globe className="h-3 w-3" /> Public
-                            </>
-                          )}
-                        </span>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Language</p>
-                        <Badge variant="secondary">
-                          {selectedRepo.metadata.language || "-"}
-                        </Badge>
-                      </div>
-                    </div>
-                    {selectedRepo.description && (
-                      <div>
-                        <p className="text-muted-foreground text-sm mb-1">Description</p>
-                        <p className="text-sm">{selectedRepo.description}</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Tags */}
-                  {selectedRepo.tags && selectedRepo.tags.length > 0 && (
-                    <div className="rounded-xl border p-4 bg-card">
-                      <h4 className="text-sm font-medium mb-2">Tags</h4>
-                      <div className="flex flex-wrap gap-1">
-                        {selectedRepo.tags.map((tag) => (
-                          <Badge key={tag} variant="outline">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </TabsContent>
-
-                <TabsContent value="details" className="space-y-4 mt-0">
-                  {/* Timeline */}
-                  <div className="rounded-xl border p-4 bg-card">
-                    <h4 className="text-sm font-medium mb-3">Timeline</h4>
-                    <div className="space-y-3">
-                      <div className="flex items-start gap-3">
-                        <div className="h-6 w-6 rounded-full bg-green-500/20 flex items-center justify-center mt-0.5">
-                          <CheckCircle className="h-3.5 w-3.5 text-green-500" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">First Seen</p>
-                          <p className="text-xs text-muted-foreground">
-                            {new Date(selectedRepo.firstSeen).toLocaleString()}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <div className="h-6 w-6 rounded-full bg-blue-500/20 flex items-center justify-center mt-0.5">
-                          <Clock className="h-3.5 w-3.5 text-blue-500" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">Last Seen</p>
-                          <p className="text-xs text-muted-foreground">
-                            {new Date(selectedRepo.lastSeen).toLocaleString()}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Technical Details */}
-                  <div className="rounded-xl border p-4 bg-card">
-                    <h4 className="text-sm font-medium mb-3">Technical Details</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">ID</span>
-                        <code className="text-xs bg-muted px-2 py-1 rounded">
-                          {selectedRepo.id}
-                        </code>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Type</span>
-                        <span className="font-medium">Repository</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Group ID</span>
-                        <code className="text-xs bg-muted px-2 py-1 rounded">
-                          {selectedRepo.groupId}
-                        </code>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Danger Zone */}
-                  <div className="rounded-xl border border-red-500/30 p-4 bg-red-500/5">
-                    <h4 className="text-sm font-medium text-red-500 mb-2">Danger Zone</h4>
-                    <p className="text-xs text-muted-foreground mb-3">
-                      Permanently delete this repository from your inventory.
-                    </p>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      className="w-full"
-                      onClick={() => {
-                        setRepoToDelete(selectedRepo);
-                        setDeleteDialogOpen(true);
-                        setSelectedRepo(null);
-                      }}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete Repository
-                    </Button>
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
+              {selectedRepo.description && (
+                <div>
+                  <p className="text-muted-foreground text-sm mb-1">Description</p>
+                  <p className="text-sm">{selectedRepo.description}</p>
+                </div>
+              )}
+            </div>
+          )
+        }
+      />
 
       {/* Add Repository Dialog */}
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>

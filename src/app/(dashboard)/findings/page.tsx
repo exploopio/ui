@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { ColumnDef } from "@tanstack/react-table";
 import { Header, Main } from "@/components/layout";
 import { ProfileDropdown } from "@/components/profile-dropdown";
@@ -21,6 +22,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   DropdownMenu,
@@ -41,6 +43,8 @@ import {
   Copy,
   Link2,
   Plus,
+  X,
+  Filter,
 } from "lucide-react";
 import {
   mockFindings,
@@ -55,13 +59,59 @@ import type { Severity } from "@/features/shared/types";
 import { toast } from "sonner";
 
 export default function FindingsPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const assetIdFilter = searchParams.get("assetId");
+
   const [selectedFinding, setSelectedFinding] = useState<Finding | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const stats = getFindingStats();
+
+  // Filter findings by assetId if present
+  const baseFindings = useMemo(() => {
+    if (!assetIdFilter) return mockFindings;
+    return mockFindings.filter((f) =>
+      f.assets.some((asset) => asset.id === assetIdFilter)
+    );
+  }, [assetIdFilter]);
+
+  // Get the asset name for display
+  const filteredAssetName = useMemo(() => {
+    if (!assetIdFilter) return null;
+    const finding = mockFindings.find((f) =>
+      f.assets.some((asset) => asset.id === assetIdFilter)
+    );
+    return finding?.assets.find((a) => a.id === assetIdFilter)?.name || assetIdFilter;
+  }, [assetIdFilter]);
+
+  // Recalculate stats based on filtered findings
+  const stats = useMemo(() => {
+    const findings = baseFindings;
+    const bySeverity: Record<Severity, number> = {
+      critical: 0,
+      high: 0,
+      medium: 0,
+      low: 0,
+      info: 0,
+    };
+    findings.forEach((f) => {
+      bySeverity[f.severity]++;
+    });
+    const cvssSum = findings.reduce((sum, f) => sum + (f.cvss || 0), 0);
+    return {
+      total: findings.length,
+      bySeverity,
+      averageCvss: findings.length > 0 ? (cvssSum / findings.length).toFixed(1) : "0",
+      overdueCount: findings.filter((f) => f.status === "new" || f.status === "triaged").length,
+    };
+  }, [baseFindings]);
 
   const selectedCount = Object.keys(rowSelection).filter((k) => rowSelection[k]).length;
+
+  const clearAssetFilter = () => {
+    router.push("/findings");
+  };
 
   const handleRefresh = () => {
     setIsRefreshing(true);
@@ -88,8 +138,8 @@ export default function FindingsPage() {
   };
 
   const filterBySeverity = (severity?: Severity) => {
-    if (!severity) return mockFindings;
-    return mockFindings.filter((f) => f.severity === severity);
+    if (!severity) return baseFindings;
+    return baseFindings.filter((f) => f.severity === severity);
   };
 
   const handleRowClick = useCallback((finding: Finding) => {
@@ -314,7 +364,7 @@ export default function FindingsPage() {
       <Main>
         <PageHeader
           title="Security Findings"
-          description={`${stats.total} total findings - ${stats.overdueCount} overdue`}
+          description={`${stats.total} total findings${assetIdFilter ? ` for "${filteredAssetName}"` : ""} - ${stats.overdueCount} overdue`}
         >
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
@@ -346,6 +396,23 @@ export default function FindingsPage() {
             </Button>
           </div>
         </PageHeader>
+
+        {/* Active Filter Indicator */}
+        {assetIdFilter && (
+          <div className="mt-4 flex items-center gap-2">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">Filtered by:</span>
+            <Badge variant="secondary" className="gap-1.5">
+              {filteredAssetName}
+              <button
+                onClick={clearAssetFilter}
+                className="ml-0.5 rounded-full hover:bg-muted-foreground/20"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          </div>
+        )}
 
         {/* Bulk Actions Bar - Shows when items selected */}
         {selectedCount > 0 && (

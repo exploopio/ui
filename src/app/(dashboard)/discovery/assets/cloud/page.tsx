@@ -16,6 +16,12 @@ import { ProfileDropdown } from "@/components/profile-dropdown";
 import { Search } from "@/components/search";
 import { ThemeSwitch } from "@/components/theme-switch";
 import { PageHeader, StatusBadge, RiskScoreBadge } from "@/features/shared";
+import {
+  AssetDetailSheet,
+  StatCard,
+  StatsGrid,
+  SectionTitle,
+} from "@/features/assets";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,11 +43,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Sheet,
-  SheetContent,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import {
   Dialog,
   DialogContent,
@@ -74,8 +75,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import {
   Plus,
@@ -881,229 +881,103 @@ export default function CloudPage() {
       </Main>
 
       {/* Cloud Asset Details Sheet */}
-      <Sheet
+      <AssetDetailSheet
+        asset={selectedAsset}
         open={!!selectedAsset && !editDialogOpen}
         onOpenChange={() => setSelectedAsset(null)}
-      >
-        <SheetContent className="sm:max-w-xl overflow-y-auto p-0">
-          <VisuallyHidden>
-            <SheetTitle>Cloud Asset Details</SheetTitle>
-          </VisuallyHidden>
-          {selectedAsset && (
-            <>
-              {/* Header */}
-              <div className={`px-6 pt-6 pb-4 bg-gradient-to-br ${
-                selectedAsset.metadata.cloudProvider === "aws"
-                  ? "from-orange-500/20 via-orange-500/10"
-                  : selectedAsset.metadata.cloudProvider === "gcp"
-                  ? "from-blue-500/20 via-blue-500/10"
-                  : "from-cyan-500/20 via-cyan-500/10"
-              } to-transparent`}>
-                <div className="flex items-center gap-3 mb-3">
-                  <div className={`h-12 w-12 rounded-xl flex items-center justify-center ${
+        icon={Cloud}
+        iconColor="text-sky-500"
+        gradientFrom="from-sky-500/20"
+        gradientVia="via-sky-500/10"
+        assetTypeName="Cloud Resource"
+        onEdit={() => selectedAsset && handleOpenEdit(selectedAsset)}
+        onDelete={() => {
+          if (selectedAsset) {
+            setAssetToDelete(selectedAsset);
+            setDeleteDialogOpen(true);
+            setSelectedAsset(null);
+          }
+        }}
+        quickActions={
+          selectedAsset && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleOpenConsole(selectedAsset)}
+            >
+              <Globe className="mr-2 h-4 w-4" />
+              Console
+            </Button>
+          )
+        }
+        statsContent={
+          selectedAsset && (
+            <StatsGrid columns={3}>
+              <div className="rounded-xl border p-4 bg-card">
+                <div className="flex flex-col items-center text-center">
+                  <div className={`h-10 w-10 rounded-lg flex items-center justify-center mb-2 ${
                     providerStyles[selectedAsset.metadata.cloudProvider || ""]?.bg || "bg-muted"
                   }`}>
-                    {getResourceIcon(selectedAsset.metadata.resourceType)}
+                    <Cloud className={`h-5 w-5 ${
+                      providerStyles[selectedAsset.metadata.cloudProvider || ""]?.icon || ""
+                    }`} />
                   </div>
-                  <div className="flex-1">
-                    <h2 className="text-xl font-bold">{selectedAsset.name}</h2>
-                    <p className="text-sm text-muted-foreground">
-                      {selectedAsset.groupName}
-                    </p>
-                  </div>
-                  <StatusBadge status={selectedAsset.status} />
-                </div>
-
-                {/* Quick Actions */}
-                <div className="flex gap-2 mt-4">
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => handleOpenEdit(selectedAsset)}
-                  >
-                    <Pencil className="mr-2 h-4 w-4" />
-                    Edit
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleOpenConsole(selectedAsset)}
-                  >
-                    <Globe className="mr-2 h-4 w-4" />
-                    Console
-                  </Button>
+                  <p className="text-xs font-bold uppercase">
+                    {selectedAsset.metadata.cloudProvider}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Provider</p>
                 </div>
               </div>
-
-              {/* Content */}
-              <Tabs defaultValue="overview" className="px-6 pb-6">
-                <TabsList className="grid w-full grid-cols-2 mb-4">
-                  <TabsTrigger value="overview">Overview</TabsTrigger>
-                  <TabsTrigger value="details">Details</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="overview" className="space-y-4 mt-0">
-                  {/* Stats */}
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="rounded-xl border p-4 bg-card">
-                      <div className="flex flex-col items-center text-center">
-                        <div className={`h-10 w-10 rounded-lg flex items-center justify-center mb-2 ${
-                          providerStyles[selectedAsset.metadata.cloudProvider || ""]?.bg || "bg-muted"
-                        }`}>
-                          <Cloud className={`h-5 w-5 ${
-                            providerStyles[selectedAsset.metadata.cloudProvider || ""]?.icon || ""
-                          }`} />
-                        </div>
-                        <p className="text-xs font-bold uppercase">
-                          {selectedAsset.metadata.cloudProvider}
-                        </p>
-                        <p className="text-xs text-muted-foreground">Provider</p>
-                      </div>
-                    </div>
-                    <div className="rounded-xl border p-4 bg-card">
-                      <div className="flex flex-col items-center text-center">
-                        <div className="h-10 w-10 rounded-lg bg-orange-500/10 flex items-center justify-center mb-2">
-                          <Shield className="h-5 w-5 text-orange-500" />
-                        </div>
-                        <p className="text-xl font-bold">{selectedAsset.riskScore}</p>
-                        <p className="text-xs text-muted-foreground">Risk</p>
-                      </div>
-                    </div>
-                    <div className="rounded-xl border p-4 bg-card">
-                      <div className="flex flex-col items-center text-center">
-                        <div className="h-10 w-10 rounded-lg bg-red-500/10 flex items-center justify-center mb-2">
-                          <AlertTriangle className="h-5 w-5 text-red-500" />
-                        </div>
-                        <p className="text-xl font-bold">{selectedAsset.findingCount}</p>
-                        <p className="text-xs text-muted-foreground">Findings</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Resource Info */}
-                  <div className="rounded-xl border p-4 bg-card space-y-3">
-                    <h4 className="text-sm font-medium">Resource Information</h4>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <p className="text-muted-foreground">Provider</p>
-                        {getProviderBadge(selectedAsset.metadata.cloudProvider)}
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Region</p>
-                        <span className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          {selectedAsset.metadata.region}
-                        </span>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Resource Type</p>
-                        <Badge variant="outline">
-                          {selectedAsset.metadata.resourceType}
-                        </Badge>
-                      </div>
-                    </div>
-                    {selectedAsset.description && (
-                      <div>
-                        <p className="text-muted-foreground text-sm mb-1">Description</p>
-                        <p className="text-sm">{selectedAsset.description}</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Tags */}
-                  {selectedAsset.tags && selectedAsset.tags.length > 0 && (
-                    <div className="rounded-xl border p-4 bg-card">
-                      <h4 className="text-sm font-medium mb-2">Tags</h4>
-                      <div className="flex flex-wrap gap-1">
-                        {selectedAsset.tags.map((tag) => (
-                          <Badge key={tag} variant="outline">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </TabsContent>
-
-                <TabsContent value="details" className="space-y-4 mt-0">
-                  {/* Timeline */}
-                  <div className="rounded-xl border p-4 bg-card">
-                    <h4 className="text-sm font-medium mb-3">Timeline</h4>
-                    <div className="space-y-3">
-                      <div className="flex items-start gap-3">
-                        <div className="h-6 w-6 rounded-full bg-green-500/20 flex items-center justify-center mt-0.5">
-                          <CheckCircle className="h-3.5 w-3.5 text-green-500" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">First Seen</p>
-                          <p className="text-xs text-muted-foreground">
-                            {new Date(selectedAsset.firstSeen).toLocaleString()}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <div className="h-6 w-6 rounded-full bg-blue-500/20 flex items-center justify-center mt-0.5">
-                          <Clock className="h-3.5 w-3.5 text-blue-500" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">Last Seen</p>
-                          <p className="text-xs text-muted-foreground">
-                            {new Date(selectedAsset.lastSeen).toLocaleString()}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Technical Details */}
-                  <div className="rounded-xl border p-4 bg-card">
-                    <h4 className="text-sm font-medium mb-3">Technical Details</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">ID</span>
-                        <code className="text-xs bg-muted px-2 py-1 rounded">
-                          {selectedAsset.id}
-                        </code>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Type</span>
-                        <span className="font-medium">Cloud</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Group ID</span>
-                        <code className="text-xs bg-muted px-2 py-1 rounded">
-                          {selectedAsset.groupId}
-                        </code>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Danger Zone */}
-                  <div className="rounded-xl border border-red-500/30 p-4 bg-red-500/5">
-                    <h4 className="text-sm font-medium text-red-500 mb-2">Danger Zone</h4>
-                    <p className="text-xs text-muted-foreground mb-3">
-                      Permanently delete this cloud asset from your inventory.
-                    </p>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      className="w-full"
-                      onClick={() => {
-                        setAssetToDelete(selectedAsset);
-                        setDeleteDialogOpen(true);
-                        setSelectedAsset(null);
-                      }}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete Asset
-                    </Button>
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
+              <StatCard
+                icon={Shield}
+                iconBg="bg-orange-500/10"
+                iconColor="text-orange-500"
+                value={selectedAsset.riskScore}
+                label="Risk"
+              />
+              <StatCard
+                icon={AlertTriangle}
+                iconBg="bg-red-500/10"
+                iconColor="text-red-500"
+                value={selectedAsset.findingCount}
+                label="Findings"
+              />
+            </StatsGrid>
+          )
+        }
+        overviewContent={
+          selectedAsset && (
+            <div className="rounded-xl border p-4 bg-card space-y-3">
+              <SectionTitle>Resource Information</SectionTitle>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-muted-foreground">Provider</p>
+                  {getProviderBadge(selectedAsset.metadata.cloudProvider)}
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Region</p>
+                  <span className="flex items-center gap-1">
+                    <MapPin className="h-3 w-3" />
+                    {selectedAsset.metadata.region}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Resource Type</p>
+                  <Badge variant="outline">
+                    {selectedAsset.metadata.resourceType}
+                  </Badge>
+                </div>
+              </div>
+              {selectedAsset.description && (
+                <div>
+                  <p className="text-muted-foreground text-sm mb-1">Description</p>
+                  <p className="text-sm">{selectedAsset.description}</p>
+                </div>
+              )}
+            </div>
+          )
+        }
+      />
 
       {/* Add Cloud Asset Dialog */}
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>

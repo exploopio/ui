@@ -16,6 +16,12 @@ import { ProfileDropdown } from "@/components/profile-dropdown";
 import { Search } from "@/components/search";
 import { ThemeSwitch } from "@/components/theme-switch";
 import { PageHeader, StatusBadge, RiskScoreBadge } from "@/features/shared";
+import {
+  AssetDetailSheet,
+  StatCardCentered,
+  StatsGrid,
+  SectionTitle,
+} from "@/features/assets";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,11 +43,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Sheet,
-  SheetContent,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import {
   Dialog,
   DialogContent,
@@ -74,8 +75,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import {
   Plus,
@@ -889,270 +889,125 @@ export default function WebsitesPage() {
       </Main>
 
       {/* Website Details Sheet */}
-      <Sheet
+      <AssetDetailSheet
+        asset={selectedWebsite}
         open={!!selectedWebsite && !editDialogOpen}
         onOpenChange={() => setSelectedWebsite(null)}
-      >
-        <SheetContent className="sm:max-w-xl overflow-y-auto p-0">
-          <VisuallyHidden>
-            <SheetTitle>Website Details</SheetTitle>
-          </VisuallyHidden>
-          {selectedWebsite && (
+        icon={selectedWebsite?.metadata.ssl ? ShieldCheck : ShieldX}
+        iconColor={selectedWebsite?.metadata.ssl ? "text-green-500" : "text-red-500"}
+        gradientFrom={selectedWebsite?.metadata.ssl ? "from-green-500/20" : "from-red-500/20"}
+        gradientVia={selectedWebsite?.metadata.ssl ? "via-green-500/10" : "via-red-500/10"}
+        assetTypeName="Website"
+        onEdit={() => selectedWebsite && handleOpenEdit(selectedWebsite)}
+        onDelete={() => {
+          if (selectedWebsite) {
+            setWebsiteToDelete(selectedWebsite);
+            setDeleteDialogOpen(true);
+            setSelectedWebsite(null);
+          }
+        }}
+        quickActions={
+          selectedWebsite && (
             <>
-              {/* Header */}
-              <div
-                className={`px-6 pt-6 pb-4 bg-gradient-to-br ${selectedWebsite.metadata.ssl ? "from-green-500/20 via-green-500/10" : "from-red-500/20 via-red-500/10"} to-transparent`}
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => window.open(selectedWebsite.name, "_blank")}
               >
-                <div className="flex items-center gap-3 mb-3">
-                  <div
-                    className={`h-12 w-12 rounded-xl ${selectedWebsite.metadata.ssl ? "bg-green-500/20" : "bg-red-500/20"} flex items-center justify-center`}
-                  >
-                    {selectedWebsite.metadata.ssl ? (
-                      <ShieldCheck className="h-6 w-6 text-green-500" />
-                    ) : (
-                      <ShieldX className="h-6 w-6 text-red-500" />
-                    )}
+                <ExternalLink className="mr-2 h-4 w-4" />
+                Open
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleCopyURL(selectedWebsite)}
+              >
+                <Copy className="mr-2 h-4 w-4" />
+                Copy
+              </Button>
+            </>
+          )
+        }
+        statsContent={
+          selectedWebsite && (
+            <StatsGrid columns={3}>
+              <StatCardCentered
+                icon={Shield}
+                iconBg="bg-orange-500/10"
+                iconColor="text-orange-500"
+                value={selectedWebsite.riskScore}
+                label="Risk Score"
+              />
+              <StatCardCentered
+                icon={AlertTriangle}
+                iconBg="bg-red-500/10"
+                iconColor="text-red-500"
+                value={selectedWebsite.findingCount}
+                label="Findings"
+              />
+              <StatCardCentered
+                icon={Zap}
+                iconBg="bg-blue-500/10"
+                iconColor="text-blue-500"
+                value={selectedWebsite.metadata.responseTime || "-"}
+                label="Response (ms)"
+              />
+            </StatsGrid>
+          )
+        }
+        overviewContent={
+          selectedWebsite && (
+            <>
+              {/* Website Info */}
+              <div className="rounded-xl border p-4 bg-card space-y-3">
+                <SectionTitle>Website Information</SectionTitle>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">HTTP Status</p>
+                    <Badge
+                      variant="outline"
+                      className={
+                        (selectedWebsite.metadata.httpStatus || 200) < 400
+                          ? "text-green-500"
+                          : "text-red-500"
+                      }
+                    >
+                      {selectedWebsite.metadata.httpStatus || 200}
+                    </Badge>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h2 className="text-lg font-bold truncate">
-                      {selectedWebsite.name}
-                    </h2>
-                    <p className="text-sm text-muted-foreground">
-                      {selectedWebsite.groupName}
+                  <div>
+                    <p className="text-muted-foreground">SSL Certificate</p>
+                    <p className="font-medium">
+                      {selectedWebsite.metadata.ssl ? "Valid" : "Invalid/Missing"}
                     </p>
                   </div>
-                  <StatusBadge status={selectedWebsite.status} />
-                </div>
-
-                {/* Quick Actions */}
-                <div className="flex gap-2 mt-4">
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => handleOpenEdit(selectedWebsite)}
-                  >
-                    <Pencil className="mr-2 h-4 w-4" />
-                    Edit
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() =>
-                      window.open(selectedWebsite.name, "_blank")
-                    }
-                  >
-                    <ExternalLink className="mr-2 h-4 w-4" />
-                    Open
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleCopyURL(selectedWebsite)}
-                  >
-                    <Copy className="mr-2 h-4 w-4" />
-                    Copy
-                  </Button>
+                  {selectedWebsite.metadata.server && (
+                    <div className="col-span-2">
+                      <p className="text-muted-foreground">Server</p>
+                      <p className="font-medium">{selectedWebsite.metadata.server}</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* Content */}
-              <Tabs defaultValue="overview" className="px-6 pb-6">
-                <TabsList className="grid w-full grid-cols-2 mb-4">
-                  <TabsTrigger value="overview">Overview</TabsTrigger>
-                  <TabsTrigger value="details">Details</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="overview" className="space-y-4 mt-0">
-                  {/* Stats */}
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="rounded-xl border p-4 bg-card">
-                      <div className="flex flex-col items-center text-center">
-                        <div className="h-10 w-10 rounded-lg bg-orange-500/10 flex items-center justify-center mb-2">
-                          <Shield className="h-5 w-5 text-orange-500" />
-                        </div>
-                        <p className="text-xl font-bold">
-                          {selectedWebsite.riskScore}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Risk Score
-                        </p>
-                      </div>
-                    </div>
-                    <div className="rounded-xl border p-4 bg-card">
-                      <div className="flex flex-col items-center text-center">
-                        <div className="h-10 w-10 rounded-lg bg-red-500/10 flex items-center justify-center mb-2">
-                          <AlertTriangle className="h-5 w-5 text-red-500" />
-                        </div>
-                        <p className="text-xl font-bold">
-                          {selectedWebsite.findingCount}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Findings
-                        </p>
-                      </div>
-                    </div>
-                    <div className="rounded-xl border p-4 bg-card">
-                      <div className="flex flex-col items-center text-center">
-                        <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center mb-2">
-                          <Zap className="h-5 w-5 text-blue-500" />
-                        </div>
-                        <p className="text-xl font-bold">
-                          {selectedWebsite.metadata.responseTime || "-"}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Response (ms)
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Website Info */}
-                  <div className="rounded-xl border p-4 bg-card space-y-3">
-                    <h4 className="text-sm font-medium">Website Information</h4>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <p className="text-muted-foreground">HTTP Status</p>
-                        <Badge
-                          variant="outline"
-                          className={
-                            (selectedWebsite.metadata.httpStatus || 200) < 400
-                              ? "text-green-500"
-                              : "text-red-500"
-                          }
-                        >
-                          {selectedWebsite.metadata.httpStatus || 200}
+              {/* Technology Stack */}
+              {selectedWebsite.metadata.technology &&
+                selectedWebsite.metadata.technology.length > 0 && (
+                  <div className="rounded-xl border p-4 bg-card">
+                    <SectionTitle>Technology Stack</SectionTitle>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedWebsite.metadata.technology.map((tech) => (
+                        <Badge key={tech} variant="secondary">
+                          {tech}
                         </Badge>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">SSL Certificate</p>
-                        <p className="font-medium">
-                          {selectedWebsite.metadata.ssl ? "Valid" : "Invalid/Missing"}
-                        </p>
-                      </div>
-                      {selectedWebsite.metadata.server && (
-                        <div className="col-span-2">
-                          <p className="text-muted-foreground">Server</p>
-                          <p className="font-medium">
-                            {selectedWebsite.metadata.server}
-                          </p>
-                        </div>
-                      )}
+                      ))}
                     </div>
                   </div>
-
-                  {/* Technology Stack */}
-                  {selectedWebsite.metadata.technology &&
-                    selectedWebsite.metadata.technology.length > 0 && (
-                      <div className="rounded-xl border p-4 bg-card">
-                        <h4 className="text-sm font-medium mb-2">
-                          Technology Stack
-                        </h4>
-                        <div className="flex flex-wrap gap-2">
-                          {selectedWebsite.metadata.technology.map((tech) => (
-                            <Badge key={tech} variant="secondary">
-                              {tech}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                  {/* Tags */}
-                  {selectedWebsite.tags && selectedWebsite.tags.length > 0 && (
-                    <div className="rounded-xl border p-4 bg-card">
-                      <h4 className="text-sm font-medium mb-2">Tags</h4>
-                      <div className="flex flex-wrap gap-1">
-                        {selectedWebsite.tags.map((tag) => (
-                          <Badge key={tag} variant="outline">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </TabsContent>
-
-                <TabsContent value="details" className="space-y-4 mt-0">
-                  {/* Timeline */}
-                  <div className="rounded-xl border p-4 bg-card">
-                    <h4 className="text-sm font-medium mb-3">Timeline</h4>
-                    <div className="space-y-3">
-                      <div className="flex items-start gap-3">
-                        <div className="h-6 w-6 rounded-full bg-green-500/20 flex items-center justify-center mt-0.5">
-                          <CheckCircle className="h-3.5 w-3.5 text-green-500" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">First Seen</p>
-                          <p className="text-xs text-muted-foreground">
-                            {new Date(selectedWebsite.firstSeen).toLocaleString()}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <div className="h-6 w-6 rounded-full bg-blue-500/20 flex items-center justify-center mt-0.5">
-                          <Clock className="h-3.5 w-3.5 text-blue-500" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">Last Seen</p>
-                          <p className="text-xs text-muted-foreground">
-                            {new Date(selectedWebsite.lastSeen).toLocaleString()}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Technical Details */}
-                  <div className="rounded-xl border p-4 bg-card">
-                    <h4 className="text-sm font-medium mb-3">Technical Details</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">ID</span>
-                        <code className="text-xs bg-muted px-2 py-1 rounded">
-                          {selectedWebsite.id}
-                        </code>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Type</span>
-                        <span className="font-medium">Website</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Group ID</span>
-                        <code className="text-xs bg-muted px-2 py-1 rounded">
-                          {selectedWebsite.groupId}
-                        </code>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Danger Zone */}
-                  <div className="rounded-xl border border-red-500/30 p-4 bg-red-500/5">
-                    <h4 className="text-sm font-medium text-red-500 mb-2">
-                      Danger Zone
-                    </h4>
-                    <p className="text-xs text-muted-foreground mb-3">
-                      Permanently delete this website from your inventory.
-                    </p>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      className="w-full"
-                      onClick={() => {
-                        setWebsiteToDelete(selectedWebsite);
-                        setDeleteDialogOpen(true);
-                        setSelectedWebsite(null);
-                      }}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete Website
-                    </Button>
-                  </div>
-                </TabsContent>
-              </Tabs>
+                )}
             </>
-          )}
-        </SheetContent>
-      </Sheet>
+          )
+        }
+      />
 
       {/* Add Website Dialog */}
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
