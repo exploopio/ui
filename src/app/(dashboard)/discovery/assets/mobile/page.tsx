@@ -99,7 +99,7 @@ import {
   Star,
   ExternalLink,
 } from "lucide-react";
-import { getMobileApps, getAssetRelationships, type Asset } from "@/features/assets";
+import { getMobileApps, getAssetRelationships, ClassificationBadges, type Asset } from "@/features/assets";
 import { mockAssetGroups } from "@/features/asset-groups";
 import type { Status } from "@/features/shared/types";
 
@@ -316,6 +316,18 @@ export default function MobileAppsPage() {
       cell: ({ row }) => <StatusBadge status={row.original.status} />,
     },
     {
+      id: "classification",
+      header: "Classification",
+      cell: ({ row }) => (
+        <ClassificationBadges
+          scope={row.original.scope}
+          exposure={row.original.exposure}
+          size="sm"
+          showTooltips
+        />
+      ),
+    },
+    {
       accessorKey: "findingCount",
       header: ({ column }) => (
         <Button
@@ -444,6 +456,8 @@ export default function MobileAppsPage() {
       type: "mobile",
       name: formData.name,
       status: "pending",
+      scope: "external",
+      exposure: "public",
       riskScore: 0,
       findingCount: 0,
       groupId: formData.groupId,

@@ -19,6 +19,80 @@ export type AssetType =
   | "mobile"
   | "api";
 
+/**
+ * Asset Scope - Ownership/location perspective
+ * Indicates who owns or manages the asset
+ */
+export type AssetScope =
+  | "internal"    // Company-owned internal infrastructure
+  | "external"    // Internet-facing company assets
+  | "cloud"       // Cloud-hosted resources (AWS, GCP, Azure)
+  | "partner"     // Partner/affiliate managed assets
+  | "vendor"      // Third-party vendor systems
+  | "shadow";     // Unknown/shadow IT assets
+
+export const ASSET_SCOPE_LABELS: Record<AssetScope, string> = {
+  internal: "Internal",
+  external: "External",
+  cloud: "Cloud",
+  partner: "Partner",
+  vendor: "Vendor",
+  shadow: "Shadow IT",
+};
+
+export const ASSET_SCOPE_DESCRIPTIONS: Record<AssetScope, string> = {
+  internal: "Company-owned internal infrastructure",
+  external: "Internet-facing company assets",
+  cloud: "Cloud-hosted resources (AWS, GCP, Azure)",
+  partner: "Partner or affiliate managed assets",
+  vendor: "Third-party vendor systems",
+  shadow: "Unknown or shadow IT assets",
+};
+
+export const ASSET_SCOPE_COLORS: Record<AssetScope, { bg: string; text: string; border: string }> = {
+  internal: { bg: "bg-blue-500/15", text: "text-blue-600", border: "border-blue-500/30" },
+  external: { bg: "bg-purple-500/15", text: "text-purple-600", border: "border-purple-500/30" },
+  cloud: { bg: "bg-cyan-500/15", text: "text-cyan-600", border: "border-cyan-500/30" },
+  partner: { bg: "bg-amber-500/15", text: "text-amber-600", border: "border-amber-500/30" },
+  vendor: { bg: "bg-orange-500/15", text: "text-orange-600", border: "border-orange-500/30" },
+  shadow: { bg: "bg-slate-500/15", text: "text-slate-600", border: "border-slate-500/30" },
+};
+
+/**
+ * Exposure Level - Network accessibility perspective
+ * Indicates how accessible the asset is from the internet
+ */
+export type ExposureLevel =
+  | "public"      // Directly accessible from internet
+  | "restricted"  // Behind authentication/VPN but externally accessible
+  | "private"     // Only accessible from internal network
+  | "isolated"    // Air-gapped or highly restricted
+  | "unknown";    // Exposure not yet determined
+
+export const EXPOSURE_LEVEL_LABELS: Record<ExposureLevel, string> = {
+  public: "Public",
+  restricted: "Restricted",
+  private: "Private",
+  isolated: "Isolated",
+  unknown: "Unknown",
+};
+
+export const EXPOSURE_LEVEL_DESCRIPTIONS: Record<ExposureLevel, string> = {
+  public: "Directly accessible from the internet",
+  restricted: "Behind authentication or VPN but externally accessible",
+  private: "Only accessible from internal network",
+  isolated: "Air-gapped or highly restricted environment",
+  unknown: "Exposure level not yet determined",
+};
+
+export const EXPOSURE_LEVEL_COLORS: Record<ExposureLevel, { bg: string; text: string; border: string }> = {
+  public: { bg: "bg-red-500/15", text: "text-red-600", border: "border-red-500/30" },
+  restricted: { bg: "bg-yellow-500/15", text: "text-yellow-600", border: "border-yellow-500/30" },
+  private: { bg: "bg-green-500/15", text: "text-green-600", border: "border-green-500/30" },
+  isolated: { bg: "bg-emerald-500/15", text: "text-emerald-600", border: "border-emerald-500/30" },
+  unknown: { bg: "bg-slate-500/15", text: "text-slate-600", border: "border-slate-500/30" },
+};
+
 export const ASSET_TYPE_LABELS: Record<AssetType, string> = {
   domain: "Domain",
   website: "Website",
@@ -146,6 +220,8 @@ export interface Asset {
   name: string;
   description?: string;
   status: Status;
+  scope: AssetScope;           // Ownership/location classification
+  exposure: ExposureLevel;     // Network accessibility classification
   riskScore: number; // 0-100
   findingCount: number;
   groupId?: string; // Optional - asset can be ungrouped
@@ -166,6 +242,8 @@ export interface CreateAssetInput {
   type: AssetType;
   name: string;
   description?: string;
+  scope?: AssetScope;      // Defaults to 'internal' if not provided
+  exposure?: ExposureLevel; // Defaults to 'unknown' if not provided
   groupId?: string; // Optional - can create ungrouped assets
   metadata?: Partial<AssetMetadata>;
   tags?: string[];
@@ -178,6 +256,8 @@ export interface UpdateAssetInput {
   name?: string;
   description?: string;
   status?: Status;
+  scope?: AssetScope;
+  exposure?: ExposureLevel;
   groupId?: string | null; // null to remove from group
   metadata?: Partial<AssetMetadata>;
   tags?: string[];
@@ -205,6 +285,8 @@ export interface AssetStats {
   totalAssets: number;
   byType: Record<AssetType, number>;
   byStatus: Record<Status, number>;
+  byScope: Record<AssetScope, number>;
+  byExposure: Record<ExposureLevel, number>;
   averageRiskScore: number;
   totalFindings: number;
 }
