@@ -101,7 +101,7 @@ import {
   Lock,
   Save,
 } from "lucide-react";
-import { getDatabases, type Asset } from "@/features/assets";
+import { getDatabases, getAssetRelationships, type Asset } from "@/features/assets";
 import { mockAssetGroups } from "@/features/asset-groups";
 import type { Status } from "@/features/shared/types";
 
@@ -401,7 +401,7 @@ export default function DatabasesPage() {
     setFormData({
       name: database.name,
       description: database.description || "",
-      groupId: database.groupId,
+      groupId: database.groupId || "",
       engine: database.metadata.engine || "postgresql",
       dbVersion: database.metadata.dbVersion || "",
       dbHost: database.metadata.dbHost || "",
@@ -793,6 +793,7 @@ export default function DatabasesPage() {
         gradientFrom="from-indigo-500/20"
         gradientVia="via-indigo-500/10"
         assetTypeName="Database"
+        relationships={selectedDatabase ? getAssetRelationships(selectedDatabase.id) : []}
         subtitle={selectedDatabase ? `${selectedDatabase.metadata.dbHost}:${selectedDatabase.metadata.dbPort}` : undefined}
         onEdit={() => selectedDatabase && handleOpenEdit(selectedDatabase)}
         onDelete={() => {

@@ -2628,3 +2628,54 @@ export const getAssetStats = () => ({
   ),
   totalFindings: mockAssets.reduce((acc, a) => acc + a.findingCount, 0),
 });
+
+// ============================================
+// Ungrouped Assets Helpers
+// ============================================
+
+/**
+ * Get all assets that don't belong to any group
+ */
+export const getUngroupedAssets = (): Asset[] =>
+  mockAssets.filter((asset) => !asset.groupId);
+
+/**
+ * Get ungrouped assets by type
+ */
+export const getUngroupedAssetsByType = (type: AssetType): Asset[] =>
+  mockAssets.filter((asset) => asset.type === type && !asset.groupId);
+
+/**
+ * Get assets by group ID
+ */
+export const getAssetsByGroup = (groupId: string): Asset[] =>
+  mockAssets.filter((asset) => asset.groupId === groupId);
+
+/**
+ * Get count of ungrouped assets
+ */
+export const getUngroupedAssetsCount = (): number =>
+  mockAssets.filter((asset) => !asset.groupId).length;
+
+/**
+ * Get ungrouped assets stats by type
+ */
+export const getUngroupedAssetStats = () => {
+  const ungrouped = getUngroupedAssets();
+  return {
+    total: ungrouped.length,
+    byType: {
+      domain: ungrouped.filter((a) => a.type === "domain").length,
+      website: ungrouped.filter((a) => a.type === "website").length,
+      service: ungrouped.filter((a) => a.type === "service").length,
+      repository: ungrouped.filter((a) => a.type === "repository").length,
+      cloud: ungrouped.filter((a) => a.type === "cloud").length,
+      credential: ungrouped.filter((a) => a.type === "credential").length,
+      host: ungrouped.filter((a) => a.type === "host").length,
+      container: ungrouped.filter((a) => a.type === "container").length,
+      database: ungrouped.filter((a) => a.type === "database").length,
+      mobile: ungrouped.filter((a) => a.type === "mobile").length,
+      api: ungrouped.filter((a) => a.type === "api").length,
+    },
+  };
+};

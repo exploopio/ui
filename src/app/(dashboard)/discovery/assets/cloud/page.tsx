@@ -104,7 +104,7 @@ import {
   Globe,
   MapPin,
 } from "lucide-react";
-import { getCloudAssets, type Asset } from "@/features/assets";
+import { getCloudAssets, getAssetRelationships, type Asset } from "@/features/assets";
 import { mockAssetGroups } from "@/features/asset-groups";
 import type { Status } from "@/features/shared/types";
 
@@ -452,7 +452,7 @@ export default function CloudPage() {
     setFormData({
       name: asset.name,
       description: asset.description || "",
-      groupId: asset.groupId,
+      groupId: asset.groupId || "",
       cloudProvider: (asset.metadata.cloudProvider as "aws" | "gcp" | "azure") || "aws",
       region: asset.metadata.region || "",
       resourceType: asset.metadata.resourceType || "",
@@ -890,6 +890,7 @@ export default function CloudPage() {
         gradientFrom="from-sky-500/20"
         gradientVia="via-sky-500/10"
         assetTypeName="Cloud Resource"
+        relationships={selectedAsset ? getAssetRelationships(selectedAsset.id) : []}
         onEdit={() => selectedAsset && handleOpenEdit(selectedAsset)}
         onDelete={() => {
           if (selectedAsset) {

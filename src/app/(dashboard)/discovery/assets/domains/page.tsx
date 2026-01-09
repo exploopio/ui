@@ -101,7 +101,7 @@ import {
   Copy,
   RefreshCw,
 } from "lucide-react";
-import { getDomains, type Asset } from "@/features/assets";
+import { getDomains, getAssetRelationships, type Asset } from "@/features/assets";
 import { mockAssetGroups } from "@/features/asset-groups";
 import type { Status } from "@/features/shared/types";
 
@@ -342,7 +342,7 @@ export default function DomainsPage() {
     setFormData({
       name: domain.name,
       description: domain.description || "",
-      groupId: domain.groupId,
+      groupId: domain.groupId || "",
       registrar: domain.metadata.registrar || "",
       expiryDate: domain.metadata.expiryDate || "",
       nameservers: domain.metadata.nameservers?.join(", ") || "",
@@ -702,6 +702,7 @@ export default function DomainsPage() {
         gradientFrom="from-blue-500/20"
         gradientVia="via-blue-500/10"
         assetTypeName="Domain"
+        relationships={selectedDomain ? getAssetRelationships(selectedDomain.id) : []}
         onEdit={() => selectedDomain && handleOpenEdit(selectedDomain)}
         onDelete={() => {
           if (selectedDomain) {

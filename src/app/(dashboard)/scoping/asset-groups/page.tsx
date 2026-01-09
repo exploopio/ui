@@ -84,8 +84,13 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { mockAssetGroups, getAssetGroupStats } from "@/features/asset-groups";
-import type { AssetGroup } from "@/features/asset-groups/types";
+import {
+  mockAssetGroups,
+  getAssetGroupStats,
+  CreateGroupDialog,
+} from "@/features/asset-groups";
+import { getUngroupedAssets } from "@/features/assets";
+import type { AssetGroup, CreateAssetGroupInput } from "@/features/asset-groups/types";
 
 type Environment = "production" | "staging" | "development" | "testing";
 type Criticality = "critical" | "high" | "medium" | "low";
@@ -204,12 +209,15 @@ export default function AssetGroupsPage() {
     });
   };
 
-  const handleCreate = () => {
+  // Get ungrouped assets for the create dialog
+  const ungroupedAssets = useMemo(() => getUngroupedAssets(), []);
+
+  const handleCreate = async (input: CreateAssetGroupInput) => {
+    // In real app, this would call an API
+    const totalAssets = (input.existingAssetIds?.length || 0) + (input.newAssets?.length || 0);
     toast.success("Asset group created", {
-      description: formData.name,
+      description: `${input.name}${totalAssets > 0 ? ` with ${totalAssets} assets` : ""}`,
     });
-    setIsCreateOpen(false);
-    resetForm();
   };
 
   const handleEdit = () => {
@@ -1067,81 +1075,13 @@ export default function AssetGroupsPage() {
         </SheetContent>
       </Sheet>
 
-      {/* Create Dialog */}
-      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create Asset Group</DialogTitle>
-            <DialogDescription>
-              Create a new group to organize your assets
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
-              <Input
-                id="name"
-                placeholder="e.g., Production APIs"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                placeholder="Brief description of this group"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Environment</Label>
-                <Select
-                  value={formData.environment}
-                  onValueChange={(value: Environment) => setFormData({ ...formData, environment: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="production">Production</SelectItem>
-                    <SelectItem value="staging">Staging</SelectItem>
-                    <SelectItem value="development">Development</SelectItem>
-                    <SelectItem value="testing">Testing</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Criticality</Label>
-                <Select
-                  value={formData.criticality}
-                  onValueChange={(value: Criticality) => setFormData({ ...formData, criticality: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="critical">Critical</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="low">Low</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleCreate} disabled={!formData.name}>
-              Create Group
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Create Group Dialog - Multi-step wizard */}
+      <CreateGroupDialog
+        open={isCreateOpen}
+        onOpenChange={setIsCreateOpen}
+        ungroupedAssets={ungroupedAssets}
+        onSubmit={handleCreate}
+      />
 
       {/* Edit Dialog */}
       <Dialog open={!!editGroup} onOpenChange={() => setEditGroup(null)}>

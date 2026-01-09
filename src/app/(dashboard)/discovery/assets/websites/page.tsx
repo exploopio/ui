@@ -103,7 +103,7 @@ import {
   Zap,
   Lock,
 } from "lucide-react";
-import { getWebsites, type Asset } from "@/features/assets";
+import { getWebsites, getAssetRelationships, type Asset } from "@/features/assets";
 import { mockAssetGroups } from "@/features/asset-groups";
 import type { Status } from "@/features/shared/types";
 
@@ -433,7 +433,7 @@ export default function WebsitesPage() {
     setFormData({
       name: website.name,
       description: website.description || "",
-      groupId: website.groupId,
+      groupId: website.groupId || "",
       technology: website.metadata.technology?.join(", ") || "",
       ssl: website.metadata.ssl ?? true,
       httpStatus: String(website.metadata.httpStatus || 200),
@@ -898,6 +898,7 @@ export default function WebsitesPage() {
         gradientFrom={selectedWebsite?.metadata.ssl ? "from-green-500/20" : "from-red-500/20"}
         gradientVia={selectedWebsite?.metadata.ssl ? "via-green-500/10" : "via-red-500/10"}
         assetTypeName="Website"
+        relationships={selectedWebsite ? getAssetRelationships(selectedWebsite.id) : []}
         onEdit={() => selectedWebsite && handleOpenEdit(selectedWebsite)}
         onDelete={() => {
           if (selectedWebsite) {

@@ -99,7 +99,7 @@ import {
   RefreshCw,
   Network,
 } from "lucide-react";
-import { getServices, type Asset } from "@/features/assets";
+import { getServices, getAssetRelationships, type Asset } from "@/features/assets";
 import { mockAssetGroups } from "@/features/asset-groups";
 import type { Status } from "@/features/shared/types";
 
@@ -397,7 +397,7 @@ export default function ServicesPage() {
     setFormData({
       name: service.name,
       description: service.description || "",
-      groupId: service.groupId,
+      groupId: service.groupId || "",
       port: String(service.metadata.port || ""),
       protocol: service.metadata.protocol || "tcp",
       version: service.metadata.version || "",
@@ -813,6 +813,7 @@ export default function ServicesPage() {
         gradientFrom="from-blue-500/20"
         gradientVia="via-blue-500/10"
         assetTypeName="Service"
+        relationships={selectedService ? getAssetRelationships(selectedService.id) : []}
         onEdit={() => selectedService && handleOpenEdit(selectedService)}
         onDelete={() => {
           if (selectedService) {

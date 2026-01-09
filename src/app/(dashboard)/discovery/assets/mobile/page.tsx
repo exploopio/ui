@@ -99,7 +99,7 @@ import {
   Star,
   ExternalLink,
 } from "lucide-react";
-import { getMobileApps, type Asset } from "@/features/assets";
+import { getMobileApps, getAssetRelationships, type Asset } from "@/features/assets";
 import { mockAssetGroups } from "@/features/asset-groups";
 import type { Status } from "@/features/shared/types";
 
@@ -427,7 +427,7 @@ export default function MobileAppsPage() {
       platform: app.metadata.platform || "android",
       appVersion: app.metadata.appVersion || "",
       storeUrl: app.metadata.storeUrl || "",
-      groupId: app.groupId,
+      groupId: app.groupId || "",
     });
     setSelectedMobileApp(app);
     setEditDialogOpen(true);
@@ -797,6 +797,7 @@ export default function MobileAppsPage() {
         gradientFrom="from-violet-500/20"
         gradientVia="via-violet-500/10"
         assetTypeName="Mobile App"
+        relationships={selectedMobileApp ? getAssetRelationships(selectedMobileApp.id) : []}
         subtitle={selectedMobileApp?.metadata.bundleId}
         onEdit={() => selectedMobileApp && handleOpenEdit(selectedMobileApp)}
         onDelete={() => {
