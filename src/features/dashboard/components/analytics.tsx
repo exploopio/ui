@@ -167,7 +167,7 @@ export function Analytics() {
       </div>
 
       {/* Referrers and Devices */}
-      <div className='grid grid-cols-1 gap-4 lg:grid-cols-7'>
+      <div className='grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-7'>
         {/* Referrers */}
         <Card className='col-span-1 lg:col-span-4'>
           <CardHeader>

@@ -9,142 +9,228 @@
 
 import {
   LayoutDashboard,
-  Monitor,
-  Bug,
-  HelpCircle,
-  Lock,
-  Bell,
-  Palette,
-  Settings,
-  Wrench,
-  UserCog,
+  FolderKanban,
+  Target,
+  Settings2,
+  Radar,
+  Server,
+  Globe,
+  MonitorSmartphone,
+  Container,
+  GitBranch,
+  Cloud,
+  KeyRound,
+  BarChart3,
+  Building2,
+  Swords,
   ShieldCheck,
-  AudioWaveform,
+  ListChecks,
+  Workflow,
+  FileWarning,
+  FileText,
+  Users,
+  Puzzle,
+  Settings,
   Command,
-} from 'lucide-react'
-import { type SidebarData } from '@/components/types'
+  AudioWaveform,
+  Play,
+  CreditCard,
+  Building,
+} from "lucide-react";
+import { type SidebarData } from "@/components/types";
 
 export const sidebarData: SidebarData = {
   user: {
-    name: '0xManhnv',
-    email: '0xmanhnv@gmail.com',
-    avatar: '/avatars/shadcn.jpg',
+    name: "Nguyen Van An",
+    email: "an.nguyen@company.vn",
+    avatar: "",
   },
   teams: [
     {
-      name: 'Codebase',
+      name: "Security Platform",
       logo: Command,
-      plan: 'Codebase',
+      plan: "Enterprise",
     },
     {
-      name: 'Acme Corp.',
+      name: "Security Ops",
       logo: AudioWaveform,
-      plan: 'Startup',
+      plan: "Team",
     },
   ],
   navGroups: [
     {
-      title: 'General',
+      title: "",
       items: [
         {
-          title: 'Dashboard',
-          url: '/',
+          title: "Dashboard",
+          url: "/",
           icon: LayoutDashboard,
         },
       ],
     },
     {
-      title: 'AppSec',
+      title: "Scoping",
       items: [
         {
-          title: 'Vulnerabilities',
-          badge: '3',
-          icon: Bug,
-          url: '/vulnerabilities',
+          title: "Asset Groups",
+          url: "/scoping/asset-groups",
+          icon: FolderKanban,
+          badge: "9",
         },
         {
-          title: 'Scans',
-          badge: '3',
-          icon: ShieldCheck,
-          url: '/scans',
+          title: "Attack Surface",
+          url: "/scoping/attack-surface",
+          icon: Target,
         },
         {
-          title: 'Assets',
-          badge: '3',
-          icon: AudioWaveform,
-          url: '/assets',
+          title: "Scope Config",
+          url: "/scoping/scope-config",
+          icon: Settings2,
         },
       ],
     },
     {
-      title: 'TI',
+      title: "Discovery",
       items: [
         {
-          title: 'Incidents',
-          badge: '3',
-          icon: Bug,
-          url: '/incidents',
+          title: "Scan Management",
+          url: "/discovery/scans",
+          icon: Radar,
         },
         {
-          title: 'Threats',
-          badge: '3',
-          icon: ShieldCheck,
-          url: '/threats',
+          title: "Runners",
+          url: "/discovery/runners",
+          icon: Play,
         },
         {
-          title: 'Indicators',
-          badge: '3',
-          icon: AudioWaveform,
-          url: '/indicators',
-        },
-        {
-          title: 'Credentials',
-          badge: '3',
-          icon: Lock,
-          url: '/credentials',
-        },
-      ],
-    },
-    {
-      title: 'Other',
-      items: [
-        {
-          title: 'Settings',
-          icon: Settings,
+          title: "Asset Inventory",
+          icon: Container,
           items: [
             {
-              title: 'Profile',
-              url: '/settings',
-              icon: UserCog,
+              title: "Domains",
+              url: "/discovery/assets/domains",
+              icon: Globe,
             },
             {
-              title: 'Account',
-              url: '/settings/account',
-              icon: Wrench,
+              title: "Websites",
+              url: "/discovery/assets/websites",
+              icon: MonitorSmartphone,
             },
             {
-              title: 'Appearance',
-              url: '/settings/appearance',
-              icon: Palette,
+              title: "Services",
+              url: "/discovery/assets/services",
+              icon: Server,
             },
             {
-              title: 'Notifications',
-              url: '/settings/notifications',
-              icon: Bell,
+              title: "Repositories",
+              url: "/discovery/assets/repositories",
+              icon: GitBranch,
             },
             {
-              title: 'Display',
-              url: '/settings/display',
-              icon: Monitor,
+              title: "Cloud Assets",
+              url: "/discovery/assets/cloud",
+              icon: Cloud,
             },
           ],
         },
         {
-          title: 'Help Center',
-          url: '/help-center',
-          icon: HelpCircle,
+          title: "Credential Leaks",
+          url: "/discovery/credentials",
+          icon: KeyRound,
+        },
+      ],
+    },
+    {
+      title: "Prioritization",
+      items: [
+        {
+          title: "Risk Analysis",
+          url: "/prioritization/risk-analysis",
+          icon: BarChart3,
+        },
+        {
+          title: "Business Impact",
+          url: "/prioritization/business-impact",
+          icon: Building2,
+        },
+      ],
+    },
+    {
+      title: "Validation",
+      items: [
+        {
+          title: "Attack Simulation",
+          url: "/validation/attack-simulation",
+          icon: Swords,
+        },
+        {
+          title: "Control Testing",
+          url: "/validation/control-testing",
+          icon: ShieldCheck,
+        },
+      ],
+    },
+    {
+      title: "Mobilization",
+      items: [
+        {
+          title: "Remediation Tasks",
+          url: "/mobilization/remediation",
+          icon: ListChecks,
+          badge: "8",
+        },
+        {
+          title: "Workflows",
+          url: "/mobilization/workflows",
+          icon: Workflow,
+        },
+      ],
+    },
+    {
+      title: "Insights",
+      items: [
+        {
+          title: "Findings",
+          url: "/findings",
+          icon: FileWarning,
+          badge: "24",
+        },
+        {
+          title: "Reports",
+          url: "/reports",
+          icon: FileText,
+        },
+      ],
+    },
+    {
+      title: "Settings",
+      items: [
+        {
+          title: "Tenant",
+          url: "/settings/tenant",
+          icon: Building,
+        },
+        {
+          title: "Users",
+          url: "/settings/users",
+          icon: Users,
+        },
+        {
+          title: "Billing",
+          url: "/settings/billing",
+          icon: CreditCard,
+        },
+        {
+          title: "Integrations",
+          url: "/settings/integrations",
+          icon: Puzzle,
+        },
+        {
+          title: "Settings",
+          url: "/settings",
+          icon: Settings,
         },
       ],
     },
   ],
-}
+};

@@ -1,44 +1,46 @@
-# Next.js 16 Codebase with Keycloak Authentication
+# Rediver CTEM Platform
 
-Production-ready Next.js 16 application with Keycloak OAuth2/OIDC authentication, backend API integration, and comprehensive security features.
+Continuous Threat Exposure Management (CTEM) platform built with Next.js 16, featuring the complete 5-stage CTEM process: Scoping, Discovery, Prioritization, Validation, and Mobilization.
 
-## ✨ Features
+## Overview
 
-### 🔐 Authentication & Security
+Rediver is an enterprise-grade Attack Surface Management (ASM) and Vulnerability Management platform that helps security teams continuously monitor, assess, and remediate security risks across their digital infrastructure.
+
+## Key Features
+
+### CTEM 5-Stage Process
+- **Scoping** - Define attack surface boundaries and business context
+- **Discovery** - Automated asset discovery (domains, websites, services, repositories, cloud, credentials)
+- **Prioritization** - Risk-based vulnerability prioritization with business impact analysis
+- **Validation** - Attack simulation and security control testing
+- **Mobilization** - Remediation task management with workflow automation
+
+### Asset Management
+- **6 Asset Types** - Domains, Websites, Services, Repositories, Cloud Assets, Credential Leaks
+- **Asset Groups** - Organize assets by environment (Production, Staging, Development)
+- **Risk Scoring** - 0-100 risk scores with severity-based visualization
+
+### Scan Management
+- **Single Scans** - One-time scans with custom configuration
+- **Workflow Scans** - Predefined multi-tool workflows (Full Recon, Vuln Assessment, etc.)
+- **Scan Runners** - Distributed scan execution with runner management
+
+### Findings & Remediation
+- **Severity Classification** - Critical, High, Medium, Low, Info
+- **CVSS Scoring** - Industry-standard vulnerability scoring
+- **Task Management** - Kanban-style remediation workflow
+- **Assignee Tracking** - Team-based task assignment
+
+### Security & Authentication
 - **Keycloak OAuth2/OIDC** - Enterprise-grade authentication
-- **Secure Cookie Management** - HttpOnly, Secure, SameSite
-- **JWT Token Validation** - Automatic token refresh
 - **Role-Based Access Control** - Fine-grained permissions
-- **Protected Routes** - Middleware-based route protection
+- **Secure Cookies** - HttpOnly, Secure, SameSite
 - **CSRF Protection** - Cross-site request forgery prevention
-- **Security Headers** - CSP, X-Frame-Options, etc.
 
-### 🔌 Backend Integration
-- **Type-Safe API Client** - Automatic auth header injection
-- **SWR Data Fetching** - Built-in caching and revalidation
-- **Error Handling** - Centralized error management
-- **Request/Response Interceptors** - Custom request processing
-- **Customizable Types** - Match your backend schema
-
-### 🎨 UI & Developer Experience
-- **Next.js 16** - Latest App Router with Server Components
-- **React 19** - Latest React features
-- **TypeScript** - Full type safety
-- **Tailwind CSS** - Utility-first styling
-- **shadcn/ui** - Beautiful, accessible components
-- **Zustand** - Lightweight state management
-
-### 🧪 Testing & Quality
-- **274 Comprehensive Tests** - Unit, integration, edge cases
-- **84.28% Code Coverage** - V8 coverage reporting
-- **95%+ Critical Coverage** - Auth components fully tested
-- **Vitest** - Fast, modern testing framework
-
-### 🚀 Deployment & Monitoring
-- **Docker Support** - Multi-stage optimized build
-- **Nginx Configuration** - Reverse proxy with SSL/TLS
-- **Sentry Integration** - Error tracking (configurable)
-- **Health Checks** - Built-in monitoring endpoints
+### Deployment & Operations
+- **Docker Support** - Multi-stage optimized build with health checks
+- **Nginx Configuration** - Reverse proxy with SSL/TLS and rate limiting
+- **Health Monitoring** - Built-in `/api/health` endpoint
 - **Production-Ready** - Environment validation, security hardening
 
 ---
@@ -201,33 +203,41 @@ npm run generate-secret  # Generate CSRF secret
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
-codebase-nextjs/
+rediver-ui/
 ├── src/
 │   ├── app/                      # Next.js App Router pages
 │   │   ├── (auth)/               # Auth pages (login, register)
 │   │   ├── (dashboard)/          # Protected dashboard pages
+│   │   │   ├── page.tsx          # CTEM Dashboard
+│   │   │   ├── asset-groups/     # Asset Groups management
+│   │   │   ├── discovery/        # Discovery pages
+│   │   │   │   ├── scans/        # Scan management
+│   │   │   │   ├── runners/      # Scan runners
+│   │   │   │   └── assets/       # Asset inventory (6 types)
+│   │   │   ├── findings/         # Findings list
+│   │   │   └── mobilization/     # Remediation tasks
 │   │   └── api/                  # API routes
+│   │       └── health/           # Health check endpoint
 │   ├── components/               # Shared components
-│   │   └── ui/                   # shadcn/ui components
+│   │   ├── ui/                   # shadcn/ui components
+│   │   └── layout/               # Layout components
 │   ├── features/                 # Feature-based modules
-│   │   ├── auth/                 # Authentication feature
-│   │   └── dashboard/            # Dashboard feature
+│   │   ├── auth/                 # Authentication
+│   │   ├── assets/               # Asset management
+│   │   ├── findings/             # Findings & vulnerabilities
+│   │   ├── scans/                # Scan management
+│   │   ├── remediation/          # Remediation tasks
+│   │   └── shared/               # Shared CTEM components
 │   ├── lib/                      # Shared utilities
-│   │   ├── api/                  # API client & hooks
-│   │   ├── keycloak/             # Keycloak utilities
-│   │   └── cookies.ts            # Cookie management
 │   └── stores/                   # Zustand stores
 ├── docs/                         # Documentation
-│   ├── auth/                     # Auth documentation
-│   └── examples/                 # Example code
-├── scripts/                      # Utility scripts
-├── public/                       # Static assets
-├── Dockerfile                    # Docker configuration
-├── docker-compose.yml            # Docker Compose setup
-└── nginx/                        # Nginx configuration
+├── nginx/                        # Nginx configuration
+├── Dockerfile                    # Multi-stage build (dev & prod targets)
+├── docker-compose.yml            # Development with hot reload
+└── docker-compose.prod.yml       # Production deployment
 ```
 
 ---
@@ -281,15 +291,24 @@ See [Deployment Guide](./docs/DEPLOYMENT.md#vercel) for details.
 ### Option 2: Docker (Recommended for production)
 
 ```bash
-# Build image
-docker-compose build
+# Development (with hot reload)
+docker compose up --build
 
-# Run (development)
-docker-compose up
+# Production
+docker compose -f docker-compose.prod.yml up --build -d
 
-# Run (production)
-docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# View logs
+docker compose logs -f nextjs
+
+# Stop
+docker compose down
 ```
+
+**Docker Image Sizes:**
+| Target | Size | Use Case |
+|--------|------|----------|
+| development | ~1.3GB | Local dev with hot reload |
+| production | ~341MB | Optimized production |
 
 See [Docker Setup Guide](./docs/DOCKER_SENTRY_SETUP.md) for details.
 
@@ -369,24 +388,36 @@ See [Security Documentation](./docs/auth/KEYCLOAK_SETUP.md#security-consideratio
 
 ---
 
-## 🏗️ Project Status
+## Project Status
 
 **Version:** 1.0.0
-**Status:** ✅ Production-ready
-**Last Updated:** 2025-12-11
+**Status:** UI Complete - Ready for Backend Integration
+**Last Updated:** 2026-01-08
 
-### Completed
-- ✅ Keycloak authentication
-- ✅ Backend API integration
-- ✅ Comprehensive testing (274 tests, 84% coverage)
-- ✅ Docker deployment
-- ✅ Security hardening
-- ✅ Complete documentation
+### Completed (UI - 90%)
+- CTEM Dashboard with 5-stage process visualization
+- Asset Management (6 types with full CRUD)
+- Asset Groups with risk scoring
+- Findings management with severity classification
+- Scan Management (Single + Workflow modes)
+- Scan Runners with status monitoring
+- Remediation Tasks with Kanban view
+- Docker deployment with health checks
+- Keycloak authentication integration
+- Security hardening
+
+### Pending (Backend - 0%)
+- Backend API development
+- Database schema implementation
+- Real scan engine integration
+- User management system
+- Report generation
 
 ### Roadmap
-- ⏳ Performance monitoring (Sentry installed, needs configuration)
-- ⏳ CI/CD pipeline
-- ⏳ Internationalization (i18n)
+- CI/CD pipeline
+- Real-time notifications
+- Performance monitoring (Sentry)
+- Multi-tenancy support
 
 ---
 

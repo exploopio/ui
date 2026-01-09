@@ -63,11 +63,10 @@ LICENSE
 .travis.yml
 azure-pipelines.yml
 
-# Docker files (no need to copy into image)
-Dockerfile
-Dockerfile.*
+# Docker files (no need to copy into image - only for build context)
 docker-compose*.yml
 .dockerignore
+# Note: Dockerfile and Dockerfile.dev are needed in context for multi-stage builds
 
 # Misc
 .cache

@@ -1,7 +1,7 @@
 # Deployment Guide
 
-**Last Updated:** 2025-12-11
-**Version:** 1.0.0
+**Last Updated:** 2026-01-08
+**Version:** 1.1.0
 
 Complete guide for deploying this Next.js application to production.
 
@@ -335,18 +335,28 @@ networks:
 #### Step 5: Build and Run
 
 ```bash
-# Build image
-docker build -t nextjs-app .
+# Development: Build and run
+docker-compose up --build
 
-# Run container
-docker run -p 3000:3000 \
-  -e KEYCLOAK_CLIENT_SECRET=<secret> \
-  -e CSRF_SECRET=<secret> \
-  nextjs-app
+# Production: Build and run with Nginx reverse proxy
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 
-# Or use docker-compose
-docker-compose up -d
+# View logs
+docker-compose logs -f
+
+# Stop containers
+docker-compose down
+
+# Health check verification
+curl http://localhost:3000/api/health
+# Expected: {"status":"ok","timestamp":"...","uptime":...,"environment":"production"}
 ```
+
+**Important:** The production setup (`docker-compose.prod.yml`) includes:
+- Nginx reverse proxy with SSL/TLS support
+- Rate limiting (10 requests/second)
+- Security headers
+- Health check monitoring
 
 #### Step 6: Setup Nginx Reverse Proxy (Recommended)
 
@@ -530,19 +540,32 @@ npx @sentry/wizard@latest -i nextjs
 
 #### Health Check Endpoint
 
-Create `src/app/api/health/route.ts`:
+The health check endpoint is already implemented at `src/app/api/health/route.ts`:
 
 ```typescript
-export async function GET() {
-  return Response.json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV,
-  })
+// GET /api/health
+// Response:
+{
+  "status": "ok",
+  "timestamp": "2026-01-08T12:00:00.000Z",
+  "uptime": 3600,
+  "environment": "production"
 }
 ```
 
-Test: `curl https://your-app.com/api/health`
+Test your deployment:
+```bash
+# Local
+curl http://localhost:3000/api/health
+
+# Production
+curl https://your-app.com/api/health
+
+# Docker health check (automatic)
+docker inspect --format='{{.State.Health.Status}}' <container_id>
+```
+
+**Note:** Docker health checks automatically use this endpoint. If the endpoint returns non-200, the container will be marked as unhealthy.
 
 ---
 
@@ -687,5 +710,5 @@ For deployment issues:
 
 ---
 
-**Last Updated:** 2025-12-11
-**Version:** 1.0.0
+**Last Updated:** 2026-01-08
+**Version:** 1.1.0

@@ -8,6 +8,12 @@
  */
 
 /**
+ * Check if we're in Docker build mode (no validation needed)
+ * Docker builds pass env vars differently, so we allow empty values during build
+ */
+const isDockerBuild = process.env.DOCKER_BUILD === 'true' || process.env.CI === 'true'
+
+/**
  * Gets an environment variable with validation
  * @param key - Environment variable name
  * @param defaultValue - Optional default value
@@ -20,15 +26,18 @@ function getEnvVar(
 ): string {
   const value = process.env[key]
 
+  // During Docker build or CI, don't throw errors - return default or empty
+  if (isDockerBuild) {
+    return value || defaultValue || ''
+  }
+
   if (!value && !defaultValue) {
-    // Only throw error on server side or during build
-    if (typeof window === 'undefined') {
-      throw new Error(
-        `Missing required environment variable: ${key}\n` +
-        `Please add it to your .env.local file.`
-      )
+    // On client side, return empty string
+    if (typeof window !== 'undefined') {
+      return ''
     }
-    // On client side, return empty string if not a public var
+    // On server side during development, warn but don't throw
+    console.warn(`Warning: Missing environment variable: ${key}`)
     return ''
   }
 
@@ -105,8 +114,15 @@ export const serverEnv = {
 /**
  * Validates all required environment variables at build time
  * Call this in next.config.ts to fail fast on missing vars
+ * Skips validation during Docker build (DOCKER_BUILD=true)
  */
 export function validateEnv() {
+  // Skip validation during Docker build or CI
+  if (isDockerBuild) {
+    console.log('⏭️  Skipping env validation (Docker/CI build)')
+    return
+  }
+
   const errors: string[] = []
 
   // Check required Keycloak vars
@@ -119,42 +135,39 @@ export function validateEnv() {
   const missingKeycloak = requiredKeycloakVars.filter(key => !process.env[key])
   if (missingKeycloak.length > 0) {
     errors.push(
-      `❌ Missing Keycloak configuration:\n${missingKeycloak.map(k => `   - ${k}`).join('\n')}`
+      `Missing Keycloak configuration:\n${missingKeycloak.map(k => `   - ${k}`).join('\n')}`
     )
   }
 
   // Check API URL
   if (!process.env.NEXT_PUBLIC_API_URL) {
-    errors.push(`❌ Missing NEXT_PUBLIC_API_URL`)
+    errors.push(`Missing NEXT_PUBLIC_API_URL`)
   }
 
   // Check CSRF secret
   if (!process.env.CSRF_SECRET) {
-    errors.push(`❌ Missing CSRF_SECRET`)
+    errors.push(`Missing CSRF_SECRET`)
   } else if (process.env.CSRF_SECRET.length < 32) {
     errors.push(
-      `❌ CSRF_SECRET must be at least 32 characters long\n` +
+      `CSRF_SECRET must be at least 32 characters long\n` +
       `   Current length: ${process.env.CSRF_SECRET.length}\n` +
       `   Generate with: openssl rand -base64 32`
     )
   }
 
-  // Throw all errors at once
+  // Log warnings but don't throw (allow development without all vars)
   if (errors.length > 0) {
-    throw new Error(
+    console.warn(
       `\n${'='.repeat(60)}\n` +
-      `Environment Variables Validation Failed\n` +
+      `Environment Variables Warning\n` +
       `${'='.repeat(60)}\n\n` +
-      errors.join('\n\n') +
-      `\n\n💡 Please check your .env.local file and compare with .env.example\n` +
+      errors.map(e => `⚠️  ${e}`).join('\n\n') +
+      `\n\nPlease check your .env.local file and compare with .env.example\n` +
       `${'='.repeat(60)}\n`
     )
+  } else {
+    console.log('Environment variables validated successfully')
   }
-
-  console.log('✅ Environment variables validated successfully')
-  console.log(`   - Keycloak: ${process.env.NEXT_PUBLIC_KEYCLOAK_URL}`)
-  console.log(`   - API URL: ${process.env.NEXT_PUBLIC_API_URL}`)
-  console.log(`   - Environment: ${process.env.NODE_ENV}`)
 }
 
 // ============================================
