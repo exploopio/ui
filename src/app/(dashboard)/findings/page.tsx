@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import { Header, Main } from "@/components/layout";
 import { ProfileDropdown } from "@/components/profile-dropdown";
@@ -92,10 +92,10 @@ export default function FindingsPage() {
     return mockFindings.filter((f) => f.severity === severity);
   };
 
-  const handleRowClick = (finding: Finding) => {
+  const handleRowClick = useCallback((finding: Finding) => {
     setSelectedFinding(finding);
     setDrawerOpen(true);
-  };
+  }, []);
 
   const handleStatusChange = (findingId: string, status: FindingStatus) => {
     const statusConfig = FINDING_STATUS_CONFIG[status];
@@ -129,7 +129,7 @@ export default function FindingsPage() {
     });
   };
 
-  const handleRowAction = (action: string, finding: Finding) => {
+  const handleRowAction = useCallback((action: string, finding: Finding) => {
     switch (action) {
       case "view":
         handleRowClick(finding);
@@ -145,7 +145,7 @@ export default function FindingsPage() {
       default:
         toast.info(`Action: ${action}`, { description: finding.title });
     }
-  };
+  }, [handleRowClick]);
 
   // Define columns for DataTable
   const columns: ColumnDef<Finding>[] = useMemo(
@@ -298,7 +298,7 @@ export default function FindingsPage() {
         },
       },
     ],
-    []
+    [handleRowAction, handleRowClick]
   );
 
   return (
