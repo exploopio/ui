@@ -8,9 +8,8 @@
 "use client";
 
 import * as React from "react";
-import { Pencil } from "lucide-react";
+import { Pencil, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Sheet,
   SheetContent,
@@ -27,7 +26,9 @@ import {
   DangerZoneSection,
   TagsSection,
 } from "./sheet-sections";
-import type { Asset, AssetType } from "../types/asset.types";
+import { RelationshipSection, RelationshipPreview } from "./relationships";
+import type { Asset } from "../types/asset.types";
+import type { AssetRelationship } from "../types/relationship.types";
 
 // ============================================
 // Types
@@ -85,6 +86,28 @@ interface AssetDetailSheetProps<T extends Asset> {
     label: string;
     content: React.ReactNode;
   }>;
+
+  // ============================================
+  // Relationship Props
+  // ============================================
+
+  /** Relationships for this asset (optional - if provided, shows Relationships tab) */
+  relationships?: AssetRelationship[];
+
+  /** Callback when Add Relationship is clicked */
+  onAddRelationship?: () => void;
+
+  /** Callback when a relationship is edited */
+  onEditRelationship?: (relationship: AssetRelationship) => void;
+
+  /** Callback when a relationship is deleted */
+  onDeleteRelationship?: (relationship: AssetRelationship) => void;
+
+  /** Callback when navigating to a related asset */
+  onNavigateToAsset?: (assetId: string) => void;
+
+  /** Whether to show relationship preview in overview tab (default: true if relationships provided) */
+  showRelationshipPreview?: boolean;
 }
 
 // ============================================
@@ -108,18 +131,33 @@ export function AssetDetailSheet<T extends Asset>({
   assetTypeName,
   showDetailsTab = true,
   extraTabs,
+  // Relationship props
+  relationships,
+  onAddRelationship,
+  onEditRelationship,
+  onDeleteRelationship,
+  onNavigateToAsset,
+  showRelationshipPreview,
 }: AssetDetailSheetProps<T>) {
+  const [activeTab, setActiveTab] = React.useState("overview");
+
   if (!asset) return null;
 
   // Calculate icon background color from text color
   const iconBgColor = iconColor.replace("text-", "bg-").replace(/(\d+)$/, "$1/20");
 
+  // Determine if we should show relationships
+  const hasRelationships = relationships && relationships.length > 0;
+  const shouldShowRelationshipTab = relationships !== undefined;
+  const shouldShowRelationshipPreview = showRelationshipPreview ?? hasRelationships;
+
   // Calculate total number of tabs
-  const tabCount = 2 + (showDetailsTab ? 1 : 0) + (extraTabs?.length || 0);
+  const tabCount = 2 + (showDetailsTab ? 1 : 0) + (extraTabs?.length || 0) + (shouldShowRelationshipTab ? 1 : 0);
   const tabGridClass =
     tabCount === 2 ? "grid-cols-2" :
     tabCount === 3 ? "grid-cols-3" :
-    tabCount === 4 ? "grid-cols-4" : "grid-cols-3";
+    tabCount === 4 ? "grid-cols-4" :
+    tabCount === 5 ? "grid-cols-5" : "grid-cols-3";
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -165,7 +203,7 @@ export function AssetDetailSheet<T extends Asset>({
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="overview" className="px-6 pb-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="px-6 pb-6">
           <TabsList className={cn("grid w-full mb-4", tabGridClass)}>
             <TabsTrigger value="overview">Overview</TabsTrigger>
             {extraTabs?.map((tab) => (
@@ -173,6 +211,12 @@ export function AssetDetailSheet<T extends Asset>({
                 {tab.label}
               </TabsTrigger>
             ))}
+            {shouldShowRelationshipTab && (
+              <TabsTrigger value="relationships" className="gap-1">
+                <Link2 className="h-3.5 w-3.5" />
+                Relations
+              </TabsTrigger>
+            )}
             <TabsTrigger value="findings">Findings</TabsTrigger>
             {showDetailsTab && (
               <TabsTrigger value="details">Details</TabsTrigger>
@@ -183,6 +227,18 @@ export function AssetDetailSheet<T extends Asset>({
           <TabsContent value="overview" className="space-y-4 mt-0">
             {statsContent}
             {overviewContent}
+
+            {/* Relationship Preview in Overview */}
+            {shouldShowRelationshipPreview && relationships && (
+              <RelationshipPreview
+                relationships={relationships}
+                currentAssetId={asset.id}
+                onViewAll={() => setActiveTab("relationships")}
+                onAssetClick={onNavigateToAsset}
+                maxItems={3}
+              />
+            )}
+
             <TagsSection tags={asset.tags} />
           </TabsContent>
 
@@ -192,6 +248,21 @@ export function AssetDetailSheet<T extends Asset>({
               {tab.content}
             </TabsContent>
           ))}
+
+          {/* Relationships Tab */}
+          {shouldShowRelationshipTab && (
+            <TabsContent value="relationships" className="mt-0">
+              <RelationshipSection
+                relationships={relationships || []}
+                currentAssetId={asset.id}
+                onAddClick={onAddRelationship}
+                onEditClick={onEditRelationship}
+                onDeleteClick={onDeleteRelationship}
+                onAssetClick={onNavigateToAsset}
+                maxHeight="500px"
+              />
+            </TabsContent>
+          )}
 
           {/* Findings Tab */}
           <TabsContent value="findings" className="mt-0">

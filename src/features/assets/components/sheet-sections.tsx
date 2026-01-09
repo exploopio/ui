@@ -141,7 +141,7 @@ export function TimelineSection({ firstSeen, lastSeen }: TimelineSectionProps) {
 interface TechnicalDetailsSectionProps {
   id: string;
   type: AssetType;
-  groupId: string;
+  groupId?: string; // Optional - asset can be ungrouped
 }
 
 export function TechnicalDetailsSection({ id, type, groupId }: TechnicalDetailsSectionProps) {
@@ -172,8 +172,14 @@ export function TechnicalDetailsSection({ id, type, groupId }: TechnicalDetailsS
           <span className="font-medium">{typeLabels[type]}</span>
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-muted-foreground">Group ID</span>
-          <code className="text-xs bg-muted px-2 py-1 rounded">{groupId}</code>
+          <span className="text-muted-foreground">Group</span>
+          {groupId ? (
+            <code className="text-xs bg-muted px-2 py-1 rounded">{groupId}</code>
+          ) : (
+            <Badge variant="outline" className="text-xs text-muted-foreground">
+              Ungrouped
+            </Badge>
+          )}
         </div>
       </div>
     </div>

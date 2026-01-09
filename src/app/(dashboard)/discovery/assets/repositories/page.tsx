@@ -104,7 +104,7 @@ import {
   Github,
   GitlabIcon,
 } from "lucide-react";
-import { getRepositories, type Asset } from "@/features/assets";
+import { getRepositories, getAssetRelationships, type Asset } from "@/features/assets";
 import { mockAssetGroups } from "@/features/asset-groups";
 import type { Status } from "@/features/shared/types";
 
@@ -436,7 +436,7 @@ export default function RepositoriesPage() {
     setFormData({
       name: repo.name,
       description: repo.description || "",
-      groupId: repo.groupId,
+      groupId: repo.groupId || "",
       provider: (repo.metadata.provider as "github" | "gitlab" | "bitbucket") || "github",
       visibility: (repo.metadata.visibility as "public" | "private") || "private",
       language: repo.metadata.language || "",
@@ -852,6 +852,7 @@ export default function RepositoriesPage() {
         gradientFrom="from-purple-500/20"
         gradientVia="via-purple-500/10"
         assetTypeName="Repository"
+        relationships={selectedRepo ? getAssetRelationships(selectedRepo.id) : []}
         onEdit={() => selectedRepo && handleOpenEdit(selectedRepo)}
         onDelete={() => {
           if (selectedRepo) {

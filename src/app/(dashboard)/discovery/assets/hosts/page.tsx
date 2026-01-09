@@ -101,7 +101,7 @@ import {
   HardDrive,
   Network,
 } from "lucide-react";
-import { getHosts, type Asset } from "@/features/assets";
+import { getHosts, getAssetRelationships, type Asset } from "@/features/assets";
 import { mockAssetGroups } from "@/features/asset-groups";
 import type { Status } from "@/features/shared/types";
 
@@ -402,7 +402,7 @@ export default function HostsPage() {
     setFormData({
       name: host.name,
       description: host.description || "",
-      groupId: host.groupId,
+      groupId: host.groupId || "",
       ip: host.metadata.ip || "",
       hostname: host.metadata.hostname || "",
       os: host.metadata.os || "",
@@ -800,6 +800,7 @@ export default function HostsPage() {
         gradientFrom="from-purple-500/20"
         gradientVia="via-purple-500/10"
         assetTypeName="Host"
+        relationships={selectedHost ? getAssetRelationships(selectedHost.id) : []}
         subtitle={selectedHost?.metadata.ip}
         onEdit={() => selectedHost && handleOpenEdit(selectedHost)}
         onDelete={() => {

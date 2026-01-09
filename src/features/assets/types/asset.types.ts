@@ -148,7 +148,7 @@ export interface Asset {
   status: Status;
   riskScore: number; // 0-100
   findingCount: number;
-  groupId: string;
+  groupId?: string; // Optional - asset can be ungrouped
   groupName?: string;
   metadata: AssetMetadata;
   tags?: string[];
@@ -156,6 +156,46 @@ export interface Asset {
   lastSeen: string;
   createdAt: string;
   updatedAt: string;
+}
+
+/**
+ * Input for creating a new asset
+ * Used when creating assets independently or within a group
+ */
+export interface CreateAssetInput {
+  type: AssetType;
+  name: string;
+  description?: string;
+  groupId?: string; // Optional - can create ungrouped assets
+  metadata?: Partial<AssetMetadata>;
+  tags?: string[];
+}
+
+/**
+ * Input for updating an asset
+ */
+export interface UpdateAssetInput {
+  name?: string;
+  description?: string;
+  status?: Status;
+  groupId?: string | null; // null to remove from group
+  metadata?: Partial<AssetMetadata>;
+  tags?: string[];
+}
+
+/**
+ * Bulk operation to assign assets to a group
+ */
+export interface AssignAssetsToGroupInput {
+  assetIds: string[];
+  groupId: string;
+}
+
+/**
+ * Bulk operation to remove assets from their groups
+ */
+export interface UnassignAssetsInput {
+  assetIds: string[];
 }
 
 /**
