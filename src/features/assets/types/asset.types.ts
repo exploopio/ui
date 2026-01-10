@@ -6,18 +6,101 @@
 
 import type { Status } from "@/features/shared/types";
 
+/**
+ * Asset Type Categories (CTEM-aligned)
+ *
+ * External Attack Surface: domain, certificate, ip_address
+ * Applications: website, api, mobile_app
+ * Cloud: cloud_account, compute, storage, serverless
+ * Infrastructure: host, container, database, network
+ * Code & CI/CD: repository
+ *
+ * Legacy types (deprecated, kept for backwards compatibility):
+ * - service: Use specific service detection instead
+ * - cloud: Use cloud_account, compute, storage, or serverless
+ * - credential: Moved to Identities module
+ * - mobile: Use mobile_app instead
+ */
 export type AssetType =
+  // External Attack Surface
   | "domain"
+  | "certificate"
+  | "ip_address"
+  // Applications
   | "website"
-  | "service"
-  | "repository"
-  | "cloud"
-  | "credential"
+  | "api"
+  | "mobile_app"
+  // Cloud
+  | "cloud_account"
+  | "compute"
+  | "storage"
+  | "serverless"
+  // Infrastructure
   | "host"
   | "container"
   | "database"
-  | "mobile"
-  | "api";
+  | "network"
+  // Code & CI/CD
+  | "repository"
+  // Legacy types (deprecated - kept for backwards compatibility)
+  | "service"      // @deprecated - Use specific service type
+  | "cloud"        // @deprecated - Use cloud_account, compute, storage, serverless
+  | "credential"   // @deprecated - Moved to Identities module
+  | "mobile";      // @deprecated - Use mobile_app instead
+
+/**
+ * Asset Type Category for grouping in UI
+ */
+export type AssetTypeCategory =
+  | "external"
+  | "applications"
+  | "cloud"
+  | "infrastructure"
+  | "code";
+
+export const ASSET_TYPE_CATEGORIES: Record<AssetTypeCategory, {
+  label: string;
+  description: string;
+  types: AssetType[];
+}> = {
+  external: {
+    label: "External Attack Surface",
+    description: "Internet-facing assets and entry points",
+    types: ["domain", "certificate", "ip_address"],
+  },
+  applications: {
+    label: "Applications",
+    description: "Web, mobile, and API applications",
+    types: ["website", "api", "mobile_app", "mobile", "service"],
+  },
+  cloud: {
+    label: "Cloud",
+    description: "Cloud infrastructure and services",
+    types: ["cloud_account", "compute", "storage", "serverless", "cloud"],
+  },
+  infrastructure: {
+    label: "Infrastructure",
+    description: "Servers, containers, and network infrastructure",
+    types: ["host", "container", "database", "network", "credential"],
+  },
+  code: {
+    label: "Code & CI/CD",
+    description: "Source code repositories and pipelines",
+    types: ["repository"],
+  },
+};
+
+/**
+ * Legacy asset types that are deprecated but still supported
+ */
+export const LEGACY_ASSET_TYPES: AssetType[] = ["service", "cloud", "credential", "mobile"];
+
+/**
+ * Check if an asset type is deprecated
+ */
+export const isLegacyAssetType = (type: AssetType): boolean => {
+  return LEGACY_ASSET_TYPES.includes(type);
+};
 
 /**
  * Asset Scope - Ownership/location perspective
@@ -94,98 +177,196 @@ export const EXPOSURE_LEVEL_COLORS: Record<ExposureLevel, { bg: string; text: st
 };
 
 export const ASSET_TYPE_LABELS: Record<AssetType, string> = {
+  // External Attack Surface
   domain: "Domain",
+  certificate: "Certificate",
+  ip_address: "IP Address",
+  // Applications
   website: "Website",
-  service: "Service",
-  repository: "Repository",
-  cloud: "Cloud",
-  credential: "Credential",
+  api: "API",
+  mobile_app: "Mobile App",
+  // Cloud
+  cloud_account: "Cloud Account",
+  compute: "Compute",
+  storage: "Storage",
+  serverless: "Serverless",
+  // Infrastructure
   host: "Host",
   container: "Container",
   database: "Database",
+  network: "Network",
+  // Code & CI/CD
+  repository: "Repository",
+  // Legacy types (deprecated)
+  service: "Service",
+  cloud: "Cloud",
+  credential: "Credential",
   mobile: "Mobile App",
-  api: "API",
+};
+
+export const ASSET_TYPE_ICONS: Record<AssetType, string> = {
+  domain: "Globe",
+  certificate: "ShieldCheck",
+  ip_address: "Network",
+  website: "MonitorSmartphone",
+  api: "Zap",
+  mobile_app: "Smartphone",
+  cloud_account: "Cloud",
+  compute: "Server",
+  storage: "HardDrive",
+  serverless: "Cpu",
+  host: "Server",
+  container: "Boxes",
+  database: "Database",
+  network: "Network",
+  repository: "GitBranch",
+  // Legacy types (deprecated)
+  service: "Zap",
+  cloud: "Cloud",
+  credential: "KeyRound",
+  mobile: "Smartphone",
+};
+
+export const ASSET_TYPE_DESCRIPTIONS: Record<AssetType, string> = {
+  domain: "Root domains and subdomains",
+  certificate: "SSL/TLS certificates",
+  ip_address: "IPv4/IPv6 addresses and ASN information",
+  website: "Web applications and sites",
+  api: "REST, GraphQL, gRPC endpoints",
+  mobile_app: "iOS and Android applications",
+  cloud_account: "AWS accounts, GCP projects, Azure subscriptions",
+  compute: "Virtual machines and instances",
+  storage: "S3 buckets, Azure Blobs, GCS buckets",
+  serverless: "Lambda functions, Cloud Functions, Cloud Run",
+  host: "Physical and virtual servers",
+  container: "Docker and Kubernetes workloads",
+  database: "Database instances and clusters",
+  network: "VPCs, firewalls, load balancers",
+  repository: "Source code repositories",
+  // Legacy types (deprecated)
+  service: "Network services (deprecated)",
+  cloud: "Cloud resources (deprecated - use cloud_account, compute, storage, serverless)",
+  credential: "Credentials (deprecated - moved to Identities)",
+  mobile: "Mobile applications (deprecated - use mobile_app)",
+};
+
+/**
+ * Asset type colors for UI badges and indicators
+ */
+export const ASSET_TYPE_COLORS: Record<AssetType, { bg: string; text: string }> = {
+  // External Attack Surface
+  domain: { bg: "bg-blue-500/15", text: "text-blue-600" },
+  certificate: { bg: "bg-green-500/15", text: "text-green-600" },
+  ip_address: { bg: "bg-purple-500/15", text: "text-purple-600" },
+  // Applications
+  website: { bg: "bg-cyan-500/15", text: "text-cyan-600" },
+  api: { bg: "bg-indigo-500/15", text: "text-indigo-600" },
+  mobile_app: { bg: "bg-pink-500/15", text: "text-pink-600" },
+  // Cloud
+  cloud_account: { bg: "bg-sky-500/15", text: "text-sky-600" },
+  compute: { bg: "bg-orange-500/15", text: "text-orange-600" },
+  storage: { bg: "bg-amber-500/15", text: "text-amber-600" },
+  serverless: { bg: "bg-violet-500/15", text: "text-violet-600" },
+  // Infrastructure
+  host: { bg: "bg-slate-500/15", text: "text-slate-600" },
+  container: { bg: "bg-teal-500/15", text: "text-teal-600" },
+  database: { bg: "bg-emerald-500/15", text: "text-emerald-600" },
+  network: { bg: "bg-rose-500/15", text: "text-rose-600" },
+  // Code & CI/CD
+  repository: { bg: "bg-fuchsia-500/15", text: "text-fuchsia-600" },
+  // Legacy types (deprecated)
+  service: { bg: "bg-yellow-500/15", text: "text-yellow-600" },
+  cloud: { bg: "bg-sky-500/15", text: "text-sky-600" },
+  credential: { bg: "bg-red-500/15", text: "text-red-600" },
+  mobile: { bg: "bg-pink-500/15", text: "text-pink-600" },
+};
+
+/**
+ * Cloud Provider type
+ */
+export type CloudProvider = "aws" | "gcp" | "azure" | "oci" | "alibaba" | "digitalocean";
+
+export const CLOUD_PROVIDER_LABELS: Record<CloudProvider, string> = {
+  aws: "Amazon Web Services",
+  gcp: "Google Cloud Platform",
+  azure: "Microsoft Azure",
+  oci: "Oracle Cloud",
+  alibaba: "Alibaba Cloud",
+  digitalocean: "DigitalOcean",
 };
 
 /**
  * Asset metadata varies by asset type
  */
 export interface AssetMetadata {
+  // ============================================
   // Domain-specific
+  // ============================================
   registrar?: string;
   expiryDate?: string;
   nameservers?: string[];
+  whoisOrganization?: string;
+  dnssecEnabled?: boolean;
 
+  // ============================================
+  // Certificate-specific (NEW)
+  // ============================================
+  certIssuer?: string;
+  certSubject?: string;
+  certSerialNumber?: string;
+  certNotBefore?: string;
+  certNotAfter?: string;
+  certDaysUntilExpiry?: number;
+  certSignatureAlgorithm?: string;
+  certKeySize?: number;
+  certSans?: string[];  // Subject Alternative Names
+  certChainValid?: boolean;
+  certIsWildcard?: boolean;
+  certTransparencyLogged?: boolean;
+
+  // ============================================
+  // IP Address-specific (NEW)
+  // ============================================
+  ipVersion?: "ipv4" | "ipv6";
+  ipAddress?: string;
+  asn?: string;
+  asnOrganization?: string;
+  ipCountry?: string;
+  ipCity?: string;
+  ipIsp?: string;
+  ipReverseDns?: string;
+  ipIsPublic?: boolean;
+  ipOpenPorts?: number[];
+  ipServices?: string[];
+
+  // ============================================
   // Website-specific
+  // ============================================
   technology?: string[];
   ssl?: boolean;
   sslExpiry?: string;
   httpStatus?: number;
   responseTime?: number;
   server?: string;
+  wafDetected?: string;
+  cdnDetected?: string;
 
-  // Service-specific
-  port?: number;
-  protocol?: string;
-  version?: string;
-  banner?: string;
+  // ============================================
+  // API-specific
+  // ============================================
+  apiType?: "rest" | "graphql" | "grpc" | "websocket" | "soap";
+  baseUrl?: string;
+  apiVersion?: string;
+  authType?: "none" | "api_key" | "oauth2" | "jwt" | "basic" | "mtls";
+  endpointCount?: number;
+  documentationUrl?: string;
+  openApiSpec?: boolean;
+  rateLimit?: number;
+  lastActivity?: string;
 
-  // Repository-specific
-  provider?: "github" | "gitlab" | "bitbucket";
-  visibility?: "public" | "private";
-  language?: string;
-  stars?: number;
-
-  // Cloud-specific
-  cloudProvider?: "aws" | "gcp" | "azure";
-  region?: string;
-  resourceType?: string;
-
-  // Credential-specific
-  source?: string;
-  username?: string;
-  leakDate?: string;
-
-  // Host-specific
-  ip?: string;
-  hostname?: string;
-  os?: string;
-  osVersion?: string;
-  architecture?: "x86" | "x64" | "arm64";
-  cpuCores?: number;
-  memoryGB?: number;
-  isVirtual?: boolean;
-  hypervisor?: string;
-  openPorts?: number[];
-  lastBoot?: string;
-
-  // Container-specific
-  image?: string;
-  imageTag?: string;
-  registry?: string;
-  runtime?: "docker" | "containerd" | "cri-o";
-  orchestrator?: "kubernetes" | "docker-swarm" | "ecs" | "standalone";
-  namespace?: string;
-  cluster?: string;
-  replicas?: number;
-  cpuLimit?: string;
-  memoryLimit?: string;
-  containerPorts?: number[];
-  vulnerabilities?: number;
-
-  // Database-specific
-  engine?: "mysql" | "postgresql" | "mongodb" | "redis" | "elasticsearch" | "mssql" | "oracle";
-  dbVersion?: string;
-  dbHost?: string;
-  dbPort?: number;
-  sizeGB?: number;
-  encryption?: boolean;
-  backupEnabled?: boolean;
-  lastBackup?: string;
-  replication?: "single" | "replica-set" | "cluster";
-  connections?: number;
-
+  // ============================================
   // Mobile App-specific
+  // ============================================
   platform?: "ios" | "android" | "cross-platform";
   bundleId?: string;
   appVersion?: string;
@@ -199,16 +380,177 @@ export interface AssetMetadata {
   permissions?: string[];
   sdks?: string[];
 
-  // API-specific
-  apiType?: "rest" | "graphql" | "grpc" | "websocket" | "soap";
-  baseUrl?: string;
-  apiVersion?: string;
-  authType?: "none" | "api_key" | "oauth2" | "jwt" | "basic";
-  endpointCount?: number;
-  documentationUrl?: string;
-  openApiSpec?: boolean;
-  rateLimit?: number;
-  lastActivity?: string;
+  // ============================================
+  // Cloud Account-specific (NEW)
+  // ============================================
+  cloudProvider?: CloudProvider;
+  accountId?: string;
+  accountAlias?: string;
+  organizationId?: string;
+  rootEmail?: string;
+  mfaEnabled?: boolean;
+  ssoEnabled?: boolean;
+  resourceCount?: number;
+  monthlySpend?: number;
+  complianceFrameworks?: string[];
+
+  // ============================================
+  // Compute-specific (NEW - VM/Instance)
+  // ============================================
+  instanceId?: string;
+  instanceType?: string;
+  instanceState?: "running" | "stopped" | "terminated" | "pending";
+  availabilityZone?: string;
+  vpcId?: string;
+  subnetId?: string;
+  privateIp?: string;
+  publicIp?: string;
+  securityGroups?: string[];
+  iamRole?: string;
+  launchTime?: string;
+  imageId?: string;  // AMI ID
+
+  // ============================================
+  // Storage-specific (NEW - S3/Blob/GCS)
+  // ============================================
+  bucketName?: string;
+  storageClass?: string;
+  bucketRegion?: string;
+  isPubliclyAccessible?: boolean;
+  encryptionEnabled?: boolean;
+  encryptionType?: "none" | "sse-s3" | "sse-kms" | "sse-c";
+  versioningEnabled?: boolean;
+  loggingEnabled?: boolean;
+  lifecycleRules?: number;
+  objectCount?: number;
+  totalSizeGB?: number;
+  lastModified?: string;
+
+  // ============================================
+  // Serverless-specific (NEW)
+  // ============================================
+  functionName?: string;
+  functionRuntime?: string;
+  functionHandler?: string;
+  functionMemory?: number;
+  functionTimeout?: number;
+  functionCodeSize?: number;
+  functionLastModified?: string;
+  functionTriggers?: string[];
+  functionEnvVars?: number;
+  functionLayers?: string[];
+  functionVpcEnabled?: boolean;
+
+  // ============================================
+  // Host-specific
+  // ============================================
+  ip?: string;
+  hostname?: string;
+  os?: string;
+  osVersion?: string;
+  architecture?: "x86" | "x64" | "arm64";
+  cpuCores?: number;
+  memoryGB?: number;
+  isVirtual?: boolean;
+  hypervisor?: string;
+  openPorts?: number[];
+  lastBoot?: string;
+
+  // ============================================
+  // Container-specific
+  // ============================================
+  image?: string;
+  imageTag?: string;
+  registry?: string;
+  runtime?: "docker" | "containerd" | "cri-o";
+  orchestrator?: "kubernetes" | "docker-swarm" | "ecs" | "standalone";
+  namespace?: string;
+  cluster?: string;
+  replicas?: number;
+  cpuLimit?: string;
+  memoryLimit?: string;
+  containerPorts?: number[];
+  containerVulnerabilities?: number;
+
+  // ============================================
+  // Database-specific
+  // ============================================
+  engine?: "mysql" | "postgresql" | "mongodb" | "redis" | "elasticsearch" | "mssql" | "oracle" | "dynamodb" | "cosmosdb";
+  dbVersion?: string;
+  dbHost?: string;
+  dbPort?: number;
+  sizeGB?: number;
+  encryption?: boolean;
+  backupEnabled?: boolean;
+  lastBackup?: string;
+  replication?: "single" | "replica-set" | "cluster";
+  connections?: number;
+  dbPubliclyAccessible?: boolean;
+
+  // ============================================
+  // Network-specific (NEW)
+  // ============================================
+  networkType?: "vpc" | "vnet" | "firewall" | "load_balancer" | "nat_gateway" | "vpn" | "transit_gateway";
+  vpcCidr?: string;
+  subnetCidrs?: string[];
+  routeTableCount?: number;
+  networkAclCount?: number;
+  peeringConnections?: string[];
+  flowLogsEnabled?: boolean;
+  // Firewall specific
+  firewallRules?: number;
+  allowedPorts?: number[];
+  deniedPorts?: number[];
+  // Load balancer specific
+  lbType?: "application" | "network" | "classic" | "gateway";
+  lbScheme?: "internet-facing" | "internal";
+  lbTargetGroups?: number;
+  lbListeners?: number;
+  healthCheckEnabled?: boolean;
+
+  // ============================================
+  // Repository-specific
+  // ============================================
+  repoProvider?: "github" | "gitlab" | "bitbucket" | "azure_devops" | "codecommit";
+  visibility?: "public" | "private" | "internal";
+  language?: string;
+  languages?: Record<string, number>;  // language -> percentage
+  stars?: number;
+  forks?: number;
+  openIssues?: number;
+  defaultBranch?: string;
+  lastCommit?: string;
+  contributors?: number;
+  hasSecurityPolicy?: boolean;
+  branchProtection?: boolean;
+  secretScanningEnabled?: boolean;
+  dependabotEnabled?: boolean;
+
+  // ============================================
+  // Legacy fields (deprecated, for migration)
+  // ============================================
+  /** @deprecated Use repoProvider instead */
+  provider?: "github" | "gitlab" | "bitbucket";
+  /** @deprecated Use specific port fields instead */
+  port?: number;
+  /** @deprecated Use apiType service detection instead */
+  protocol?: string;
+  /** @deprecated Use appropriate version field instead */
+  version?: string;
+  /** @deprecated Use ipServices instead */
+  banner?: string;
+  /** @deprecated Use dedicated region fields instead */
+  region?: string;
+  /** @deprecated Compute type is now a separate asset type */
+  resourceType?: string;
+  /** @deprecated Moved to Identities module */
+  source?: string;
+  /** @deprecated Moved to Identities module */
+  username?: string;
+  /** @deprecated Moved to Identities module */
+  leakDate?: string;
+  /** @deprecated Use containerVulnerabilities instead */
+  vulnerabilities?: number;
 }
 
 /**

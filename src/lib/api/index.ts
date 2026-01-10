@@ -11,8 +11,11 @@
  * // Import hooks
  * import { useUsers, useCreateUser } from '@/lib/api'
  *
+ * // Import security platform hooks
+ * import { useAssets, useFindings, useScans } from '@/lib/api'
+ *
  * // Import endpoints
- * import { endpoints } from '@/lib/api'
+ * import { endpoints, securityEndpoints } from '@/lib/api'
  *
  * // Import types
  * import type { User, ApiResponse } from '@/lib/api'
@@ -147,3 +150,133 @@ export type {
   PartialExcept,
   AuthenticatedRequest,
 } from './types'
+
+// ============================================
+// SECURITY PLATFORM ENDPOINTS
+// ============================================
+
+export {
+  securityEndpoints,
+  assetEndpoints,
+  assetGroupEndpoints,
+  componentEndpoints,
+  findingEndpoints,
+  scanEndpoints,
+  runnerEndpoints,
+  credentialEndpoints,
+  pentestEndpoints,
+  remediationEndpoints,
+  analyticsEndpoints,
+  reportEndpoints,
+  integrationEndpoints,
+  SECURITY_API_BASE,
+} from './security-endpoints'
+
+export type {
+  PaginationParams,
+  AssetFilters,
+  FindingFilters,
+  ComponentFilters,
+  ScanFilters,
+} from './security-endpoints'
+
+// ============================================
+// SECURITY PLATFORM HOOKS
+// ============================================
+
+export {
+  // Asset hooks
+  useAssets,
+  useAssetsByType,
+  useAsset,
+  useAssetStats,
+  useAssetRelationships,
+  useCreateAsset,
+  useUpdateAsset,
+  useDeleteAsset,
+
+  // Asset group hooks
+  useAssetGroups,
+  useAssetGroup,
+  useAssetGroupStats,
+  useCreateAssetGroup,
+  useUpdateAssetGroup,
+  useDeleteAssetGroup,
+
+  // Component (SBOM) hooks
+  useComponents,
+  useComponent,
+  useVulnerableComponents,
+  useComponentsByEcosystem,
+  useComponentStats,
+  useEcosystemStats,
+  useLicenseStats,
+
+  // Finding hooks
+  useFindings,
+  useFinding,
+  useFindingStats,
+  useFindingsBySeverity,
+  useCreateFinding,
+  useUpdateFinding,
+  useUpdateFindingStatus,
+  useAssignFinding,
+
+  // Scan hooks
+  useScans,
+  useScan,
+  useScanStats,
+  useScanResults,
+  useStartScan,
+  useStopScan,
+
+  // Runner hooks
+  useRunners,
+  useRunner,
+  useRunnerStats,
+  useCreateRunner,
+  useDeleteRunner,
+
+  // Credential leak hooks
+  useCredentialLeaks,
+  useCredentialLeak,
+  useCredentialStats,
+
+  // Remediation hooks
+  useRemediationTasks,
+  useRemediationTask,
+  useRemediationStats,
+  useOverdueTasks,
+  usePriorityTasks,
+  useCreateRemediationTask,
+  useUpdateRemediationTask,
+
+  // Pentest hooks
+  usePentestCampaigns,
+  usePentestCampaign,
+  usePentestCampaignStats,
+  usePentestFindings,
+  usePentestFindingStats,
+  usePentestRetests,
+  usePentestReports,
+  usePentestTemplates,
+
+  // Analytics hooks
+  useDashboardAnalytics,
+  useRiskTrend,
+  useFindingTrend,
+  useCoverageAnalytics,
+  useMTTRAnalytics,
+
+  // Report hooks
+  useReports,
+  useReport,
+  useGenerateReport,
+
+  // Integration hooks
+  useIntegrations,
+  useIntegration,
+  useIntegrationTypes,
+  useCreateIntegration,
+  useTestIntegration,
+} from './security-hooks'

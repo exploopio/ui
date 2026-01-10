@@ -132,7 +132,7 @@ const emptyDatabaseForm = {
   name: "",
   description: "",
   groupId: "",
-  engine: "postgresql" as "mysql" | "postgresql" | "mongodb" | "redis" | "elasticsearch" | "mssql" | "oracle",
+  engine: "postgresql" as "mysql" | "postgresql" | "mongodb" | "redis" | "elasticsearch" | "mssql" | "oracle" | "dynamodb" | "cosmosdb",
   dbVersion: "",
   dbHost: "",
   dbPort: "",

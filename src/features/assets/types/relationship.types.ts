@@ -161,25 +161,37 @@ export type ExtendedAssetType =
  * Labels for extended asset types
  */
 export const EXTENDED_ASSET_TYPE_LABELS: Record<ExtendedAssetType, string> = {
-  // Base asset types
+  // Base asset types - External Attack Surface
   domain: "Domain",
+  certificate: "Certificate",
+  ip_address: "IP Address",
+  // Base asset types - Applications
   website: "Website",
-  service: "Service",
-  repository: "Repository",
-  cloud: "Cloud Resource",
-  credential: "Credential",
+  api: "API",
+  mobile_app: "Mobile App",
+  // Base asset types - Cloud
+  cloud_account: "Cloud Account",
+  compute: "Compute",
+  storage: "Storage",
+  serverless: "Serverless",
+  // Base asset types - Infrastructure
   host: "Host",
   container: "Container",
   database: "Database",
+  network: "Network",
+  // Base asset types - Code
+  repository: "Repository",
+  // Legacy base types (deprecated)
+  service: "Service",
+  cloud: "Cloud Resource",
+  credential: "Credential",
   mobile: "Mobile App",
-  api: "API",
   // Extended types
   k8s_cluster: "Kubernetes Cluster",
   k8s_workload: "Kubernetes Workload",
   container_image: "Container Image",
   api_collection: "API Collection",
   api_endpoint: "API Endpoint",
-  network: "Network",
   load_balancer: "Load Balancer",
   identity_provider: "Identity Provider",
 };

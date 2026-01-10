@@ -19,7 +19,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import type { Asset, AssetType } from "@/features/assets/types";
-import { ASSET_TYPE_LABELS } from "@/features/assets/types";
+import { ASSET_TYPE_LABELS, ASSET_TYPE_COLORS } from "@/features/assets/types";
 import type { CreateGroupFormData } from "./types";
 
 interface ReviewStepProps {
@@ -41,20 +41,6 @@ const CRITICALITY_CONFIG = {
   low: { label: "Low", color: "bg-blue-500" },
 };
 
-const ASSET_TYPE_COLORS: Record<AssetType, { bg: string; text: string }> = {
-  domain: { bg: "bg-blue-500/20", text: "text-blue-500" },
-  website: { bg: "bg-green-500/20", text: "text-green-500" },
-  service: { bg: "bg-purple-500/20", text: "text-purple-500" },
-  repository: { bg: "bg-orange-500/20", text: "text-orange-500" },
-  cloud: { bg: "bg-cyan-500/20", text: "text-cyan-500" },
-  credential: { bg: "bg-red-500/20", text: "text-red-500" },
-  host: { bg: "bg-slate-500/20", text: "text-slate-500" },
-  container: { bg: "bg-indigo-500/20", text: "text-indigo-500" },
-  database: { bg: "bg-yellow-500/20", text: "text-yellow-500" },
-  mobile: { bg: "bg-pink-500/20", text: "text-pink-500" },
-  api: { bg: "bg-emerald-500/20", text: "text-emerald-500" },
-};
-
 export function ReviewStep({ data, ungroupedAssets }: ReviewStepProps) {
   // Get selected assets details
   const selectedAssets = React.useMemo(
@@ -67,30 +53,24 @@ export function ReviewStep({ data, ungroupedAssets }: ReviewStepProps) {
 
   // Group assets by type for summary
   const assetsByType = React.useMemo(() => {
-    const counts: Record<AssetType, { existing: number; new: number }> = {
-      domain: { existing: 0, new: 0 },
-      website: { existing: 0, new: 0 },
-      service: { existing: 0, new: 0 },
-      repository: { existing: 0, new: 0 },
-      cloud: { existing: 0, new: 0 },
-      credential: { existing: 0, new: 0 },
-      host: { existing: 0, new: 0 },
-      container: { existing: 0, new: 0 },
-      database: { existing: 0, new: 0 },
-      mobile: { existing: 0, new: 0 },
-      api: { existing: 0, new: 0 },
-    };
+    const counts: Partial<Record<AssetType, { existing: number; new: number }>> = {};
 
     selectedAssets.forEach((asset) => {
-      counts[asset.type].existing++;
+      if (!counts[asset.type]) {
+        counts[asset.type] = { existing: 0, new: 0 };
+      }
+      counts[asset.type]!.existing++;
     });
 
     data.newAssets.forEach((asset) => {
-      counts[asset.type].new++;
+      if (!counts[asset.type]) {
+        counts[asset.type] = { existing: 0, new: 0 };
+      }
+      counts[asset.type]!.new++;
     });
 
     return Object.entries(counts).filter(
-      ([, value]) => value.existing > 0 || value.new > 0
+      ([, value]) => value && (value.existing > 0 || value.new > 0)
     );
   }, [selectedAssets, data.newAssets]);
 
