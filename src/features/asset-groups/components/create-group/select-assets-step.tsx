@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import type { Asset, AssetType } from "@/features/assets/types";
-import { ASSET_TYPE_LABELS } from "@/features/assets/types";
+import { ASSET_TYPE_LABELS, ASSET_TYPE_COLORS } from "@/features/assets/types";
 import type { CreateGroupFormData } from "./types";
 
 interface SelectAssetsStepProps {
@@ -30,20 +30,6 @@ interface SelectAssetsStepProps {
   onChange: (data: Partial<CreateGroupFormData>) => void;
   ungroupedAssets: Asset[];
 }
-
-const ASSET_TYPE_COLORS: Record<AssetType, { bg: string; text: string }> = {
-  domain: { bg: "bg-blue-500/20", text: "text-blue-500" },
-  website: { bg: "bg-green-500/20", text: "text-green-500" },
-  service: { bg: "bg-purple-500/20", text: "text-purple-500" },
-  repository: { bg: "bg-orange-500/20", text: "text-orange-500" },
-  cloud: { bg: "bg-cyan-500/20", text: "text-cyan-500" },
-  credential: { bg: "bg-red-500/20", text: "text-red-500" },
-  host: { bg: "bg-slate-500/20", text: "text-slate-500" },
-  container: { bg: "bg-indigo-500/20", text: "text-indigo-500" },
-  database: { bg: "bg-yellow-500/20", text: "text-yellow-500" },
-  mobile: { bg: "bg-pink-500/20", text: "text-pink-500" },
-  api: { bg: "bg-emerald-500/20", text: "text-emerald-500" },
-};
 
 export function SelectAssetsStep({
   data,

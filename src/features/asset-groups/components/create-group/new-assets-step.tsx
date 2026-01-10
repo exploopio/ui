@@ -29,7 +29,11 @@ import {
 } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
 import type { AssetType } from "@/features/assets/types";
-import { ASSET_TYPE_LABELS } from "@/features/assets/types";
+import {
+  ASSET_TYPE_LABELS,
+  ASSET_TYPE_COLORS,
+  ASSET_TYPE_DESCRIPTIONS,
+} from "@/features/assets/types";
 import type { CreateGroupFormData, NewAssetFormData } from "./types";
 
 interface NewAssetsStepProps {
@@ -37,33 +41,22 @@ interface NewAssetsStepProps {
   onChange: (data: Partial<CreateGroupFormData>) => void;
 }
 
+// Common asset types for group creation (subset of all types)
 const ASSET_TYPES: { value: AssetType; label: string; description: string }[] = [
   { value: "domain", label: "Domain", description: "Root domain or subdomain" },
   { value: "website", label: "Website", description: "Web application or site" },
-  { value: "service", label: "Service", description: "Network service or API" },
+  { value: "api", label: "API", description: "API endpoint collection" },
   { value: "repository", label: "Repository", description: "Code repository" },
-  { value: "cloud", label: "Cloud", description: "Cloud resource or instance" },
+  { value: "cloud_account", label: "Cloud Account", description: "Cloud subscription or project" },
+  { value: "compute", label: "Compute", description: "VM or instance" },
+  { value: "storage", label: "Storage", description: "S3/Blob/GCS bucket" },
   { value: "host", label: "Host", description: "Server or workstation" },
   { value: "container", label: "Container", description: "Docker/K8s container" },
   { value: "database", label: "Database", description: "Database instance" },
-  { value: "mobile", label: "Mobile App", description: "Mobile application" },
-  { value: "api", label: "API", description: "API endpoint collection" },
-  { value: "credential", label: "Credential", description: "Credentials or secrets" },
+  { value: "mobile_app", label: "Mobile App", description: "Mobile application" },
+  { value: "certificate", label: "Certificate", description: "SSL/TLS certificate" },
+  { value: "ip_address", label: "IP Address", description: "IP address" },
 ];
-
-const ASSET_TYPE_COLORS: Record<AssetType, { bg: string; text: string }> = {
-  domain: { bg: "bg-blue-500/20", text: "text-blue-500" },
-  website: { bg: "bg-green-500/20", text: "text-green-500" },
-  service: { bg: "bg-purple-500/20", text: "text-purple-500" },
-  repository: { bg: "bg-orange-500/20", text: "text-orange-500" },
-  cloud: { bg: "bg-cyan-500/20", text: "text-cyan-500" },
-  credential: { bg: "bg-red-500/20", text: "text-red-500" },
-  host: { bg: "bg-slate-500/20", text: "text-slate-500" },
-  container: { bg: "bg-indigo-500/20", text: "text-indigo-500" },
-  database: { bg: "bg-yellow-500/20", text: "text-yellow-500" },
-  mobile: { bg: "bg-pink-500/20", text: "text-pink-500" },
-  api: { bg: "bg-emerald-500/20", text: "text-emerald-500" },
-};
 
 // Generate unique ID for new assets
 function generateId(): string {

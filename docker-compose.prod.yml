@@ -79,35 +79,62 @@ services:
           cpus: '0.5'
           memory: 512M
 
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+# ==============================================================================
+# Nginx Reverse Proxy (Optional - uncomment to use)
+# ==============================================================================
+# nginx:
+#   image: nginx:alpine
+#   container_name: rediver-nginx
+#
+#   ports:
+#     - "80:80"
+#     - "443:443"
+#
+#   volumes:
+#     - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+#     - ./nginx/ssl:/etc/nginx/ssl:ro
+#
+#   depends_on:
+#     nextjs:
+#       condition: service_healthy
+#
+#   healthcheck:
+#     test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/api/health"]
+#     interval: 30s
+#     timeout: 10s
+#     retries: 3
+#     start_period: 30s
+#
+#   restart: unless-stopped
+#
+#   networks:
+#     - app-network
+#
+#   deploy:
+#     resources:
+#       limits:
+#         cpus: '0.5'
+#         memory: 256M
+#       reservations:
+#         cpus: '0.1'
+#         memory: 64M
+#
+#   logging:
+#     driver: "json-file"
+#     options:
+#       max-size: "10m"
+#       max-file: "3"
+
 # ==============================================================================
 # Networks
 # ==============================================================================
 networks:
   app-network:
     driver: bridge
-
-# ==============================================================================
-# To use with Nginx reverse proxy, uncomment the nginx service below
-# and create nginx/nginx.conf and nginx/ssl/ directory
-# ==============================================================================
-#
-#   nginx:
-#     image: nginx:alpine
-#     container_name: rediver-nginx
-#
-#     ports:
-#       - "80:80"
-#       - "443:443"
-#
-#     volumes:
-#       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-#       - ./nginx/ssl:/etc/nginx/ssl:ro
-#
-#     depends_on:
-#       nextjs:
-#         condition: service_healthy
-#
-#     restart: unless-stopped
-#
-#     networks:
-#       - app-network

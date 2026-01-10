@@ -9,7 +9,8 @@ import { CheckCircle, Clock, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { Asset, AssetType, ASSET_TYPE_LABELS } from "../types/asset.types";
+import type { AssetType } from "../types/asset.types";
+import { ASSET_TYPE_LABELS } from "../types/asset.types";
 
 // ============================================
 // Stat Card
@@ -145,20 +146,6 @@ interface TechnicalDetailsSectionProps {
 }
 
 export function TechnicalDetailsSection({ id, type, groupId }: TechnicalDetailsSectionProps) {
-  const typeLabels: Record<AssetType, string> = {
-    domain: "Domain",
-    website: "Website",
-    service: "Service",
-    repository: "Repository",
-    cloud: "Cloud Resource",
-    credential: "Credential",
-    host: "Host",
-    container: "Container",
-    database: "Database",
-    mobile: "Mobile App",
-    api: "API",
-  };
-
   return (
     <div className="rounded-xl border p-4 bg-card">
       <h4 className="text-sm font-medium mb-3">Technical Details</h4>
@@ -169,7 +156,7 @@ export function TechnicalDetailsSection({ id, type, groupId }: TechnicalDetailsS
         </div>
         <div className="flex items-center justify-between">
           <span className="text-muted-foreground">Type</span>
-          <span className="font-medium">{typeLabels[type]}</span>
+          <span className="font-medium">{ASSET_TYPE_LABELS[type]}</span>
         </div>
         <div className="flex items-center justify-between">
           <span className="text-muted-foreground">Group</span>

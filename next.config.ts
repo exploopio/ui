@@ -73,15 +73,13 @@ const nextConfig: NextConfig = {
     ]
   },
   // Allow cross-origin requests in development (for accessing from other devices/IPs)
+  // Note: Add your local IP to this list during development if needed
   allowedDevOrigins: [
-    'http://10.29.243.85:3000',
     'http://localhost:3000',
     'http://127.0.0.1:3000',
+    // Production domains
     'https://app.rediver.io',
-    'https://app.rediver.io:3000',
-    'http://app.rediver.io:3000',
-    'https://app.rediver.io:443',
-    'http://app.rediver.io:80',
+    'http://app.rediver.io',
   ],
 }
 

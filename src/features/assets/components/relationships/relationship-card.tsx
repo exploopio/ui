@@ -45,24 +45,38 @@ import { RELATIONSHIP_LABELS, EXTENDED_ASSET_TYPE_LABELS } from "../../types";
 // Asset Type Icons & Colors
 // ============================================
 
-const ASSET_TYPE_COLORS: Record<ExtendedAssetType, { bg: string; text: string }> = {
+const EXTENDED_ASSET_TYPE_COLORS: Record<ExtendedAssetType, { bg: string; text: string }> = {
+  // External Attack Surface
   domain: { bg: "bg-blue-500/20", text: "text-blue-500" },
-  website: { bg: "bg-green-500/20", text: "text-green-500" },
-  service: { bg: "bg-purple-500/20", text: "text-purple-500" },
-  repository: { bg: "bg-orange-500/20", text: "text-orange-500" },
-  cloud: { bg: "bg-cyan-500/20", text: "text-cyan-500" },
-  credential: { bg: "bg-red-500/20", text: "text-red-500" },
+  certificate: { bg: "bg-green-500/20", text: "text-green-500" },
+  ip_address: { bg: "bg-purple-500/20", text: "text-purple-500" },
+  // Applications
+  website: { bg: "bg-cyan-500/20", text: "text-cyan-500" },
+  api: { bg: "bg-emerald-500/20", text: "text-emerald-500" },
+  mobile_app: { bg: "bg-pink-500/20", text: "text-pink-500" },
+  // Cloud
+  cloud_account: { bg: "bg-sky-500/20", text: "text-sky-500" },
+  compute: { bg: "bg-orange-500/20", text: "text-orange-500" },
+  storage: { bg: "bg-amber-500/20", text: "text-amber-500" },
+  serverless: { bg: "bg-violet-500/20", text: "text-violet-500" },
+  // Infrastructure
   host: { bg: "bg-slate-500/20", text: "text-slate-500" },
   container: { bg: "bg-indigo-500/20", text: "text-indigo-500" },
   database: { bg: "bg-yellow-500/20", text: "text-yellow-500" },
+  network: { bg: "bg-gray-500/20", text: "text-gray-500" },
+  // Code & CI/CD
+  repository: { bg: "bg-orange-500/20", text: "text-orange-500" },
+  // Legacy types (deprecated)
+  service: { bg: "bg-purple-500/20", text: "text-purple-500" },
+  cloud: { bg: "bg-cyan-500/20", text: "text-cyan-500" },
+  credential: { bg: "bg-red-500/20", text: "text-red-500" },
   mobile: { bg: "bg-pink-500/20", text: "text-pink-500" },
-  api: { bg: "bg-emerald-500/20", text: "text-emerald-500" },
+  // Extended types
   k8s_cluster: { bg: "bg-blue-600/20", text: "text-blue-600" },
   k8s_workload: { bg: "bg-blue-400/20", text: "text-blue-400" },
   container_image: { bg: "bg-violet-500/20", text: "text-violet-500" },
   api_collection: { bg: "bg-teal-500/20", text: "text-teal-500" },
   api_endpoint: { bg: "bg-teal-400/20", text: "text-teal-400" },
-  network: { bg: "bg-gray-500/20", text: "text-gray-500" },
   load_balancer: { bg: "bg-amber-500/20", text: "text-amber-500" },
   identity_provider: { bg: "bg-rose-500/20", text: "text-rose-500" },
 };
@@ -133,7 +147,7 @@ interface AssetNodeProps {
 }
 
 function AssetNode({ name, type, onClick }: AssetNodeProps) {
-  const colors = ASSET_TYPE_COLORS[type] || ASSET_TYPE_COLORS.service;
+  const colors = EXTENDED_ASSET_TYPE_COLORS[type] || EXTENDED_ASSET_TYPE_COLORS.service;
   const label = EXTENDED_ASSET_TYPE_LABELS[type] || type;
 
   return (
@@ -367,7 +381,7 @@ export function RelationshipListItem({
         type: relationship.sourceAssetType,
       };
 
-  const colors = ASSET_TYPE_COLORS[otherAsset.type] || ASSET_TYPE_COLORS.service;
+  const colors = EXTENDED_ASSET_TYPE_COLORS[otherAsset.type] || EXTENDED_ASSET_TYPE_COLORS.service;
 
   return (
     <button

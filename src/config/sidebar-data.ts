@@ -50,6 +50,20 @@ import {
   Bug,
   RotateCcw,
   BookTemplate,
+  // New icons for CTEM architecture
+  ShieldAlert,
+  Network,
+  HardDrive,
+  Cpu,
+  Package,
+  UserCog,
+  Key,
+  Bot,
+  Lock,
+  AlertTriangle,
+  FileCode,
+  Scale,
+  Download,
 } from "lucide-react";
 import { type SidebarData } from "@/components/types";
 
@@ -115,6 +129,7 @@ export const sidebarData: SidebarData = {
     // ========================================
     // PHASE 2: DISCOVERY
     // Identify assets, vulnerabilities, misconfigurations, and exposures
+    // Three pillars: Assets, Components (SBOM), Identities
     // ========================================
     {
       title: "Discovery",
@@ -129,6 +144,11 @@ export const sidebarData: SidebarData = {
           url: "/runners",
           icon: Play,
         },
+        // ----------------------------------------
+        // ASSET INVENTORY
+        // Note: New CTEM asset types (certificates, ip_address, cloud_account,
+        // compute, storage, serverless, network) are documented in docs/ROADMAP.md
+        // ----------------------------------------
         {
           title: "Asset Inventory",
           icon: Container,
@@ -185,12 +205,59 @@ export const sidebarData: SidebarData = {
             },
           ],
         },
+        // ----------------------------------------
+        // CREDENTIAL LEAKS
+        // ----------------------------------------
         {
           title: "Credential Leaks",
           url: "/credentials",
           icon: KeyRound,
           badge: "7",
         },
+        // ----------------------------------------
+        // SOFTWARE COMPONENTS (SBOM)
+        // ----------------------------------------
+        {
+          title: "Components",
+          icon: Package,
+          items: [
+            {
+              title: "Overview",
+              url: "/components",
+              icon: Package,
+            },
+            {
+              title: "All Components",
+              url: "/components/all",
+              icon: Package,
+            },
+            {
+              title: "Vulnerable",
+              url: "/components/vulnerable",
+              icon: ShieldAlert,
+              badge: "4",
+            },
+            {
+              title: "Ecosystems",
+              url: "/components/ecosystems",
+              icon: Boxes,
+            },
+            {
+              title: "Licenses",
+              url: "/components/licenses",
+              icon: Scale,
+            },
+            {
+              title: "SBOM Export",
+              url: "/components/sbom-export",
+              icon: Download,
+            },
+          ],
+        },
+        // ----------------------------------------
+        // COMING SOON - Identities
+        // See docs/ROADMAP.md for full feature specs
+        // ----------------------------------------
       ],
     },
 
