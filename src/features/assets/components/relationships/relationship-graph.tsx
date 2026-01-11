@@ -8,7 +8,7 @@
  */
 
 import * as React from "react";
-import { ZoomIn, ZoomOut, Maximize2, Move, Link2 } from "lucide-react";
+import { ZoomIn, ZoomOut, Maximize2, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -22,7 +22,6 @@ import type {
   RelationshipGraph as RelationshipGraphType,
   RelationshipGraphNode,
   RelationshipGraphEdge,
-  ExtendedAssetType,
 } from "../../types";
 import { EXTENDED_ASSET_TYPE_LABELS, RELATIONSHIP_LABELS } from "../../types";
 
@@ -55,7 +54,6 @@ interface RelationshipGraphProps {
 // ============================================
 
 const NODE_RADIUS = 40;
-const NODE_SPACING = 150;
 
 const ASSET_TYPE_COLORS: Record<string, string> = {
   domain: "#3b82f6",

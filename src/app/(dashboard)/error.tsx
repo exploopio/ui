@@ -11,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { reportRouteError } from '@/lib/error-reporting'
 
 interface ErrorProps {
   error: Error & { digest?: string }
@@ -19,8 +20,7 @@ interface ErrorProps {
 
 export default function DashboardError({ error, reset }: ErrorProps) {
   useEffect(() => {
-    // Log error to monitoring service (e.g., Sentry)
-    console.error('Dashboard error:', error)
+    reportRouteError(error, '/dashboard', { section: 'dashboard' })
   }, [error])
 
   return (

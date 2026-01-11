@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Header, Main } from "@/components/layout";
 import { ProfileDropdown } from "@/components/profile-dropdown";
 import { Search } from "@/components/search";
@@ -16,6 +16,14 @@ import {
   CheckCircle,
   XCircle,
 } from "lucide-react";
+import {
+  ScopeBadgeSimple,
+  ScopeCoverageCard,
+  getScopeMatchesForAsset,
+  calculateScopeCoverage,
+  getActiveScopeTargets,
+  getActiveScopeExclusions,
+} from "@/features/scope";
 
 // Mock data for certificates
 const mockCertificates = [
@@ -67,6 +75,37 @@ const stats = {
 export default function CertificatesPage() {
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Scope data
+  const scopeTargets = useMemo(() => getActiveScopeTargets(), []);
+  const scopeExclusions = useMemo(() => getActiveScopeExclusions(), []);
+
+  // Compute scope matches for each certificate
+  const scopeMatchesMap = useMemo(() => {
+    const map = new Map<string, { inScope: boolean; excluded: boolean }>();
+    mockCertificates.forEach((cert) => {
+      const match = getScopeMatchesForAsset(
+        { id: cert.id, type: "certificate", name: cert.name },
+        scopeTargets,
+        scopeExclusions
+      );
+      map.set(cert.id, {
+        inScope: match.inScope,
+        excluded: match.matchedExclusions.length > 0,
+      });
+    });
+    return map;
+  }, [scopeTargets, scopeExclusions]);
+
+  // Calculate scope coverage
+  const scopeCoverage = useMemo(() => {
+    const assets = mockCertificates.map((cert) => ({
+      id: cert.id,
+      name: cert.name,
+      type: "certificate",
+    }));
+    return calculateScopeCoverage(assets, scopeTargets, scopeExclusions);
+  }, [scopeTargets, scopeExclusions]);
+
   const filteredCertificates = mockCertificates.filter(
     (cert) =>
       cert.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -116,7 +155,7 @@ export default function CertificatesPage() {
         />
 
         {/* Stats */}
-        <div className="grid gap-4 md:grid-cols-4 mb-6">
+        <div className="grid gap-4 md:grid-cols-5 mb-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Certificates</CardTitle>
@@ -153,6 +192,11 @@ export default function CertificatesPage() {
               <div className="text-2xl font-bold text-red-600">{stats.expired}</div>
             </CardContent>
           </Card>
+          <ScopeCoverageCard
+            coverage={scopeCoverage}
+            title="Scope Coverage"
+            showBreakdown={false}
+          />
         </div>
 
         {/* Actions */}
@@ -180,6 +224,7 @@ export default function CertificatesPage() {
                   <th className="text-left p-4 font-medium">Issuer</th>
                   <th className="text-left p-4 font-medium">Valid Until</th>
                   <th className="text-left p-4 font-medium">Days Left</th>
+                  <th className="text-left p-4 font-medium">Scope</th>
                   <th className="text-left p-4 font-medium">Status</th>
                 </tr>
               </thead>
@@ -199,6 +244,14 @@ export default function CertificatesPage() {
                       <span className={cert.daysUntilExpiry < 30 ? "text-red-600 font-medium" : ""}>
                         {cert.daysUntilExpiry > 0 ? cert.daysUntilExpiry : "Expired"}
                       </span>
+                    </td>
+                    <td className="p-4">
+                      {scopeMatchesMap.get(cert.id) && (
+                        <ScopeBadgeSimple
+                          inScope={scopeMatchesMap.get(cert.id)!.inScope}
+                          excluded={scopeMatchesMap.get(cert.id)!.excluded}
+                        />
+                      )}
                     </td>
                     <td className="p-4">
                       <span

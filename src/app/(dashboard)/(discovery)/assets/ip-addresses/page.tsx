@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Header, Main } from "@/components/layout";
 import { ProfileDropdown } from "@/components/profile-dropdown";
 import { Search } from "@/components/search";
@@ -16,6 +16,14 @@ import {
   Lock,
   Server,
 } from "lucide-react";
+import {
+  ScopeBadgeSimple,
+  ScopeCoverageCard,
+  getScopeMatchesForAsset,
+  calculateScopeCoverage,
+  getActiveScopeTargets,
+  getActiveScopeExclusions,
+} from "@/features/scope";
 
 // Mock data
 const mockIpAddresses = [
@@ -79,6 +87,37 @@ const stats = {
 export default function IpAddressesPage() {
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Scope data
+  const scopeTargets = useMemo(() => getActiveScopeTargets(), []);
+  const scopeExclusions = useMemo(() => getActiveScopeExclusions(), []);
+
+  // Compute scope matches for each IP
+  const scopeMatchesMap = useMemo(() => {
+    const map = new Map<string, { inScope: boolean; excluded: boolean }>();
+    mockIpAddresses.forEach((ip) => {
+      const match = getScopeMatchesForAsset(
+        { id: ip.id, type: "ip_address", name: ip.address },
+        scopeTargets,
+        scopeExclusions
+      );
+      map.set(ip.id, {
+        inScope: match.inScope,
+        excluded: match.matchedExclusions.length > 0,
+      });
+    });
+    return map;
+  }, [scopeTargets, scopeExclusions]);
+
+  // Calculate scope coverage
+  const scopeCoverage = useMemo(() => {
+    const assets = mockIpAddresses.map((ip) => ({
+      id: ip.id,
+      name: ip.address,
+      type: "ip_address",
+    }));
+    return calculateScopeCoverage(assets, scopeTargets, scopeExclusions);
+  }, [scopeTargets, scopeExclusions]);
+
   const filteredIps = mockIpAddresses.filter(
     (ip) =>
       ip.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -108,7 +147,7 @@ export default function IpAddressesPage() {
         />
 
         {/* Stats */}
-        <div className="grid gap-4 md:grid-cols-4 mb-6">
+        <div className="grid gap-4 md:grid-cols-5 mb-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total IPs</CardTitle>
@@ -145,6 +184,11 @@ export default function IpAddressesPage() {
               <div className="text-2xl font-bold text-cyan-600">{stats.ipv6}</div>
             </CardContent>
           </Card>
+          <ScopeCoverageCard
+            coverage={scopeCoverage}
+            title="Scope Coverage"
+            showBreakdown={false}
+          />
         </div>
 
         {/* Actions */}
@@ -171,6 +215,7 @@ export default function IpAddressesPage() {
                   <th className="text-left p-4 font-medium">IP Address</th>
                   <th className="text-left p-4 font-medium">ASN / Organization</th>
                   <th className="text-left p-4 font-medium">Type</th>
+                  <th className="text-left p-4 font-medium">Scope</th>
                   <th className="text-left p-4 font-medium">Open Ports</th>
                   <th className="text-left p-4 font-medium">Risk Score</th>
                 </tr>
@@ -190,6 +235,14 @@ export default function IpAddressesPage() {
                       <Badge variant={ip.isPublic ? "default" : "secondary"}>
                         {ip.isPublic ? "Public" : "Private"}
                       </Badge>
+                    </td>
+                    <td className="p-4">
+                      {scopeMatchesMap.get(ip.id) && (
+                        <ScopeBadgeSimple
+                          inScope={scopeMatchesMap.get(ip.id)!.inScope}
+                          excluded={scopeMatchesMap.get(ip.id)!.excluded}
+                        />
+                      )}
                     </td>
                     <td className="p-4">
                       <div className="flex flex-wrap gap-1">

@@ -88,7 +88,7 @@ const statusConfig: Record<
   false_positive: { label: "False Positive", variant: "outline" },
 };
 
-export function AssetFindings({ assetId, assetName, className }: AssetFindingsProps) {
+export function AssetFindings({ assetId, className }: AssetFindingsProps) {
   const [findings, setFindings] = React.useState<AssetFinding[]>([]);
 
   React.useEffect(() => {

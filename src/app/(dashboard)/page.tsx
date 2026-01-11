@@ -12,6 +12,7 @@ import { ProfileDropdown } from "@/components/profile-dropdown";
 import { Search } from "@/components/search";
 import { ThemeSwitch } from "@/components/theme-switch";
 import { ProcessStepper, StatsCard } from "@/features/shared";
+import { ActivityItem, QuickStat } from "@/features/dashboard";
 import {
   Server,
   AlertTriangle,
@@ -43,7 +44,7 @@ import {
   Cell,
   PieChart,
   Pie,
-} from "recharts";
+} from "@/components/charts";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 
@@ -393,50 +394,5 @@ export default function Dashboard() {
         </section>
       </Main>
     </>
-  );
-}
-
-function ActivityItem({
-  icon,
-  title,
-  description,
-  time,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-  time: string;
-}) {
-  return (
-    <div className="flex items-start gap-3">
-      <div className="bg-muted flex h-8 w-8 items-center justify-center rounded-full">
-        {icon}
-      </div>
-      <div className="flex-1 space-y-1">
-        <p className="text-sm font-medium">{title}</p>
-        <p className="text-muted-foreground text-xs">{description}</p>
-      </div>
-      <span className="text-muted-foreground text-xs">{time}</span>
-    </div>
-  );
-}
-
-function QuickStat({
-  label,
-  value,
-  subtext,
-}: {
-  label: string;
-  value: number;
-  subtext: string;
-}) {
-  return (
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="text-muted-foreground text-sm">{label}</p>
-        <p className="text-muted-foreground text-xs">{subtext}</p>
-      </div>
-      <span className="text-2xl font-bold">{value}</span>
-    </div>
   );
 }

@@ -36,7 +36,6 @@ import type {
   ExtendedAssetType,
   CreateRelationshipInput,
   RelationshipConfidence,
-  DiscoveryMethod,
 } from "../../types";
 import {
   RELATIONSHIP_LABELS,

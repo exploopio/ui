@@ -35,7 +35,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { cn } from "@/lib/utils";
@@ -117,7 +116,7 @@ export function ComponentDetailSheet({
     if (component) {
       setActiveTab("overview");
     }
-  }, [component?.id]);
+  }, [component]);
 
   if (!component) return null;
 

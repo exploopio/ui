@@ -112,6 +112,15 @@ import {
   type K8sWorkload,
   type ContainerImage,
 } from "@/features/assets";
+import {
+  ScopeBadge,
+  ScopeCoverageCard,
+  getScopeMatchesForAsset,
+  calculateScopeCoverage,
+  getActiveScopeTargets,
+  getActiveScopeExclusions,
+  type ScopeMatchResult,
+} from "@/features/scope";
 
 // Status colors and labels
 const clusterStatusConfig: Record<K8sCluster["status"], { label: string; color: string; icon: typeof CheckCircle }> = {
@@ -248,6 +257,34 @@ export default function KubernetesPage() {
     totalPods: clusters.reduce((acc, c) => acc + c.podCount, 0),
     totalNodes: clusters.reduce((acc, c) => acc + c.nodeCount, 0),
   }), [clusters, workloads, images]);
+
+  // Scope data
+  const scopeTargets = useMemo(() => getActiveScopeTargets(), []);
+  const scopeExclusions = useMemo(() => getActiveScopeExclusions(), []);
+
+  // Compute scope matches for each container image
+  const scopeMatchesMap = useMemo(() => {
+    const map = new Map<string, ScopeMatchResult>();
+    images.forEach((image) => {
+      const match = getScopeMatchesForAsset(
+        { id: image.id, type: "container", name: image.fullName },
+        scopeTargets,
+        scopeExclusions
+      );
+      map.set(image.id, match);
+    });
+    return map;
+  }, [images, scopeTargets, scopeExclusions]);
+
+  // Calculate scope coverage for container images
+  const scopeCoverage = useMemo(() => {
+    const assets = images.map((i) => ({
+      id: i.id,
+      name: i.fullName,
+      type: "container",
+    }));
+    return calculateScopeCoverage(assets, scopeTargets, scopeExclusions);
+  }, [images, scopeTargets, scopeExclusions]);
 
   // Filtered data
   const filteredWorkloads = useMemo(() => {
@@ -866,6 +903,15 @@ export default function KubernetesPage() {
       },
     },
     {
+      id: "scope",
+      header: "Scope",
+      cell: ({ row }) => {
+        const match = scopeMatchesMap.get(row.original.id);
+        if (!match) return <span className="text-muted-foreground">-</span>;
+        return <ScopeBadge match={match} />;
+      },
+    },
+    {
       accessorKey: "riskScore",
       header: ({ column }) => (
         <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} className="-ml-4">
@@ -1167,6 +1213,15 @@ export default function KubernetesPage() {
               </p>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Scope Coverage Card */}
+        <div className="mt-4">
+          <ScopeCoverageCard
+            coverage={scopeCoverage}
+            title="Scope Coverage"
+            showBreakdown={false}
+          />
         </div>
 
         {/* Main Content */}

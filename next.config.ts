@@ -1,5 +1,10 @@
 import type { NextConfig } from 'next'
+import bundleAnalyzer from '@next/bundle-analyzer'
 import { validateEnv } from './src/lib/env'
+
+const withBundleAnalyzer = bundleAnalyzer({
+  enabled: process.env.ANALYZE === 'true',
+})
 
 // Validate environment variables at build time
 // This will throw an error if required vars are missing or invalid
@@ -83,4 +88,4 @@ const nextConfig: NextConfig = {
   ],
 }
 
-export default nextConfig
+export default withBundleAnalyzer(nextConfig)

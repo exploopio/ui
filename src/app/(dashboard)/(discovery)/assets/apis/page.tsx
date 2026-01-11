@@ -22,6 +22,15 @@ import {
   StatsGrid,
   SectionTitle,
 } from "@/features/assets";
+import {
+  ScopeBadge,
+  ScopeCoverageCard,
+  getScopeMatchesForAsset,
+  calculateScopeCoverage,
+  getActiveScopeTargets,
+  getActiveScopeExclusions,
+  type ScopeMatchResult,
+} from "@/features/scope";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -211,6 +220,34 @@ export default function ApisPage() {
     withDocs: apis.filter((a) => a.openApiSpec).length,
   }), [apis]);
 
+  // Scope data
+  const scopeTargets = useMemo(() => getActiveScopeTargets(), []);
+  const scopeExclusions = useMemo(() => getActiveScopeExclusions(), []);
+
+  // Compute scope matches for each API
+  const scopeMatchesMap = useMemo(() => {
+    const map = new Map<string, ScopeMatchResult>();
+    apis.forEach((api) => {
+      const match = getScopeMatchesForAsset(
+        { id: api.id, type: "api", name: api.baseUrl },
+        scopeTargets,
+        scopeExclusions
+      );
+      map.set(api.id, match);
+    });
+    return map;
+  }, [apis, scopeTargets, scopeExclusions]);
+
+  // Calculate scope coverage
+  const scopeCoverage = useMemo(() => {
+    const assets = apis.map((a) => ({
+      id: a.id,
+      name: a.baseUrl,
+      type: "api" as const,
+    }));
+    return calculateScopeCoverage(assets, scopeTargets, scopeExclusions);
+  }, [apis, scopeTargets, scopeExclusions]);
+
   // Table columns
   const columns: ColumnDef<Api>[] = [
     {
@@ -293,6 +330,15 @@ export default function ApisPage() {
                        status === "deprecated" ? "destructive" :
                        status === "development" ? "outline" : "secondary";
         return <Badge variant={variant}>{status}</Badge>;
+      },
+    },
+    {
+      id: "scope",
+      header: "Scope",
+      cell: ({ row }) => {
+        const match = scopeMatchesMap.get(row.original.id);
+        if (!match) return <span className="text-muted-foreground">-</span>;
+        return <ScopeBadge match={match} />;
       },
     },
     {
@@ -607,6 +653,11 @@ export default function ApisPage() {
               <CardTitle className="text-3xl text-orange-500">{stats.withFindings}</CardTitle>
             </CardHeader>
           </Card>
+        </div>
+
+        {/* Scope Coverage Card */}
+        <div className="mt-4">
+          <ScopeCoverageCard coverage={scopeCoverage} showBreakdown={false} />
         </div>
 
         {/* Table Card */}
@@ -932,6 +983,52 @@ export default function ApisPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Scope Information */}
+              {(() => {
+                const scopeMatch = scopeMatchesMap.get(selectedApi.id);
+                if (!scopeMatch) return null;
+                return (
+                  <div className="rounded-xl border p-4 bg-card space-y-3">
+                    <SectionTitle>Scope Information</SectionTitle>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">Status:</span>
+                        <ScopeBadge match={scopeMatch} />
+                      </div>
+                      {scopeMatch.matchedTargets.length > 0 && (
+                        <div>
+                          <p className="text-sm text-muted-foreground mb-1">Matched Scope Rules:</p>
+                          <div className="flex flex-wrap gap-1">
+                            {scopeMatch.matchedTargets.map((target, idx) => (
+                              <Badge key={idx} variant="secondary" className="text-xs">
+                                {target.pattern} ({target.matchType})
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {scopeMatch.matchedExclusions.length > 0 && (
+                        <div>
+                          <p className="text-sm text-muted-foreground mb-1">Exclusion Rules:</p>
+                          <div className="space-y-1">
+                            {scopeMatch.matchedExclusions.map((exclusion, idx) => (
+                              <div key={idx} className="text-sm">
+                                <Badge variant="outline" className="text-xs border-orange-500/50 text-orange-500">
+                                  {exclusion.pattern}
+                                </Badge>
+                                <span className="text-muted-foreground ml-2 text-xs">
+                                  {exclusion.reason}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Traffic Stats */}
               {selectedApi.requestsPerDay && (

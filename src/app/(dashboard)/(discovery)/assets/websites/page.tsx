@@ -95,7 +95,6 @@ import {
   Shield,
   AlertTriangle,
   CheckCircle,
-  Clock,
   Copy,
   RefreshCw,
   ShieldCheck,
@@ -106,6 +105,15 @@ import {
 import { getWebsites, getAssetRelationships, ClassificationBadges, type Asset } from "@/features/assets";
 import { mockAssetGroups } from "@/features/asset-groups";
 import type { Status } from "@/features/shared/types";
+import {
+  ScopeBadge,
+  ScopeCoverageCard,
+  getScopeMatchesForAsset,
+  calculateScopeCoverage,
+  getActiveScopeTargets,
+  getActiveScopeExclusions,
+  type ScopeMatchResult,
+} from "@/features/scope";
 
 // Filter types
 type StatusFilter = Status | "all";
@@ -211,6 +219,34 @@ export default function WebsitesPage() {
     }),
     [websites]
   );
+
+  // Scope data
+  const scopeTargets = useMemo(() => getActiveScopeTargets(), []);
+  const scopeExclusions = useMemo(() => getActiveScopeExclusions(), []);
+
+  // Compute scope matches for each website
+  const scopeMatchesMap = useMemo(() => {
+    const map = new Map<string, ScopeMatchResult>();
+    websites.forEach((website) => {
+      const match = getScopeMatchesForAsset(
+        { id: website.id, type: "website", name: website.name },
+        scopeTargets,
+        scopeExclusions
+      );
+      map.set(website.id, match);
+    });
+    return map;
+  }, [websites, scopeTargets, scopeExclusions]);
+
+  // Calculate scope coverage
+  const scopeCoverage = useMemo(() => {
+    const assets = websites.map((w) => ({
+      id: w.id,
+      name: w.name,
+      type: "website",
+    }));
+    return calculateScopeCoverage(assets, scopeTargets, scopeExclusions);
+  }, [websites, scopeTargets, scopeExclusions]);
 
   // Table columns
   const columns: ColumnDef<Asset>[] = [
@@ -322,6 +358,15 @@ export default function WebsitesPage() {
       accessorKey: "status",
       header: "Status",
       cell: ({ row }) => <StatusBadge status={row.original.status} />,
+    },
+    {
+      id: "scope",
+      header: "Scope",
+      cell: ({ row }) => {
+        const match = scopeMatchesMap.get(row.original.id);
+        if (!match) return <span className="text-muted-foreground">-</span>;
+        return <ScopeBadge match={match} />;
+      },
     },
     {
       id: "classification",
@@ -689,6 +734,15 @@ export default function WebsitesPage() {
           </Card>
         </div>
 
+        {/* Scope Coverage Card */}
+        <div className="mt-4">
+          <ScopeCoverageCard
+            coverage={scopeCoverage}
+            title="Scope Coverage"
+            showBreakdown={false}
+          />
+        </div>
+
         {/* Table Card */}
         <Card className="mt-6">
           <CardHeader>
@@ -973,6 +1027,48 @@ export default function WebsitesPage() {
         overviewContent={
           selectedWebsite && (
             <>
+              {/* Scope Status Section */}
+              {scopeMatchesMap.get(selectedWebsite.id) && (
+                <div className="rounded-xl border p-4 bg-card space-y-3">
+                  <SectionTitle>Scope Status</SectionTitle>
+                  <div className="flex items-center gap-3">
+                    <ScopeBadge match={scopeMatchesMap.get(selectedWebsite.id)!} showDetails />
+                  </div>
+                  {scopeMatchesMap.get(selectedWebsite.id)!.matchedTargets.length > 0 && (
+                    <div className="text-sm">
+                      <p className="text-muted-foreground mb-1">Matching Rules</p>
+                      <div className="space-y-1">
+                        {scopeMatchesMap.get(selectedWebsite.id)!.matchedTargets.map((target) => (
+                          <div key={target.targetId} className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs">
+                              {target.pattern}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">({target.matchType})</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {scopeMatchesMap.get(selectedWebsite.id)!.matchedExclusions.length > 0 && (
+                    <div className="text-sm">
+                      <p className="text-muted-foreground mb-1">Exclusions Applied</p>
+                      <div className="space-y-1">
+                        {scopeMatchesMap.get(selectedWebsite.id)!.matchedExclusions.map((exclusion) => (
+                          <div key={exclusion.exclusionId} className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs border-orange-500/50 text-orange-500">
+                              {exclusion.pattern}
+                            </Badge>
+                            {exclusion.reason && (
+                              <span className="text-xs text-muted-foreground">{exclusion.reason}</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Website Info */}
               <div className="rounded-xl border p-4 bg-card space-y-3">
                 <SectionTitle>Website Information</SectionTitle>

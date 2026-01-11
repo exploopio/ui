@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Header, Main } from "@/components/layout";
 import { ProfileDropdown } from "@/components/profile-dropdown";
 import { Search } from "@/components/search";
@@ -10,6 +10,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Cloud, Plus, Shield, AlertTriangle, DollarSign } from "lucide-react";
+import {
+  ScopeBadge,
+  ScopeCoverageCard,
+  getScopeMatchesForAsset,
+  calculateScopeCoverage,
+  getActiveScopeTargets,
+  getActiveScopeExclusions,
+  type ScopeMatchResult,
+} from "@/features/scope";
 
 const mockCloudAccounts = [
   {
@@ -77,6 +86,34 @@ export default function CloudAccountsPage() {
     return "text-green-600 bg-green-500/15";
   };
 
+  // Scope data
+  const scopeTargets = useMemo(() => getActiveScopeTargets(), []);
+  const scopeExclusions = useMemo(() => getActiveScopeExclusions(), []);
+
+  // Compute scope matches for each cloud account
+  const scopeMatchesMap = useMemo(() => {
+    const map = new Map<string, ScopeMatchResult>();
+    mockCloudAccounts.forEach((account) => {
+      const match = getScopeMatchesForAsset(
+        { id: account.id, type: "cloud_account", name: account.name },
+        scopeTargets,
+        scopeExclusions
+      );
+      map.set(account.id, match);
+    });
+    return map;
+  }, [scopeTargets, scopeExclusions]);
+
+  // Calculate scope coverage for all cloud accounts
+  const scopeCoverage = useMemo(() => {
+    const assets = mockCloudAccounts.map((a) => ({
+      id: a.id,
+      name: a.name,
+      type: "cloud_account",
+    }));
+    return calculateScopeCoverage(assets, scopeTargets, scopeExclusions);
+  }, [scopeTargets, scopeExclusions]);
+
   return (
     <>
       <Header>
@@ -94,7 +131,7 @@ export default function CloudAccountsPage() {
         />
 
         {/* Stats */}
-        <div className="grid gap-4 md:grid-cols-4 mb-6">
+        <div className="grid gap-4 md:grid-cols-5 mb-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Accounts</CardTitle>
@@ -137,6 +174,11 @@ export default function CloudAccountsPage() {
               </div>
             </CardContent>
           </Card>
+          <ScopeCoverageCard
+            coverage={scopeCoverage}
+            title="Scope Coverage"
+            showBreakdown={false}
+          />
         </div>
 
         {/* Actions */}
@@ -164,6 +206,7 @@ export default function CloudAccountsPage() {
                   <th className="text-left p-4 font-medium">Provider</th>
                   <th className="text-left p-4 font-medium">Resources</th>
                   <th className="text-left p-4 font-medium">Security</th>
+                  <th className="text-left p-4 font-medium">Scope</th>
                   <th className="text-left p-4 font-medium">Risk Score</th>
                 </tr>
               </thead>
@@ -189,6 +232,13 @@ export default function CloudAccountsPage() {
                           <Badge variant="secondary" className="text-xs">SSO</Badge>
                         )}
                       </div>
+                    </td>
+                    <td className="p-4">
+                      {scopeMatchesMap.get(account.id) ? (
+                        <ScopeBadge match={scopeMatchesMap.get(account.id)!} />
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
                     </td>
                     <td className="p-4">
                       <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getRiskColor(account.riskScore)}`}>

@@ -175,24 +175,25 @@ function AssetCell({
 // Sort Button Component (moved outside to avoid React Compiler error)
 function SortButton({
   field,
-  currentField,
   children,
   onSort,
+  currentField,
 }: {
   field: SortField;
-  currentField: SortField;
   children: React.ReactNode;
   onSort: (field: SortField) => void;
+  currentField?: SortField;
 }) {
+  const isActive = currentField === field;
   return (
     <Button
       variant="ghost"
       size="sm"
-      className="-ml-3 h-8 data-[state=open]:bg-accent"
+      className={`-ml-3 h-8 data-[state=open]:bg-accent ${isActive ? "text-primary" : ""}`}
       onClick={() => onSort(field)}
     >
       {children}
-      <ArrowUpDown className="ml-2 h-4 w-4" />
+      <ArrowUpDown className={`ml-2 h-4 w-4 ${isActive ? "text-primary" : ""}`} />
     </Button>
   );
 }

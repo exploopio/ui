@@ -32,7 +32,6 @@ import type { AssetType } from "@/features/assets/types";
 import {
   ASSET_TYPE_LABELS,
   ASSET_TYPE_COLORS,
-  ASSET_TYPE_DESCRIPTIONS,
 } from "@/features/assets/types";
 import type { CreateGroupFormData, NewAssetFormData } from "./types";
 
