@@ -7,7 +7,7 @@
 
 import useSWR, { type SWRConfiguration, type KeyedMutator } from 'swr'
 import useSWRMutation from 'swr/mutation'
-import { apiClient, get, post, put, patch, del } from './client'
+import { get, post, put, patch, del } from './client'
 import {
   securityEndpoints,
   type AssetFilters,

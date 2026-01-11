@@ -22,6 +22,15 @@ import {
   StatsGrid,
   SectionTitle,
 } from "@/features/assets";
+import {
+  ScopeBadge,
+  ScopeCoverageCard,
+  getScopeMatchesForAsset,
+  calculateScopeCoverage,
+  getActiveScopeTargets,
+  getActiveScopeExclusions,
+  type ScopeMatchResult,
+} from "@/features/scope";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -94,7 +103,6 @@ import {
   Shield,
   AlertTriangle,
   CheckCircle,
-  Clock,
   Copy,
   RefreshCw,
   HardDrive,
@@ -187,6 +195,34 @@ export default function DatabasesPage() {
     withBackup: databases.filter((d) => d.metadata.backupEnabled).length,
     withFindings: databases.filter((d) => d.findingCount > 0).length,
   }), [databases]);
+
+  // Scope data
+  const scopeTargets = useMemo(() => getActiveScopeTargets(), []);
+  const scopeExclusions = useMemo(() => getActiveScopeExclusions(), []);
+
+  // Compute scope matches for each database
+  const scopeMatchesMap = useMemo(() => {
+    const map = new Map<string, ScopeMatchResult>();
+    databases.forEach((database) => {
+      const match = getScopeMatchesForAsset(
+        { id: database.id, type: "database", name: database.metadata.dbHost || database.name },
+        scopeTargets,
+        scopeExclusions
+      );
+      map.set(database.id, match);
+    });
+    return map;
+  }, [databases, scopeTargets, scopeExclusions]);
+
+  // Calculate scope coverage
+  const scopeCoverage = useMemo(() => {
+    const assets = databases.map((d) => ({
+      id: d.id,
+      name: d.metadata.dbHost || d.name,
+      type: "database" as const,
+    }));
+    return calculateScopeCoverage(assets, scopeTargets, scopeExclusions);
+  }, [databases, scopeTargets, scopeExclusions]);
 
   // Table columns
   const columns: ColumnDef<Asset>[] = [
@@ -310,6 +346,15 @@ export default function DatabasesPage() {
           showTooltips
         />
       ),
+    },
+    {
+      id: "scope",
+      header: "Scope",
+      cell: ({ row }) => {
+        const match = scopeMatchesMap.get(row.original.id);
+        if (!match) return <span className="text-muted-foreground">-</span>;
+        return <ScopeBadge match={match} />;
+      },
     },
     {
       accessorKey: "findingCount",
@@ -619,6 +664,9 @@ export default function DatabasesPage() {
               <CardTitle className="text-3xl text-purple-500">{stats.withBackup}</CardTitle>
             </CardHeader>
           </Card>
+        </div>
+        <div className="mt-4">
+          <ScopeCoverageCard coverage={scopeCoverage} showBreakdown={false} />
         </div>
 
         {/* Table Card */}

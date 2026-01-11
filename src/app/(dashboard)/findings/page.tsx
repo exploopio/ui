@@ -48,7 +48,6 @@ import {
 } from "lucide-react";
 import {
   mockFindings,
-  getFindingStats,
   FindingStatusBadge,
   FindingDetailDrawer,
   FINDING_STATUS_CONFIG,

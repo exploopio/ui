@@ -28,7 +28,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import type { AssetRelationship, RelationshipDirection } from "../../types";
-import { RELATIONSHIP_LABELS, EXTENDED_ASSET_TYPE_LABELS } from "../../types";
+import { RELATIONSHIP_LABELS } from "../../types";
 import { RelationshipCard, RelationshipListItem } from "./relationship-card";
 import { RelationshipGraphView, MiniGraph } from "./relationship-graph";
 import { buildRelationshipGraph } from "../../lib";

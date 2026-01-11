@@ -94,7 +94,6 @@ import {
   Shield,
   AlertTriangle,
   CheckCircle,
-  Clock,
   Copy,
   RefreshCw,
   Lock,
@@ -107,6 +106,14 @@ import {
 import { getRepositories, getAssetRelationships, ClassificationBadges, type Asset } from "@/features/assets";
 import { mockAssetGroups } from "@/features/asset-groups";
 import type { Status } from "@/features/shared/types";
+import {
+  ScopeBadgeSimple,
+  ScopeCoverageCard,
+  getScopeMatchesForAsset,
+  calculateScopeCoverage,
+  getActiveScopeTargets,
+  getActiveScopeExclusions,
+} from "@/features/scope";
 
 // Filter types
 type StatusFilter = Status | "all";
@@ -200,6 +207,36 @@ export default function RepositoriesPage() {
       private: repositories.filter((r) => r.metadata.visibility === "private").length,
     }),
     [repositories]
+  );
+
+  // Scope computation
+  const scopeTargets = useMemo(() => getActiveScopeTargets(), []);
+  const scopeExclusions = useMemo(() => getActiveScopeExclusions(), []);
+
+  const scopeMatchesMap = useMemo(() => {
+    const map: Record<string, { inScope: boolean; excluded: boolean }> = {};
+    repositories.forEach((repo) => {
+      const match = getScopeMatchesForAsset(
+        { id: repo.id, type: "repository", name: repo.name, metadata: repo.metadata as unknown as Record<string, unknown> },
+        scopeTargets,
+        scopeExclusions
+      );
+      map[repo.id] = {
+        inScope: match.inScope,
+        excluded: match.matchedExclusions.length > 0,
+      };
+    });
+    return map;
+  }, [repositories, scopeTargets, scopeExclusions]);
+
+  const scopeCoverage = useMemo(
+    () =>
+      calculateScopeCoverage(
+        repositories.map((r) => ({ id: r.id, type: "repository", name: r.name, metadata: r.metadata as unknown as Record<string, unknown> })),
+        scopeTargets,
+        scopeExclusions
+      ),
+    [repositories, scopeTargets, scopeExclusions]
   );
 
   // Provider icon
@@ -330,6 +367,19 @@ export default function RepositoriesPage() {
           showTooltips
         />
       ),
+    },
+    {
+      id: "scope",
+      header: "Scope",
+      cell: ({ row }) => {
+        const scopeMatch = scopeMatchesMap[row.original.id];
+        return (
+          <ScopeBadgeSimple
+            inScope={scopeMatch?.inScope ?? false}
+            excluded={scopeMatch?.excluded}
+          />
+        );
+      },
     },
     {
       accessorKey: "findingCount",
@@ -667,6 +717,11 @@ export default function RepositoriesPage() {
               </CardTitle>
             </CardHeader>
           </Card>
+        </div>
+
+        {/* Scope Coverage Card */}
+        <div className="mt-4">
+          <ScopeCoverageCard coverage={scopeCoverage} showBreakdown={false} />
         </div>
 
         {/* Table Card */}

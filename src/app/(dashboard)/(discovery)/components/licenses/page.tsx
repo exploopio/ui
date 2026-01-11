@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import { Header, Main } from "@/components/layout";
 import { ProfileDropdown } from "@/components/profile-dropdown";
@@ -40,7 +40,6 @@ import {
   getComponents,
   LicenseRiskBadge,
   LicenseCategoryBadge,
-  LICENSE_CATEGORY_LABELS,
 } from "@/features/components";
 import type { LicenseRisk, LicenseCategory } from "@/features/components";
 import { toast } from "sonner";

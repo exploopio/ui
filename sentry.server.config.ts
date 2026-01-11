@@ -31,7 +31,7 @@ if (SENTRY_DSN) {
     ],
 
     // Before sending events, filter sensitive data
-    beforeSend(event, hint) {
+    beforeSend(event, _hint) {
       // Remove sensitive environment variables
       if (event.contexts?.runtime?.name === 'node') {
         // Filter out sensitive env vars

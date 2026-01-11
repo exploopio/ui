@@ -1,8 +1,10 @@
 "use client"
 
+import { useEffect } from "react"
 import { ThemeProvider } from "@/context/theme-provider"
 import { DirectionProvider } from "@/context/direction-provider"
 import { Toaster } from "sonner"
+import { initWebVitals } from "@/lib/web-vitals"
 
 export function Providers({
   children,
@@ -11,6 +13,11 @@ export function Providers({
   children: React.ReactNode
   dir: "ltr" | "rtl"
 }) {
+  // Initialize Web Vitals reporting
+  useEffect(() => {
+    initWebVitals()
+  }, [])
+
   return (
     <ThemeProvider
       attribute="class"

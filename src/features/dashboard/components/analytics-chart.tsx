@@ -6,7 +6,7 @@
  * - Mock data for demonstration (should be replaced with real API data)
  */
 
-import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis } from 'recharts'
+import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis } from '@/components/charts'
 
 /**
  * MOCK DATA - Replace with real API integration

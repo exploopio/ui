@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { ColumnDef } from "@tanstack/react-table";
 import { Header, Main } from "@/components/layout";
 import { ProfileDropdown } from "@/components/profile-dropdown";
@@ -125,6 +126,7 @@ const defaultFilters: Filters = {
 };
 
 export default function AssetGroupsPage() {
+  const router = useRouter();
   const stats = getAssetGroupStats();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -259,7 +261,7 @@ export default function AssetGroupsPage() {
   };
 
   const handleCopyLink = (id: string) => {
-    navigator.clipboard.writeText(`${window.location.origin}/scoping/asset-groups/${id}`);
+    navigator.clipboard.writeText(`${window.location.origin}/asset-groups/${id}`);
     toast.success("Link copied to clipboard");
   };
 
@@ -420,7 +422,11 @@ export default function AssetGroupsPage() {
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => setViewGroup(group)}>
                   <Eye className="mr-2 h-4 w-4" />
-                  View Details
+                  Quick View
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push(`/asset-groups/${group.id}`)}>
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  Open Full Page
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => openEditDialog(group)}>
                   <Pencil className="mr-2 h-4 w-4" />
@@ -434,10 +440,6 @@ export default function AssetGroupsPage() {
                 <DropdownMenuItem onClick={() => handleCopyLink(group.id)}>
                   <Link className="mr-2 h-4 w-4" />
                   Copy Link
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  View Assets
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
@@ -830,6 +832,7 @@ export default function AssetGroupsPage() {
                   ? "Try adjusting your filters"
                   : "Create your first asset group to organize your assets"
               }
+              onRowClick={(group) => setViewGroup(group)}
             />
           </CardContent>
         </Card>
@@ -1040,9 +1043,12 @@ export default function AssetGroupsPage() {
                     <Pencil className="mr-2 h-4 w-4" />
                     Edit Group
                   </Button>
-                  <Button variant="outline" className="flex-1">
+                  <Button variant="outline" className="flex-1" onClick={() => {
+                    setViewGroup(null);
+                    router.push(`/asset-groups/${viewGroup.id}`);
+                  }}>
                     <ExternalLink className="mr-2 h-4 w-4" />
-                    View All Assets
+                    Open Full Page
                   </Button>
                 </div>
 

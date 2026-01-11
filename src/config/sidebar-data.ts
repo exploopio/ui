@@ -52,16 +52,7 @@ import {
   BookTemplate,
   // New icons for CTEM architecture
   ShieldAlert,
-  Network,
-  HardDrive,
-  Cpu,
   Package,
-  UserCog,
-  Key,
-  Bot,
-  Lock,
-  AlertTriangle,
-  FileCode,
   Scale,
   Download,
 } from "lucide-react";

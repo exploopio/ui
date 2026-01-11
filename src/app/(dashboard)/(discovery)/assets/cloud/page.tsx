@@ -94,7 +94,6 @@ import {
   Shield,
   AlertTriangle,
   CheckCircle,
-  Clock,
   RefreshCw,
   Server,
   Database,
@@ -107,6 +106,12 @@ import {
 import { getCloudAssets, getAssetRelationships, ClassificationBadges, type Asset } from "@/features/assets";
 import { mockAssetGroups } from "@/features/asset-groups";
 import type { Status } from "@/features/shared/types";
+import {
+  ScopeCoverageCard,
+  calculateScopeCoverage,
+  getActiveScopeTargets,
+  getActiveScopeExclusions,
+} from "@/features/scope";
 
 // Filter types
 type StatusFilter = Status | "all";
@@ -236,6 +241,20 @@ export default function CloudPage() {
       azure: cloudAssets.filter((a) => a.metadata.cloudProvider === "azure").length,
     }),
     [cloudAssets]
+  );
+
+  // Scope computation
+  const scopeTargets = useMemo(() => getActiveScopeTargets(), []);
+  const scopeExclusions = useMemo(() => getActiveScopeExclusions(), []);
+
+  const scopeCoverage = useMemo(
+    () =>
+      calculateScopeCoverage(
+        cloudAssets.map((a) => ({ id: a.id, type: "cloud", name: a.name, metadata: a.metadata as unknown as Record<string, unknown> })),
+        scopeTargets,
+        scopeExclusions
+      ),
+    [cloudAssets, scopeTargets, scopeExclusions]
   );
 
   // Get resource type icon
@@ -705,6 +724,11 @@ export default function CloudPage() {
               </CardTitle>
             </CardHeader>
           </Card>
+        </div>
+
+        {/* Scope Coverage Card */}
+        <div className="mt-4">
+          <ScopeCoverageCard coverage={scopeCoverage} showBreakdown={false} />
         </div>
 
         {/* Table Card */}

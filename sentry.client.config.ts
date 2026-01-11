@@ -68,7 +68,7 @@ if (SENTRY_DSN) {
           url.searchParams.delete('password')
           url.searchParams.delete('secret')
           event.request.url = url.toString()
-        } catch (e) {
+        } catch (_e) {
           // Invalid URL, keep original
         }
       }

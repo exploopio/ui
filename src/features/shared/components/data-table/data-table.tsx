@@ -59,6 +59,7 @@ interface DataTableProps<TData, TValue> {
   pageSizeOptions?: number[];
   emptyMessage?: string;
   emptyDescription?: string;
+  onRowClick?: (row: TData) => void;
 }
 
 export function DataTable<TData, TValue>({
@@ -73,6 +74,7 @@ export function DataTable<TData, TValue>({
   pageSizeOptions = [10, 20, 30, 50, 100],
   emptyMessage = "No results found",
   emptyDescription = "Try adjusting your search or filters",
+  onRowClick,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -213,7 +215,20 @@ export function DataTable<TData, TValue>({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
-                  className="cursor-pointer hover:bg-muted/50"
+                  className={onRowClick ? "cursor-pointer hover:bg-muted/50" : ""}
+                  onClick={(e) => {
+                    // Don't trigger row click if clicking on checkbox, button, or dropdown
+                    const target = e.target as HTMLElement;
+                    const isInteractiveElement =
+                      target.closest('button') ||
+                      target.closest('[role="checkbox"]') ||
+                      target.closest('[data-radix-collection-item]') ||
+                      target.closest('[role="menuitem"]');
+
+                    if (!isInteractiveElement && onRowClick) {
+                      onRowClick(row.original);
+                    }
+                  }}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>

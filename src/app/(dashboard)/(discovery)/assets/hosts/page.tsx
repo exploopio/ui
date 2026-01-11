@@ -94,7 +94,6 @@ import {
   Shield,
   AlertTriangle,
   CheckCircle,
-  Clock,
   Copy,
   RefreshCw,
   Cpu,
@@ -104,6 +103,15 @@ import {
 import { getHosts, getAssetRelationships, ClassificationBadges, type Asset } from "@/features/assets";
 import { mockAssetGroups } from "@/features/asset-groups";
 import type { Status } from "@/features/shared/types";
+import {
+  ScopeBadge,
+  ScopeCoverageCard,
+  getScopeMatchesForAsset,
+  calculateScopeCoverage,
+  getActiveScopeTargets,
+  getActiveScopeExclusions,
+  type ScopeMatchResult,
+} from "@/features/scope";
 
 // Filter types
 type StatusFilter = Status | "all";
@@ -190,6 +198,34 @@ export default function HostsPage() {
     virtual: hosts.filter((h) => h.metadata.isVirtual).length,
     withFindings: hosts.filter((h) => h.findingCount > 0).length,
   }), [hosts]);
+
+  // Scope data
+  const scopeTargets = useMemo(() => getActiveScopeTargets(), []);
+  const scopeExclusions = useMemo(() => getActiveScopeExclusions(), []);
+
+  // Compute scope matches for each host
+  const scopeMatchesMap = useMemo(() => {
+    const map = new Map<string, ScopeMatchResult>();
+    hosts.forEach((host) => {
+      const match = getScopeMatchesForAsset(
+        { id: host.id, type: "host", name: host.name },
+        scopeTargets,
+        scopeExclusions
+      );
+      map.set(host.id, match);
+    });
+    return map;
+  }, [hosts, scopeTargets, scopeExclusions]);
+
+  // Calculate scope coverage for all hosts
+  const scopeCoverage = useMemo(() => {
+    const assets = hosts.map((h) => ({
+      id: h.id,
+      name: h.name,
+      type: "host",
+    }));
+    return calculateScopeCoverage(assets, scopeTargets, scopeExclusions);
+  }, [hosts, scopeTargets, scopeExclusions]);
 
   // Table columns
   const columns: ColumnDef<Asset>[] = [
@@ -300,6 +336,15 @@ export default function HostsPage() {
       accessorKey: "status",
       header: "Status",
       cell: ({ row }) => <StatusBadge status={row.original.status} />,
+    },
+    {
+      id: "scope",
+      header: "Scope",
+      cell: ({ row }) => {
+        const match = scopeMatchesMap.get(row.original.id);
+        if (!match) return <span className="text-muted-foreground">-</span>;
+        return <ScopeBadge match={match} />;
+      },
     },
     {
       id: "classification",
@@ -626,6 +671,15 @@ export default function HostsPage() {
               <CardTitle className="text-3xl text-orange-500">{stats.withFindings}</CardTitle>
             </CardHeader>
           </Card>
+        </div>
+
+        {/* Scope Coverage Card */}
+        <div className="mt-4">
+          <ScopeCoverageCard
+            coverage={scopeCoverage}
+            title="Scope Coverage"
+            showBreakdown={false}
+          />
         </div>
 
         {/* Table Card */}

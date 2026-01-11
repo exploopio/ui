@@ -12,7 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Users, Bot, Key, Puzzle, KeyRound, ShieldAlert, Lock } from "lucide-react";
+import { Users, Bot, Key, Puzzle, KeyRound, ShieldAlert } from "lucide-react";
 
 // Mock stats data
 const identityStats = [

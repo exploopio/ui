@@ -78,7 +78,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import {
   Plus,
@@ -99,11 +98,8 @@ import {
   CheckCircle,
   Clock,
   Copy,
-  RefreshCw,
   User,
   Calendar,
-  Database,
-  ExternalLink,
   FileText,
 } from "lucide-react";
 import { getCredentials, getAssetRelationships, type Asset } from "@/features/assets";

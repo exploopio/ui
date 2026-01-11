@@ -178,6 +178,112 @@ export const mockAssetGroups: AssetGroup[] = [
   },
 ];
 
+// Get single group by ID
+export const getAssetGroupById = (id: string): AssetGroup | undefined => {
+  return mockAssetGroups.find((g) => g.id === id);
+};
+
+// Get all groups
+export const getAssetGroups = (): AssetGroup[] => {
+  return [...mockAssetGroups];
+};
+
+// Mock assets for groups (simplified for demo)
+export interface GroupAsset {
+  id: string;
+  type: "domain" | "website" | "api" | "host" | "cloud" | "repository" | "database";
+  name: string;
+  status: "active" | "inactive" | "monitoring";
+  riskScore: number;
+  findingCount: number;
+  lastSeen: string;
+}
+
+// Generate mock assets for a group
+export const getAssetsByGroupId = (groupId: string): GroupAsset[] => {
+  const group = getAssetGroupById(groupId);
+  if (!group) return [];
+
+  const assets: GroupAsset[] = [];
+  const types: GroupAsset["type"][] = ["domain", "website", "api", "host", "cloud", "repository", "database"];
+  const statuses: GroupAsset["status"][] = ["active", "inactive", "monitoring"];
+
+  // Generate assets based on group's asset count
+  for (let i = 0; i < Math.min(group.assetCount, 20); i++) {
+    const type = types[i % types.length];
+    const typeIndex = i + 1;
+
+    assets.push({
+      id: `${groupId}-asset-${i + 1}`,
+      type,
+      name: type === "domain"
+        ? `${group.name.toLowerCase().replace(/[^a-z0-9]/g, "")}-${typeIndex}.example.vn`
+        : type === "website"
+        ? `https://app${typeIndex}.example.vn`
+        : type === "api"
+        ? `api-${typeIndex}.example.vn`
+        : type === "host"
+        ? `192.168.1.${100 + typeIndex}`
+        : type === "cloud"
+        ? `aws-${typeIndex}-${group.id}`
+        : type === "repository"
+        ? `github.com/example/repo-${typeIndex}`
+        : `db-${typeIndex}.example.vn`,
+      status: statuses[i % statuses.length],
+      riskScore: Math.floor(Math.random() * 100),
+      findingCount: Math.floor(Math.random() * 10),
+      lastSeen: daysAgo(Math.floor(Math.random() * 7)),
+    });
+  }
+
+  return assets;
+};
+
+// Get findings summary for a group
+export interface GroupFinding {
+  id: string;
+  title: string;
+  severity: "critical" | "high" | "medium" | "low" | "info";
+  status: "open" | "in_progress" | "resolved";
+  assetName: string;
+  discoveredAt: string;
+}
+
+export const getFindingsByGroupId = (groupId: string): GroupFinding[] => {
+  const group = getAssetGroupById(groupId);
+  if (!group) return [];
+
+  const findings: GroupFinding[] = [];
+  const severities: GroupFinding["severity"][] = ["critical", "high", "medium", "low", "info"];
+  const statuses: GroupFinding["status"][] = ["open", "in_progress", "resolved"];
+
+  const findingTitles = [
+    "SQL Injection Vulnerability",
+    "Cross-Site Scripting (XSS)",
+    "Insecure Direct Object Reference",
+    "Missing Security Headers",
+    "Outdated SSL Certificate",
+    "Exposed Admin Panel",
+    "Weak Password Policy",
+    "Missing Rate Limiting",
+    "Information Disclosure",
+    "Broken Authentication",
+  ];
+
+  for (let i = 0; i < Math.min(group.findingCount, 15); i++) {
+    findings.push({
+      id: `${groupId}-finding-${i + 1}`,
+      title: findingTitles[i % findingTitles.length],
+      severity: severities[i % severities.length],
+      status: statuses[i % statuses.length],
+      assetName: `asset-${i + 1}.example.vn`,
+      discoveredAt: daysAgo(Math.floor(Math.random() * 30)),
+    });
+  }
+
+  return findings;
+};
+
 // Stats
 export const getAssetGroupStats = () => ({
   total: mockAssetGroups.length,

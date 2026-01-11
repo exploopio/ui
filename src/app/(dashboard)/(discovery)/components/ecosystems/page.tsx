@@ -53,9 +53,6 @@ export default function EcosystemsPage() {
     return getComponentsByEcosystem(selectedEcosystem);
   }, [selectedEcosystem]);
 
-  // Find the most used ecosystem
-  const topEcosystem = ecosystemStats.length > 0 ? ecosystemStats[0] : null;
-
   return (
     <>
       <Header fixed>
