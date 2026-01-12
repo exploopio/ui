@@ -180,7 +180,7 @@ export const COMMON_LICENSES: { id: string; name: string; category: LicenseCateg
 // Component Source (where the component was found)
 // ============================================
 
-export type ComponentSourceType = "repository" | "container" | "mobile_app" | "host" | "serverless";
+export type ComponentSourceType = "project" | "repository" | "container" | "mobile_app" | "host" | "serverless";
 
 export interface ComponentSource {
   id: string;

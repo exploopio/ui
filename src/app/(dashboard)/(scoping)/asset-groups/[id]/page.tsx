@@ -122,7 +122,8 @@ const assetTypeIcons: Record<string, React.ReactNode> = {
   api: <Server className="h-4 w-4" />,
   host: <Server className="h-4 w-4" />,
   cloud: <Cloud className="h-4 w-4" />,
-  repository: <GitBranch className="h-4 w-4" />,
+  project: <GitBranch className="h-4 w-4" />,
+  repository: <GitBranch className="h-4 w-4" />, // @deprecated
   database: <Database className="h-4 w-4" />,
 };
 

@@ -276,9 +276,10 @@ export const matchesScopeTarget = (
       break;
     }
 
+    case "project":
     case "repository": {
       const repo =
-        `${metadata?.repoProvider || "github"}.com/${metadata?.org || ""}/${name}` ||
+        `${metadata?.projectProvider || metadata?.repoProvider || "github"}.com/${metadata?.org || ""}/${name}` ||
         name;
       if (matchRepository(validPattern, repo)) {
         return {

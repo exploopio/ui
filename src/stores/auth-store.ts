@@ -256,9 +256,12 @@ export const useAuthStore = create<AuthState>()(
 // Store refresh timeout ID at module level for type safety
 let authRefreshTimeout: ReturnType<typeof setTimeout> | null = null
 
+// Token refresh mutex - shared with API client via module-level state
+let isRefreshingToken = false
+
 /**
  * Setup automatic token refresh before expiry
- * This is a simple implementation - you may want to use a more robust solution
+ * Automatically refreshes the access token 5 minutes before expiry.
  *
  * @param expiresIn - Seconds until token expires
  */
@@ -272,22 +275,48 @@ function setupTokenRefresh(expiresIn: number): void {
   // Only setup refresh if token has reasonable expiry
   if (expiresIn < 60 || expiresIn > 86400) return // 1 min to 24 hours
 
-  // Refresh 5 minutes before expiry
+  // Refresh 5 minutes before expiry (or immediately if less than 5 min left)
   const refreshIn = Math.max(0, (expiresIn - 300) * 1000)
 
   if (typeof window !== 'undefined') {
-    authRefreshTimeout = setTimeout(() => {
-      // Call your refresh token API here
-      console.log('[Auth] Token expiring soon, should refresh...')
+    authRefreshTimeout = setTimeout(async () => {
+      // Skip if already refreshing (prevents race with API client refresh)
+      if (isRefreshingToken) {
+        console.log('[Auth] Token refresh already in progress, skipping scheduled refresh')
+        return
+      }
 
-      // Example: Call refresh endpoint
-      // fetch('/api/auth/refresh', { method: 'POST' })
-      //   .then(res => res.json())
-      //   .then(data => {
-      //     if (data.accessToken) {
-      //       useAuthStore.getState().updateToken(data.accessToken)
-      //     }
-      //   })
+      console.log('[Auth] Token expiring soon, refreshing...')
+      isRefreshingToken = true
+
+      try {
+        const response = await fetch('/api/auth/refresh', {
+          method: 'POST',
+          credentials: 'include', // Include httpOnly cookies
+        })
+
+        const data = await response.json()
+
+        if (response.ok && data.success && data.data?.access_token) {
+          console.log('[Auth] Token refreshed successfully')
+          useAuthStore.getState().updateToken(data.data.access_token)
+        } else {
+          // Refresh failed - clear auth and redirect to login
+          console.warn('[Auth] Token refresh failed:', data.error?.message || 'Unknown error')
+          useAuthStore.getState().clearAuth()
+          redirectToLogin()
+        }
+      } catch (error) {
+        console.error('[Auth] Token refresh error:', error)
+        // Network error or other failure - clear auth
+        useAuthStore.getState().clearAuth()
+        redirectToLogin()
+      } finally {
+        // Clear the mutex after a delay to prevent rapid re-attempts
+        setTimeout(() => {
+          isRefreshingToken = false
+        }, 1000)
+      }
     }, refreshIn)
   }
 }

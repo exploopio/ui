@@ -65,7 +65,8 @@ const EXTENDED_ASSET_TYPE_COLORS: Record<ExtendedAssetType, { bg: string; text: 
   database: { bg: "bg-yellow-500/20", text: "text-yellow-500" },
   network: { bg: "bg-gray-500/20", text: "text-gray-500" },
   // Code & CI/CD
-  repository: { bg: "bg-orange-500/20", text: "text-orange-500" },
+  project: { bg: "bg-orange-500/20", text: "text-orange-500" },
+  repository: { bg: "bg-orange-500/20", text: "text-orange-500" }, // @deprecated
   // Legacy types (deprecated)
   service: { bg: "bg-purple-500/20", text: "text-purple-500" },
   cloud: { bg: "bg-cyan-500/20", text: "text-cyan-500" },

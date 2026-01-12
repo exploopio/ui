@@ -4,27 +4,25 @@ import { useLayout } from "@/context/layout-provider";
 import {
   Sidebar,
   SidebarContent,
-  // SidebarFooter,
+  SidebarFooter,
   SidebarHeader,
   SidebarRail,
-  // useSidebar,
 } from "@/components/ui/sidebar";
 // Use centralized sidebar data from features
 import { sidebarData } from "@/config/sidebar-data";
 import { NavGroup } from "./nav-group";
-// import { NavUser } from "./nav-user";
+import { SidebarUser } from "./sidebar-user";
 import { TeamSwitcher } from "./team-switcher";
 import { Separator } from "@/components/ui/separator";
 
 export function AppSidebar() {
   const { collapsible, variant } = useLayout();
-  // const { open } = useSidebar();
 
   return (
     <Sidebar collapsible={collapsible} variant={variant}>
-      {/* Header */}
+      {/* Header - Team Switcher */}
       <SidebarHeader>
-        <TeamSwitcher teams={sidebarData.teams} />
+        <TeamSwitcher />
         <Separator orientation="horizontal" />
       </SidebarHeader>
 
@@ -35,12 +33,12 @@ export function AppSidebar() {
         ))}
       </SidebarContent>
 
-      {/* <Separator orientation="horizontal" /> */}
+      <Separator orientation="horizontal" />
 
-      {/* Footer */}
-      {/* <SidebarFooter>
-        <NavUser user={sidebarData.user} />
-      </SidebarFooter> */}
+      {/* Footer - User profile and logout */}
+      <SidebarFooter>
+        <SidebarUser />
+      </SidebarFooter>
 
       {/* Sidebar toggle rail */}
       <SidebarRail />

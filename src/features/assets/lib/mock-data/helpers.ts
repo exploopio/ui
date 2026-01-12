@@ -61,9 +61,9 @@ export const deriveScopeAndExposure = (
     (tagsSet.has("customer-facing") || nameLC.includes("gateway") || nameLC.includes("api"))
   ) {
     exposure = "restricted";
-  } else if (type === "repository" && metadata?.visibility === "public") {
+  } else if ((type === "project" || type === "repository") && metadata?.visibility === "public") {
     exposure = "public";
-  } else if (type === "repository") {
+  } else if (type === "project" || type === "repository") {
     exposure = "restricted";
   } else if (type === "credential") {
     exposure = "isolated"; // Credentials should be highly protected

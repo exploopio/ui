@@ -59,7 +59,8 @@ const ASSET_TYPE_COLORS: Record<string, string> = {
   domain: "#3b82f6",
   website: "#22c55e",
   service: "#a855f7",
-  repository: "#f97316",
+  project: "#f97316",
+  repository: "#f97316", // @deprecated
   cloud: "#06b6d4",
   credential: "#ef4444",
   host: "#64748b",

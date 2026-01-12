@@ -1,7 +1,7 @@
 /**
  * API Endpoints
  *
- * Centralized API endpoint definitions
+ * Centralized API endpoint definitions for Rediver
  * Type-safe URL builders for backend API
  */
 
@@ -16,12 +16,13 @@ import type { SearchFilters, UserListFilters } from './types'
  * API base paths
  */
 export const API_BASE = {
-  USERS: '/api/users',
-  POSTS: '/api/posts',
-  FILES: '/api/files',
-  AUTH: '/api/auth',
-  PROFILE: '/api/profile',
-  SETTINGS: '/api/settings',
+  AUTH: '/api/v1/auth',
+  USERS: '/api/v1/users',
+  TENANTS: '/api/v1/tenants',
+  INVITATIONS: '/api/v1/invitations',
+  ASSETS: '/api/v1/assets',
+  VULNERABILITIES: '/api/v1/vulnerabilities',
+  DASHBOARD: '/api/v1/dashboard',
 } as const
 
 // ============================================
@@ -33,9 +34,9 @@ export const API_BASE = {
  */
 export const authEndpoints = {
   /**
-   * Get current user profile
+   * Get auth provider info
    */
-  me: () => `${API_BASE.AUTH}/me`,
+  info: () => `${API_BASE.AUTH}/info`,
 
   /**
    * Refresh access token
@@ -43,14 +44,69 @@ export const authEndpoints = {
   refresh: () => `${API_BASE.AUTH}/refresh`,
 
   /**
+   * Exchange refresh token for tenant-scoped access token
+   */
+  token: () => `${API_BASE.AUTH}/token`,
+
+  /**
    * Logout
    */
   logout: () => `${API_BASE.AUTH}/logout`,
 
+  // ============================================
+  // LOCAL AUTH
+  // ============================================
+
   /**
-   * Validate token
+   * Register new user (local auth)
    */
-  validate: () => `${API_BASE.AUTH}/validate`,
+  register: () => `${API_BASE.AUTH}/register`,
+
+  /**
+   * Login with email/password (local auth)
+   */
+  login: () => `${API_BASE.AUTH}/login`,
+
+  /**
+   * Verify email with token
+   */
+  verifyEmail: (token: string) => `${API_BASE.AUTH}/verify-email?token=${token}`,
+
+  /**
+   * Resend verification email
+   */
+  resendVerification: () => `${API_BASE.AUTH}/resend-verification`,
+
+  /**
+   * Request password reset
+   */
+  forgotPassword: () => `${API_BASE.AUTH}/forgot-password`,
+
+  /**
+   * Reset password with token
+   */
+  resetPassword: () => `${API_BASE.AUTH}/reset-password`,
+
+  /**
+   * Create first team for new user (uses refresh token)
+   */
+  createFirstTeam: () => `${API_BASE.AUTH}/create-first-team`,
+
+  // ============================================
+  // SOCIAL/OAUTH AUTH
+  // ============================================
+
+  /**
+   * Get OAuth authorization URL for a provider
+   * @param provider - OAuth provider (google, github, microsoft)
+   */
+  oauthAuthorize: (provider: string) => `${API_BASE.AUTH}/oauth/${provider}/authorize`,
+
+  /**
+   * OAuth callback endpoint (handled by backend, redirects to frontend)
+   * @param provider - OAuth provider (google, github, microsoft)
+   */
+  oauthCallback: (provider: string) => `${API_BASE.AUTH}/oauth/${provider}/callback`,
 } as const
 
 // ============================================
@@ -61,8 +117,60 @@ export const authEndpoints = {
  * User endpoints
  */
 export const userEndpoints = {
+  // ============================================
+  // CURRENT USER (Profile)
+  // ============================================
+
   /**
-   * List users with filters
+   * Get current user's profile
+   */
+  me: () => `${API_BASE.USERS}/me`,
+
+  /**
+   * Update current user's profile
+   */
+  updateMe: () => `${API_BASE.USERS}/me`,
+
+  /**
+   * Update current user's preferences
+   */
+  updatePreferences: () => `${API_BASE.USERS}/me/preferences`,
+
+  /**
+   * Get current user's tenants/teams
+   */
+  myTenants: () => `${API_BASE.USERS}/me/tenants`,
+
+  // ============================================
+  // SESSION MANAGEMENT (Local Auth)
+  // ============================================
+
+  /**
+   * Change password (authenticated user)
+   */
+  changePassword: () => `${API_BASE.USERS}/me/change-password`,
+
+  /**
+   * List active sessions
+   */
+  sessions: () => `${API_BASE.USERS}/me/sessions`,
+
+  /**
+   * Revoke all sessions except current
+   */
+  revokeAllSessions: () => `${API_BASE.USERS}/me/sessions`,
+
+  /**
+   * Revoke specific session
+   */
+  revokeSession: (sessionId: string) => `${API_BASE.USERS}/me/sessions/${sessionId}`,
+
+  // ============================================
+  // USER MANAGEMENT (Admin)
+  // ============================================
+
+  /**
+   * List users with filters (admin)
    */
   list: (filters?: UserListFilters) => {
     const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
@@ -70,197 +178,360 @@ export const userEndpoints = {
   },
 
   /**
-   * Get single user by ID
+   * Get single user by ID (admin)
    */
   get: (userId: string) => `${API_BASE.USERS}/${userId}`,
 
   /**
-   * Create new user
+   * Create new user (admin)
    */
   create: () => API_BASE.USERS,
 
   /**
-   * Update user by ID
+   * Update user by ID (admin)
    */
   update: (userId: string) => `${API_BASE.USERS}/${userId}`,
 
   /**
-   * Delete user by ID
+   * Delete user by ID (admin)
    */
   delete: (userId: string) => `${API_BASE.USERS}/${userId}`,
-
-  /**
-   * Get user's posts
-   */
-  posts: (userId: string, filters?: SearchFilters) => {
-    const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
-    return `${API_BASE.USERS}/${userId}/posts${queryString}`
-  },
-
-  /**
-   * Get user's roles
-   */
-  roles: (userId: string) => `${API_BASE.USERS}/${userId}/roles`,
-
-  /**
-   * Update user's roles
-   */
-  updateRoles: (userId: string) => `${API_BASE.USERS}/${userId}/roles`,
 } as const
 
 // ============================================
-// POST ENDPOINTS
+// TENANT ENDPOINTS (Teams)
 // ============================================
 
 /**
- * Post endpoints
+ * Tenant endpoints (API uses "tenant", UI displays "Team")
  */
-export const postEndpoints = {
+export const tenantEndpoints = {
   /**
-   * List posts with filters
+   * List user's tenants/teams
    */
   list: (filters?: SearchFilters) => {
     const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
-    return `${API_BASE.POSTS}${queryString}`
+    return `${API_BASE.TENANTS}${queryString}`
   },
 
   /**
-   * Get single post by ID
+   * Create a new tenant/team
    */
-  get: (postId: string) => `${API_BASE.POSTS}/${postId}`,
+  create: () => API_BASE.TENANTS,
 
   /**
-   * Create new post
+   * Get tenant by ID or slug
    */
-  create: () => API_BASE.POSTS,
+  get: (tenantIdOrSlug: string) => `${API_BASE.TENANTS}/${tenantIdOrSlug}`,
 
   /**
-   * Update post by ID
+   * Update tenant
    */
-  update: (postId: string) => `${API_BASE.POSTS}/${postId}`,
+  update: (tenantIdOrSlug: string) => `${API_BASE.TENANTS}/${tenantIdOrSlug}`,
 
   /**
-   * Delete post by ID
+   * Delete tenant
    */
-  delete: (postId: string) => `${API_BASE.POSTS}/${postId}`,
+  delete: (tenantIdOrSlug: string) => `${API_BASE.TENANTS}/${tenantIdOrSlug}`,
+
+  // ============================================
+  // MEMBER MANAGEMENT
+  // ============================================
 
   /**
-   * Publish post
+   * List tenant members
    */
-  publish: (postId: string) => `${API_BASE.POSTS}/${postId}/publish`,
+  members: (tenantIdOrSlug: string) => `${API_BASE.TENANTS}/${tenantIdOrSlug}/members`,
 
   /**
-   * Unpublish post
+   * Add member to tenant
    */
-  unpublish: (postId: string) => `${API_BASE.POSTS}/${postId}/unpublish`,
+  addMember: (tenantIdOrSlug: string) => `${API_BASE.TENANTS}/${tenantIdOrSlug}/members`,
+
+  /**
+   * Update member role
+   */
+  updateMemberRole: (tenantIdOrSlug: string, memberId: string) =>
+    `${API_BASE.TENANTS}/${tenantIdOrSlug}/members/${memberId}`,
+
+  /**
+   * Remove member from tenant
+   */
+  removeMember: (tenantIdOrSlug: string, memberId: string) =>
+    `${API_BASE.TENANTS}/${tenantIdOrSlug}/members/${memberId}`,
+
+  // ============================================
+  // INVITATION MANAGEMENT
+  // ============================================
+
+  /**
+   * List tenant invitations
+   */
+  invitations: (tenantIdOrSlug: string) => `${API_BASE.TENANTS}/${tenantIdOrSlug}/invitations`,
+
+  /**
+   * Create invitation
+   */
+  createInvitation: (tenantIdOrSlug: string) => `${API_BASE.TENANTS}/${tenantIdOrSlug}/invitations`,
+
+  /**
+   * Delete invitation
+   */
+  deleteInvitation: (tenantIdOrSlug: string, invitationId: string) =>
+    `${API_BASE.TENANTS}/${tenantIdOrSlug}/invitations/${invitationId}`,
 } as const
 
 // ============================================
-// FILE ENDPOINTS
+// INVITATION ENDPOINTS (Public)
 // ============================================
 
 /**
- * File endpoints
+ * Invitation endpoints for accepting invitations
  */
-export const fileEndpoints = {
+export const invitationEndpoints = {
   /**
-   * Upload file
+   * Get invitation details by token
    */
-  upload: () => `${API_BASE.FILES}/upload`,
+  get: (token: string) => `${API_BASE.INVITATIONS}/${token}`,
 
   /**
-   * Get file by ID
+   * Accept invitation
    */
-  get: (fileId: string) => `${API_BASE.FILES}/${fileId}`,
+  accept: (token: string) => `${API_BASE.INVITATIONS}/${token}/accept`,
+} as const
 
-  /**
-   * Delete file by ID
-   */
-  delete: (fileId: string) => `${API_BASE.FILES}/${fileId}`,
+// ============================================
+// ASSET ENDPOINTS (Global)
+// ============================================
 
+/**
+ * Asset endpoints (global resources)
+ */
+export const assetEndpoints = {
   /**
-   * Get file URL
-   */
-  url: (fileId: string) => `${API_BASE.FILES}/${fileId}/url`,
-
-  /**
-   * List files with filters
+   * List assets
    */
   list: (filters?: SearchFilters) => {
     const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
-    return `${API_BASE.FILES}${queryString}`
+    return `${API_BASE.ASSETS}${queryString}`
   },
+
+  /**
+   * Get asset by ID
+   */
+  get: (assetId: string) => `${API_BASE.ASSETS}/${assetId}`,
+
+  /**
+   * Create asset (admin only)
+   */
+  create: () => API_BASE.ASSETS,
+
+  /**
+   * Update asset (admin only)
+   */
+  update: (assetId: string) => `${API_BASE.ASSETS}/${assetId}`,
+
+  /**
+   * Delete asset (admin only)
+   */
+  delete: (assetId: string) => `${API_BASE.ASSETS}/${assetId}`,
 } as const
 
 // ============================================
-// PROFILE ENDPOINTS
+// PROJECT ENDPOINTS (Tenant-scoped)
 // ============================================
 
 /**
- * Profile endpoints (current user)
+ * Project endpoints (tenant-scoped repositories/code projects)
  */
-export const profileEndpoints = {
+export const projectEndpoints = {
   /**
-   * Get current user's profile
+   * List projects in tenant
    */
-  get: () => API_BASE.PROFILE,
-
-  /**
-   * Update current user's profile
-   */
-  update: () => API_BASE.PROFILE,
-
-  /**
-   * Upload avatar
-   */
-  uploadAvatar: () => `${API_BASE.PROFILE}/avatar`,
-
-  /**
-   * Delete avatar
-   */
-  deleteAvatar: () => `${API_BASE.PROFILE}/avatar`,
-
-  /**
-   * Get current user's posts
-   */
-  posts: (filters?: SearchFilters) => {
+  list: (tenantIdOrSlug: string, filters?: SearchFilters) => {
     const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
-    return `${API_BASE.PROFILE}/posts${queryString}`
+    return `${API_BASE.TENANTS}/${tenantIdOrSlug}/projects${queryString}`
   },
 
   /**
-   * Change password
+   * Get project by ID
    */
-  changePassword: () => `${API_BASE.PROFILE}/password`,
+  get: (tenantIdOrSlug: string, projectId: string) =>
+    `${API_BASE.TENANTS}/${tenantIdOrSlug}/projects/${projectId}`,
+
+  /**
+   * Create project (member+ role)
+   */
+  create: (tenantIdOrSlug: string) => `${API_BASE.TENANTS}/${tenantIdOrSlug}/projects`,
+
+  /**
+   * Update project (member+ role)
+   */
+  update: (tenantIdOrSlug: string, projectId: string) =>
+    `${API_BASE.TENANTS}/${tenantIdOrSlug}/projects/${projectId}`,
+
+  /**
+   * Delete project (admin+ role)
+   */
+  delete: (tenantIdOrSlug: string, projectId: string) =>
+    `${API_BASE.TENANTS}/${tenantIdOrSlug}/projects/${projectId}`,
 } as const
 
 // ============================================
-// SETTINGS ENDPOINTS
+// COMPONENT ENDPOINTS (Tenant-scoped)
 // ============================================
 
 /**
- * Settings endpoints
+ * Component endpoints (tenant-scoped dependencies/packages)
  */
-export const settingsEndpoints = {
+export const componentEndpoints = {
   /**
-   * Get all settings
+   * List components in tenant
    */
-  get: () => API_BASE.SETTINGS,
+  list: (tenantIdOrSlug: string, filters?: SearchFilters) => {
+    const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
+    return `${API_BASE.TENANTS}/${tenantIdOrSlug}/components${queryString}`
+  },
 
   /**
-   * Update settings
+   * Get component by ID
    */
-  update: () => API_BASE.SETTINGS,
+  get: (tenantIdOrSlug: string, componentId: string) =>
+    `${API_BASE.TENANTS}/${tenantIdOrSlug}/components/${componentId}`,
 
   /**
-   * Get specific setting category
+   * Create component (member+ role)
    */
-  category: (category: string) => `${API_BASE.SETTINGS}/${category}`,
+  create: (tenantIdOrSlug: string) => `${API_BASE.TENANTS}/${tenantIdOrSlug}/components`,
 
   /**
-   * Update specific setting category
+   * Update component (member+ role)
    */
-  updateCategory: (category: string) => `${API_BASE.SETTINGS}/${category}`,
+  update: (tenantIdOrSlug: string, componentId: string) =>
+    `${API_BASE.TENANTS}/${tenantIdOrSlug}/components/${componentId}`,
+
+  /**
+   * Delete component (admin+ role)
+   */
+  delete: (tenantIdOrSlug: string, componentId: string) =>
+    `${API_BASE.TENANTS}/${tenantIdOrSlug}/components/${componentId}`,
+
+  /**
+   * List components by project
+   */
+  listByProject: (tenantIdOrSlug: string, projectId: string, filters?: SearchFilters) => {
+    const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
+    return `${API_BASE.TENANTS}/${tenantIdOrSlug}/projects/${projectId}/components${queryString}`
+  },
+} as const
+
+// ============================================
+// VULNERABILITY ENDPOINTS (Global CVE database)
+// ============================================
+
+/**
+ * Vulnerability endpoints (global CVE database)
+ */
+export const vulnerabilityEndpoints = {
+  /**
+   * List vulnerabilities
+   */
+  list: (filters?: SearchFilters) => {
+    const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
+    return `${API_BASE.VULNERABILITIES}${queryString}`
+  },
+
+  /**
+   * Get vulnerability by ID
+   */
+  get: (vulnId: string) => `${API_BASE.VULNERABILITIES}/${vulnId}`,
+
+  /**
+   * Get vulnerability by CVE ID
+   */
+  getByCVE: (cveId: string) => `${API_BASE.VULNERABILITIES}/cve/${cveId}`,
+
+  /**
+   * Create vulnerability (admin only)
+   */
+  create: () => API_BASE.VULNERABILITIES,
+
+  /**
+   * Update vulnerability (admin only)
+   */
+  update: (vulnId: string) => `${API_BASE.VULNERABILITIES}/${vulnId}`,
+
+  /**
+   * Delete vulnerability (admin only)
+   */
+  delete: (vulnId: string) => `${API_BASE.VULNERABILITIES}/${vulnId}`,
+} as const
+
+// ============================================
+// FINDING ENDPOINTS (Tenant-scoped)
+// ============================================
+
+/**
+ * Finding endpoints (tenant-scoped vulnerability instances)
+ */
+export const findingEndpoints = {
+  /**
+   * List findings in tenant
+   */
+  list: (tenantIdOrSlug: string, filters?: SearchFilters) => {
+    const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
+    return `${API_BASE.TENANTS}/${tenantIdOrSlug}/findings${queryString}`
+  },
+
+  /**
+   * Get finding by ID
+   */
+  get: (tenantIdOrSlug: string, findingId: string) =>
+    `${API_BASE.TENANTS}/${tenantIdOrSlug}/findings/${findingId}`,
+
+  /**
+   * Create finding (member+ role)
+   */
+  create: (tenantIdOrSlug: string) => `${API_BASE.TENANTS}/${tenantIdOrSlug}/findings`,
+
+  /**
+   * Update finding status (member+ role)
+   */
+  updateStatus: (tenantIdOrSlug: string, findingId: string) =>
+    `${API_BASE.TENANTS}/${tenantIdOrSlug}/findings/${findingId}/status`,
+
+  /**
+   * Delete finding (admin+ role)
+   */
+  delete: (tenantIdOrSlug: string, findingId: string) =>
+    `${API_BASE.TENANTS}/${tenantIdOrSlug}/findings/${findingId}`,
+
+  /**
+   * List findings by project
+   */
+  listByProject: (tenantIdOrSlug: string, projectId: string, filters?: SearchFilters) => {
+    const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
+    return `${API_BASE.TENANTS}/${tenantIdOrSlug}/projects/${projectId}/findings${queryString}`
+  },
+} as const
+
+// ============================================
+// DASHBOARD ENDPOINTS
+// ============================================
+
+/**
+ * Dashboard endpoints for aggregated statistics
+ */
+export const dashboardEndpoints = {
+  /**
+   * Get global dashboard stats (not tenant-scoped)
+   */
+  globalStats: () => `${API_BASE.DASHBOARD}/stats`,
+
+  /**
+   * Get tenant-scoped dashboard stats
+   */
+  stats: (tenantIdOrSlug: string) => `${API_BASE.TENANTS}/${tenantIdOrSlug}/dashboard/stats`,
 } as const
 
 // ============================================
@@ -310,10 +581,14 @@ export function buildSortEndpoint(
 export const endpoints = {
   auth: authEndpoints,
   users: userEndpoints,
-  posts: postEndpoints,
-  files: fileEndpoints,
-  profile: profileEndpoints,
-  settings: settingsEndpoints,
+  tenants: tenantEndpoints,
+  invitations: invitationEndpoints,
+  assets: assetEndpoints,
+  projects: projectEndpoints,
+  components: componentEndpoints,
+  vulnerabilities: vulnerabilityEndpoints,
+  findings: findingEndpoints,
+  dashboard: dashboardEndpoints,
 } as const
 
 /**
@@ -322,8 +597,12 @@ export const endpoints = {
 export {
   authEndpoints as auth,
   userEndpoints as users,
-  postEndpoints as posts,
-  fileEndpoints as files,
-  profileEndpoints as profile,
-  settingsEndpoints as settings,
+  tenantEndpoints as tenants,
+  invitationEndpoints as invitations,
+  assetEndpoints as assets,
+  projectEndpoints as projects,
+  componentEndpoints as components,
+  vulnerabilityEndpoints as vulnerabilities,
+  findingEndpoints as findings,
+  dashboardEndpoints as dashboard,
 }

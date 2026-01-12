@@ -22,7 +22,7 @@ export default function SignUp() {
             Enter your email and password to create an account. <br />
             Already have an account?{' '}
             <Link
-              href='/sign-in'
+              href='/login'
               className='hover:text-primary underline underline-offset-4'
             >
               Sign In

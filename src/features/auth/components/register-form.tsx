@@ -1,23 +1,25 @@
 /**
  * Register Form Component
  *
- * Handles user registration via Keycloak
- * - Validates input using centralized schema
- * - Includes password confirmation matching
- * - Redirects to Keycloak for registration
- * - Supports social registration (GitHub, Facebook)
+ * Handles user registration with support for multiple auth providers:
+ * - Local auth (email/password) via backend API
+ * - Social auth (Google, GitHub, Microsoft) via OAuth2
+ * - OIDC (Keycloak) for enterprise SSO
+ * - Hybrid mode (multiple options available)
  */
 
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2, UserPlus } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { IconFacebook, IconGithub } from '@/assets/brand-icons'
 import { cn } from '@/lib/utils'
+import { isLocalAuthEnabled, isOidcAuthEnabled, isLocalAuthOnly } from '@/lib/env'
 import { redirectToRegister } from '@/lib/keycloak'
 import { Button } from '@/components/ui/button'
 import {
@@ -30,9 +32,12 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/password-input'
+import { IconGoogle, IconGithub, IconMicrosoft } from '@/assets/brand-icons'
 
-// Import centralized schema
+// Import schema and server actions
 import { registerSchema, type RegisterInput } from '../schemas/auth.schema'
+import { registerAction } from '../actions/local-auth-actions'
+import { initiateSocialLogin, type SocialProvider } from '../actions/social-auth-actions'
 
 // ============================================
 // TYPES
@@ -41,16 +46,42 @@ import { registerSchema, type RegisterInput } from '../schemas/auth.schema'
 interface RegisterFormProps extends React.HTMLAttributes<HTMLFormElement> {
   /**
    * URL to redirect to after successful registration
-   * @default '/dashboard'
+   * @default '/login'
    */
   redirectTo?: string
 
   /**
-   * Whether to show social registration buttons
+   * URL to redirect to after social login (which signs in directly)
+   * @default '/'
+   */
+  socialRedirectTo?: string
+
+  /**
+   * Whether to show OIDC registration button when in hybrid mode
+   * @default false
+   */
+  showOidcRegister?: boolean
+
+  /**
+   * Whether to show social login buttons (Google, GitHub, Microsoft)
    * @default true
    */
-  showSocialRegister?: boolean
+  showSocialLogin?: boolean
 }
+
+// ============================================
+// SOCIAL PROVIDERS CONFIG
+// ============================================
+
+const socialProviders: {
+  id: SocialProvider
+  name: string
+  icon: React.ComponentType<{ className?: string }>
+}[] = [
+  { id: 'google', name: 'Google', icon: IconGoogle },
+  { id: 'github', name: 'GitHub', icon: IconGithub },
+  { id: 'microsoft', name: 'Microsoft', icon: IconMicrosoft },
+]
 
 // ============================================
 // COMPONENT
@@ -58,17 +89,35 @@ interface RegisterFormProps extends React.HTMLAttributes<HTMLFormElement> {
 
 export function RegisterForm({
   className,
-  redirectTo: _redirectTo = '/dashboard',
-  showSocialRegister = true,
+  redirectTo = '/login',
+  socialRedirectTo = '/',
+  showOidcRegister = false,
+  showSocialLogin = true,
   ...props
 }: RegisterFormProps) {
-  // Note: _redirectTo is available for future OAuth redirect implementation
-  const [isLoading, setIsLoading] = useState(false)
+  const [isPending, startTransition] = useTransition()
+  const [isOidcLoading, setIsOidcLoading] = useState(false)
+  const [loadingProvider, setLoadingProvider] = useState<SocialProvider | null>(null)
+  const router = useRouter()
+  const searchParams = useSearchParams()
+
+  // Check for error from OAuth callback
+  const errorParam = searchParams.get('error')
+  if (errorParam) {
+    toast.error(errorParam)
+  }
+
+  // Check auth provider configuration
+  const localAuthEnabled = isLocalAuthEnabled()
+  const oidcAuthEnabled = isOidcAuthEnabled()
+  const localAuthOnly = isLocalAuthOnly()
 
   // Form setup with centralized schema
   const form = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
+      firstName: '',
+      lastName: '',
       email: '',
       password: '',
       confirmPassword: '',
@@ -76,50 +125,60 @@ export function RegisterForm({
   })
 
   /**
-   * Handle form submission
-   * Redirects to Keycloak registration page
+   * Handle form submission for local auth
    */
   function onSubmit(data: RegisterInput) {
-    setIsLoading(true)
+    startTransition(async () => {
+      const result = await registerAction({
+        email: data.email,
+        password: data.password,
+        firstName: data.firstName,
+        lastName: data.lastName,
+      })
 
-    // For development: Log attempt (remove in production)
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Registration attempt:', { email: data.email })
-    }
+      if (result.success) {
+        toast.success(
+          result.message || 'Registration successful! Please check your email to verify your account.'
+        )
+        router.push(redirectTo)
+      } else {
+        toast.error(result.error || 'Registration failed')
+      }
+    })
+  }
 
+  /**
+   * Handle social login (Google, GitHub, Microsoft)
+   * Social login also handles registration - creates account if doesn't exist
+   */
+  async function handleSocialLogin(provider: SocialProvider) {
+    setLoadingProvider(provider)
     try {
-      // Redirect to Keycloak registration page
-      // After successful registration, Keycloak will redirect back to /auth/callback
-      // which will then redirect to the specified redirectTo URL
-      redirectToRegister()
-
-      // Note: This toast might not show because of redirect
-      // The actual success toast should be in the callback page
-      toast.loading('Redirecting to registration...')
+      // This will redirect to the OAuth provider
+      await initiateSocialLogin(provider, socialRedirectTo)
     } catch (error) {
-      setIsLoading(false)
-      console.error('Registration redirect error:', error)
-      toast.error('Failed to initiate registration. Please try again.')
+      setLoadingProvider(null)
+      console.error(`Social login error (${provider}):`, error)
+      toast.error(`Failed to sign up with ${provider}. Please try again.`)
     }
   }
 
   /**
-   * Handle social registration (GitHub, Facebook)
-   *
-   * FEATURE: OAuth2 Social Registration with Keycloak
-   * To implement:
-   * 1. Configure identity providers in Keycloak (GitHub, Facebook, etc.)
-   * 2. Enable account creation on first login
-   * 3. Use redirectToLogin() with kc_idp_hint to trigger social registration
-   *
-   * @see https://www.keycloak.org/docs/latest/server_admin/#_identity_broker
+   * Handle OIDC registration (Keycloak)
    */
-  function handleSocialRegister(provider: 'github' | 'facebook') {
-    toast.info(`${provider} registration requires Keycloak Identity Provider configuration`)
-    // Placeholder for social registration
-    // When Keycloak IDP is configured, this will automatically create user on first login
-    // redirectToLogin(undefined, { kc_idp_hint: provider })
+  function handleOidcRegister() {
+    setIsOidcLoading(true)
+    try {
+      redirectToRegister()
+      toast.loading('Redirecting to registration...')
+    } catch (error) {
+      setIsOidcLoading(false)
+      console.error('OIDC registration redirect error:', error)
+      toast.error('Failed to initiate registration. Please try again.')
+    }
   }
+
+  const isLoading = isPending || isOidcLoading || loadingProvider !== null
 
   return (
     <Form {...form}>
@@ -128,79 +187,176 @@ export function RegisterForm({
         className={cn('grid gap-3', className)}
         {...props}
       >
-        {/* Email Field */}
-        <FormField
-          control={form.control}
-          name='email'
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Email</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder='name@example.com'
-                  type='email'
-                  autoComplete='email'
+        {/* Social Login Section - Show First for Better UX */}
+        {showSocialLogin && (
+          <>
+            <div className='grid grid-cols-3 gap-2'>
+              {socialProviders.map((provider) => (
+                <Button
+                  key={provider.id}
+                  variant='outline'
+                  type='button'
                   disabled={isLoading}
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+                  onClick={() => handleSocialLogin(provider.id)}
+                  className='relative'
+                >
+                  {loadingProvider === provider.id ? (
+                    <Loader2 className='h-4 w-4 animate-spin' />
+                  ) : (
+                    <provider.icon className='h-4 w-4' />
+                  )}
+                  <span className='sr-only'>{provider.name}</span>
+                </Button>
+              ))}
+            </div>
 
-        {/* Password Field */}
-        <FormField
-          control={form.control}
-          name='password'
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Password</FormLabel>
-              <FormControl>
-                <PasswordInput
-                  placeholder='••••••••'
-                  autoComplete='new-password'
-                  disabled={isLoading}
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+            {localAuthEnabled && (
+              <div className='relative my-2'>
+                <div className='absolute inset-0 flex items-center'>
+                  <span className='w-full border-t' />
+                </div>
+                <div className='relative flex justify-center text-xs uppercase'>
+                  <span className='bg-background text-muted-foreground px-2'>
+                    Or register with email
+                  </span>
+                </div>
+              </div>
+            )}
+          </>
+        )}
 
-        {/* Confirm Password Field */}
-        <FormField
-          control={form.control}
-          name='confirmPassword'
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Confirm Password</FormLabel>
-              <FormControl>
-                <PasswordInput
-                  placeholder='••••••••'
-                  autoComplete='new-password'
-                  disabled={isLoading}
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {/* Local Auth Form Fields */}
+        {localAuthEnabled && (
+          <>
+            {/* Name Fields */}
+            <div className='grid grid-cols-2 gap-3'>
+              <FormField
+                control={form.control}
+                name='firstName'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>First Name</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder='John'
+                        autoComplete='given-name'
+                        disabled={isLoading}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-        {/* Submit Button */}
-        <Button className='mt-2' disabled={isLoading} type='submit'>
-          {isLoading ? (
-            <Loader2 className='h-4 w-4 animate-spin' />
-          ) : (
-            <UserPlus className='h-4 w-4' />
-          )}
-          Create Account
-        </Button>
+              <FormField
+                control={form.control}
+                name='lastName'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Last Name</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder='Doe'
+                        autoComplete='family-name'
+                        disabled={isLoading}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
-        {/* Social Registration Section */}
-        {showSocialRegister && (
+            {/* Email Field */}
+            <FormField
+              control={form.control}
+              name='email'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder='name@example.com'
+                      type='email'
+                      autoComplete='email'
+                      disabled={isLoading}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Password Field */}
+            <FormField
+              control={form.control}
+              name='password'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Password</FormLabel>
+                  <FormControl>
+                    <PasswordInput
+                      placeholder='Create a password'
+                      autoComplete='new-password'
+                      disabled={isLoading}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Confirm Password Field */}
+            <FormField
+              control={form.control}
+              name='confirmPassword'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Confirm Password</FormLabel>
+                  <FormControl>
+                    <PasswordInput
+                      placeholder='Confirm your password'
+                      autoComplete='new-password'
+                      disabled={isLoading}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Terms and Privacy Notice */}
+            <p className='text-muted-foreground text-xs'>
+              By creating an account, you agree to our{' '}
+              <Link href='/terms' className='text-primary hover:underline'>
+                Terms of Service
+              </Link>{' '}
+              and{' '}
+              <Link href='/privacy' className='text-primary hover:underline'>
+                Privacy Policy
+              </Link>
+              .
+            </p>
+
+            {/* Submit Button */}
+            <Button className='mt-2' disabled={isLoading} type='submit'>
+              {isPending ? (
+                <Loader2 className='h-4 w-4 animate-spin' />
+              ) : (
+                <UserPlus className='h-4 w-4' />
+              )}
+              Create Account
+            </Button>
+          </>
+        )}
+
+        {/* OIDC Registration Section (for enterprise SSO) */}
+        {oidcAuthEnabled && showOidcRegister && !localAuthOnly && (
           <>
             <div className='relative my-2'>
               <div className='absolute inset-0 flex items-center'>
@@ -208,32 +364,42 @@ export function RegisterForm({
               </div>
               <div className='relative flex justify-center text-xs uppercase'>
                 <span className='bg-background text-muted-foreground px-2'>
-                  Or continue with
+                  Enterprise
                 </span>
               </div>
             </div>
 
-            <div className='grid grid-cols-1 gap-2 xs:grid-cols-2'>
-              <Button
-                variant='outline'
-                type='button'
-                disabled={isLoading}
-                onClick={() => handleSocialRegister('github')}
-              >
-                <IconGithub className='h-4 w-4' />
-                GitHub
-              </Button>
-              <Button
-                variant='outline'
-                type='button'
-                disabled={isLoading}
-                onClick={() => handleSocialRegister('facebook')}
-              >
-                <IconFacebook className='h-4 w-4' />
-                Facebook
-              </Button>
-            </div>
+            <Button
+              variant='outline'
+              type='button'
+              disabled={isLoading}
+              onClick={handleOidcRegister}
+            >
+              {isOidcLoading ? (
+                <Loader2 className='h-4 w-4 animate-spin' />
+              ) : (
+                <UserPlus className='h-4 w-4' />
+              )}
+              Register with SSO
+            </Button>
           </>
+        )}
+
+        {/* OIDC Only Mode (no local auth, no social) */}
+        {!localAuthEnabled && !showSocialLogin && oidcAuthEnabled && (
+          <Button
+            className='mt-2'
+            disabled={isLoading}
+            type='button'
+            onClick={handleOidcRegister}
+          >
+            {isOidcLoading ? (
+              <Loader2 className='h-4 w-4 animate-spin' />
+            ) : (
+              <UserPlus className='h-4 w-4' />
+            )}
+            Register with SSO
+          </Button>
         )}
       </form>
     </Form>

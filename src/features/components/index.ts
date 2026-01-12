@@ -8,7 +8,16 @@
 // Types
 export * from "./types";
 
-// Data
+// API (hooks and types for backend)
+export * from "./api";
+
+// Hooks (high-level data hooks)
+export * from "./hooks";
+
+// Lib (utilities)
+export * from "./lib";
+
+// Data (mock data - legacy, can be removed when fully migrated)
 export * from "./data";
 
 // Components
