@@ -1,7 +1,7 @@
 /**
  * API Types & Interfaces
  *
- * Type definitions for API requests and responses
+ * Type definitions for Rediver API requests and responses
  */
 
 // ============================================
@@ -67,6 +67,12 @@ export interface ApiRequestOptions extends RequestInit {
     count: number
     delay: number
   }
+
+  /**
+   * Internal: Skip automatic token refresh on 401
+   * Used to prevent infinite retry loops
+   */
+  _skipRefreshRetry?: boolean
 }
 
 // ============================================
@@ -80,9 +86,12 @@ export interface User {
   id: string
   email: string
   name: string
+  firstName?: string
+  lastName?: string
   avatar?: string
   roles: string[]
   emailVerified: boolean
+  authProvider?: 'local' | 'oidc'
   createdAt: string
   updatedAt: string
 }
@@ -102,6 +111,8 @@ export interface CreateUserRequest {
  */
 export interface UpdateUserRequest {
   name?: string
+  firstName?: string
+  lastName?: string
   avatar?: string
   roles?: string[]
 }
@@ -119,63 +130,151 @@ export interface UserListFilters {
 }
 
 // ============================================
-// POST TYPES (Example)
+// TENANT TYPES
 // ============================================
 
 /**
- * Post entity from backend
+ * Tenant/Team entity
  */
-export interface Post {
+export interface Tenant {
   id: string
-  title: string
-  content: string
-  author: User
+  name: string
+  slug: string
+  ownerId: string
   createdAt: string
   updatedAt: string
-  published: boolean
 }
 
 /**
- * Create post request
+ * Tenant member
  */
-export interface CreatePostRequest {
-  title: string
-  content: string
-  published?: boolean
-}
-
-/**
- * Update post request
- */
-export interface UpdatePostRequest {
-  title?: string
-  content?: string
-  published?: boolean
-}
-
-// ============================================
-// FILE UPLOAD TYPES
-// ============================================
-
-/**
- * File upload response
- */
-export interface FileUploadResponse {
+export interface TenantMember {
   id: string
-  url: string
-  filename: string
-  size: number
-  mimeType: string
+  userId: string
+  tenantId: string
+  role: 'owner' | 'admin' | 'member' | 'viewer'
+  user: User
+  joinedAt: string
+}
+
+/**
+ * Tenant invitation
+ */
+export interface TenantInvitation {
+  id: string
+  email: string
+  tenantId: string
+  role: 'admin' | 'member' | 'viewer'
+  invitedBy: string
+  expiresAt: string
   createdAt: string
 }
 
+// ============================================
+// VULNERABILITY TYPES
+// ============================================
+
 /**
- * File upload progress
+ * Vulnerability entity (CVE database)
  */
-export interface UploadProgress {
-  loaded: number
-  total: number
-  percentage: number
+export interface Vulnerability {
+  id: string
+  cveId: string
+  title: string
+  description: string
+  severity: 'critical' | 'high' | 'medium' | 'low' | 'informational'
+  cvssScore?: number
+  cvssVector?: string
+  cweId?: string
+  publishedAt?: string
+  modifiedAt?: string
+  references?: string[]
+  createdAt: string
+  updatedAt: string
+}
+
+/**
+ * Finding entity (tenant-scoped vulnerability instance)
+ */
+export interface Finding {
+  id: string
+  tenantId: string
+  vulnerabilityId: string
+  vulnerability?: Vulnerability
+  projectId?: string
+  componentId?: string
+  status: 'open' | 'in_progress' | 'resolved' | 'false_positive' | 'risk_accepted'
+  severity: 'critical' | 'high' | 'medium' | 'low' | 'informational'
+  title: string
+  description?: string
+  remediation?: string
+  dueDate?: string
+  assigneeId?: string
+  assignee?: User
+  foundAt: string
+  resolvedAt?: string
+  createdAt: string
+  updatedAt: string
+}
+
+// ============================================
+// PROJECT TYPES
+// ============================================
+
+/**
+ * Project entity (tenant-scoped)
+ */
+export interface Project {
+  id: string
+  tenantId: string
+  name: string
+  description?: string
+  repositoryUrl?: string
+  defaultBranch?: string
+  language?: string
+  createdAt: string
+  updatedAt: string
+}
+
+// ============================================
+// COMPONENT TYPES
+// ============================================
+
+/**
+ * Component entity (dependency/package)
+ */
+export interface Component {
+  id: string
+  tenantId: string
+  projectId?: string
+  name: string
+  version: string
+  type: 'library' | 'framework' | 'application' | 'container' | 'os'
+  purl?: string // Package URL
+  license?: string
+  createdAt: string
+  updatedAt: string
+}
+
+// ============================================
+// ASSET TYPES
+// ============================================
+
+/**
+ * Asset entity (global resource)
+ */
+export interface Asset {
+  id: string
+  name: string
+  type: 'server' | 'workstation' | 'network_device' | 'cloud_resource' | 'container' | 'application'
+  hostname?: string
+  ipAddresses?: string[]
+  operatingSystem?: string
+  owner?: string
+  criticality?: 'critical' | 'high' | 'medium' | 'low'
+  status: 'active' | 'inactive' | 'decommissioned'
+  createdAt: string
+  updatedAt: string
 }
 
 // ============================================

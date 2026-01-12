@@ -14,15 +14,36 @@ import { ApiClientError } from './error-handler'
 // ============================================
 
 /**
- * Get backend API base URL from environment
+ * Check if code is running on server or client
+ */
+function isServer(): boolean {
+  return typeof window === 'undefined'
+}
+
+/**
+ * Get API base URL
+ *
+ * - Client-side: Empty string (requests go to /api/v1/* which is proxied by Next.js)
+ * - Server-side: Direct to backend URL
  */
 export function getApiBaseUrl(): string {
-  const baseUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL
+  // On client-side, use empty base URL
+  // Requests to /api/v1/* are handled by Next.js API route which proxies to backend
+  if (!isServer()) {
+    return ''
+  }
+
+  // On server-side, use direct backend URL
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL
 
   if (!baseUrl) {
-    throw new Error(
-      'NEXT_PUBLIC_BACKEND_API_URL is not defined. Please set it in .env.local'
-    )
+    // Return default in development, throw in production
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(
+        'NEXT_PUBLIC_API_URL is not defined. Please set it in environment variables.'
+      )
+    }
+    return 'http://localhost:8080'
   }
 
   return baseUrl
@@ -32,6 +53,63 @@ export function getApiBaseUrl(): string {
  * Default request timeout (30 seconds)
  */
 const DEFAULT_TIMEOUT = 30000
+
+/**
+ * Token refresh mutex to prevent race conditions
+ * When multiple requests fail with 401 simultaneously, only one should refresh
+ */
+let refreshPromise: Promise<boolean> | null = null
+
+/**
+ * Try to refresh the access token
+ * Uses a mutex to prevent multiple concurrent refresh attempts
+ * Returns true if refresh succeeded, false otherwise
+ */
+async function tryRefreshToken(): Promise<boolean> {
+  // Only attempt refresh in browser
+  if (typeof window === 'undefined') {
+    return false
+  }
+
+  // If already refreshing, wait for the existing refresh to complete
+  if (refreshPromise) {
+    console.log('[API Client] Token refresh already in progress, waiting...')
+    return refreshPromise
+  }
+
+  // Create a new refresh promise
+  refreshPromise = (async () => {
+    try {
+      console.log('[API Client] Starting token refresh...')
+      const response = await fetch('/api/auth/refresh', {
+        method: 'POST',
+        credentials: 'include',
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.success && data.data?.access_token) {
+        console.log('[API Client] Token refresh successful')
+        useAuthStore.getState().updateToken(data.data.access_token)
+        return true
+      }
+
+      console.warn('[API Client] Token refresh failed:', data.error?.message || 'Unknown error')
+      return false
+    } catch (error) {
+      console.error('[API Client] Token refresh error:', error)
+      return false
+    } finally {
+      // Clear the refresh promise after a short delay
+      // This prevents immediate re-refresh if the refresh just failed
+      setTimeout(() => {
+        refreshPromise = null
+      }, 1000)
+    }
+  })()
+
+  return refreshPromise
+}
 
 // ============================================
 // CORE API CLIENT
@@ -67,14 +145,12 @@ export async function apiClient<T = unknown>(
     baseUrl = getApiBaseUrl(),
     timeout = DEFAULT_TIMEOUT,
     retry: _retry, // Reserved for future retry implementation
+    _skipRefreshRetry = false,
     ...fetchOptions
   } = options
 
   // Build full URL
   const url = endpoint.startsWith('http') ? endpoint : `${baseUrl}${endpoint}`
-
-  // Get access token from auth store
-  const accessToken = skipAuth ? null : useAuthStore.getState().accessToken
 
   // Build headers
   const headers = new Headers(fetchOptions.headers)
@@ -84,10 +160,16 @@ export async function apiClient<T = unknown>(
     headers.set('Content-Type', 'application/json')
   }
 
-  // Add Authorization header if token exists
-  if (accessToken && !skipAuth) {
-    headers.set('Authorization', `Bearer ${accessToken}`)
+  // Add Authorization header with access token from auth store
+  // Only for server-side direct calls - client-side uses proxy which handles auth via cookies
+  if (!skipAuth && isServer()) {
+    const accessToken = useAuthStore.getState().accessToken
+    if (accessToken) {
+      headers.set('Authorization', `Bearer ${accessToken}`)
+    }
   }
+  // For client-side requests via proxy, don't add Authorization header
+  // The proxy reads the httpOnly cookie and adds the header
 
   // Create abort controller for timeout
   const controller = new AbortController()
@@ -95,16 +177,35 @@ export async function apiClient<T = unknown>(
 
   try {
     // Make request
+    // Include credentials to send cookies (important for proxy auth)
     const response = await fetch(url, {
       ...fetchOptions,
       headers,
       signal: controller.signal,
+      credentials: 'include',
     })
 
     clearTimeout(timeoutId)
 
     // Handle non-ok responses
     if (!response.ok) {
+      // Handle 401 Unauthorized - try to refresh token
+      if (response.status === 401 && !_skipRefreshRetry && !skipAuth) {
+        const refreshed = await tryRefreshToken()
+        if (refreshed) {
+          // Retry the original request with new token
+          return apiClient<T>(endpoint, { ...options, _skipRefreshRetry: true })
+        }
+        // Refresh failed - clear auth
+        useAuthStore.getState().clearAuth()
+
+        // Redirect to login if in browser and not already there
+        if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+          console.log('[API Client] Auth failed, redirecting to login')
+          window.location.href = '/login'
+        }
+      }
+
       const error = await parseErrorResponse(response)
       throw new ApiClientError(error.message, error.code, error.statusCode, error.details)
     }
@@ -114,8 +215,32 @@ export async function apiClient<T = unknown>(
       return undefined as T
     }
 
+    // Check if response has content before parsing
+    const contentType = response.headers.get('content-type')
+    const responseText = await response.text()
+
+    // Log response for debugging
+    console.log('[API Client] Response:', response.status, 'Content-Type:', contentType, 'Body length:', responseText.length)
+
+    // Handle empty response body
+    if (!responseText || responseText.trim() === '') {
+      console.warn('[API Client] Empty response body from:', endpoint)
+      return undefined as T
+    }
+
     // Parse JSON response
-    const data = await response.json()
+    let data: unknown
+    try {
+      data = JSON.parse(responseText)
+    } catch (parseError) {
+      console.error('[API Client] Failed to parse JSON:', responseText.substring(0, 200))
+      throw new ApiClientError(
+        'Invalid JSON response from server',
+        'PARSE_ERROR',
+        response.status,
+        { responseText: responseText.substring(0, 500) }
+      )
+    }
 
     // If response is wrapped in ApiResponse, unwrap it
     if (isApiResponse(data)) {
@@ -133,6 +258,9 @@ export async function apiClient<T = unknown>(
     return data as T
   } catch (error) {
     clearTimeout(timeoutId)
+
+    // Log the actual error for debugging
+    console.error('[API Client] Caught error:', error)
 
     // Handle timeout
     if (error instanceof Error && error.name === 'AbortError') {
@@ -159,9 +287,10 @@ export async function apiClient<T = unknown>(
       throw error
     }
 
-    // Handle unknown errors
+    // Handle unknown errors - preserve original error message if available
+    const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred'
     throw new ApiClientError(
-      'An unexpected error occurred',
+      errorMessage,
       'UNKNOWN_ERROR',
       500,
       { originalError: error }

@@ -77,7 +77,8 @@ const ASSET_TYPE_COLORS: Record<string, { bg: string; text: string }> = {
   domain: { bg: "bg-blue-500/20", text: "text-blue-500" },
   website: { bg: "bg-green-500/20", text: "text-green-500" },
   service: { bg: "bg-purple-500/20", text: "text-purple-500" },
-  repository: { bg: "bg-orange-500/20", text: "text-orange-500" },
+  project: { bg: "bg-orange-500/20", text: "text-orange-500" },
+  repository: { bg: "bg-orange-500/20", text: "text-orange-500" }, // @deprecated
   cloud: { bg: "bg-cyan-500/20", text: "text-cyan-500" },
   credential: { bg: "bg-red-500/20", text: "text-red-500" },
   host: { bg: "bg-slate-500/20", text: "text-slate-500" },

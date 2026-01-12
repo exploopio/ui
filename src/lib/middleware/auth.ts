@@ -56,16 +56,31 @@ export function requiresAuth(pathname: string): boolean {
 
 /**
  * Check if user is authenticated
- * Looks for refresh token in HttpOnly cookie
- * In dev mode, also checks for dev auth cookie
+ * Looks for auth tokens in HttpOnly cookies
+ * Supports both local auth and OIDC (Keycloak)
  */
 export function isAuthenticated(req: NextRequest): boolean {
-  // Check for Keycloak refresh token (production)
-  const cookieName =
-    process.env.NEXT_PUBLIC_REFRESH_COOKIE_NAME || 'kc_refresh_token'
-  const refreshToken = req.cookies.get(cookieName)
+  // Check for local auth token
+  const localAuthCookieName =
+    process.env.NEXT_PUBLIC_AUTH_COOKIE_NAME || 'rediver_auth_token'
+  const localAuthToken = req.cookies.get(localAuthCookieName)
 
-  if (refreshToken?.value) {
+  if (localAuthToken?.value) {
+    return true
+  }
+
+  // Check for local auth refresh token
+  const localRefreshCookieName =
+    process.env.NEXT_PUBLIC_REFRESH_COOKIE_NAME || 'refresh_token'
+  const localRefreshToken = req.cookies.get(localRefreshCookieName)
+
+  if (localRefreshToken?.value) {
+    return true
+  }
+
+  // Check for Keycloak refresh token (for OIDC mode)
+  const keycloakRefreshToken = req.cookies.get('kc_refresh_token')
+  if (keycloakRefreshToken?.value) {
     return true
   }
 
@@ -116,10 +131,15 @@ export function validateRedirectUrl(url: string): string {
 // ============================================
 
 /**
+ * Auth pages that authenticated users should be redirected away from
+ */
+const AUTH_PAGES = ['/login', '/register']
+
+/**
  * Handle authentication check in middleware
  *
  * @param req - Next.js request object
- * @returns Redirect response if not authenticated, null otherwise
+ * @returns Redirect response if auth state doesn't match route requirements, null otherwise
  *
  * @example
  * ```typescript
@@ -129,9 +149,15 @@ export function validateRedirectUrl(url: string): string {
  */
 export function handleAuth(req: NextRequest): NextResponse | null {
   const { pathname, search } = req.nextUrl
+  const authenticated = isAuthenticated(req)
+
+  // If authenticated and trying to access auth pages, redirect to dashboard
+  if (authenticated && AUTH_PAGES.some((page) => pathname.startsWith(page))) {
+    return NextResponse.redirect(new URL('/', req.url))
+  }
 
   // Check if route requires auth and user is not authenticated
-  if (requiresAuth(pathname) && !isAuthenticated(req)) {
+  if (requiresAuth(pathname) && !authenticated) {
     const loginUrl = new URL('/login', req.url)
 
     // Add return URL as query parameter (validated)

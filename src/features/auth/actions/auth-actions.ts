@@ -147,7 +147,7 @@ export async function handleOAuthCallback(
     await removeServerCookie('oauth_state')
 
     // Validate redirect URL (validation side-effect, result used client-side)
-    validateRedirectUrl(input.redirectTo || '/dashboard')
+    validateRedirectUrl(input.redirectTo || '/')
 
     return {
       success: true,

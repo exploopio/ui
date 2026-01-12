@@ -13,13 +13,14 @@ import type { Status } from "@/features/shared/types";
  * Applications: website, api, mobile_app
  * Cloud: cloud_account, compute, storage, serverless
  * Infrastructure: host, container, database, network
- * Code & CI/CD: repository
+ * Code & CI/CD: project
  *
  * Legacy types (deprecated, kept for backwards compatibility):
  * - service: Use specific service detection instead
  * - cloud: Use cloud_account, compute, storage, or serverless
  * - credential: Moved to Identities module
  * - mobile: Use mobile_app instead
+ * - repository: Use project instead
  */
 export type AssetType =
   // External Attack Surface
@@ -41,12 +42,13 @@ export type AssetType =
   | "database"
   | "network"
   // Code & CI/CD
-  | "repository"
+  | "project"
   // Legacy types (deprecated - kept for backwards compatibility)
   | "service"      // @deprecated - Use specific service type
   | "cloud"        // @deprecated - Use cloud_account, compute, storage, serverless
   | "credential"   // @deprecated - Moved to Identities module
-  | "mobile";      // @deprecated - Use mobile_app instead
+  | "mobile"       // @deprecated - Use mobile_app instead
+  | "repository";  // @deprecated - Use project instead
 
 /**
  * Asset Type Category for grouping in UI
@@ -85,15 +87,15 @@ export const ASSET_TYPE_CATEGORIES: Record<AssetTypeCategory, {
   },
   code: {
     label: "Code & CI/CD",
-    description: "Source code repositories and pipelines",
-    types: ["repository"],
+    description: "Source code projects and pipelines",
+    types: ["project", "repository"],
   },
 };
 
 /**
  * Legacy asset types that are deprecated but still supported
  */
-export const LEGACY_ASSET_TYPES: AssetType[] = ["service", "cloud", "credential", "mobile"];
+export const LEGACY_ASSET_TYPES: AssetType[] = ["service", "cloud", "credential", "mobile", "repository"];
 
 /**
  * Check if an asset type is deprecated
@@ -196,12 +198,13 @@ export const ASSET_TYPE_LABELS: Record<AssetType, string> = {
   database: "Database",
   network: "Network",
   // Code & CI/CD
-  repository: "Repository",
+  project: "Project",
   // Legacy types (deprecated)
   service: "Service",
   cloud: "Cloud",
   credential: "Credential",
   mobile: "Mobile App",
+  repository: "Repository",
 };
 
 export const ASSET_TYPE_ICONS: Record<AssetType, string> = {
@@ -219,12 +222,13 @@ export const ASSET_TYPE_ICONS: Record<AssetType, string> = {
   container: "Boxes",
   database: "Database",
   network: "Network",
-  repository: "GitBranch",
+  project: "GitBranch",
   // Legacy types (deprecated)
   service: "Zap",
   cloud: "Cloud",
   credential: "KeyRound",
   mobile: "Smartphone",
+  repository: "GitBranch",
 };
 
 export const ASSET_TYPE_DESCRIPTIONS: Record<AssetType, string> = {
@@ -242,12 +246,13 @@ export const ASSET_TYPE_DESCRIPTIONS: Record<AssetType, string> = {
   container: "Docker and Kubernetes workloads",
   database: "Database instances and clusters",
   network: "VPCs, firewalls, load balancers",
-  repository: "Source code repositories",
+  project: "Source code projects",
   // Legacy types (deprecated)
   service: "Network services (deprecated)",
   cloud: "Cloud resources (deprecated - use cloud_account, compute, storage, serverless)",
   credential: "Credentials (deprecated - moved to Identities)",
   mobile: "Mobile applications (deprecated - use mobile_app)",
+  repository: "Source code repositories (deprecated - use project)",
 };
 
 /**
@@ -273,12 +278,13 @@ export const ASSET_TYPE_COLORS: Record<AssetType, { bg: string; text: string }> 
   database: { bg: "bg-emerald-500/15", text: "text-emerald-600" },
   network: { bg: "bg-rose-500/15", text: "text-rose-600" },
   // Code & CI/CD
-  repository: { bg: "bg-fuchsia-500/15", text: "text-fuchsia-600" },
+  project: { bg: "bg-fuchsia-500/15", text: "text-fuchsia-600" },
   // Legacy types (deprecated)
   service: { bg: "bg-yellow-500/15", text: "text-yellow-600" },
   cloud: { bg: "bg-sky-500/15", text: "text-sky-600" },
   credential: { bg: "bg-red-500/15", text: "text-red-600" },
   mobile: { bg: "bg-pink-500/15", text: "text-pink-600" },
+  repository: { bg: "bg-fuchsia-500/15", text: "text-fuchsia-600" },
 };
 
 /**
@@ -509,8 +515,10 @@ export interface AssetMetadata {
   healthCheckEnabled?: boolean;
 
   // ============================================
-  // Repository-specific
+  // Project-specific (Git repositories)
   // ============================================
+  projectProvider?: "github" | "gitlab" | "bitbucket" | "azure_devops" | "codecommit";
+  /** @deprecated Use projectProvider instead */
   repoProvider?: "github" | "gitlab" | "bitbucket" | "azure_devops" | "codecommit";
   visibility?: "public" | "private" | "internal";
   language?: string;

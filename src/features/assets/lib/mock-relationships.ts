@@ -762,18 +762,18 @@ export const assetRelationships: AssetRelationship[] = [
   },
 
   // ============================================
-  // Repository → Container Image (contains - builds)
+  // Project → Container Image (contains - builds)
   // ============================================
   {
     id: "rel-038",
     type: "contains",
-    sourceAssetId: "repo-001",
+    sourceAssetId: "proj-001",
     sourceAssetName: "vingroup/core-banking-api",
-    sourceAssetType: "repository",
+    sourceAssetType: "project",
     targetAssetId: "image-003",
     targetAssetName: "vingroup/payment-processor:v3.1.0",
     targetAssetType: "container_image",
-    description: "Core banking repository builds payment-processor image",
+    description: "Core banking project builds payment-processor image",
     confidence: "high",
     discoveryMethod: "automatic",
     impactWeight: 8,
@@ -785,13 +785,13 @@ export const assetRelationships: AssetRelationship[] = [
   {
     id: "rel-039",
     type: "contains",
-    sourceAssetId: "repo-002",
+    sourceAssetId: "proj-002",
     sourceAssetName: "fpt/customer-portal",
-    sourceAssetType: "repository",
+    sourceAssetType: "project",
     targetAssetId: "image-002",
     targetAssetName: "vingroup/user-service:v2.5.1",
     targetAssetType: "container_image",
-    description: "Customer portal repository builds user-service image",
+    description: "Customer portal project builds user-service image",
     confidence: "high",
     discoveryMethod: "automatic",
     impactWeight: 7,

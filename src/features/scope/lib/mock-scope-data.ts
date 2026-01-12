@@ -91,12 +91,12 @@ export const mockScopeTargets: ScopeTarget[] = [
     addedAt: "2024-02-20",
     addedBy: "Le Van Cuong",
   },
-  // Repositories
+  // Projects
   {
     id: "scope-009",
-    type: "repository",
+    type: "project",
     pattern: "github.com/techcombank/*",
-    description: "All GitHub repositories",
+    description: "All GitHub projects",
     status: "active",
     priority: "high",
     addedAt: "2024-02-10",

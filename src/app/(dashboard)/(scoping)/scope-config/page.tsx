@@ -188,9 +188,9 @@ const mockScopeTargets: ScopeTarget[] = [
   },
   {
     id: "scope-005",
-    type: "repository",
+    type: "project",
     pattern: "github.com/techcombank/*",
-    description: "All GitHub repositories",
+    description: "All GitHub projects",
     status: "active",
     addedAt: "2024-02-10",
     addedBy: "Pham Thi Dung",
@@ -324,7 +324,8 @@ const targetTypeIcons: Record<string, React.ReactNode> = {
   host: <Server className="h-4 w-4" />,
   network: <Link className="h-4 w-4" />,
   // Code & CI/CD
-  repository: <GitBranch className="h-4 w-4" />,
+  project: <GitBranch className="h-4 w-4" />,
+  repository: <GitBranch className="h-4 w-4" />, // @deprecated
   // Generic
   path: <Folder className="h-4 w-4" />,
   email_domain: <Mail className="h-4 w-4" />,

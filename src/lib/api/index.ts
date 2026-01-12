@@ -47,10 +47,13 @@ export {
   endpoints,
   auth,
   users,
-  posts,
-  files,
-  profile,
-  settings,
+  tenants,
+  invitations,
+  assets,
+  projects,
+  components,
+  vulnerabilities,
+  findings,
   API_BASE,
   buildPaginatedEndpoint,
   buildSearchEndpoint,
@@ -71,33 +74,33 @@ export {
 } from './error-handler'
 
 // ============================================
-// HOOKS
+// HOOKS (Base)
 // ============================================
 
 export {
-  // User hooks
+  // Current user hooks
   useCurrentUser,
+  useUpdateCurrentUser,
+
+  // User management hooks (admin)
   useUser,
   useUsers,
   useCreateUser,
   useUpdateUser,
   useDeleteUser,
 
-  // Post hooks
-  usePosts,
-  usePost,
-  useCreatePost,
-  useUpdatePost,
-  useDeletePost,
-  usePublishPost,
+  // Tenant hooks (base)
+  useTenants,
+  useTenant,
+  useCreateTenant,
+  useUpdateTenant,
+  useDeleteTenant,
+  useTenantMembers,
 
-  // File hooks
-  useUploadFile,
-
-  // Profile hooks
-  useProfile,
-  useUpdateProfile,
-  useUploadAvatar,
+  // Vulnerability hooks
+  useVulnerabilities,
+  useVulnerability,
+  useVulnerabilityByCVE,
 
   // Utilities
   mutateMultiple,
@@ -128,14 +131,20 @@ export type {
   UpdateUserRequest,
   UserListFilters,
 
-  // Post types
-  Post,
-  CreatePostRequest,
-  UpdatePostRequest,
+  // Tenant types
+  Tenant,
+  TenantMember,
+  TenantInvitation,
 
-  // File types
-  FileUploadResponse,
-  UploadProgress,
+  // Vulnerability types
+  Vulnerability,
+  Finding,
+
+  // Component types
+  Component,
+
+  // Asset types
+  Asset,
 
   // Validation types
   ValidationError,
@@ -179,6 +188,59 @@ export type {
   ComponentFilters,
   ScanFilters,
 } from './security-endpoints'
+
+// ============================================
+// PROJECT ENDPOINTS & HOOKS
+// ============================================
+
+export { projectEndpoints } from './project-endpoints'
+
+export {
+  useProjects,
+  useProject,
+  useCreateProject,
+  useUpdateProject,
+  useDeleteProject,
+  getProjectsListKey,
+  getProjectKey,
+  invalidateProjectsCache,
+  defaultProjectSwrConfig,
+} from './project-hooks'
+
+export type {
+  Project,
+  ProjectProvider,
+  ProjectVisibility,
+  ProjectStatus,
+  ProjectScope,
+  ProjectExposure,
+  ProjectListResponse,
+  ProjectFilters,
+  CreateProjectRequest,
+  UpdateProjectRequest,
+} from './project-types'
+
+// ============================================
+// USER TENANT MEMBERSHIP
+// ============================================
+
+export {
+  useMyTenants,
+  getMyTenantsKey,
+  invalidateMyTenantsCache,
+} from './user-tenant-hooks'
+
+export type {
+  TenantMembership,
+  TenantPlan,
+  TenantRole,
+} from './user-tenant-types'
+
+export {
+  RolePermissions,
+  RoleLabels,
+  RoleColors,
+} from './user-tenant-types'
 
 // ============================================
 // SECURITY PLATFORM HOOKS

@@ -180,7 +180,8 @@ export const EXTENDED_ASSET_TYPE_LABELS: Record<ExtendedAssetType, string> = {
   database: "Database",
   network: "Network",
   // Base asset types - Code
-  repository: "Repository",
+  project: "Project",
+  repository: "Repository", // @deprecated - Use project instead
   // Legacy base types (deprecated)
   service: "Service",
   cloud: "Cloud Resource",
@@ -332,7 +333,7 @@ export const VALID_RELATIONSHIP_CONSTRAINTS: Record<RelationshipType, Relationsh
       targetTypes: ["container", "service", "database"],
     },
     {
-      sourceTypes: ["repository"],
+      sourceTypes: ["project", "repository"],
       targetTypes: ["container_image"], // Source code builds image
     },
     {
@@ -442,7 +443,8 @@ export const VALID_RELATIONSHIP_CONSTRAINTS: Record<RelationshipType, Relationsh
         "domain",
         "website",
         "service",
-        "repository",
+        "project",
+        "repository", // @deprecated
         "cloud",
         "host",
         "database",
@@ -456,7 +458,7 @@ export const VALID_RELATIONSHIP_CONSTRAINTS: Record<RelationshipType, Relationsh
 
   deployed_to: [
     {
-      sourceTypes: ["repository", "container_image"],
+      sourceTypes: ["project", "repository", "container_image"],
       targetTypes: ["k8s_cluster", "k8s_workload", "cloud", "host"],
     },
     {

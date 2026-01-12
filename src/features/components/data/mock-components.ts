@@ -80,7 +80,7 @@ const mockVulnerabilities: ComponentVulnerability[] = [
 const mockSources: ComponentSource[] = [
   {
     id: "src-1",
-    type: "repository",
+    type: "project",
     assetId: "repo-1",
     assetName: "frontend-app",
     filePath: "package.json",
@@ -90,7 +90,7 @@ const mockSources: ComponentSource[] = [
   },
   {
     id: "src-2",
-    type: "repository",
+    type: "project",
     assetId: "repo-2",
     assetName: "backend-api",
     filePath: "requirements.txt",

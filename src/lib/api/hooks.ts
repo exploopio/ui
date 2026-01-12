@@ -2,7 +2,7 @@
  * API Hooks
  *
  * Custom React hooks for data fetching using SWR
- * Examples and utilities for common API operations
+ * Hooks for Rediver API operations
  */
 
 'use client'
@@ -10,20 +10,16 @@
 import useSWR, { type SWRConfiguration } from 'swr'
 import useSWRMutation from 'swr/mutation'
 import useSWRInfinite from 'swr/infinite'
-import { get, post, put, del, uploadFile } from './client'
+import { get, post, put, patch, del } from './client'
 import { handleApiError } from './error-handler'
 import { endpoints } from './endpoints'
 import type {
   User,
-  Post,
   CreateUserRequest,
   UpdateUserRequest,
-  CreatePostRequest,
-  UpdatePostRequest,
   UserListFilters,
   SearchFilters,
   PaginatedResponse,
-  FileUploadResponse,
 } from './types'
 
 // ============================================
@@ -49,39 +45,50 @@ export const defaultSwrConfig: SWRConfiguration = {
 }
 
 // ============================================
-// USER HOOKS
+// CURRENT USER HOOKS
 // ============================================
 
 /**
  * Fetch current user profile
- *
- * @example
- * ```typescript
- * function ProfilePage() {
- *   const { data: user, error, isLoading } = useCurrentUser()
- *
- *   if (isLoading) return <Loading />
- *   if (error) return <Error error={error} />
- *
- *   return <div>Welcome, {user.name}!</div>
- * }
- * ```
  */
 export function useCurrentUser(config?: SWRConfiguration) {
   return useSWR<User>(
-    endpoints.auth.me(),
+    endpoints.users.me(),
     get,
     { ...defaultSwrConfig, ...config }
   )
 }
 
 /**
+ * Update current user profile
+ */
+export function useUpdateCurrentUser() {
+  return useSWRMutation(
+    endpoints.users.updateMe(),
+    (url, { arg }: { arg: UpdateUserRequest }) => put<User>(url, arg)
+  )
+}
+
+/**
+ * Fetch current user's teams/tenants
+ * @deprecated Use useMyTenants from '@/lib/api/user-tenant-hooks' instead
+ * That version includes proper cookie checking to prevent 401 errors for new users
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function _deprecatedUseMyTenants(config?: SWRConfiguration) {
+  return useSWR(
+    endpoints.users.myTenants(),
+    get,
+    { ...defaultSwrConfig, ...config }
+  )
+}
+
+// ============================================
+// USER MANAGEMENT HOOKS (Admin)
+// ============================================
+
+/**
  * Fetch user by ID
- *
- * @example
- * ```typescript
- * const { data: user } = useUser('user-123')
- * ```
  */
 export function useUser(userId: string | null, config?: SWRConfiguration) {
   return useSWR<User>(
@@ -93,16 +100,6 @@ export function useUser(userId: string | null, config?: SWRConfiguration) {
 
 /**
  * Fetch users list with pagination and filters
- *
- * @example
- * ```typescript
- * const { data, error, isLoading } = useUsers({
- *   page: 1,
- *   pageSize: 10,
- *   search: 'john',
- *   role: 'admin'
- * })
- * ```
  */
 export function useUsers(
   filters?: UserListFilters,
@@ -117,24 +114,6 @@ export function useUsers(
 
 /**
  * Create user mutation
- *
- * @example
- * ```typescript
- * function CreateUserForm() {
- *   const { trigger, isMutating } = useCreateUser()
- *
- *   const handleSubmit = async (data) => {
- *     try {
- *       const newUser = await trigger(data)
- *       toast.success('User created!')
- *     } catch (error) {
- *       // Error already handled by SWR
- *     }
- *   }
- *
- *   return <form onSubmit={handleSubmit}>...</form>
- * }
- * ```
  */
 export function useCreateUser() {
   return useSWRMutation(
@@ -164,164 +143,255 @@ export function useDeleteUser(userId: string) {
 }
 
 // ============================================
-// POST HOOKS
+// TENANT HOOKS
 // ============================================
 
 /**
- * Fetch posts list with pagination and filters
- *
- * @example
- * ```typescript
- * const { data: posts } = usePosts({ page: 1, pageSize: 10 })
- * ```
+ * Fetch tenants list
  */
-export function usePosts(
-  filters?: SearchFilters,
-  config?: SWRConfiguration
-) {
-  return useSWR<PaginatedResponse<Post>>(
-    endpoints.posts.list(filters),
+export function useTenants(filters?: SearchFilters, config?: SWRConfiguration) {
+  return useSWR(
+    endpoints.tenants.list(filters),
     get,
     { ...defaultSwrConfig, ...config }
   )
 }
 
 /**
- * Fetch post by ID
+ * Fetch tenant by ID or slug
  */
-export function usePost(postId: string | null, config?: SWRConfiguration) {
-  return useSWR<Post>(
-    postId ? endpoints.posts.get(postId) : null,
+export function useTenant(tenantIdOrSlug: string | null, config?: SWRConfiguration) {
+  return useSWR(
+    tenantIdOrSlug ? endpoints.tenants.get(tenantIdOrSlug) : null,
     get,
     { ...defaultSwrConfig, ...config }
   )
 }
 
 /**
- * Create post mutation
+ * Create tenant mutation
  */
-export function useCreatePost() {
+export function useCreateTenant() {
   return useSWRMutation(
-    endpoints.posts.create(),
-    (url, { arg }: { arg: CreatePostRequest }) => post<Post>(url, arg)
+    endpoints.tenants.create(),
+    (url, { arg }: { arg: { name: string; slug?: string } }) => post(url, arg)
   )
 }
 
 /**
- * Update post mutation
+ * Update tenant mutation
  */
-export function useUpdatePost(postId: string) {
+export function useUpdateTenant(tenantIdOrSlug: string) {
   return useSWRMutation(
-    endpoints.posts.update(postId),
-    (url, { arg }: { arg: UpdatePostRequest }) => put<Post>(url, arg)
+    endpoints.tenants.update(tenantIdOrSlug),
+    (url, { arg }: { arg: { name?: string; slug?: string } }) => patch(url, arg)
   )
 }
 
 /**
- * Delete post mutation
+ * Delete tenant mutation
  */
-export function useDeletePost(postId: string) {
+export function useDeleteTenant(tenantIdOrSlug: string) {
   return useSWRMutation(
-    endpoints.posts.delete(postId),
+    endpoints.tenants.delete(tenantIdOrSlug),
     (url) => del(url)
   )
 }
 
 /**
- * Publish post mutation
+ * Fetch tenant members
  */
-export function usePublishPost(postId: string) {
-  return useSWRMutation(
-    endpoints.posts.publish(postId),
-    (url) => post<Post>(url)
+export function useTenantMembers(tenantIdOrSlug: string | null, config?: SWRConfiguration) {
+  return useSWR(
+    tenantIdOrSlug ? endpoints.tenants.members(tenantIdOrSlug) : null,
+    get,
+    { ...defaultSwrConfig, ...config }
   )
 }
 
 // ============================================
-// FILE UPLOAD HOOKS
+// VULNERABILITY HOOKS
 // ============================================
 
 /**
- * Upload file mutation
- *
- * @example
- * ```typescript
- * function FileUploader() {
- *   const { trigger, isMutating, progress } = useUploadFile()
- *   const [uploadProgress, setUploadProgress] = useState(0)
- *
- *   const handleUpload = async (file: File) => {
- *     try {
- *       const result = await trigger({
- *         file,
- *         onProgress: (p) => setUploadProgress(p.percentage)
- *       })
- *       toast.success('File uploaded!')
- *     } catch (error) {
- *       // Error handled by SWR
- *     }
- *   }
- *
- *   return <input type="file" onChange={(e) => handleUpload(e.target.files[0])} />
- * }
- * ```
+ * Fetch vulnerabilities list
  */
-export function useUploadFile() {
-  return useSWRMutation(
-    endpoints.files.upload(),
-    (
-      url,
-      { arg }: {
-        arg: {
-          file: File
-          onProgress?: (progress: { loaded: number; total: number; percentage: number }) => void
-        }
-      }
-    ) => uploadFile<FileUploadResponse>(url, arg.file, { onProgress: arg.onProgress })
-  )
-}
-
-// ============================================
-// PROFILE HOOKS
-// ============================================
-
-/**
- * Fetch current user's profile
- * (Alias for useCurrentUser for clarity)
- */
-export function useProfile(config?: SWRConfiguration) {
-  return useSWR<User>(
-    endpoints.profile.get(),
+export function useVulnerabilities(filters?: SearchFilters, config?: SWRConfiguration) {
+  return useSWR(
+    endpoints.vulnerabilities.list(filters),
     get,
     { ...defaultSwrConfig, ...config }
   )
 }
 
 /**
- * Update profile mutation
+ * Fetch vulnerability by ID
  */
-export function useUpdateProfile() {
-  return useSWRMutation(
-    endpoints.profile.update(),
-    (url, { arg }: { arg: UpdateUserRequest }) => put<User>(url, arg)
+export function useVulnerability(vulnId: string | null, config?: SWRConfiguration) {
+  return useSWR(
+    vulnId ? endpoints.vulnerabilities.get(vulnId) : null,
+    get,
+    { ...defaultSwrConfig, ...config }
   )
 }
 
 /**
- * Upload avatar mutation
+ * Fetch vulnerability by CVE ID
  */
-export function useUploadAvatar() {
-  return useSWRMutation(
-    endpoints.profile.uploadAvatar(),
-    (
-      url,
-      { arg }: {
-        arg: {
-          file: File
-          onProgress?: (progress: { loaded: number; total: number; percentage: number }) => void
-        }
-      }
-    ) => uploadFile<FileUploadResponse>(url, arg.file, { onProgress: arg.onProgress })
+export function useVulnerabilityByCVE(cveId: string | null, config?: SWRConfiguration) {
+  return useSWR(
+    cveId ? endpoints.vulnerabilities.getByCVE(cveId) : null,
+    get,
+    { ...defaultSwrConfig, ...config }
+  )
+}
+
+// ============================================
+// FINDING HOOKS
+// ============================================
+
+/**
+ * Fetch findings for a tenant
+ */
+export function useFindings(
+  tenantIdOrSlug: string | null,
+  filters?: SearchFilters,
+  config?: SWRConfiguration
+) {
+  return useSWR(
+    tenantIdOrSlug ? endpoints.findings.list(tenantIdOrSlug, filters) : null,
+    get,
+    { ...defaultSwrConfig, ...config }
+  )
+}
+
+/**
+ * Fetch finding by ID
+ */
+export function useFinding(
+  tenantIdOrSlug: string | null,
+  findingId: string | null,
+  config?: SWRConfiguration
+) {
+  return useSWR(
+    tenantIdOrSlug && findingId ? endpoints.findings.get(tenantIdOrSlug, findingId) : null,
+    get,
+    { ...defaultSwrConfig, ...config }
+  )
+}
+
+/**
+ * Fetch findings by project
+ */
+export function useFindingsByProject(
+  tenantIdOrSlug: string | null,
+  projectId: string | null,
+  filters?: SearchFilters,
+  config?: SWRConfiguration
+) {
+  return useSWR(
+    tenantIdOrSlug && projectId
+      ? endpoints.findings.listByProject(tenantIdOrSlug, projectId, filters)
+      : null,
+    get,
+    { ...defaultSwrConfig, ...config }
+  )
+}
+
+// ============================================
+// PROJECT HOOKS
+// ============================================
+
+/**
+ * Fetch projects for a tenant
+ */
+export function useProjects(
+  tenantIdOrSlug: string | null,
+  filters?: SearchFilters,
+  config?: SWRConfiguration
+) {
+  return useSWR(
+    tenantIdOrSlug ? endpoints.projects.list(tenantIdOrSlug, filters) : null,
+    get,
+    { ...defaultSwrConfig, ...config }
+  )
+}
+
+/**
+ * Fetch project by ID
+ */
+export function useProject(
+  tenantIdOrSlug: string | null,
+  projectId: string | null,
+  config?: SWRConfiguration
+) {
+  return useSWR(
+    tenantIdOrSlug && projectId ? endpoints.projects.get(tenantIdOrSlug, projectId) : null,
+    get,
+    { ...defaultSwrConfig, ...config }
+  )
+}
+
+// ============================================
+// COMPONENT HOOKS
+// ============================================
+
+/**
+ * Fetch components for a tenant
+ */
+export function useComponents(
+  tenantIdOrSlug: string | null,
+  filters?: SearchFilters,
+  config?: SWRConfiguration
+) {
+  return useSWR(
+    tenantIdOrSlug ? endpoints.components.list(tenantIdOrSlug, filters) : null,
+    get,
+    { ...defaultSwrConfig, ...config }
+  )
+}
+
+/**
+ * Fetch components by project
+ */
+export function useComponentsByProject(
+  tenantIdOrSlug: string | null,
+  projectId: string | null,
+  filters?: SearchFilters,
+  config?: SWRConfiguration
+) {
+  return useSWR(
+    tenantIdOrSlug && projectId
+      ? endpoints.components.listByProject(tenantIdOrSlug, projectId, filters)
+      : null,
+    get,
+    { ...defaultSwrConfig, ...config }
+  )
+}
+
+// ============================================
+// ASSET HOOKS
+// ============================================
+
+/**
+ * Fetch assets list
+ */
+export function useAssets(filters?: SearchFilters, config?: SWRConfiguration) {
+  return useSWR(
+    endpoints.assets.list(filters),
+    get,
+    { ...defaultSwrConfig, ...config }
+  )
+}
+
+/**
+ * Fetch asset by ID
+ */
+export function useAsset(assetId: string | null, config?: SWRConfiguration) {
+  return useSWR(
+    assetId ? endpoints.assets.get(assetId) : null,
+    get,
+    { ...defaultSwrConfig, ...config }
   )
 }
 
@@ -331,15 +401,6 @@ export function useUploadAvatar() {
 
 /**
  * Mutate (revalidate) multiple SWR keys
- *
- * @example
- * ```typescript
- * // After creating a user, refresh user list
- * await mutateMultiple([
- *   endpoints.users.list(),
- *   endpoints.auth.me()
- * ])
- * ```
  */
 export async function mutateMultiple(keys: string[]) {
   const { mutate } = await import('swr')
@@ -356,17 +417,6 @@ export async function clearAllCache() {
 
 /**
  * Create optimistic update helper
- *
- * @example
- * ```typescript
- * const updateUser = useUpdateUser('user-123')
- *
- * await optimisticUpdate(
- *   endpoints.users.get('user-123'),
- *   { name: 'New Name' },
- *   () => updateUser.trigger({ name: 'New Name' })
- * )
- * ```
  */
 export async function optimisticUpdate<T>(
   key: string,
@@ -391,21 +441,7 @@ export async function optimisticUpdate<T>(
 // ============================================
 
 /**
- * Infinite scroll hook for paginated data
- *
- * @example
- * ```typescript
- * const {
- *   data,
- *   size,
- *   setSize,
- *   isLoading,
- *   isValidating
- * } = useInfiniteUsers({ pageSize: 20 })
- *
- * // Load more
- * <button onClick={() => setSize(size + 1)}>Load More</button>
- * ```
+ * Infinite scroll hook for paginated users
  */
 export function useInfiniteUsers(filters?: UserListFilters) {
   return useSWRInfinite(
@@ -418,16 +454,6 @@ export function useInfiniteUsers(filters?: UserListFilters) {
 
 /**
  * Dependent fetching - fetch data only when condition is met
- *
- * @example
- * ```typescript
- * const { data: user } = useUser(userId)
- * const { data: posts } = useDependentData(
- *   user?.id,
- *   (id) => endpoints.users.posts(id),
- *   get
- * )
- * ```
  */
 export function useDependentData<T, C = unknown>(
   condition: C,
@@ -444,16 +470,6 @@ export function useDependentData<T, C = unknown>(
 
 /**
  * Polling hook - automatically refetch data at interval
- *
- * @example
- * ```typescript
- * // Refresh every 5 seconds
- * const { data } = usePolling(
- *   endpoints.auth.me(),
- *   get,
- *   5000
- * )
- * ```
  */
 export function usePolling<T>(
   key: string | null,

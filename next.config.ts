@@ -59,15 +59,17 @@ const nextConfig: NextConfig = {
           },
           // Content Security Policy - Prevents XSS attacks
           // Note: This is a strict policy. Adjust based on your needs.
+          // API calls go through /api/proxy (same-origin) so connect-src 'self' is sufficient
           {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
               "script-src 'self' 'unsafe-eval' 'unsafe-inline'", // Next.js requires unsafe-eval and unsafe-inline
-              "style-src 'self' 'unsafe-inline'", // Tailwind requires unsafe-inline
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com", // Tailwind + Google Fonts
+              "style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com", // Google Fonts stylesheets
               "img-src 'self' data: https:",
-              "font-src 'self' data:",
-              "connect-src 'self' " + (process.env.NEXT_PUBLIC_BACKEND_API_URL || ''),
+              "font-src 'self' data: https://fonts.gstatic.com", // Google Fonts files
+              "connect-src 'self'", // API calls through /api/proxy (same-origin)
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",
@@ -82,6 +84,8 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: [
     'http://localhost:3000',
     'http://127.0.0.1:3000',
+    'http://localhost:8080',
+    'http://127.0.0.1:8080',
     // Production domains
     'https://app.rediver.io',
     'http://app.rediver.io',

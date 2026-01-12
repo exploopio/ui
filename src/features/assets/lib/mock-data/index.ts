@@ -14,7 +14,7 @@ export type { BaseAsset } from "./helpers";
 import { domainAssets } from "./domains";
 import { websiteAssets } from "./websites";
 import { serviceAssets } from "./services";
-import { repositoryAssets } from "./repositories";
+import { projectAssets, repositoryAssets } from "./projects";
 import { cloudAssets } from "./cloud";
 import { hostAssets } from "./hosts";
 import { containerAssets } from "./containers";
@@ -40,7 +40,7 @@ import type { BaseAsset } from "./helpers";
 export { domainAssets } from "./domains";
 export { websiteAssets } from "./websites";
 export { serviceAssets } from "./services";
-export { repositoryAssets } from "./repositories";
+export { projectAssets, repositoryAssets } from "./projects";
 export { cloudAssets } from "./cloud";
 export { hostAssets } from "./hosts";
 export { containerAssets } from "./containers";
@@ -57,7 +57,7 @@ const baseAssets: BaseAsset[] = [
   ...domainAssets,
   ...websiteAssets,
   ...serviceAssets,
-  ...repositoryAssets,
+  ...projectAssets,
   ...cloudAssets,
   ...hostAssets,
   ...containerAssets,
@@ -82,7 +82,9 @@ export const getAssetsByType = (type: AssetType): Asset[] =>
 export const getDomains = () => getAssetsByType("domain");
 export const getWebsites = () => getAssetsByType("website");
 export const getServices = () => getAssetsByType("service");
-export const getRepositories = () => getAssetsByType("repository");
+export const getProjects = () => getAssetsByType("project");
+/** @deprecated Use getProjects instead */
+export const getRepositories = () => getAssetsByType("project");
 export const getCloudAssets = () => getAssetsByType("cloud");
 export const getCredentials = () => getAssetsByType("credential");
 export const getHosts = () => getAssetsByType("host");
@@ -118,7 +120,9 @@ export const getAssetStats = () => ({
   domains: getDomains().length,
   websites: getWebsites().length,
   services: getServices().length,
-  repositories: getRepositories().length,
+  projects: getProjects().length,
+  /** @deprecated Use projects instead */
+  repositories: getProjects().length,
   cloud: getCloudAssets().length,
   hosts: getHosts().length,
   containers: getContainers().length,
@@ -172,7 +176,9 @@ export const getUngroupedAssetStats = () => {
       domain: ungrouped.filter((a) => a.type === "domain").length,
       website: ungrouped.filter((a) => a.type === "website").length,
       service: ungrouped.filter((a) => a.type === "service").length,
-      repository: ungrouped.filter((a) => a.type === "repository").length,
+      project: ungrouped.filter((a) => a.type === "project").length,
+      /** @deprecated Use project instead */
+      repository: ungrouped.filter((a) => a.type === "project").length,
       cloud: ungrouped.filter((a) => a.type === "cloud").length,
       credential: ungrouped.filter((a) => a.type === "credential").length,
       host: ungrouped.filter((a) => a.type === "host").length,

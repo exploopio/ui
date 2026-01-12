@@ -1,14 +1,14 @@
 /**
- * Repository Assets Mock Data
+ * Project Assets Mock Data
  */
 
 import type { BaseAsset } from "./helpers";
 import { daysAgo } from "./helpers";
 
-export const repositoryAssets: BaseAsset[] = [
+export const projectAssets: BaseAsset[] = [
   {
-    id: "repo-001",
-    type: "repository",
+    id: "proj-001",
+    type: "project",
     name: "vingroup/core-banking-api",
     description: "Core Banking API Service",
     status: "active",
@@ -17,7 +17,7 @@ export const repositoryAssets: BaseAsset[] = [
     groupId: "grp-001",
     groupName: "Production - Core Banking",
     metadata: {
-      provider: "github",
+      projectProvider: "github",
       visibility: "private",
       language: "Java",
       stars: 0,
@@ -29,8 +29,8 @@ export const repositoryAssets: BaseAsset[] = [
     updatedAt: daysAgo(1),
   },
   {
-    id: "repo-002",
-    type: "repository",
+    id: "proj-002",
+    type: "project",
     name: "fpt/ecommerce-frontend",
     description: "E-commerce Frontend Application",
     status: "active",
@@ -39,7 +39,7 @@ export const repositoryAssets: BaseAsset[] = [
     groupId: "grp-002",
     groupName: "Production - E-commerce",
     metadata: {
-      provider: "gitlab",
+      projectProvider: "gitlab",
       visibility: "private",
       language: "TypeScript",
       stars: 0,
@@ -51,8 +51,8 @@ export const repositoryAssets: BaseAsset[] = [
     updatedAt: daysAgo(2),
   },
   {
-    id: "repo-003",
-    type: "repository",
+    id: "proj-003",
+    type: "project",
     name: "viettel/infrastructure-terraform",
     description: "Infrastructure as Code",
     status: "active",
@@ -61,7 +61,7 @@ export const repositoryAssets: BaseAsset[] = [
     groupId: "grp-006",
     groupName: "Cloud Infrastructure",
     metadata: {
-      provider: "github",
+      projectProvider: "github",
       visibility: "private",
       language: "HCL",
       stars: 0,
@@ -73,8 +73,8 @@ export const repositoryAssets: BaseAsset[] = [
     updatedAt: daysAgo(0),
   },
   {
-    id: "repo-004",
-    type: "repository",
+    id: "proj-004",
+    type: "project",
     name: "techcombank/mobile-app",
     description: "Mobile Banking Application",
     status: "active",
@@ -83,7 +83,7 @@ export const repositoryAssets: BaseAsset[] = [
     groupId: "grp-001",
     groupName: "Production - Core Banking",
     metadata: {
-      provider: "bitbucket",
+      projectProvider: "bitbucket",
       visibility: "private",
       language: "Kotlin",
       stars: 0,
@@ -95,8 +95,8 @@ export const repositoryAssets: BaseAsset[] = [
     updatedAt: daysAgo(1),
   },
   {
-    id: "repo-005",
-    type: "repository",
+    id: "proj-005",
+    type: "project",
     name: "vpbank/docs-public",
     description: "Public Documentation",
     status: "active",
@@ -105,7 +105,7 @@ export const repositoryAssets: BaseAsset[] = [
     groupId: "grp-005",
     groupName: "Partner Systems",
     metadata: {
-      provider: "github",
+      projectProvider: "github",
       visibility: "public",
       language: "Markdown",
       stars: 12,
@@ -117,3 +117,8 @@ export const repositoryAssets: BaseAsset[] = [
     updatedAt: daysAgo(5),
   },
 ];
+
+/**
+ * @deprecated Use projectAssets instead
+ */
+export const repositoryAssets = projectAssets;

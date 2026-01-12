@@ -45,7 +45,7 @@ const ASSET_TYPES: { value: AssetType; label: string; description: string }[] = 
   { value: "domain", label: "Domain", description: "Root domain or subdomain" },
   { value: "website", label: "Website", description: "Web application or site" },
   { value: "api", label: "API", description: "API endpoint collection" },
-  { value: "repository", label: "Repository", description: "Code repository" },
+  { value: "project", label: "Project", description: "Code project/repository" },
   { value: "cloud_account", label: "Cloud Account", description: "Cloud subscription or project" },
   { value: "compute", label: "Compute", description: "VM or instance" },
   { value: "storage", label: "Storage", description: "S3/Blob/GCS bucket" },
