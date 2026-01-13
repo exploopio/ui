@@ -80,7 +80,7 @@ export function reportError(error: Error | unknown, context?: ErrorContext): voi
         email: context.user.email,
       } : undefined,
     })
-  } catch (err) {
+  } catch (_err) {
     // Sentry capture failed, log to console
     console.error('[Error Report - Sentry failed]', {
       message: errorMessage,

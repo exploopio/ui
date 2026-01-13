@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useTransition } from 'react'
+import { useState, useEffect, useTransition, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Building2, Check, Loader2, LogOut } from 'lucide-react'
 import { toast } from 'sonner'
@@ -16,33 +16,39 @@ import { Button } from '@/components/ui/button'
 import { getCookie } from '@/lib/cookies'
 import { selectTenantAction, localLogoutAction, type LoginTenant } from '@/features/auth/actions/local-auth-actions'
 
+// Parse tenants from cookie - done outside component to avoid re-parsing
+function parsePendingTenants(): { tenants: LoginTenant[]; error: boolean } {
+  if (typeof window === 'undefined') {
+    return { tenants: [], error: false }
+  }
+  const pendingTenantsStr = getCookie('rediver_pending_tenants')
+  if (!pendingTenantsStr) {
+    return { tenants: [], error: true }
+  }
+  try {
+    const parsed = JSON.parse(pendingTenantsStr) as LoginTenant[]
+    return { tenants: parsed, error: false }
+  } catch {
+    return { tenants: [], error: true }
+  }
+}
+
 export default function SelectTenantPage() {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
-  const [tenants, setTenants] = useState<LoginTenant[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
-  // Load tenants from cookie on mount
+  // Parse tenants once using useMemo
+  const { tenants, error: parseError } = useMemo(() => parsePendingTenants(), [])
+
+  // Handle redirect on error - use effect only for side effects (navigation)
   useEffect(() => {
-    const pendingTenantsStr = getCookie('rediver_pending_tenants')
-    if (pendingTenantsStr) {
-      try {
-        const parsed = JSON.parse(pendingTenantsStr) as LoginTenant[]
-        setTenants(parsed)
-      } catch {
-        console.error('Failed to parse pending tenants')
-        toast.error('Session expired. Please login again.')
-        router.push('/login')
-      }
-    } else {
-      // No pending tenants - redirect to login
+    if (parseError) {
       toast.error('Session expired. Please login again.')
       router.push('/login')
     }
-    setIsLoading(false)
-  }, [router])
+  }, [parseError, router])
 
   // Handle tenant selection
   function handleSelectTenant(tenantId: string) {
@@ -73,7 +79,8 @@ export default function SelectTenantPage() {
     }
   }
 
-  if (isLoading) {
+  // Show loading if parsing or redirecting due to error
+  if (parseError || tenants.length === 0) {
     return (
       <Card className='w-full max-w-md'>
         <CardContent className='flex items-center justify-center py-12'>

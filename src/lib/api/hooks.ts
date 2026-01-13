@@ -69,19 +69,8 @@ export function useUpdateCurrentUser() {
   )
 }
 
-/**
- * Fetch current user's teams/tenants
- * @deprecated Use useMyTenants from '@/lib/api/user-tenant-hooks' instead
- * That version includes proper cookie checking to prevent 401 errors for new users
- */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function _deprecatedUseMyTenants(config?: SWRConfiguration) {
-  return useSWR(
-    endpoints.users.myTenants(),
-    get,
-    { ...defaultSwrConfig, ...config }
-  )
-}
+// NOTE: For user tenant fetching, use useMyTenants from '@/lib/api/user-tenant-hooks'
+// That version includes proper cookie checking to prevent 401 errors for new users
 
 // ============================================
 // USER MANAGEMENT HOOKS (Admin)

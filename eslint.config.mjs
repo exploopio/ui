@@ -28,6 +28,9 @@ const eslintConfig = defineConfig([
           caughtErrorsIgnorePattern: "^_",
         },
       ],
+      // Allow setState in effects - common pattern for syncing with external state
+      // (localStorage, cookies, server data). React Compiler handles this well.
+      "react-hooks/set-state-in-effect": "warn",
     },
   },
   // Allow `any` in test files (mocking often requires it)

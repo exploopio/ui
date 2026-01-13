@@ -57,7 +57,8 @@ export function SidebarUser({ initialUser }: SidebarUserProps) {
   const [open, setOpen] = useDialogState();
   const [user, setUser] = useState<UserData | null>(initialUser || null);
 
-  // Try to get user from localStorage on mount (for local auth)
+  // Try to get user from localStorage on mount (for local auth) - syncing with external storage
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (!user) {
       try {

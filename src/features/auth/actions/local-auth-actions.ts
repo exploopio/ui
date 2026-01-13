@@ -1110,7 +1110,7 @@ export async function isLocalAuthenticated(): Promise<boolean> {
 export async function getLocalAccessToken(): Promise<string | null> {
   try {
     const cookieStore = await cookies()
-    let accessToken = cookieStore.get(env.auth.cookieName)?.value
+    const accessToken = cookieStore.get(env.auth.cookieName)?.value
 
     if (!accessToken) {
       return null

@@ -34,7 +34,7 @@ function getEnvVar(key: string, defaultValue?: string): string {
 /**
  * Gets a required environment variable (warns if missing)
  */
-function getRequiredEnvVar(key: string, defaultValue?: string): string {
+function _getRequiredEnvVar(key: string, defaultValue?: string): string {
   const value = process.env[key]
 
   if (isDockerBuild) {

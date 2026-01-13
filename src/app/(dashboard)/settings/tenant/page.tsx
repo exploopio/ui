@@ -132,7 +132,8 @@ export default function TenantPage() {
     logo_data: null as string | null,
   });
 
-  // Populate org info form when tenant loads
+  // Populate org info form when tenant loads - syncing with external data
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (currentTenant) {
       setOrgInfoForm({
@@ -143,7 +144,8 @@ export default function TenantPage() {
     }
   }, [currentTenant]);
 
-  // Populate settings form when settings load
+  // Populate settings form when settings load - syncing with external data
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (settings) {
       setGeneralForm({

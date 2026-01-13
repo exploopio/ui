@@ -132,7 +132,7 @@ export function TeamSwitcher() {
   const currentIndex = currentTenant
     ? displayTenants.findIndex(t => t.id === currentTenant.id)
     : 0;
-  const CurrentIcon = getTeamIcon(currentIndex >= 0 ? currentIndex : 0);
+  const currentIconIndex = currentIndex >= 0 ? currentIndex : 0;
 
   // Loading state
   if (isLoading && displayTenants.length === 0) {
@@ -191,7 +191,7 @@ export function TeamSwitcher() {
                 {isSwitching ? (
                   <Loader2 className="size-4 animate-spin" />
                 ) : (
-                  <CurrentIcon className="size-4" />
+                  React.createElement(teamIcons[currentIconIndex % teamIcons.length], { className: "size-4" })
                 )}
               </div>
 

@@ -5,7 +5,7 @@
  * Logo data is stored in localStorage to persist across sessions.
  */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 
 const LOGO_CACHE_PREFIX = 'rediver_tenant_logo_'
 const LOGO_CACHE_VERSION = 'v1'
@@ -94,45 +94,54 @@ export function useTenantLogo(
   serverLogo?: string | null,
   fallbackUrl?: string
 ) {
-  const [logoSrc, setLogoSrc] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-
-  // Initialize from cache or server
-  useEffect(() => {
-    if (!tenantId) {
-      setLogoSrc(null)
-      setIsLoading(false)
-      return
-    }
-
-    setIsLoading(true)
+  // Compute initial logo from cache or server (no setState needed)
+  const initialLogo = useMemo(() => {
+    if (!tenantId) return null
 
     // Try cache first
     const cached = getCachedLogo(tenantId)
-    if (cached) {
-      setLogoSrc(cached)
-      setIsLoading(false)
+    if (cached) return cached
 
-      // If server has different data, update cache
-      if (serverLogo && serverLogo !== cached) {
-        setCachedLogo(tenantId, serverLogo)
-        setLogoSrc(serverLogo)
-      }
-      return
-    }
-
-    // No cache, use server data
-    if (serverLogo) {
-      setCachedLogo(tenantId, serverLogo)
-      setLogoSrc(serverLogo)
-    } else if (fallbackUrl) {
-      setLogoSrc(fallbackUrl)
-    } else {
-      setLogoSrc(null)
-    }
-
-    setIsLoading(false)
+    // No cache, use server data or fallback
+    if (serverLogo) return serverLogo
+    if (fallbackUrl) return fallbackUrl
+    return null
   }, [tenantId, serverLogo, fallbackUrl])
+
+  const [logoSrc, setLogoSrc] = useState<string | null>(initialLogo)
+
+  // Sync state when inputs change - this is intentional external state synchronization
+  useEffect(() => {
+    // Compute new logo value based on current inputs
+    let newLogo: string | null = null
+
+    if (tenantId) {
+      // Try cache first
+      const cached = getCachedLogo(tenantId)
+      if (cached) {
+        newLogo = cached
+      } else if (serverLogo) {
+        // Use server data and cache it
+        setCachedLogo(tenantId, serverLogo)
+        newLogo = serverLogo
+      } else if (fallbackUrl) {
+        newLogo = fallbackUrl
+      }
+
+      // If server has newer data than cache, update
+      if (serverLogo && cached && serverLogo !== cached) {
+        setCachedLogo(tenantId, serverLogo)
+        newLogo = serverLogo
+      }
+    }
+
+    // Only update state if value changed
+    if (newLogo !== logoSrc) {
+      setLogoSrc(newLogo)
+    }
+  }, [tenantId, serverLogo, fallbackUrl, logoSrc])
+
+  const isLoading = false // Logo is computed synchronously now
 
   // Update logo (also updates cache)
   const updateLogo = useCallback(

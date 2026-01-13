@@ -14,7 +14,7 @@ import {
   calculateEcosystemStats,
   calculateLicenseStats,
 } from '../lib/transform-api'
-import type { Component, ComponentStats, ComponentEcosystem, LicenseRisk, LicenseCategory } from '../types'
+import type { ComponentStats, ComponentEcosystem, LicenseRisk, LicenseCategory } from '../types'
 
 interface UseComponentsOptions {
   filters?: ComponentApiFilters

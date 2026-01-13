@@ -232,7 +232,7 @@ export async function apiClient<T = unknown>(
     let data: unknown
     try {
       data = JSON.parse(responseText)
-    } catch (parseError) {
+    } catch (_parseError) {
       console.error('[API Client] Failed to parse JSON:', responseText.substring(0, 200))
       throw new ApiClientError(
         'Invalid JSON response from server',

@@ -76,7 +76,7 @@ import {
   CheckCircle,
   Mail,
   MoreHorizontal,
-  Key,
+  Link,
   Trash2,
   Send,
   Ban,
@@ -862,11 +862,22 @@ export default function UsersPage() {
                         variant="ghost"
                         size="sm"
                         className="text-muted-foreground hover:text-foreground"
+                        title="Copy invitation link"
                         onClick={async () => {
-                          toast.success("Invitation link copied");
+                          if (!invitation.token) {
+                            toast.error("Invitation token not available");
+                            return;
+                          }
+                          const inviteLink = `${window.location.origin}/invitations/${invitation.token}`;
+                          try {
+                            await navigator.clipboard.writeText(inviteLink);
+                            toast.success("Invitation link copied to clipboard");
+                          } catch {
+                            toast.error("Failed to copy link");
+                          }
                         }}
                       >
-                        <Key className="h-4 w-4" />
+                        <Link className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
