@@ -43,6 +43,8 @@ interface TenantContextValue {
   isSwitching: boolean
   /** Refresh tenant list */
   refreshTenants: () => Promise<void>
+  /** Update current tenant info (name, slug) without full reload */
+  updateCurrentTenant: (updates: Partial<Pick<CurrentTenant, 'name' | 'slug'>>) => void
 }
 
 // ============================================
@@ -181,6 +183,25 @@ export function TenantProvider({ children }: TenantProviderProps) {
     await invalidateMyTenantsCache()
   }, [mutate])
 
+  // Update current tenant info (name, slug) without full reload
+  const updateCurrentTenant = React.useCallback((updates: Partial<Pick<CurrentTenant, 'name' | 'slug'>>) => {
+    if (!currentTenant) return
+
+    const updatedTenant: CurrentTenant = {
+      ...currentTenant,
+      ...updates,
+    }
+
+    setCurrentTenant(updatedTenant)
+
+    // Update cookie with new info
+    setCookie(TENANT_COOKIE, JSON.stringify({
+      id: updatedTenant.id,
+      slug: updatedTenant.slug,
+      role: updatedTenant.role,
+    }), { path: '/', maxAge: 7 * 24 * 60 * 60 })
+  }, [currentTenant])
+
   const value = React.useMemo<TenantContextValue>(() => ({
     currentTenant,
     tenants,
@@ -189,7 +210,8 @@ export function TenantProvider({ children }: TenantProviderProps) {
     switchTeam,
     isSwitching,
     refreshTenants,
-  }), [currentTenant, tenants, isLoading, error, switchTeam, isSwitching, refreshTenants])
+    updateCurrentTenant,
+  }), [currentTenant, tenants, isLoading, error, switchTeam, isSwitching, refreshTenants, updateCurrentTenant])
 
   return (
     <TenantContext.Provider value={value}>

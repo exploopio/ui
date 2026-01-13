@@ -129,6 +129,9 @@ export const Permission = {
   // Integration permissions
   IntegrationsRead: 'integrations:read',
   IntegrationsManage: 'integrations:manage',
+
+  // Audit log permissions
+  AuditRead: 'audit:read',
 } as const
 
 /**
@@ -213,3 +216,126 @@ export const PermissionGroups = {
     Permission.CredentialsRead,
   ],
 } as const
+
+/**
+ * Role to Permissions mapping
+ * Maps each role to its default permissions.
+ * This mirrors the backend role_mapping.go to enable client-side permission derivation.
+ */
+export const RolePermissions: Record<RoleString, PermissionString[]> = {
+  [Role.Owner]: [
+    // Full resource access
+    Permission.AssetsRead, Permission.AssetsWrite, Permission.AssetsDelete,
+    Permission.ProjectsRead, Permission.ProjectsWrite, Permission.ProjectsDelete,
+    Permission.ComponentsRead, Permission.ComponentsWrite, Permission.ComponentsDelete,
+    Permission.FindingsRead, Permission.FindingsWrite, Permission.FindingsDelete,
+    Permission.VulnerabilitiesRead,
+    Permission.DashboardRead,
+    // Audit logs
+    Permission.AuditRead,
+    // Scans
+    Permission.ScansRead, Permission.ScansWrite,
+    // Credentials
+    Permission.CredentialsRead, Permission.CredentialsWrite,
+    // Reports
+    Permission.ReportsRead, Permission.ReportsWrite,
+    // Pentest
+    Permission.PentestRead, Permission.PentestWrite,
+    // Remediation
+    Permission.RemediationRead, Permission.RemediationWrite,
+    // Workflows
+    Permission.WorkflowsRead, Permission.WorkflowsWrite,
+    // Full team management
+    Permission.MembersRead, Permission.MembersInvite, Permission.MembersManage,
+    Permission.TeamRead, Permission.TeamUpdate, Permission.TeamDelete,
+    // Billing
+    Permission.BillingRead, Permission.BillingManage,
+    // Integrations
+    Permission.IntegrationsRead, Permission.IntegrationsManage,
+  ],
+
+  [Role.Admin]: [
+    // Full resource access
+    Permission.AssetsRead, Permission.AssetsWrite, Permission.AssetsDelete,
+    Permission.ProjectsRead, Permission.ProjectsWrite, Permission.ProjectsDelete,
+    Permission.ComponentsRead, Permission.ComponentsWrite, Permission.ComponentsDelete,
+    Permission.FindingsRead, Permission.FindingsWrite, Permission.FindingsDelete,
+    Permission.VulnerabilitiesRead,
+    Permission.DashboardRead,
+    // Audit logs
+    Permission.AuditRead,
+    // Scans
+    Permission.ScansRead, Permission.ScansWrite,
+    // Credentials
+    Permission.CredentialsRead, Permission.CredentialsWrite,
+    // Reports
+    Permission.ReportsRead, Permission.ReportsWrite,
+    // Pentest
+    Permission.PentestRead, Permission.PentestWrite,
+    // Remediation
+    Permission.RemediationRead, Permission.RemediationWrite,
+    // Workflows
+    Permission.WorkflowsRead, Permission.WorkflowsWrite,
+    // Member management (can invite and manage, but not delete team)
+    Permission.MembersRead, Permission.MembersInvite, Permission.MembersManage,
+    Permission.TeamRead, Permission.TeamUpdate,
+    // Billing read only
+    Permission.BillingRead,
+    // Integrations
+    Permission.IntegrationsRead, Permission.IntegrationsManage,
+  ],
+
+  [Role.Member]: [
+    // Read + Write (no delete)
+    Permission.AssetsRead, Permission.AssetsWrite,
+    Permission.ProjectsRead, Permission.ProjectsWrite,
+    Permission.ComponentsRead, Permission.ComponentsWrite,
+    Permission.FindingsRead, Permission.FindingsWrite,
+    Permission.VulnerabilitiesRead,
+    Permission.DashboardRead,
+    // Scans (read + write)
+    Permission.ScansRead, Permission.ScansWrite,
+    // Credentials (read only)
+    Permission.CredentialsRead,
+    // Reports (read + write)
+    Permission.ReportsRead, Permission.ReportsWrite,
+    // Pentest (read + write)
+    Permission.PentestRead, Permission.PentestWrite,
+    // Remediation (read + write)
+    Permission.RemediationRead, Permission.RemediationWrite,
+    // Workflows (read only)
+    Permission.WorkflowsRead,
+    // Can view members but not manage
+    Permission.MembersRead,
+    Permission.TeamRead,
+    // Integrations (read only)
+    Permission.IntegrationsRead,
+  ],
+
+  [Role.Viewer]: [
+    // Read-only access
+    Permission.AssetsRead,
+    Permission.ProjectsRead,
+    Permission.ComponentsRead,
+    Permission.FindingsRead,
+    Permission.VulnerabilitiesRead,
+    Permission.DashboardRead,
+    // Scans (read only)
+    Permission.ScansRead,
+    // Credentials (read only)
+    Permission.CredentialsRead,
+    // Reports (read only)
+    Permission.ReportsRead,
+    // Pentest (read only)
+    Permission.PentestRead,
+    // Remediation (read only)
+    Permission.RemediationRead,
+    // Workflows (read only)
+    Permission.WorkflowsRead,
+    // Can view team info
+    Permission.MembersRead,
+    Permission.TeamRead,
+    // Integrations (read only)
+    Permission.IntegrationsRead,
+  ],
+}

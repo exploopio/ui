@@ -23,6 +23,7 @@ export const API_BASE = {
   ASSETS: '/api/v1/assets',
   VULNERABILITIES: '/api/v1/vulnerabilities',
   DASHBOARD: '/api/v1/dashboard',
+  AUDIT_LOGS: '/api/v1/audit-logs',
 } as const
 
 // ============================================
@@ -244,9 +245,20 @@ export const tenantEndpoints = {
   members: (tenantIdOrSlug: string) => `${API_BASE.TENANTS}/${tenantIdOrSlug}/members`,
 
   /**
+   * Get member statistics
+   */
+  memberStats: (tenantIdOrSlug: string) => `${API_BASE.TENANTS}/${tenantIdOrSlug}/members/stats`,
+
+  /**
    * Add member to tenant
    */
   addMember: (tenantIdOrSlug: string) => `${API_BASE.TENANTS}/${tenantIdOrSlug}/members`,
+
+  /**
+   * Update member (alias for updateMemberRole)
+   */
+  updateMember: (tenantIdOrSlug: string, memberId: string) =>
+    `${API_BASE.TENANTS}/${tenantIdOrSlug}/members/${memberId}`,
 
   /**
    * Update member role
@@ -279,6 +291,39 @@ export const tenantEndpoints = {
    */
   deleteInvitation: (tenantIdOrSlug: string, invitationId: string) =>
     `${API_BASE.TENANTS}/${tenantIdOrSlug}/invitations/${invitationId}`,
+
+  // ============================================
+  // SETTINGS MANAGEMENT
+  // ============================================
+
+  /**
+   * Get tenant settings
+   */
+  settings: (tenantIdOrSlug: string) => `${API_BASE.TENANTS}/${tenantIdOrSlug}/settings`,
+
+  /**
+   * Update general settings
+   */
+  updateGeneralSettings: (tenantIdOrSlug: string) =>
+    `${API_BASE.TENANTS}/${tenantIdOrSlug}/settings/general`,
+
+  /**
+   * Update security settings
+   */
+  updateSecuritySettings: (tenantIdOrSlug: string) =>
+    `${API_BASE.TENANTS}/${tenantIdOrSlug}/settings/security`,
+
+  /**
+   * Update API settings
+   */
+  updateAPISettings: (tenantIdOrSlug: string) =>
+    `${API_BASE.TENANTS}/${tenantIdOrSlug}/settings/api`,
+
+  /**
+   * Update branding settings
+   */
+  updateBrandingSettings: (tenantIdOrSlug: string) =>
+    `${API_BASE.TENANTS}/${tenantIdOrSlug}/settings/branding`,
 } as const
 
 // ============================================
@@ -572,6 +617,45 @@ export function buildSortEndpoint(
 }
 
 // ============================================
+// AUDIT LOG ENDPOINTS
+// ============================================
+
+/**
+ * Audit log endpoints (tenant from JWT token, not URL path)
+ * Backend uses /api/v1/audit-logs with tenant extracted from JWT
+ */
+export const auditLogEndpoints = {
+  /**
+   * List audit logs with optional filters
+   */
+  list: (filters?: SearchFilters) => {
+    const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
+    return `${API_BASE.AUDIT_LOGS}${queryString}`
+  },
+
+  /**
+   * Get audit log statistics
+   */
+  stats: () => `${API_BASE.AUDIT_LOGS}/stats`,
+
+  /**
+   * Get single audit log by ID
+   */
+  get: (logId: string) => `${API_BASE.AUDIT_LOGS}/${logId}`,
+
+  /**
+   * Get resource audit history
+   */
+  resourceHistory: (resourceType: string, resourceId: string) =>
+    `${API_BASE.AUDIT_LOGS}/resource/${resourceType}/${resourceId}`,
+
+  /**
+   * Get user activity
+   */
+  userActivity: (userId: string) => `${API_BASE.AUDIT_LOGS}/user/${userId}`,
+} as const
+
+// ============================================
 // ENDPOINT COLLECTIONS
 // ============================================
 
@@ -589,6 +673,7 @@ export const endpoints = {
   vulnerabilities: vulnerabilityEndpoints,
   findings: findingEndpoints,
   dashboard: dashboardEndpoints,
+  auditLogs: auditLogEndpoints,
 } as const
 
 /**
@@ -605,4 +690,5 @@ export {
   vulnerabilityEndpoints as vulnerabilities,
   findingEndpoints as findings,
   dashboardEndpoints as dashboard,
+  auditLogEndpoints as auditLogs,
 }

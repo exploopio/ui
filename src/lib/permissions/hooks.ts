@@ -10,8 +10,10 @@
  * Use roles for high-level access checks (e.g., "is owner or admin")
  */
 
+import { useMemo } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
-import { type PermissionString, type RoleString, Role, isRoleAtLeast } from './constants'
+import { useTenant } from '@/context/tenant-provider'
+import { type PermissionString, type RoleString, Role, isRoleAtLeast, RolePermissions } from './constants'
 
 /**
  * Hook to access permissions, roles, and check functions
@@ -34,8 +36,26 @@ import { type PermissionString, type RoleString, Role, isRoleAtLeast } from './c
  */
 export function usePermissions() {
   const user = useAuthStore((state) => state.user)
-  const permissions = user?.permissions ?? []
-  const tenantRole = user?.tenantRole
+  const { currentTenant } = useTenant()
+
+  // Get tenant role from auth store first, then fall back to tenant context
+  // This is needed because the auth store may be empty when the page first loads
+  // (access token is in httpOnly cookie, not directly accessible by JS)
+  const tenantRole = user?.tenantRole || currentTenant?.role
+
+  // Get permissions from auth store first, then derive from role if not available
+  // This ensures permissions work even when auth store hasn't been populated yet
+  const permissions = useMemo(() => {
+    // If auth store has permissions, use them
+    if (user?.permissions && user.permissions.length > 0) {
+      return user.permissions
+    }
+    // Otherwise, derive permissions from role
+    if (tenantRole && RolePermissions[tenantRole as RoleString]) {
+      return RolePermissions[tenantRole as RoleString]
+    }
+    return []
+  }, [user?.permissions, tenantRole])
 
   // ============================================
   // PERMISSION CHECKS
@@ -132,7 +152,7 @@ export function usePermissions() {
   return {
     // User info
     permissions,
-    tenantId: user?.tenantId,
+    tenantId: user?.tenantId || currentTenant?.id,
     tenantRole,
 
     // Permission checks
@@ -164,8 +184,8 @@ export function usePermissions() {
  * ```
  */
 export function useHasPermission(permission: PermissionString | string): boolean {
-  const user = useAuthStore((state) => state.user)
-  return user?.permissions?.includes(permission) ?? false
+  const { can } = usePermissions()
+  return can(permission)
 }
 
 /**
@@ -180,10 +200,9 @@ export function useHasPermission(permission: PermissionString | string): boolean
  * }
  * ```
  */
-export function useHasAnyPermission(...permissions: (PermissionString | string)[]): boolean {
-  const user = useAuthStore((state) => state.user)
-  const userPermissions = user?.permissions ?? []
-  return permissions.some((p) => userPermissions.includes(p))
+export function useHasAnyPermission(...perms: (PermissionString | string)[]): boolean {
+  const { canAny } = usePermissions()
+  return canAny(...perms)
 }
 
 /**
@@ -198,8 +217,7 @@ export function useHasAnyPermission(...permissions: (PermissionString | string)[
  * }
  * ```
  */
-export function useHasAllPermissions(...permissions: (PermissionString | string)[]): boolean {
-  const user = useAuthStore((state) => state.user)
-  const userPermissions = user?.permissions ?? []
-  return permissions.every((p) => userPermissions.includes(p))
+export function useHasAllPermissions(...perms: (PermissionString | string)[]): boolean {
+  const { canAll } = usePermissions()
+  return canAll(...perms)
 }

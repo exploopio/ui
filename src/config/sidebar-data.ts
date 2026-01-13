@@ -38,7 +38,6 @@ import {
   Command,
   AudioWaveform,
   Play,
-  CreditCard,
   Building,
   Zap,
   Server,
@@ -50,6 +49,7 @@ import {
   Bug,
   RotateCcw,
   BookTemplate,
+  History,
   // New icons for CTEM architecture
   ShieldAlert,
   Package,
@@ -412,13 +412,21 @@ export const sidebarData: SidebarData = {
               permission: Permission.MembersRead,
             },
             {
-              title: "Billing",
-              url: "/settings/billing",
-              icon: CreditCard,
-              // Billing is restricted to owner and admin
+              title: "Audit Log",
+              url: "/settings/audit",
+              icon: History,
+              // Audit log is restricted to admin and owner
               minRole: Role.Admin,
-              permission: Permission.BillingRead,
+              permission: Permission.AuditRead,
             },
+            // Billing temporarily hidden - coming soon
+            // {
+            //   title: "Billing",
+            //   url: "/settings/billing",
+            //   icon: CreditCard,
+            //   minRole: Role.Admin,
+            //   permission: Permission.BillingRead,
+            // },
           ],
         },
         {
