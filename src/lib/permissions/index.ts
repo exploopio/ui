@@ -21,7 +21,7 @@
 export { Permission, type PermissionString, PermissionGroups, AllPermissions, isValidPermission } from './constants'
 
 // Role exports
-export { Role, type RoleString, AllRoles, isValidRole, RoleHierarchy, isRoleAtLeast } from './constants'
+export { Role, type RoleString, AllRoles, isValidRole, RoleHierarchy, isRoleAtLeast, RolePermissions } from './constants'
 
 // Hooks
 export { usePermissions, useHasPermission, useHasAnyPermission, useHasAllPermissions } from './hooks'

@@ -13,7 +13,8 @@
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
+// Use 127.0.0.1 instead of localhost to avoid IPv6 resolution issues in Node.js
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL?.replace('localhost', '127.0.0.1') || 'http://127.0.0.1:8080'
 const ACCESS_TOKEN_COOKIE = process.env.NEXT_PUBLIC_AUTH_COOKIE_NAME || 'rediver_auth_token'
 
 async function proxyRequest(
@@ -96,9 +97,11 @@ async function proxyRequest(
 
     return proxyResponse
   } catch (error) {
-    console.error('Proxy error:', error)
+    console.error('[Proxy] Connection error:', error)
+    console.error('[Proxy] Backend URL was:', backendUrl)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     return NextResponse.json(
-      { error: 'PROXY_ERROR', message: 'Failed to connect to backend' },
+      { error: 'PROXY_ERROR', message: `Failed to connect to backend: ${errorMessage}` },
       { status: 502 }
     )
   }

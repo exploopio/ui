@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import {
   ColumnDef,
   flexRender,
@@ -23,7 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Card,
   CardContent,
@@ -65,13 +65,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { toast } from "sonner";
@@ -97,200 +90,34 @@ import {
   Eye,
   Pencil,
   History,
-  Target,
   Activity,
   Calendar,
-  Building,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
-
-// Types
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  department: string;
-  status: "active" | "pending" | "inactive";
-  lastActive: string;
-  assignedFindings: number;
-  joinedAt: string;
-  completedTasks: number;
-  pendingTasks: number;
-}
+import { useTenant } from "@/context/tenant-provider";
+import {
+  useMembers,
+  useMemberStats,
+  useInvitations,
+  useCreateInvitation,
+  getMembersKey,
+  getMemberStatsKey,
+  getInvitationsKey,
+  type MemberWithUser,
+  type MemberRole,
+  ROLE_DISPLAY,
+  STATUS_DISPLAY,
+  INVITABLE_ROLES,
+} from "@/features/organization";
+import { mutate } from "swr";
+import { fetcherWithOptions } from "@/lib/api/client";
+import { tenantEndpoints } from "@/lib/api/endpoints";
 
 type StatusFilter = "all" | "active" | "pending" | "inactive";
-type RoleFilter = "all" | "Admin" | "Manager" | "Security Analyst" | "Security Engineer" | "Viewer";
+type RoleFilter = "all" | MemberRole;
 
-// Mock data
-const userStats = {
-  totalUsers: 12,
-  active: 10,
-  pending: 2,
-  roles: 5,
-};
-
-const users: User[] = [
-  {
-    id: "usr-001",
-    name: "Nguyen Van An",
-    email: "an.nguyen@techcombank.com.vn",
-    role: "Admin",
-    department: "Security Operations",
-    status: "active",
-    lastActive: "Just now",
-    assignedFindings: 8,
-    joinedAt: "2023-06-15",
-    completedTasks: 45,
-    pendingTasks: 3,
-  },
-  {
-    id: "usr-002",
-    name: "Tran Thi Binh",
-    email: "binh.tran@techcombank.com.vn",
-    role: "Security Analyst",
-    department: "Security Operations",
-    status: "active",
-    lastActive: "5 mins ago",
-    assignedFindings: 12,
-    joinedAt: "2023-08-20",
-    completedTasks: 89,
-    pendingTasks: 5,
-  },
-  {
-    id: "usr-003",
-    name: "Le Van Cuong",
-    email: "cuong.le@techcombank.com.vn",
-    role: "Security Engineer",
-    department: "Engineering",
-    status: "active",
-    lastActive: "1 hour ago",
-    assignedFindings: 6,
-    joinedAt: "2023-09-10",
-    completedTasks: 56,
-    pendingTasks: 2,
-  },
-  {
-    id: "usr-004",
-    name: "Pham Thi Dung",
-    email: "dung.pham@techcombank.com.vn",
-    role: "Security Analyst",
-    department: "Security Operations",
-    status: "active",
-    lastActive: "2 hours ago",
-    assignedFindings: 10,
-    joinedAt: "2023-10-05",
-    completedTasks: 72,
-    pendingTasks: 4,
-  },
-  {
-    id: "usr-005",
-    name: "Hoang Van Em",
-    email: "em.hoang@techcombank.com.vn",
-    role: "Manager",
-    department: "Security Operations",
-    status: "active",
-    lastActive: "3 hours ago",
-    assignedFindings: 3,
-    joinedAt: "2023-05-01",
-    completedTasks: 128,
-    pendingTasks: 1,
-  },
-  {
-    id: "usr-006",
-    name: "Vu Thi Phuong",
-    email: "phuong.vu@techcombank.com.vn",
-    role: "Viewer",
-    department: "Compliance",
-    status: "active",
-    lastActive: "1 day ago",
-    assignedFindings: 0,
-    joinedAt: "2024-01-15",
-    completedTasks: 0,
-    pendingTasks: 0,
-  },
-  {
-    id: "usr-007",
-    name: "Dao Van Giang",
-    email: "giang.dao@techcombank.com.vn",
-    role: "Security Analyst",
-    department: "Security Operations",
-    status: "pending",
-    lastActive: "Never",
-    assignedFindings: 0,
-    joinedAt: "2025-01-05",
-    completedTasks: 0,
-    pendingTasks: 0,
-  },
-  {
-    id: "usr-008",
-    name: "Bui Thi Hoa",
-    email: "hoa.bui@techcombank.com.vn",
-    role: "Security Engineer",
-    department: "Engineering",
-    status: "pending",
-    lastActive: "Never",
-    assignedFindings: 0,
-    joinedAt: "2025-01-06",
-    completedTasks: 0,
-    pendingTasks: 0,
-  },
-];
-
-const roles = [
-  {
-    name: "Admin",
-    description: "Full access to all features and settings",
-    users: 1,
-    permissions: ["All permissions"],
-  },
-  {
-    name: "Manager",
-    description: "Manage team, assign tasks, view reports",
-    users: 1,
-    permissions: ["Manage users", "Assign findings", "View reports", "Export data"],
-  },
-  {
-    name: "Security Analyst",
-    description: "Analyze findings, manage remediation",
-    users: 4,
-    permissions: ["View findings", "Update status", "Add comments", "View assets"],
-  },
-  {
-    name: "Security Engineer",
-    description: "Configure scans, manage integrations",
-    users: 3,
-    permissions: ["Configure scans", "Manage integrations", "View findings"],
-  },
-  {
-    name: "Viewer",
-    description: "Read-only access to dashboards and reports",
-    users: 3,
-    permissions: ["View dashboards", "View reports"],
-  },
-];
-
-const recentActivity = [
-  { user: "Nguyen Van An", action: "Updated finding status", time: "5 mins ago" },
-  { user: "Tran Thi Binh", action: "Assigned finding to Cuong", time: "15 mins ago" },
-  { user: "Le Van Cuong", action: "Added comment on CVE-2024-1234", time: "1 hour ago" },
-  { user: "Pham Thi Dung", action: "Generated security report", time: "2 hours ago" },
-  { user: "Hoang Van Em", action: "Approved remediation task", time: "3 hours ago" },
-];
-
-const statusConfig: Record<string, { color: string; bgColor: string }> = {
-  active: { color: "text-green-400", bgColor: "bg-green-500/20" },
-  pending: { color: "text-yellow-400", bgColor: "bg-yellow-500/20" },
-  inactive: { color: "text-gray-400", bgColor: "bg-gray-500/20" },
-};
-
-const roleConfig: Record<string, string> = {
-  Admin: "bg-red-500/20 text-red-400",
-  Manager: "bg-purple-500/20 text-purple-400",
-  "Security Analyst": "bg-blue-500/20 text-blue-400",
-  "Security Engineer": "bg-green-500/20 text-green-400",
-  Viewer: "bg-gray-500/20 text-gray-400",
-};
-
+// Static config
 const statusFilters: { value: StatusFilter; label: string }[] = [
   { value: "all", label: "All" },
   { value: "active", label: "Active" },
@@ -300,15 +127,58 @@ const statusFilters: { value: StatusFilter; label: string }[] = [
 
 const roleFilters: { value: RoleFilter; label: string }[] = [
   { value: "all", label: "All Roles" },
-  { value: "Admin", label: "Admin" },
-  { value: "Manager", label: "Manager" },
-  { value: "Security Analyst", label: "Security Analyst" },
-  { value: "Security Engineer", label: "Security Engineer" },
-  { value: "Viewer", label: "Viewer" },
+  { value: "owner", label: "Owner" },
+  { value: "admin", label: "Admin" },
+  { value: "member", label: "Member" },
+  { value: "viewer", label: "Viewer" },
 ];
 
+// Helper functions
+const getInitials = (name: string) => {
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+};
+
+const formatDate = (dateString: string) => {
+  return new Date(dateString).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+};
+
+const formatLastActive = (lastLoginAt?: string) => {
+  if (!lastLoginAt) return "Never";
+  const date = new Date(lastLoginAt);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return "Just now";
+  if (diffMins < 60) return `${diffMins} mins ago`;
+  if (diffHours < 24) return `${diffHours} hours ago`;
+  if (diffDays < 7) return `${diffDays} days ago`;
+  return formatDate(lastLoginAt);
+};
+
 export default function UsersPage() {
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const { currentTenant } = useTenant();
+  const tenantSlug = currentTenant?.slug;
+
+  // API Hooks
+  const { members, isLoading: membersLoading, isError: membersError, mutate: mutateMembers } = useMembers(tenantSlug);
+  const { stats, isLoading: statsLoading, mutate: mutateStats } = useMemberStats(tenantSlug);
+  const { invitations, mutate: mutateInvitations } = useInvitations(tenantSlug);
+  const { createInvitation, isCreating } = useCreateInvitation(tenantSlug);
+
+  // UI State
+  const [selectedMember, setSelectedMember] = useState<MemberWithUser | null>(null);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
@@ -317,53 +187,43 @@ export default function UsersPage() {
   const [rowSelection, setRowSelection] = useState({});
   const [inviteForm, setInviteForm] = useState({
     email: "",
-    role: "Security Analyst",
-    department: "",
+    role: "member" as MemberRole,
   });
 
-  // Helper functions
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  };
+  // Refresh all data
+  const refreshData = useCallback(() => {
+    if (tenantSlug) {
+      mutateMembers();
+      mutateStats();
+      mutateInvitations();
+    }
+  }, [tenantSlug, mutateMembers, mutateStats, mutateInvitations]);
 
   // Filter data
   const filteredData = useMemo(() => {
-    let data = [...users];
+    let data = [...members];
 
     if (statusFilter !== "all") {
-      data = data.filter((user) => user.status === statusFilter);
+      data = data.filter((member) => member.status === statusFilter);
     }
 
     if (roleFilter !== "all") {
-      data = data.filter((user) => user.role === roleFilter);
+      data = data.filter((member) => member.role === roleFilter);
     }
 
     return data;
-  }, [statusFilter, roleFilter]);
+  }, [members, statusFilter, roleFilter]);
 
-  // Status counts
+  // Status counts from members
   const statusCounts = useMemo(() => ({
-    all: users.length,
-    active: users.filter((u) => u.status === "active").length,
-    pending: users.filter((u) => u.status === "pending").length,
-    inactive: users.filter((u) => u.status === "inactive").length,
-  }), []);
+    all: members.length,
+    active: members.filter((m) => m.status === "active").length,
+    pending: invitations.length,
+    inactive: members.filter((m) => m.status === "inactive").length,
+  }), [members, invitations]);
 
   // Table columns
-  const columns: ColumnDef<User>[] = [
+  const columns: ColumnDef<MemberWithUser>[] = [
     {
       id: "select",
       header: ({ table }) => (
@@ -413,53 +273,37 @@ export default function UsersPage() {
     {
       accessorKey: "role",
       header: "Role",
-      cell: ({ row }) => (
-        <Badge className={`${roleConfig[row.original.role]} border-0`}>
-          {row.original.role}
-        </Badge>
-      ),
-    },
-    {
-      accessorKey: "department",
-      header: "Department",
-      cell: ({ row }) => (
-        <span className="text-muted-foreground text-sm">{row.original.department}</span>
-      ),
-    },
-    {
-      accessorKey: "assignedFindings",
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="-ml-4"
-        >
-          Assigned
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      ),
       cell: ({ row }) => {
-        if (row.original.assignedFindings === 0) {
-          return <span className="text-muted-foreground">--</span>;
-        }
-        return <Badge variant="secondary">{row.original.assignedFindings} findings</Badge>;
+        const roleDisplay = ROLE_DISPLAY[row.original.role];
+        return (
+          <Badge className={`${roleDisplay?.color || "bg-gray-500/20 text-gray-400"} border-0`}>
+            {roleDisplay?.label || row.original.role}
+          </Badge>
+        );
       },
     },
     {
-      accessorKey: "lastActive",
+      accessorKey: "joined_at",
+      header: "Joined",
+      cell: ({ row }) => (
+        <span className="text-muted-foreground text-sm">{formatDate(row.original.joined_at)}</span>
+      ),
+    },
+    {
+      accessorKey: "last_login_at",
       header: "Last Active",
       cell: ({ row }) => (
-        <span className="text-muted-foreground text-sm">{row.original.lastActive}</span>
+        <span className="text-muted-foreground text-sm">{formatLastActive(row.original.last_login_at)}</span>
       ),
     },
     {
       accessorKey: "status",
       header: "Status",
       cell: ({ row }) => {
-        const status = statusConfig[row.original.status];
+        const statusDisplay = STATUS_DISPLAY[row.original.status];
         return (
-          <Badge className={`${status.bgColor} ${status.color} border-0`}>
-            {row.original.status}
+          <Badge className={`${statusDisplay?.bgColor || "bg-gray-500/20"} ${statusDisplay?.color || "text-gray-400"} border-0`}>
+            {statusDisplay?.label || row.original.status}
           </Badge>
         );
       },
@@ -467,9 +311,8 @@ export default function UsersPage() {
     {
       id: "actions",
       cell: ({ row }) => {
-        const user = row.original;
-        const isPending = user.status === "pending";
-        const isActive = user.status === "active";
+        const member = row.original;
+        const isOwner = member.role === "owner";
 
         return (
           <DropdownMenu>
@@ -479,34 +322,26 @@ export default function UsersPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setSelectedUser(user)}>
+              <DropdownMenuItem onClick={() => setSelectedMember(member)}>
                 <Eye className="mr-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleEditUser(user)}>
-                <Pencil className="mr-2 h-4 w-4" />
-                Edit User
-              </DropdownMenuItem>
-              {isPending && (
-                <DropdownMenuItem onClick={() => handleResendInvite(user)}>
-                  <Send className="mr-2 h-4 w-4" />
-                  Resend Invite
-                </DropdownMenuItem>
+              {!isOwner && (
+                <>
+                  <DropdownMenuItem onClick={() => handleEditRole(member)}>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Change Role
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="text-red-400"
+                    onClick={() => handleRemoveMember(member)}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Remove Member
+                  </DropdownMenuItem>
+                </>
               )}
-              <DropdownMenuSeparator />
-              {isActive && (
-                <DropdownMenuItem onClick={() => handleDeactivate(user)}>
-                  <Ban className="mr-2 h-4 w-4" />
-                  Deactivate
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuItem
-                className="text-red-400"
-                onClick={() => handleDeleteUser(user)}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
-              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         );
@@ -532,30 +367,43 @@ export default function UsersPage() {
   });
 
   // Actions
-  const handleEditUser = (user: User) => {
-    toast.info(`Edit user: ${user.name}`);
+  const handleEditRole = async (member: MemberWithUser) => {
+    toast.info(`Edit role for: ${member.name}`);
+    // TODO: Open role edit dialog
   };
 
-  const handleResendInvite = (user: User) => {
-    toast.success(`Invite resent to ${user.email}`);
+  const handleRemoveMember = async (member: MemberWithUser) => {
+    if (!tenantSlug) return;
+
+    try {
+      await fetcherWithOptions(tenantEndpoints.removeMember(tenantSlug, member.id), {
+        method: "DELETE",
+      });
+      toast.success(`Removed ${member.name} from the team`);
+      refreshData();
+    } catch (error) {
+      toast.error(`Failed to remove member: ${error instanceof Error ? error.message : "Unknown error"}`);
+    }
   };
 
-  const handleDeactivate = (user: User) => {
-    toast.success(`Deactivated user: ${user.name}`);
-  };
-
-  const handleDeleteUser = (user: User) => {
-    toast.success(`Deleted user: ${user.name}`);
-  };
-
-  const handleInviteUser = () => {
+  const handleInviteUser = async () => {
     if (!inviteForm.email) {
       toast.error("Please enter an email address");
       return;
     }
-    toast.success(`Invitation sent to ${inviteForm.email}`);
-    setInviteDialogOpen(false);
-    setInviteForm({ email: "", role: "Security Analyst", department: "" });
+
+    try {
+      await createInvitation({
+        email: inviteForm.email,
+        role: inviteForm.role,
+      });
+      toast.success(`Invitation sent to ${inviteForm.email}`);
+      setInviteDialogOpen(false);
+      setInviteForm({ email: "", role: "member" });
+      refreshData();
+    } catch (error) {
+      toast.error(`Failed to send invitation: ${error instanceof Error ? error.message : "Unknown error"}`);
+    }
   };
 
   // Active filters count
@@ -587,7 +435,27 @@ export default function UsersPage() {
           </Button>
         </PageHeader>
 
+        {/* Loading State */}
+        {membersLoading && (
+          <div className="mt-6 flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        )}
+
+        {/* Error State */}
+        {membersError && !membersLoading && (
+          <div className="mt-6 flex flex-col items-center justify-center py-12 gap-4">
+            <AlertCircle className="h-12 w-12 text-red-400" />
+            <p className="text-muted-foreground">Failed to load members</p>
+            <Button variant="outline" onClick={refreshData}>
+              Try Again
+            </Button>
+          </div>
+        )}
+
         {/* Stats */}
+        {!membersLoading && !membersError && (
+        <>
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Card
             className="cursor-pointer hover:border-primary transition-colors"
@@ -596,9 +464,11 @@ export default function UsersPage() {
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
                 <Users className="h-4 w-4" />
-                Total Users
+                Total Members
               </CardDescription>
-              <CardTitle className="text-3xl">{userStats.totalUsers}</CardTitle>
+              <CardTitle className="text-3xl">
+                {statsLoading ? <Skeleton className="h-9 w-12" /> : (stats?.total_members ?? members.length)}
+              </CardTitle>
             </CardHeader>
           </Card>
           <Card
@@ -610,7 +480,9 @@ export default function UsersPage() {
                 <CheckCircle className="h-4 w-4 text-green-500" />
                 Active
               </CardDescription>
-              <CardTitle className="text-3xl text-green-500">{userStats.active}</CardTitle>
+              <CardTitle className="text-3xl text-green-500">
+                {statsLoading ? <Skeleton className="h-9 w-12" /> : (stats?.active_members ?? statusCounts.active)}
+              </CardTitle>
             </CardHeader>
           </Card>
           <Card
@@ -622,7 +494,9 @@ export default function UsersPage() {
                 <Clock className="h-4 w-4 text-yellow-500" />
                 Pending Invites
               </CardDescription>
-              <CardTitle className="text-3xl text-yellow-500">{userStats.pending}</CardTitle>
+              <CardTitle className="text-3xl text-yellow-500">
+                {statsLoading ? <Skeleton className="h-9 w-12" /> : (stats?.pending_invites ?? invitations.length)}
+              </CardTitle>
             </CardHeader>
           </Card>
           <Card>
@@ -631,86 +505,46 @@ export default function UsersPage() {
                 <Shield className="h-4 w-4" />
                 Roles
               </CardDescription>
-              <CardTitle className="text-3xl">{userStats.roles}</CardTitle>
+              <CardTitle className="text-3xl">
+                {statsLoading ? <Skeleton className="h-9 w-12" /> : Object.keys(stats?.role_counts ?? {}).length || 4}
+              </CardTitle>
             </CardHeader>
           </Card>
         </div>
 
-        <div className="mt-6 grid gap-6 lg:grid-cols-3">
-          {/* Roles */}
-          <Card className="lg:col-span-1">
-            <CardHeader>
-              <div className="flex items-center justify-between">
+        {/* Pending Invitations Banner - shown only when there are pending invites */}
+        {invitations.length > 0 && (
+          <div className="mt-6 rounded-lg border border-yellow-500/30 bg-yellow-500/5 p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="rounded-full bg-yellow-500/20 p-2">
+                  <Clock className="h-4 w-4 text-yellow-500" />
+                </div>
                 <div>
-                  <CardTitle className="text-base">Roles</CardTitle>
-                  <CardDescription>Permission groups</CardDescription>
+                  <p className="font-medium">
+                    {invitations.length} pending invitation{invitations.length > 1 ? "s" : ""}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {invitations.map(inv => inv.email).slice(0, 2).join(", ")}
+                    {invitations.length > 2 && ` and ${invitations.length - 2} more`}
+                  </p>
                 </div>
-                <Button variant="outline" size="sm">
-                  <Key className="mr-2 h-4 w-4" />
-                  Manage
-                </Button>
               </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {roles.map((role) => (
-                <div
-                  key={role.name}
-                  className="rounded-lg border p-3 cursor-pointer hover:border-primary transition-colors"
-                  onClick={() => setRoleFilter(role.name as RoleFilter)}
-                >
-                  <div className="flex items-center justify-between">
-                    <Badge className={`${roleConfig[role.name]} border-0`}>
-                      {role.name}
-                    </Badge>
-                    <span className="text-muted-foreground text-xs">{role.users} users</span>
-                  </div>
-                  <p className="text-muted-foreground mt-2 text-xs">{role.description}</p>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const section = document.getElementById("pending-invitations");
+                  section?.scrollIntoView({ behavior: "smooth" });
+                }}
+              >
+                View All
+              </Button>
+            </div>
+          </div>
+        )}
 
-          {/* Recent Activity */}
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-base">Recent Activity</CardTitle>
-                  <CardDescription>User actions and events</CardDescription>
-                </div>
-                <Button variant="outline" size="sm">
-                  <History className="mr-2 h-4 w-4" />
-                  View All
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {recentActivity.map((activity, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between rounded-lg border p-3"
-                >
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback className="text-xs">
-                        {getInitials(activity.user)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="text-sm">
-                        <span className="font-medium">{activity.user}</span>{" "}
-                        <span className="text-muted-foreground">{activity.action}</span>
-                      </p>
-                    </div>
-                  </div>
-                  <span className="text-muted-foreground text-xs">{activity.time}</span>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Users Table */}
+        {/* Users Table - Primary Content */}
         <Card className="mt-6">
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -875,7 +709,7 @@ export default function UsersPage() {
                               (e.target as HTMLElement).closest('button')) {
                             return;
                           }
-                          setSelectedUser(row.original);
+                          setSelectedMember(row.original);
                         }}
                       >
                         {row.getVisibleCells().map((cell) => (
@@ -942,242 +776,372 @@ export default function UsersPage() {
             </div>
           </CardContent>
         </Card>
-      </Main>
 
-      {/* User Details Sheet */}
-      <Sheet open={!!selectedUser} onOpenChange={() => setSelectedUser(null)}>
-        <SheetContent className="sm:max-w-lg overflow-y-auto">
-          <VisuallyHidden>
-            <SheetTitle>User Details</SheetTitle>
-          </VisuallyHidden>
-          {selectedUser && (
-            <>
-              {/* Header */}
-              <div className={`-mx-6 -mt-6 px-6 py-6 ${
-                selectedUser.status === "active" ? "bg-gradient-to-r from-green-500/20 to-green-500/5" :
-                selectedUser.status === "pending" ? "bg-gradient-to-r from-yellow-500/20 to-yellow-500/5" :
-                "bg-gradient-to-r from-gray-500/20 to-gray-500/5"
-              }`}>
-                <div className="flex items-start gap-4">
-                  <Avatar className="h-16 w-16">
-                    <AvatarFallback className="text-xl">{getInitials(selectedUser.name)}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <SheetHeader className="text-left">
-                      <h2 className="text-xl font-semibold">{selectedUser.name}</h2>
-                      <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
-                    </SheetHeader>
-                    <div className="flex gap-2 mt-2">
-                      <Badge className={`${roleConfig[selectedUser.role]} border-0`}>
-                        {selectedUser.role}
-                      </Badge>
-                      <Badge className={`${statusConfig[selectedUser.status].bgColor} ${statusConfig[selectedUser.status].color} border-0`}>
-                        {selectedUser.status}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Quick Actions */}
-                <div className="flex gap-2 mt-4">
-                  <Button size="sm" variant="outline" onClick={() => handleEditUser(selectedUser)}>
-                    <Pencil className="mr-2 h-4 w-4" />
-                    Edit
-                  </Button>
-                  {selectedUser.status === "pending" && (
-                    <Button size="sm" onClick={() => handleResendInvite(selectedUser)}>
-                      <Send className="mr-2 h-4 w-4" />
-                      Resend Invite
-                    </Button>
-                  )}
+        {/* Roles & Pending Invitations Section */}
+        <div className="mt-6 grid gap-6 lg:grid-cols-3">
+          {/* Roles */}
+          <Card className="lg:col-span-1">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base">Roles</CardTitle>
+                  <CardDescription>Permission groups</CardDescription>
                 </div>
               </div>
-
-              <div className="space-y-6 mt-6">
-                {/* Stats Grid */}
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                  <div className="rounded-lg border p-3 text-center">
-                    <Target className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
-                    <p className="text-lg font-bold">{selectedUser.assignedFindings}</p>
-                    <p className="text-xs text-muted-foreground">Assigned</p>
-                  </div>
-                  <div className="rounded-lg border p-3 text-center">
-                    <CheckCircle className="h-4 w-4 mx-auto mb-1 text-green-500" />
-                    <p className="text-lg font-bold">{selectedUser.completedTasks}</p>
-                    <p className="text-xs text-muted-foreground">Completed</p>
-                  </div>
-                  <div className="rounded-lg border p-3 text-center">
-                    <Clock className="h-4 w-4 mx-auto mb-1 text-yellow-500" />
-                    <p className="text-lg font-bold">{selectedUser.pendingTasks}</p>
-                    <p className="text-xs text-muted-foreground">Pending</p>
-                  </div>
-                </div>
-
-                {/* Task Progress */}
-                {(selectedUser.completedTasks > 0 || selectedUser.pendingTasks > 0) && (
-                  <div className="space-y-2">
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {(["owner", "admin", "member", "viewer"] as MemberRole[]).map((role) => {
+                const roleDisplay = ROLE_DISPLAY[role];
+                const count = stats?.role_counts?.[role] ?? 0;
+                return (
+                  <div
+                    key={role}
+                    className="rounded-lg border p-3 cursor-pointer hover:border-primary transition-colors"
+                    onClick={() => setRoleFilter(role)}
+                  >
                     <div className="flex items-center justify-between">
-                      <Label className="text-muted-foreground">Task Completion</Label>
-                      <span className="text-sm font-medium">
-                        {Math.round((selectedUser.completedTasks / (selectedUser.completedTasks + selectedUser.pendingTasks)) * 100)}%
-                      </span>
+                      <Badge className={`${roleDisplay.color} border-0`}>
+                        {roleDisplay.label}
+                      </Badge>
+                      <span className="text-muted-foreground text-xs">{count} users</span>
                     </div>
-                    <Progress
-                      value={(selectedUser.completedTasks / (selectedUser.completedTasks + selectedUser.pendingTasks)) * 100}
-                      className="h-2"
-                    />
+                    <p className="text-muted-foreground mt-2 text-xs">{roleDisplay.description}</p>
                   </div>
-                )}
+                );
+              })}
+            </CardContent>
+          </Card>
 
-                <Separator />
-
-                {/* User Info */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3 p-3 rounded-lg border">
-                    <Building className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-xs text-muted-foreground">Department</p>
-                      <p className="text-sm font-medium">{selectedUser.department}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 rounded-lg border">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-xs text-muted-foreground">Joined</p>
-                      <p className="text-sm font-medium">{formatDate(selectedUser.joinedAt)}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 rounded-lg border">
-                    <Activity className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-xs text-muted-foreground">Last Active</p>
-                      <p className="text-sm font-medium">{selectedUser.lastActive}</p>
-                    </div>
-                  </div>
+          {/* Pending Invitations */}
+          <Card className="lg:col-span-2" id="pending-invitations">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base">Pending Invitations</CardTitle>
+                  <CardDescription>Invitations waiting to be accepted</CardDescription>
                 </div>
-
-                <Separator />
-
-                {/* Role Permissions */}
-                <div className="space-y-3">
-                  <Label className="text-muted-foreground">Role Permissions</Label>
-                  <div className="rounded-lg border p-3">
-                    <p className="text-sm font-medium mb-2">{selectedUser.role}</p>
-                    <div className="flex flex-wrap gap-1">
-                      {roles.find((r) => r.name === selectedUser.role)?.permissions.map((perm) => (
-                        <Badge key={perm} variant="outline" className="text-xs">
-                          {perm}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
+                <Button size="sm" variant="outline" onClick={() => setInviteDialogOpen(true)}>
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Invite
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {invitations.length === 0 ? (
+                <div className="text-center py-8">
+                  <Mail className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground">No pending invitations</p>
+                  <p className="text-xs text-muted-foreground mt-1">Invite someone to join your team</p>
                 </div>
-
-                <Separator />
-
-                {/* Danger Zone */}
-                <div className="rounded-lg border border-red-500/30 p-4 bg-red-500/5">
-                  <h4 className="font-medium text-red-500 mb-2">Danger Zone</h4>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Permanently delete this user and revoke all access.
-                  </p>
-                  <div className="flex gap-2">
-                    {selectedUser.status === "active" && (
+              ) : (
+                invitations.map((invitation) => (
+                  <div
+                    key={invitation.id}
+                    className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-10 w-10">
+                        <AvatarFallback className="text-sm bg-yellow-500/20 text-yellow-500">
+                          {invitation.email.substring(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-medium">{invitation.email}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <Badge className={`${ROLE_DISPLAY[invitation.role]?.color || "bg-gray-500/20 text-gray-400"} border-0 text-xs`}>
+                            {ROLE_DISPLAY[invitation.role]?.label || invitation.role}
+                          </Badge>
+                          <span className="text-muted-foreground text-xs">
+                            Expires {formatDate(invitation.expires_at)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
                       <Button
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
-                        onClick={() => {
-                          handleDeactivate(selectedUser);
-                          setSelectedUser(null);
+                        className="text-muted-foreground hover:text-foreground"
+                        onClick={async () => {
+                          toast.success("Invitation link copied");
                         }}
                       >
-                        <Ban className="mr-2 h-4 w-4" />
-                        Deactivate
+                        <Key className="h-4 w-4" />
                       </Button>
-                    )}
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => {
-                        handleDeleteUser(selectedUser);
-                        setSelectedUser(null);
-                      }}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete
-                    </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-400 hover:text-red-500 hover:bg-red-500/10"
+                        onClick={async () => {
+                          if (!tenantSlug) return;
+                          try {
+                            await fetcherWithOptions(tenantEndpoints.deleteInvitation(tenantSlug, invitation.id), {
+                              method: "DELETE",
+                            });
+                            toast.success("Invitation cancelled");
+                            refreshData();
+                          } catch (error) {
+                            toast.error("Failed to cancel invitation");
+                          }
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </div>
+        </>
+        )}
+      </Main>
+
+      {/* User Details Sheet - Redesigned */}
+      <Sheet open={!!selectedMember} onOpenChange={() => setSelectedMember(null)}>
+        <SheetContent className="sm:max-w-md p-0 overflow-y-auto">
+          <VisuallyHidden>
+            <SheetTitle>Member Details</SheetTitle>
+          </VisuallyHidden>
+          {selectedMember && (
+            <div className="flex flex-col h-full">
+              {/* Header - Clean Design */}
+              <div className="relative px-6 pt-8 pb-6 bg-gradient-to-b from-muted/50 to-background">
+                {/* Status Indicator */}
+                <div className="absolute top-4 right-4">
+                  <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${STATUS_DISPLAY[selectedMember.status]?.bgColor} ${STATUS_DISPLAY[selectedMember.status]?.color}`}>
+                    <span className={`h-1.5 w-1.5 rounded-full ${
+                      selectedMember.status === "active" ? "bg-green-400" :
+                      selectedMember.status === "pending" ? "bg-yellow-400" : "bg-gray-400"
+                    }`} />
+                    {STATUS_DISPLAY[selectedMember.status]?.label}
                   </div>
                 </div>
+
+                {/* Avatar & Basic Info */}
+                <div className="flex flex-col items-center text-center">
+                  <div className="relative">
+                    <Avatar className="h-20 w-20 ring-4 ring-background shadow-lg">
+                      <AvatarFallback className="text-2xl bg-primary/10 text-primary">
+                        {getInitials(selectedMember.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    {/* Online indicator */}
+                    {selectedMember.status === "active" && (
+                      <span className="absolute bottom-1 right-1 h-4 w-4 rounded-full bg-green-500 ring-2 ring-background" />
+                    )}
+                  </div>
+                  <h2 className="mt-4 text-xl font-semibold">{selectedMember.name}</h2>
+                  <p className="text-sm text-muted-foreground">{selectedMember.email}</p>
+                  <Badge className={`mt-3 ${ROLE_DISPLAY[selectedMember.role]?.color || "bg-gray-500/20 text-gray-400"} border-0`}>
+                    {ROLE_DISPLAY[selectedMember.role]?.label || selectedMember.role}
+                  </Badge>
+                </div>
               </div>
-            </>
+
+              {/* Content */}
+              <div className="flex-1 px-6 py-6 space-y-6">
+                {/* Quick Stats - 2 Column */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 rounded-xl bg-muted/50 text-center">
+                    <Calendar className="h-5 w-5 mx-auto text-muted-foreground mb-1" />
+                    <p className="text-xs text-muted-foreground">Joined</p>
+                    <p className="text-sm font-semibold mt-0.5">{formatDate(selectedMember.joined_at)}</p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-muted/50 text-center">
+                    <Activity className="h-5 w-5 mx-auto text-muted-foreground mb-1" />
+                    <p className="text-xs text-muted-foreground">Last Active</p>
+                    <p className="text-sm font-semibold mt-0.5">{formatLastActive(selectedMember.last_login_at)}</p>
+                  </div>
+                </div>
+
+                {/* Role & Permissions Card */}
+                <div className="rounded-xl border bg-card p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-medium">Role & Permissions</h4>
+                    {selectedMember.role !== "owner" && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 text-xs"
+                        onClick={() => handleEditRole(selectedMember)}
+                      >
+                        <Pencil className="mr-1 h-3 w-3" />
+                        Change
+                      </Button>
+                    )}
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className={`p-2 rounded-lg ${ROLE_DISPLAY[selectedMember.role]?.color || "bg-gray-500/20"}`}>
+                      <Shield className="h-5 w-5" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium">{ROLE_DISPLAY[selectedMember.role]?.label}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {ROLE_DISPLAY[selectedMember.role]?.description}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Permission Pills */}
+                  <div className="flex flex-wrap gap-1.5 mt-4 pt-3 border-t">
+                    {selectedMember.role === "owner" && (
+                      <>
+                        <span className="px-2 py-0.5 text-xs rounded-full bg-primary/10 text-primary">Full Access</span>
+                        <span className="px-2 py-0.5 text-xs rounded-full bg-primary/10 text-primary">Billing</span>
+                        <span className="px-2 py-0.5 text-xs rounded-full bg-primary/10 text-primary">Delete Team</span>
+                      </>
+                    )}
+                    {selectedMember.role === "admin" && (
+                      <>
+                        <span className="px-2 py-0.5 text-xs rounded-full bg-purple-500/10 text-purple-400">Manage Members</span>
+                        <span className="px-2 py-0.5 text-xs rounded-full bg-purple-500/10 text-purple-400">Settings</span>
+                        <span className="px-2 py-0.5 text-xs rounded-full bg-purple-500/10 text-purple-400">Full CRUD</span>
+                      </>
+                    )}
+                    {selectedMember.role === "member" && (
+                      <>
+                        <span className="px-2 py-0.5 text-xs rounded-full bg-blue-500/10 text-blue-400">Read/Write</span>
+                        <span className="px-2 py-0.5 text-xs rounded-full bg-blue-500/10 text-blue-400">Create</span>
+                      </>
+                    )}
+                    {selectedMember.role === "viewer" && (
+                      <span className="px-2 py-0.5 text-xs rounded-full bg-gray-500/10 text-gray-400">Read Only</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Member ID */}
+                <div className="flex items-center justify-between px-1">
+                  <span className="text-xs text-muted-foreground">Member ID</span>
+                  <code className="text-xs bg-muted px-2 py-1 rounded font-mono">
+                    {selectedMember.id.substring(0, 8)}...
+                  </code>
+                </div>
+              </div>
+
+              {/* Footer Actions */}
+              {selectedMember.role !== "owner" && (
+                <div className="px-6 py-4 border-t bg-muted/30">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-center text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                    onClick={() => {
+                      handleRemoveMember(selectedMember);
+                      setSelectedMember(null);
+                    }}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Remove from Team
+                  </Button>
+                </div>
+              )}
+            </div>
           )}
         </SheetContent>
       </Sheet>
 
-      {/* Invite User Dialog */}
+      {/* Invite User Dialog - Improved Design */}
       <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <UserPlus className="h-5 w-5" />
-              Invite User
+              <div className="rounded-full bg-primary/10 p-2">
+                <UserPlus className="h-5 w-5 text-primary" />
+              </div>
+              Invite Team Member
             </DialogTitle>
             <DialogDescription>
-              Send an invitation to join your organization
+              Send an invitation email to add a new member to your team.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+
+          <div className="space-y-6 py-4">
+            {/* Email Input */}
             <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
+              <Label htmlFor="invite-email" className="text-sm font-medium">
+                Email Address
+              </Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  id="email"
+                  id="invite-email"
                   type="email"
-                  placeholder="user@company.com"
+                  placeholder="colleague@company.com"
                   value={inviteForm.email}
                   onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
-                  className="pl-9"
+                  className="pl-10 h-11"
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="role">Role</Label>
-              <Select
-                value={inviteForm.role}
-                onValueChange={(value) => setInviteForm({ ...inviteForm, role: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select role" />
-                </SelectTrigger>
-                <SelectContent>
-                  {roles.map((role) => (
-                    <SelectItem key={role.name} value={role.name}>
-                      <div>
-                        <p>{role.name}</p>
-                        <p className="text-xs text-muted-foreground">{role.description}</p>
+
+            {/* Role Selection - Card Style */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Select Role</Label>
+              <div className="space-y-2">
+                {INVITABLE_ROLES.map((role) => {
+                  const roleDisplay = ROLE_DISPLAY[role];
+                  const isSelected = inviteForm.role === role;
+                  return (
+                    <div
+                      key={role}
+                      onClick={() => setInviteForm({ ...inviteForm, role })}
+                      className={`
+                        relative flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all
+                        ${isSelected
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:border-muted-foreground/30 hover:bg-muted/50"
+                        }
+                      `}
+                    >
+                      {/* Radio indicator */}
+                      <div className={`
+                        mt-0.5 h-4 w-4 rounded-full border-2 flex items-center justify-center flex-shrink-0
+                        ${isSelected ? "border-primary" : "border-muted-foreground/30"}
+                      `}>
+                        {isSelected && (
+                          <div className="h-2 w-2 rounded-full bg-primary" />
+                        )}
                       </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="department">Department (Optional)</Label>
-              <Input
-                id="department"
-                placeholder="e.g., Security Operations"
-                value={inviteForm.department}
-                onChange={(e) => setInviteForm({ ...inviteForm, department: e.target.value })}
-              />
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{roleDisplay.label}</span>
+                          <Badge className={`${roleDisplay.color} border-0 text-xs`}>
+                            {role}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {roleDisplay.description}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setInviteDialogOpen(false)}>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="ghost"
+              onClick={() => setInviteDialogOpen(false)}
+              className="flex-1 sm:flex-none"
+            >
               Cancel
             </Button>
-            <Button onClick={handleInviteUser}>
-              <Send className="mr-2 h-4 w-4" />
+            <Button
+              onClick={handleInviteUser}
+              disabled={isCreating || !inviteForm.email}
+              className="flex-1 sm:flex-none"
+            >
+              {isCreating ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="mr-2 h-4 w-4" />
+              )}
               Send Invitation
             </Button>
           </DialogFooter>

@@ -558,3 +558,38 @@ export function buildQueryString(params: Record<string, unknown>): string {
 export function isAuthenticated(): boolean {
   return !!useAuthStore.getState().accessToken
 }
+
+// ============================================
+// SWR FETCHERS
+// ============================================
+
+/**
+ * SWR-compatible fetcher function
+ * Automatically handles auth and error responses
+ *
+ * @example
+ * ```typescript
+ * const { data } = useSWR('/api/users', fetcher)
+ * ```
+ */
+export async function fetcher<T = unknown>(url: string): Promise<T> {
+  return apiClient<T>(url, { method: 'GET' })
+}
+
+/**
+ * SWR-compatible fetcher with custom options
+ * Use for requests that need custom headers or method
+ *
+ * @example
+ * ```typescript
+ * const { data } = useSWR('/api/users', (url) =>
+ *   fetcherWithOptions(url, { headers: { 'X-Custom': 'value' } })
+ * )
+ * ```
+ */
+export async function fetcherWithOptions<T = unknown>(
+  url: string,
+  options?: ApiRequestOptions
+): Promise<T> {
+  return apiClient<T>(url, options)
+}
