@@ -520,6 +520,7 @@ export default function ProjectsPage() {
       type: "project",
       name: formData.name,
       description: formData.description,
+      criticality: "medium",
       status: "active",
       scope: "internal",
       exposure: "restricted",

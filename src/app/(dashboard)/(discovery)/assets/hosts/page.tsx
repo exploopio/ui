@@ -487,6 +487,7 @@ export default function HostsPage() {
       type: "host",
       name: formData.name,
       description: formData.description,
+      criticality: "medium",
       status: "active",
       scope: "internal",
       exposure: "private",

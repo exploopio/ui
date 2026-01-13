@@ -2,7 +2,7 @@
  * Project API Endpoints
  *
  * Endpoint definitions for project management
- * Projects are tenant-scoped resources
+ * Tenant is now determined from JWT token (token-based tenant)
  */
 
 import { buildQueryString } from './client'
@@ -13,13 +13,13 @@ import type { ProjectFilters } from './project-types'
 // ============================================
 
 /**
- * Build project endpoints for a tenant
+ * Build project endpoints
  */
 export const projectEndpoints = {
   /**
    * List projects with filters
    */
-  list: (tenantId: string, filters?: ProjectFilters) => {
+  list: (filters?: ProjectFilters) => {
     const queryParams: Record<string, unknown> = {}
 
     if (filters) {
@@ -38,48 +38,48 @@ export const projectEndpoints = {
       ? buildQueryString(queryParams)
       : ''
 
-    return `/api/v1/tenants/${tenantId}/projects${queryString}`
+    return `/api/v1/projects${queryString}`
   },
 
   /**
    * Get single project by ID
    */
-  get: (tenantId: string, projectId: string) =>
-    `/api/v1/tenants/${tenantId}/projects/${projectId}`,
+  get: (projectId: string) =>
+    `/api/v1/projects/${projectId}`,
 
   /**
    * Create new project
    */
-  create: (tenantId: string) =>
-    `/api/v1/tenants/${tenantId}/projects`,
+  create: () =>
+    `/api/v1/projects`,
 
   /**
    * Update project by ID
    */
-  update: (tenantId: string, projectId: string) =>
-    `/api/v1/tenants/${tenantId}/projects/${projectId}`,
+  update: (projectId: string) =>
+    `/api/v1/projects/${projectId}`,
 
   /**
    * Delete project by ID
    */
-  delete: (tenantId: string, projectId: string) =>
-    `/api/v1/tenants/${tenantId}/projects/${projectId}`,
+  delete: (projectId: string) =>
+    `/api/v1/projects/${projectId}`,
 
   /**
    * Get project components
    */
-  components: (tenantId: string, projectId: string) =>
-    `/api/v1/tenants/${tenantId}/projects/${projectId}/components`,
+  components: (projectId: string) =>
+    `/api/v1/projects/${projectId}/components`,
 
   /**
    * Get project findings
    */
-  findings: (tenantId: string, projectId: string) =>
-    `/api/v1/tenants/${tenantId}/projects/${projectId}/findings`,
+  findings: (projectId: string) =>
+    `/api/v1/projects/${projectId}/findings`,
 
   /**
    * Import SARIF results
    */
-  importSarif: (tenantId: string, projectId: string) =>
-    `/api/v1/tenants/${tenantId}/projects/${projectId}/import/sarif`,
+  importSarif: (projectId: string) =>
+    `/api/v1/projects/${projectId}/import/sarif`,
 } as const

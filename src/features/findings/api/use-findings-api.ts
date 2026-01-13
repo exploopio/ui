@@ -2,6 +2,8 @@
  * Finding API Hooks
  *
  * SWR hooks for fetching and mutating finding data from backend
+ *
+ * Tenant is now determined from JWT token (token-based tenant)
  */
 
 'use client'
@@ -45,8 +47,8 @@ const defaultConfig: SWRConfiguration = {
 // ENDPOINT BUILDERS
 // ============================================
 
-function buildFindingsEndpoint(tenantSlug: string, filters?: FindingApiFilters): string {
-  const baseUrl = `/api/v1/tenants/${tenantSlug}/findings`
+function buildFindingsEndpoint(filters?: FindingApiFilters): string {
+  const baseUrl = '/api/v1/findings'
 
   if (!filters) return baseUrl
 
@@ -70,18 +72,17 @@ function buildFindingsEndpoint(tenantSlug: string, filters?: FindingApiFilters):
   return queryString ? `${baseUrl}?${queryString}` : baseUrl
 }
 
-function buildFindingEndpoint(tenantSlug: string, findingId: string): string {
-  return `/api/v1/tenants/${tenantSlug}/findings/${findingId}`
+function buildFindingEndpoint(findingId: string): string {
+  return `/api/v1/findings/${findingId}`
 }
 
 function buildProjectFindingsEndpoint(
-  tenantSlug: string,
   projectId: string,
   sort?: string,
   page?: number,
   perPage?: number
 ): string {
-  const baseUrl = `/api/v1/tenants/${tenantSlug}/projects/${projectId}/findings`
+  const baseUrl = `/api/v1/projects/${projectId}/findings`
   const params = new URLSearchParams()
 
   if (sort) params.set('sort', sort)
@@ -167,9 +168,8 @@ async function fetchVulnerability(url: string): Promise<ApiVulnerability> {
 export function useFindingsApi(filters?: FindingApiFilters, config?: SWRConfiguration) {
   const { currentTenant } = useTenant()
 
-  const key = currentTenant?.slug
-    ? buildFindingsEndpoint(currentTenant.slug, filters)
-    : null
+  // Ensure user has a tenant before making requests
+  const key = currentTenant ? buildFindingsEndpoint(filters) : null
 
   return useSWR<ApiFindingListResponse>(
     key,
@@ -184,9 +184,8 @@ export function useFindingsApi(filters?: FindingApiFilters, config?: SWRConfigur
 export function useFindingApi(findingId: string | null, config?: SWRConfiguration) {
   const { currentTenant } = useTenant()
 
-  const key = currentTenant?.slug && findingId
-    ? buildFindingEndpoint(currentTenant.slug, findingId)
-    : null
+  // Ensure user has a tenant before making requests
+  const key = currentTenant && findingId ? buildFindingEndpoint(findingId) : null
 
   return useSWR<ApiFinding>(
     key,
@@ -207,8 +206,9 @@ export function useProjectFindingsApi(
 ) {
   const { currentTenant } = useTenant()
 
-  const key = currentTenant?.slug && projectId
-    ? buildProjectFindingsEndpoint(currentTenant.slug, projectId, sort, page, perPage)
+  // Ensure user has a tenant before making requests
+  const key = currentTenant && projectId
+    ? buildProjectFindingsEndpoint(projectId, sort, page, perPage)
     : null
 
   return useSWR<ApiFindingListResponse>(
@@ -271,8 +271,9 @@ export function useVulnerabilityByCveApi(cveId: string | null, config?: SWRConfi
 export function useCreateFindingApi() {
   const { currentTenant } = useTenant()
 
+  // Ensure user has a tenant before making requests
   return useSWRMutation(
-    currentTenant?.slug ? `/api/v1/tenants/${currentTenant.slug}/findings` : null,
+    currentTenant ? '/api/v1/findings' : null,
     async (url: string, { arg }: { arg: CreateFindingInput }) => {
       return post<ApiFinding>(url, arg)
     }
@@ -285,10 +286,9 @@ export function useCreateFindingApi() {
 export function useUpdateFindingStatusApi(findingId: string) {
   const { currentTenant } = useTenant()
 
+  // Ensure user has a tenant before making requests
   return useSWRMutation(
-    currentTenant?.slug && findingId
-      ? `${buildFindingEndpoint(currentTenant.slug, findingId)}/status`
-      : null,
+    currentTenant && findingId ? `${buildFindingEndpoint(findingId)}/status` : null,
     async (url: string, { arg }: { arg: UpdateFindingStatusInput }) => {
       return patch<ApiFinding>(url, arg)
     }
@@ -301,10 +301,9 @@ export function useUpdateFindingStatusApi(findingId: string) {
 export function useDeleteFindingApi(findingId: string) {
   const { currentTenant } = useTenant()
 
+  // Ensure user has a tenant before making requests
   return useSWRMutation(
-    currentTenant?.slug && findingId
-      ? buildFindingEndpoint(currentTenant.slug, findingId)
-      : null,
+    currentTenant && findingId ? buildFindingEndpoint(findingId) : null,
     async (url: string) => {
       return del<void>(url)
     }
@@ -316,12 +315,12 @@ export function useDeleteFindingApi(findingId: string) {
 // ============================================
 
 /**
- * Invalidate findings cache for tenant
+ * Invalidate findings cache
  */
-export async function invalidateFindingsCache(tenantSlug: string) {
+export async function invalidateFindingsCache() {
   const { mutate } = await import('swr')
   await mutate(
-    (key) => typeof key === 'string' && key.includes(`/tenants/${tenantSlug}/findings`),
+    (key) => typeof key === 'string' && key.includes('/findings'),
     undefined,
     { revalidate: true }
   )

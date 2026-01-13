@@ -4,23 +4,24 @@
  * Utility functions for generating and enriching mock asset data
  */
 
-import type { Asset, AssetType, AssetScope, ExposureLevel } from "../../types";
+import type { Asset, AssetType, AssetScope, ExposureLevel, Criticality } from "../../types";
 
 /**
- * Base asset type without scope and exposure (to be enriched)
+ * Base asset type without scope, exposure and criticality (to be enriched)
  */
-export type BaseAsset = Omit<Asset, "scope" | "exposure">;
+export type BaseAsset = Omit<Asset, "scope" | "exposure" | "criticality">;
 
 /**
- * Derive scope and exposure based on asset characteristics
+ * Derive scope, exposure, and criticality based on asset characteristics
  * This simulates how a real system would classify assets
  */
-export const deriveScopeAndExposure = (
+export const deriveAssetClassification = (
   type: AssetType,
   name: string,
   tags?: string[],
-  metadata?: Record<string, unknown>
-): { scope: AssetScope; exposure: ExposureLevel } => {
+  metadata?: Record<string, unknown>,
+  riskScore?: number
+): { scope: AssetScope; exposure: ExposureLevel; criticality: Criticality } => {
   const tagsSet = new Set(tags || []);
   const nameLC = name.toLowerCase();
 
@@ -75,6 +76,27 @@ export const deriveScopeAndExposure = (
     exposure = nameLC.includes("staging") || nameLC.includes("dev") ? "private" : "private";
   }
 
+  // Determine criticality
+  let criticality: Criticality = "medium";
+
+  if (tagsSet.has("critical") || tagsSet.has("banking") || tagsSet.has("pci-dss")) {
+    criticality = "critical";
+  } else if (tagsSet.has("production") || tagsSet.has("prod") || nameLC.includes("prod")) {
+    criticality = "high";
+  } else if (type === "database" && !nameLC.includes("dev") && !nameLC.includes("test")) {
+    criticality = "high";
+  } else if (type === "credential") {
+    criticality = "critical"; // Credentials are always critical
+  } else if (nameLC.includes("dev") || nameLC.includes("test") || nameLC.includes("staging")) {
+    criticality = "low";
+  } else if (riskScore !== undefined) {
+    // Derive from risk score if available
+    if (riskScore >= 80) criticality = "critical";
+    else if (riskScore >= 60) criticality = "high";
+    else if (riskScore >= 30) criticality = "medium";
+    else criticality = "low";
+  }
+
   // Override for critical/banking assets
   if (tagsSet.has("critical") || tagsSet.has("banking") || tagsSet.has("pci-dss")) {
     // Critical assets might be isolated or restricted
@@ -83,20 +105,34 @@ export const deriveScopeAndExposure = (
     }
   }
 
-  return { scope, exposure };
+  return { scope, exposure, criticality };
 };
 
 /**
- * Enrich a base asset with derived scope and exposure
+ * @deprecated Use deriveAssetClassification instead
+ */
+export const deriveScopeAndExposure = (
+  type: AssetType,
+  name: string,
+  tags?: string[],
+  metadata?: Record<string, unknown>
+): { scope: AssetScope; exposure: ExposureLevel } => {
+  const result = deriveAssetClassification(type, name, tags, metadata);
+  return { scope: result.scope, exposure: result.exposure };
+};
+
+/**
+ * Enrich a base asset with derived scope, exposure, and criticality
  */
 export const enrichAsset = (asset: BaseAsset): Asset => {
-  const { scope, exposure } = deriveScopeAndExposure(
+  const { scope, exposure, criticality } = deriveAssetClassification(
     asset.type,
     asset.name,
     asset.tags,
-    asset.metadata as Record<string, unknown>
+    asset.metadata as Record<string, unknown>,
+    asset.riskScore
   );
-  return { ...asset, scope, exposure };
+  return { ...asset, scope, exposure, criticality };
 };
 
 /**

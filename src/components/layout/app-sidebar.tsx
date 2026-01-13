@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/sidebar";
 // Use centralized sidebar data from features
 import { sidebarData } from "@/config/sidebar-data";
+import { useFilteredSidebarData } from "@/lib/permissions";
 import { NavGroup } from "./nav-group";
 import { SidebarUser } from "./sidebar-user";
 import { TeamSwitcher } from "./team-switcher";
@@ -17,6 +18,8 @@ import { Separator } from "@/components/ui/separator";
 
 export function AppSidebar() {
   const { collapsible, variant } = useLayout();
+  // Filter sidebar items based on user permissions
+  const filteredSidebarData = useFilteredSidebarData(sidebarData);
 
   return (
     <Sidebar collapsible={collapsible} variant={variant}>
@@ -28,7 +31,7 @@ export function AppSidebar() {
 
       {/* Content */}
       <SidebarContent>
-        {sidebarData.navGroups.map((group) => (
+        {filteredSidebarData.navGroups.map((group) => (
           <NavGroup key={group.title} {...group} />
         ))}
       </SidebarContent>

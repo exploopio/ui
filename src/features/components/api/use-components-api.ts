@@ -2,6 +2,8 @@
  * Component API Hooks
  *
  * SWR hooks for fetching and mutating component data from backend
+ *
+ * Tenant is now determined from JWT token (token-based tenant)
  */
 
 'use client'
@@ -42,8 +44,8 @@ const defaultConfig: SWRConfiguration = {
 // ENDPOINT BUILDERS
 // ============================================
 
-function buildComponentsEndpoint(tenantSlug: string, filters?: ComponentApiFilters): string {
-  const baseUrl = `/api/v1/tenants/${tenantSlug}/components`
+function buildComponentsEndpoint(filters?: ComponentApiFilters): string {
+  const baseUrl = `/api/v1/components`
 
   if (!filters) return baseUrl
 
@@ -66,17 +68,16 @@ function buildComponentsEndpoint(tenantSlug: string, filters?: ComponentApiFilte
   return queryString ? `${baseUrl}?${queryString}` : baseUrl
 }
 
-function buildComponentEndpoint(tenantSlug: string, componentId: string): string {
-  return `/api/v1/tenants/${tenantSlug}/components/${componentId}`
+function buildComponentEndpoint(componentId: string): string {
+  return `/api/v1/components/${componentId}`
 }
 
 function buildProjectComponentsEndpoint(
-  tenantSlug: string,
   projectId: string,
   page?: number,
   perPage?: number
 ): string {
-  const baseUrl = `/api/v1/tenants/${tenantSlug}/projects/${projectId}/components`
+  const baseUrl = `/api/v1/projects/${projectId}/components`
   const params = new URLSearchParams()
 
   if (page) params.set('page', String(page))
@@ -126,8 +127,8 @@ async function fetchComponent(url: string): Promise<ApiComponent> {
 export function useComponentsApi(filters?: ComponentApiFilters, config?: SWRConfiguration) {
   const { currentTenant } = useTenant()
 
-  const key = currentTenant?.slug
-    ? buildComponentsEndpoint(currentTenant.slug, filters)
+  const key = currentTenant
+    ? buildComponentsEndpoint(filters)
     : null
 
   return useSWR<ApiComponentListResponse>(
@@ -143,8 +144,8 @@ export function useComponentsApi(filters?: ComponentApiFilters, config?: SWRConf
 export function useComponentApi(componentId: string | null, config?: SWRConfiguration) {
   const { currentTenant } = useTenant()
 
-  const key = currentTenant?.slug && componentId
-    ? buildComponentEndpoint(currentTenant.slug, componentId)
+  const key = currentTenant && componentId
+    ? buildComponentEndpoint(componentId)
     : null
 
   return useSWR<ApiComponent>(
@@ -165,8 +166,8 @@ export function useProjectComponentsApi(
 ) {
   const { currentTenant } = useTenant()
 
-  const key = currentTenant?.slug && projectId
-    ? buildProjectComponentsEndpoint(currentTenant.slug, projectId, page, perPage)
+  const key = currentTenant && projectId
+    ? buildProjectComponentsEndpoint(projectId, page, perPage)
     : null
 
   return useSWR<ApiComponentListResponse>(
@@ -187,7 +188,7 @@ export function useCreateComponentApi() {
   const { currentTenant } = useTenant()
 
   return useSWRMutation(
-    currentTenant?.slug ? `/api/v1/tenants/${currentTenant.slug}/components` : null,
+    currentTenant ? `/api/v1/components` : null,
     async (url: string, { arg }: { arg: CreateComponentInput }) => {
       return post<ApiComponent>(url, arg)
     }
@@ -201,8 +202,8 @@ export function useUpdateComponentApi(componentId: string) {
   const { currentTenant } = useTenant()
 
   return useSWRMutation(
-    currentTenant?.slug && componentId
-      ? buildComponentEndpoint(currentTenant.slug, componentId)
+    currentTenant && componentId
+      ? buildComponentEndpoint(componentId)
       : null,
     async (url: string, { arg }: { arg: UpdateComponentInput }) => {
       return put<ApiComponent>(url, arg)
@@ -217,8 +218,8 @@ export function useDeleteComponentApi(componentId: string) {
   const { currentTenant } = useTenant()
 
   return useSWRMutation(
-    currentTenant?.slug && componentId
-      ? buildComponentEndpoint(currentTenant.slug, componentId)
+    currentTenant && componentId
+      ? buildComponentEndpoint(componentId)
       : null,
     async (url: string) => {
       return del<void>(url)
@@ -231,12 +232,12 @@ export function useDeleteComponentApi(componentId: string) {
 // ============================================
 
 /**
- * Invalidate components cache for tenant
+ * Invalidate components cache
  */
-export async function invalidateComponentsCache(tenantSlug: string) {
+export async function invalidateComponentsCache() {
   const { mutate } = await import('swr')
   await mutate(
-    (key) => typeof key === 'string' && key.includes(`/tenants/${tenantSlug}/components`),
+    (key) => typeof key === 'string' && key.includes(`/api/v1/components`),
     undefined,
     { revalidate: true }
   )

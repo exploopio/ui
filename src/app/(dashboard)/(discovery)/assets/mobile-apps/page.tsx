@@ -465,6 +465,7 @@ export default function MobileAppsPage() {
       id: `mobile-${Date.now()}`,
       type: "mobile",
       name: formData.name,
+      criticality: "medium",
       status: "pending",
       scope: "external",
       exposure: "public",

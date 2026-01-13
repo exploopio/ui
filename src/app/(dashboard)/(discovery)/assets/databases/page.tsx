@@ -484,6 +484,7 @@ export default function DatabasesPage() {
       type: "database",
       name: formData.name,
       description: formData.description,
+      criticality: "high",
       status: "active",
       scope: "internal",
       exposure: "private",
