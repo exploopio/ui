@@ -26,6 +26,7 @@ export interface CurrentTenant {
   name?: string
   role: TenantRole
   plan?: string
+  logo_url?: string
 }
 
 interface TenantContextValue {

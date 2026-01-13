@@ -455,31 +455,31 @@ export default function TenantPage() {
                             accept="image/png,image/jpeg,image/jpg,image/webp"
                             className="hidden"
                             onChange={async (e) => {
-                            const file = e.target.files?.[0];
-                            if (!file) return;
-                            const img = new Image();
-                            const canvas = document.createElement('canvas');
-                            const reader = new FileReader();
-                            reader.onload = (ev) => {
-                              img.onload = () => {
-                                const maxSize = 200;
-                                let w = img.width, h = img.height;
-                                if (w > maxSize) { h = (h * maxSize) / w; w = maxSize; }
-                                if (h > maxSize) { w = (w * maxSize) / h; h = maxSize; }
-                                canvas.width = w;
-                                canvas.height = h;
-                                const ctx = canvas.getContext('2d');
-                                ctx?.drawImage(img, 0, 0, w, h);
-                                const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-                                setBrandingForm({ ...brandingForm, logo_data: dataUrl });
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              const img = new Image();
+                              const canvas = document.createElement('canvas');
+                              const reader = new FileReader();
+                              reader.onload = (ev) => {
+                                img.onload = () => {
+                                  const maxSize = 200;
+                                  let w = img.width, h = img.height;
+                                  if (w > maxSize) { h = (h * maxSize) / w; w = maxSize; }
+                                  if (h > maxSize) { w = (w * maxSize) / h; h = maxSize; }
+                                  canvas.width = w;
+                                  canvas.height = h;
+                                  const ctx = canvas.getContext('2d');
+                                  ctx?.drawImage(img, 0, 0, w, h);
+                                  const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                                  setBrandingForm({ ...brandingForm, logo_data: dataUrl });
+                                };
+                                img.src = ev.target?.result as string;
                               };
-                              img.src = ev.target?.result as string;
-                            };
-                            reader.readAsDataURL(file);
-                            e.target.value = '';
-                          }}
-                        />
-                      </label>
+                              reader.readAsDataURL(file);
+                              e.target.value = '';
+                            }}
+                          />
+                        </label>
                       ) : (
                         <TooltipProvider>
                           <Tooltip>
