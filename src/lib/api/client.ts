@@ -309,8 +309,8 @@ async function parseErrorResponse(response: Response): Promise<ApiError> {
     try {
       const data = await response.json()
 
-      // Backend returned ApiResponse format
-      if (data.error) {
+      // Backend returned ApiResponse format with nested error object
+      if (data.error && typeof data.error === 'object') {
         return {
           code: data.error.code || 'UNKNOWN_ERROR',
           message: data.error.message || response.statusText,
@@ -319,10 +319,10 @@ async function parseErrorResponse(response: Response): Promise<ApiError> {
         }
       }
 
-      // Backend returned plain error object
+      // Backend returned apierror format: { error: "CODE", code: "CODE", message: "..." }
       if (data.message) {
         return {
-          code: data.code || 'UNKNOWN_ERROR',
+          code: data.code || data.error || 'UNKNOWN_ERROR',
           message: data.message,
           details: data.details,
           statusCode: response.status,
