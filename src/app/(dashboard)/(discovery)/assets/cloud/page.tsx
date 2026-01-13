@@ -504,6 +504,7 @@ export default function CloudPage() {
       type: "cloud",
       name: formData.name,
       description: formData.description,
+      criticality: "medium",
       status: "active",
       scope: "cloud",
       exposure: "private",

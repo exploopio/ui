@@ -513,6 +513,7 @@ export default function WebsitesPage() {
       type: "website",
       name: formData.name,
       description: formData.description,
+      criticality: "high",
       status: "active",
       scope: "external",
       exposure: "public",

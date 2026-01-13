@@ -288,6 +288,33 @@ export const ASSET_TYPE_COLORS: Record<AssetType, { bg: string; text: string }> 
 };
 
 /**
+ * Asset Criticality Level
+ * Indicates the business importance of the asset
+ */
+export type Criticality = "low" | "medium" | "high" | "critical";
+
+export const CRITICALITY_LABELS: Record<Criticality, string> = {
+  low: "Low",
+  medium: "Medium",
+  high: "High",
+  critical: "Critical",
+};
+
+export const CRITICALITY_DESCRIPTIONS: Record<Criticality, string> = {
+  low: "Non-critical asset with minimal business impact",
+  medium: "Standard business asset with moderate impact",
+  high: "Important asset with significant business impact",
+  critical: "Mission-critical asset essential to business operations",
+};
+
+export const CRITICALITY_COLORS: Record<Criticality, { bg: string; text: string; border: string }> = {
+  low: { bg: "bg-slate-500/15", text: "text-slate-600", border: "border-slate-500/30" },
+  medium: { bg: "bg-blue-500/15", text: "text-blue-600", border: "border-blue-500/30" },
+  high: { bg: "bg-orange-500/15", text: "text-orange-600", border: "border-orange-500/30" },
+  critical: { bg: "bg-red-500/15", text: "text-red-600", border: "border-red-500/30" },
+};
+
+/**
  * Cloud Provider type
  */
 export type CloudProvider = "aws" | "gcp" | "azure" | "oci" | "alibaba" | "digitalocean";
@@ -569,12 +596,13 @@ export interface Asset {
   type: AssetType;
   name: string;
   description?: string;
+  criticality: Criticality;    // Business importance level
   status: Status;
   scope: AssetScope;           // Ownership/location classification
   exposure: ExposureLevel;     // Network accessibility classification
-  riskScore: number; // 0-100
+  riskScore: number;           // 0-100, calculated from criticality, exposure, and findings
   findingCount: number;
-  groupId?: string; // Optional - asset can be ungrouped
+  groupId?: string;            // Optional - asset can be ungrouped
   groupName?: string;
   metadata: AssetMetadata;
   tags?: string[];
@@ -592,9 +620,10 @@ export interface CreateAssetInput {
   type: AssetType;
   name: string;
   description?: string;
-  scope?: AssetScope;      // Defaults to 'internal' if not provided
-  exposure?: ExposureLevel; // Defaults to 'unknown' if not provided
-  groupId?: string; // Optional - can create ungrouped assets
+  criticality?: Criticality;  // Defaults to 'medium' if not provided
+  scope?: AssetScope;         // Defaults to 'internal' if not provided
+  exposure?: ExposureLevel;   // Defaults to 'unknown' if not provided
+  groupId?: string;           // Optional - can create ungrouped assets
   metadata?: Partial<AssetMetadata>;
   tags?: string[];
 }
@@ -605,7 +634,7 @@ export interface CreateAssetInput {
 export interface UpdateAssetInput {
   name?: string;
   description?: string;
-  status?: Status;
+  criticality?: Criticality;
   scope?: AssetScope;
   exposure?: ExposureLevel;
   groupId?: string | null; // null to remove from group
@@ -635,9 +664,11 @@ export interface AssetStats {
   totalAssets: number;
   byType: Record<AssetType, number>;
   byStatus: Record<Status, number>;
+  byCriticality: Record<Criticality, number>;
   byScope: Record<AssetScope, number>;
   byExposure: Record<ExposureLevel, number>;
   averageRiskScore: number;
+  highRiskCount: number;   // Assets with risk_score >= 70
   totalFindings: number;
 }
 

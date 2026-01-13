@@ -422,6 +422,7 @@ export default function CredentialsPage() {
       type: "credential",
       name: formData.name,
       description: formData.description,
+      criticality: "critical",
       status: "active",
       scope: "internal",
       exposure: "isolated",

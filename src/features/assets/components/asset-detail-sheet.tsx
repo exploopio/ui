@@ -198,6 +198,7 @@ export function AssetDetailSheet<T extends Asset>({
             <ClassificationBadges
               scope={asset.scope}
               exposure={asset.exposure}
+              criticality={asset.criticality}
               size="md"
               showTooltips
             />

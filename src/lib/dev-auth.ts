@@ -7,7 +7,7 @@
 
 import type { AuthUser } from "@/lib/keycloak";
 
-// Mock user data for development
+// Mock user data for development (admin role with full permissions)
 export const DEV_USER: AuthUser = {
   id: "dev-001",
   email: "admin@rediver.io",
@@ -17,6 +17,27 @@ export const DEV_USER: AuthUser = {
   roles: ["admin", "security_analyst"],
   realmRoles: ["admin"],
   clientRoles: { "rediver-ui": ["admin", "security_analyst"] },
+  // Permissions for admin role
+  permissions: [
+    "assets:read", "assets:write", "assets:delete",
+    "projects:read", "projects:write", "projects:delete",
+    "components:read", "components:write", "components:delete",
+    "findings:read", "findings:write", "findings:delete",
+    "vulnerabilities:read",
+    "dashboard:read",
+    "scans:read", "scans:write",
+    "credentials:read", "credentials:write",
+    "reports:read", "reports:write",
+    "pentest:read", "pentest:write",
+    "remediation:read", "remediation:write",
+    "workflows:read", "workflows:write",
+    "members:read", "members:invite", "members:manage",
+    "team:read", "team:update",
+    "billing:read",
+    "integrations:read", "integrations:manage",
+  ],
+  tenantId: "dev-tenant-001",
+  tenantRole: "admin",
 };
 
 // Mock credentials
@@ -57,6 +78,11 @@ export function generateDevToken(): string {
       resource_access: {
         "rediver-ui": { roles: DEV_USER.roles },
       },
+
+      // Permissions and tenant context
+      permissions: DEV_USER.permissions,
+      tenant: DEV_USER.tenantId,
+      role: DEV_USER.tenantRole,
     })
   );
   const signature = btoa("dev-signature");

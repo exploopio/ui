@@ -42,8 +42,11 @@ const defaultConfig: SWRConfiguration = {
 // ENDPOINT BUILDERS
 // ============================================
 
-function buildProjectsEndpoint(tenantSlug: string, filters?: ProjectFilters): string {
-  const baseUrl = `/api/v1/tenants/${tenantSlug}/projects`
+// Note: Tenant is now determined from JWT token (token-based tenant)
+// No need to include tenant in URL path
+
+function buildProjectsEndpoint(filters?: ProjectFilters): string {
+  const baseUrl = '/api/v1/projects'
 
   if (!filters) return baseUrl
 
@@ -66,8 +69,8 @@ function buildProjectsEndpoint(tenantSlug: string, filters?: ProjectFilters): st
   return queryString ? `${baseUrl}?${queryString}` : baseUrl
 }
 
-function buildProjectEndpoint(tenantSlug: string, projectId: string): string {
-  return `/api/v1/tenants/${tenantSlug}/projects/${projectId}`
+function buildProjectEndpoint(projectId: string): string {
+  return `/api/v1/projects/${projectId}`
 }
 
 // ============================================
@@ -110,9 +113,8 @@ async function fetchProject(url: string): Promise<Project> {
 export function useProjects(filters?: ProjectFilters, config?: SWRConfiguration) {
   const { currentTenant } = useTenant()
 
-  const key = currentTenant?.slug
-    ? buildProjectsEndpoint(currentTenant.slug, filters)
-    : null
+  // Only fetch if user has a current tenant (token will contain tenant_id)
+  const key = currentTenant ? buildProjectsEndpoint(filters) : null
 
   return useSWR<ProjectListResponse>(
     key,
@@ -139,9 +141,7 @@ export function useProjects(filters?: ProjectFilters, config?: SWRConfiguration)
 export function useProject(projectId: string | null, config?: SWRConfiguration) {
   const { currentTenant } = useTenant()
 
-  const key = currentTenant?.slug && projectId
-    ? buildProjectEndpoint(currentTenant.slug, projectId)
-    : null
+  const key = currentTenant && projectId ? buildProjectEndpoint(projectId) : null
 
   return useSWR<Project>(
     key,
@@ -161,7 +161,7 @@ export function useCreateProject() {
   const { currentTenant } = useTenant()
 
   return useSWRMutation(
-    currentTenant?.slug ? `/api/v1/tenants/${currentTenant.slug}/projects` : null,
+    currentTenant ? '/api/v1/projects' : null,
     async (url: string, { arg }: { arg: CreateProjectInput }) => {
       return post<Project>(url, arg)
     }
@@ -175,9 +175,7 @@ export function useUpdateProject(projectId: string) {
   const { currentTenant } = useTenant()
 
   return useSWRMutation(
-    currentTenant?.slug && projectId
-      ? buildProjectEndpoint(currentTenant.slug, projectId)
-      : null,
+    currentTenant && projectId ? buildProjectEndpoint(projectId) : null,
     async (url: string, { arg }: { arg: UpdateProjectInput }) => {
       return put<Project>(url, arg)
     }
@@ -191,9 +189,7 @@ export function useDeleteProject(projectId: string) {
   const { currentTenant } = useTenant()
 
   return useSWRMutation(
-    currentTenant?.slug && projectId
-      ? buildProjectEndpoint(currentTenant.slug, projectId)
-      : null,
+    currentTenant && projectId ? buildProjectEndpoint(projectId) : null,
     async (url: string) => {
       return del<void>(url)
     }
@@ -207,25 +203,25 @@ export function useDeleteProject(projectId: string) {
 /**
  * Get cache key for projects list
  */
-export function getProjectsKey(tenantSlug: string, filters?: ProjectFilters) {
-  return buildProjectsEndpoint(tenantSlug, filters)
+export function getProjectsKey(filters?: ProjectFilters) {
+  return buildProjectsEndpoint(filters)
 }
 
 /**
  * Get cache key for single project
  */
-export function getProjectKey(tenantSlug: string, projectId: string) {
-  return buildProjectEndpoint(tenantSlug, projectId)
+export function getProjectKey(projectId: string) {
+  return buildProjectEndpoint(projectId)
 }
 
 /**
  * Invalidate projects cache
  */
-export async function invalidateProjectsCache(tenantSlug: string) {
+export async function invalidateProjectsCache() {
   const { mutate } = await import('swr')
-  // Invalidate all project-related keys for this tenant
+  // Invalidate all project-related keys
   await mutate(
-    (key) => typeof key === 'string' && key.includes(`/tenants/${tenantSlug}/projects`),
+    (key) => typeof key === 'string' && key.includes('/api/v1/projects'),
     undefined,
     { revalidate: true }
   )

@@ -161,18 +161,36 @@ export function shouldRefreshToken(
 // ============================================
 
 /**
+ * Extended token payload for local auth tokens
+ * Includes tenant-specific claims
+ */
+interface LocalAuthToken extends KeycloakAccessToken {
+  // Local auth specific claims
+  id?: string // User ID (local auth uses 'id' instead of 'sub')
+  tenant?: string // Tenant ID
+  role?: string // Tenant role
+  permissions?: string[] // Granular permissions
+  tenants?: Array<{
+    tenant_id: string
+    tenant_slug?: string
+    role: string
+  }>
+}
+
+/**
  * Extract user information from access token
+ * Supports both Keycloak and local auth tokens
  *
  * @param accessToken - JWT access token string
  * @returns AuthUser object
  */
 export function extractUser(accessToken: string): AuthUser {
-  const decoded = decodeAccessToken(accessToken)
+  const decoded = decodeJWT<LocalAuthToken>(accessToken)
 
-  // Extract realm roles
+  // Extract realm roles (Keycloak)
   const realmRoles = decoded.realm_access?.roles || []
 
-  // Extract all client roles
+  // Extract all client roles (Keycloak)
   const clientRoles: Record<string, string[]> = {}
   let allClientRoles: string[] = []
 
@@ -186,8 +204,14 @@ export function extractUser(accessToken: string): AuthUser {
   // Combine all roles
   const allRoles = [...new Set([...realmRoles, ...allClientRoles])]
 
+  // Extract permissions (from local auth tokens)
+  const permissions = decoded.permissions || []
+
+  // Get user ID (local auth uses 'id', Keycloak uses 'sub')
+  const userId = decoded.id || decoded.sub
+
   return {
-    id: decoded.sub,
+    id: userId,
     email: decoded.email || '',
     name: decoded.name || decoded.preferred_username || '',
     username: decoded.preferred_username || decoded.email || '',
@@ -195,6 +219,9 @@ export function extractUser(accessToken: string): AuthUser {
     roles: allRoles,
     realmRoles,
     clientRoles,
+    permissions,
+    tenantId: decoded.tenant,
+    tenantRole: decoded.role,
   }
 }
 

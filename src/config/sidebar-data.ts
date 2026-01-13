@@ -57,6 +57,10 @@ import {
   Download,
 } from "lucide-react";
 import { type SidebarData } from "@/components/types";
+import { Permission, Role } from "@/lib/permissions";
+
+// Re-export Permission and Role for convenience
+export { Permission, Role };
 
 export const sidebarData: SidebarData = {
   user: {
@@ -87,6 +91,7 @@ export const sidebarData: SidebarData = {
           title: "Dashboard",
           url: "/",
           icon: LayoutDashboard,
+          permission: Permission.DashboardRead,
         },
       ],
     },
@@ -102,17 +107,20 @@ export const sidebarData: SidebarData = {
           title: "Attack Surface",
           url: "/attack-surface",
           icon: Target,
+          permission: Permission.AssetsRead,
         },
         {
           title: "Asset Groups",
           url: "/asset-groups",
           icon: FolderKanban,
           badge: "9",
+          permission: Permission.AssetsRead,
         },
         {
           title: "Scope Config",
           url: "/scope-config",
           icon: Settings2,
+          permission: Permission.AssetsRead,
         },
       ],
     },
@@ -129,11 +137,13 @@ export const sidebarData: SidebarData = {
           title: "Scan Management",
           url: "/scans",
           icon: Radar,
+          permission: Permission.ScansRead,
         },
         {
           title: "Runners",
           url: "/runners",
           icon: Play,
+          permission: Permission.ScansRead,
         },
         // ----------------------------------------
         // ASSET INVENTORY
@@ -143,6 +153,7 @@ export const sidebarData: SidebarData = {
         {
           title: "Asset Inventory",
           icon: Container,
+          permission: Permission.AssetsRead,
           items: [
             {
               title: "Domains",
@@ -204,6 +215,7 @@ export const sidebarData: SidebarData = {
           url: "/credentials",
           icon: KeyRound,
           badge: "7",
+          permission: Permission.CredentialsRead,
         },
         // ----------------------------------------
         // SOFTWARE COMPONENTS (SBOM)
@@ -211,6 +223,7 @@ export const sidebarData: SidebarData = {
         {
           title: "Components",
           icon: Package,
+          permission: Permission.ComponentsRead,
           items: [
             {
               title: "Overview",
@@ -263,11 +276,13 @@ export const sidebarData: SidebarData = {
           title: "Risk Analysis",
           url: "/risk-analysis",
           icon: BarChart3,
+          permission: Permission.FindingsRead,
         },
         {
           title: "Business Impact",
           url: "/business-impact",
           icon: Building2,
+          permission: Permission.FindingsRead,
         },
       ],
     },
@@ -282,6 +297,7 @@ export const sidebarData: SidebarData = {
         {
           title: "Penetration Testing",
           icon: Crosshair,
+          permission: Permission.PentestRead,
           items: [
             {
               title: "Campaigns",
@@ -315,11 +331,13 @@ export const sidebarData: SidebarData = {
           title: "Attack Simulation",
           url: "/attack-simulation",
           icon: Swords,
+          permission: Permission.PentestRead,
         },
         {
           title: "Control Testing",
           url: "/control-testing",
           icon: ShieldCheck,
+          permission: Permission.PentestRead,
         },
       ],
     },
@@ -336,11 +354,13 @@ export const sidebarData: SidebarData = {
           url: "/remediation",
           icon: ListChecks,
           badge: "24",
+          permission: Permission.RemediationRead,
         },
         {
           title: "Workflows",
           url: "/workflows",
           icon: Workflow,
+          permission: Permission.WorkflowsRead,
         },
       ],
     },
@@ -356,11 +376,13 @@ export const sidebarData: SidebarData = {
           url: "/findings",
           icon: FileWarning,
           badge: "24",
+          permission: Permission.FindingsRead,
         },
         {
           title: "Reports",
           url: "/reports",
           icon: FileText,
+          permission: Permission.ReportsRead,
         },
       ],
     },
@@ -374,21 +396,28 @@ export const sidebarData: SidebarData = {
         {
           title: "Organization",
           icon: Building,
+          permission: Permission.TeamRead,
           items: [
             {
               title: "Tenant Settings",
               url: "/settings/tenant",
               icon: Building,
+              // Only admin and owner can modify tenant settings
+              minRole: Role.Admin,
             },
             {
               title: "Users & Roles",
               url: "/settings/users",
               icon: Users,
+              permission: Permission.MembersRead,
             },
             {
               title: "Billing",
               url: "/settings/billing",
               icon: CreditCard,
+              // Billing is restricted to owner and admin
+              minRole: Role.Admin,
+              permission: Permission.BillingRead,
             },
           ],
         },
@@ -396,6 +425,9 @@ export const sidebarData: SidebarData = {
           title: "Integrations",
           url: "/settings/integrations",
           icon: Puzzle,
+          // Integrations management requires admin or higher
+          minRole: Role.Admin,
+          permission: Permission.IntegrationsRead,
         },
       ],
     },

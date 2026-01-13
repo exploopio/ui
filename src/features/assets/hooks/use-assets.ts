@@ -4,25 +4,25 @@ import useSWR from 'swr'
 import { get, post, put, del } from '@/lib/api/client'
 import { endpoints } from '@/lib/api/endpoints'
 import type { PaginatedResponse, SearchFilters } from '@/lib/api/types'
-import type { Asset, AssetType, AssetScope, ExposureLevel, CreateAssetInput, UpdateAssetInput } from '../types'
+import type { Asset, AssetType, AssetScope, ExposureLevel, Criticality, CreateAssetInput, UpdateAssetInput } from '../types'
 
-// Backend asset type mapping
+// Backend asset type mapping (matches Go AssetResponse struct)
 interface BackendAsset {
   id: string
+  tenant_id?: string
   name: string
-  asset_type: string
-  status: string
+  type: string           // Backend uses "type" in JSON
+  criticality: string    // low, medium, high, critical
+  status: string         // active, inactive, archived
+  scope: string          // internal, external, cloud, partner, vendor, shadow
+  exposure: string       // public, restricted, private, isolated, unknown
+  risk_score: number     // 0-100
+  finding_count: number
   description?: string
-  scope?: string
-  exposure?: string
-  risk_score?: number
-  finding_count?: number
-  group_id?: string
-  group_name?: string
-  metadata?: Record<string, unknown>
   tags?: string[]
-  first_seen?: string
-  last_seen?: string
+  metadata?: Record<string, unknown>
+  first_seen: string
+  last_seen: string
   created_at: string
   updated_at: string
 }
@@ -32,19 +32,18 @@ function transformAsset(backend: BackendAsset): Asset {
   return {
     id: backend.id,
     name: backend.name,
-    type: backend.asset_type as AssetType,
-    status: (backend.status || 'active') as 'active' | 'inactive',
+    type: backend.type as AssetType,
+    criticality: backend.criticality as Criticality,
+    status: backend.status as 'active' | 'inactive' | 'archived',
     description: backend.description,
-    scope: (backend.scope || 'internal') as AssetScope,
-    exposure: (backend.exposure || 'unknown') as ExposureLevel,
-    riskScore: backend.risk_score || 0,
-    findingCount: backend.finding_count || 0,
-    groupId: backend.group_id,
-    groupName: backend.group_name,
+    scope: backend.scope as AssetScope,
+    exposure: backend.exposure as ExposureLevel,
+    riskScore: backend.risk_score,
+    findingCount: backend.finding_count,
     metadata: backend.metadata || {},
     tags: backend.tags || [],
-    firstSeen: backend.first_seen || backend.created_at,
-    lastSeen: backend.last_seen || backend.updated_at,
+    firstSeen: backend.first_seen,
+    lastSeen: backend.last_seen,
     createdAt: backend.created_at,
     updatedAt: backend.updated_at,
   }
@@ -141,12 +140,11 @@ export function useAssetsByType(type: AssetType) {
 export async function createAsset(input: CreateAssetInput): Promise<Asset> {
   const response = await post<BackendAsset>(endpoints.assets.create(), {
     name: input.name,
-    asset_type: input.type,
+    type: input.type,
+    criticality: input.criticality || 'medium',  // Default to medium if not specified
     description: input.description,
-    scope: input.scope,
-    exposure: input.exposure,
-    group_id: input.groupId,
-    metadata: input.metadata,
+    scope: input.scope || 'internal',
+    exposure: input.exposure || 'unknown',
     tags: input.tags,
   })
   return transformAsset(response)
@@ -158,12 +156,10 @@ export async function createAsset(input: CreateAssetInput): Promise<Asset> {
 export async function updateAsset(assetId: string, input: UpdateAssetInput): Promise<Asset> {
   const response = await put<BackendAsset>(endpoints.assets.update(assetId), {
     name: input.name,
+    criticality: input.criticality,
     description: input.description,
-    status: input.status,
     scope: input.scope,
     exposure: input.exposure,
-    group_id: input.groupId,
-    metadata: input.metadata,
     tags: input.tags,
   })
   return transformAsset(response)

@@ -430,6 +430,7 @@ export default function ServicesPage() {
       type: "service",
       name: formData.name,
       description: formData.description,
+      criticality: "medium",
       status: "active",
       scope: "internal",
       exposure: "private",

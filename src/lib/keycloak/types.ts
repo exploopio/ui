@@ -117,7 +117,7 @@ export type TokenPayload = KeycloakAccessToken
 
 /**
  * Authenticated User Information
- * Extracted from Keycloak access token
+ * Extracted from access token (Keycloak or local JWT)
  */
 export interface AuthUser {
   id: string // sub claim
@@ -128,6 +128,9 @@ export interface AuthUser {
   roles: string[] // Combined realm + resource roles
   realmRoles: string[]
   clientRoles: Record<string, string[]>
+  permissions: string[] // Granular permissions (e.g., "assets:read", "projects:write")
+  tenantId?: string // Current tenant context (for tenant-scoped tokens)
+  tenantRole?: string // Role within current tenant (owner, admin, member, viewer)
 }
 
 /**
