@@ -278,10 +278,10 @@ export default function HostsPage() {
       ),
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
-          <Server className="h-4 w-4 text-muted-foreground" />
-          <div>
-            <p className="font-medium">{row.original.name}</p>
-            <p className="text-muted-foreground text-xs">{row.original.metadata.ip}</p>
+          <Server className="h-4 w-4 text-muted-foreground shrink-0" />
+          <div className="min-w-0">
+            <p className="font-medium truncate">{row.original.name}</p>
+            <p className="text-muted-foreground text-xs truncate">{row.original.metadata.ip}</p>
           </div>
         </div>
       ),
@@ -307,7 +307,7 @@ export default function HostsPage() {
         const cpu = row.original.metadata.cpuCores;
         const mem = row.original.metadata.memoryGB;
         return (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {cpu && (
               <Badge variant="outline" className="gap-1">
                 <Cpu className="h-3 w-3" />
@@ -636,7 +636,7 @@ export default function HostsPage() {
         </PageHeader>
 
         {/* Stats Cards */}
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
           <Card className="cursor-pointer hover:border-primary transition-colors" onClick={() => setStatusFilter("all")}>
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
@@ -739,7 +739,7 @@ export default function HostsPage() {
                 />
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {Object.keys(rowSelection).length > 0 && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -818,7 +818,7 @@ export default function HostsPage() {
                 {table.getFilteredSelectedRowModel().rows.length} of{" "}
                 {table.getFilteredRowModel().rows.length} row(s) selected
               </p>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"

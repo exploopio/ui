@@ -372,7 +372,7 @@ export default function WorkflowsPage() {
         </PageHeader>
 
         {/* Stats */}
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
           <Card>
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
@@ -462,7 +462,7 @@ export default function WorkflowsPage() {
                             ))}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <Switch checked={workflow.status === "active"} />
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -549,7 +549,7 @@ export default function WorkflowsPage() {
                     <CardTitle>Visual Workflow Builder</CardTitle>
                     <CardDescription>Drag and drop to create workflows</CardDescription>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Button variant="outline" size="sm">
                       <RefreshCw className="mr-2 h-4 w-4" />
                       Reset
@@ -647,7 +647,7 @@ export default function WorkflowsPage() {
           </SheetHeader>
           {selectedWorkflow && (
             <div className="mt-6 space-y-6">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Badge className={`${statusConfig[selectedWorkflow.status].bgColor} ${statusConfig[selectedWorkflow.status].color} border-0`}>
                   {selectedWorkflow.status}
                 </Badge>

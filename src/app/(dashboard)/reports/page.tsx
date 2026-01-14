@@ -185,7 +185,7 @@ export default function ReportsPage() {
         />
 
         {/* Stats */}
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
           <Card>
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
@@ -331,7 +331,7 @@ export default function ReportsPage() {
                   return (
                     <TableRow key={report.id} className="cursor-pointer hover:bg-muted/50">
                       <TableCell>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <FileText className="text-muted-foreground h-4 w-4" />
                           <span className="font-medium">{report.name}</span>
                         </div>

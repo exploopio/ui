@@ -19,17 +19,17 @@ export function PageHeader({
   return (
     <div
       className={cn(
-        "flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between",
+        "flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between min-w-0",
         className
       )}
     >
-      <div>
+      <div className="min-w-0 shrink-0">
         <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
         {description && (
           <p className="text-muted-foreground text-sm">{description}</p>
         )}
       </div>
-      {children && <div className="flex flex-wrap items-center gap-2">{children}</div>}
+      {children}
     </div>
   );
 }

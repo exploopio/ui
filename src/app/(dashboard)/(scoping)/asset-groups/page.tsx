@@ -471,7 +471,7 @@ export default function AssetGroupsPage() {
           title="Asset Groups"
           description={`${filteredData.length} of ${mockAssetGroups.length} groups`}
         >
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
               <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
               Refresh
@@ -706,7 +706,7 @@ export default function AssetGroupsPage() {
               <span className="text-sm font-medium">
                 {selectedIds.length} group(s) selected
               </span>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {/* Change Criticality */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -762,7 +762,7 @@ export default function AssetGroupsPage() {
         )}
 
         {/* Stats Cards - Clickable */}
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
           <Card
             className={`cursor-pointer transition-colors hover:border-primary ${
               quickFilter === "all" ? "border-primary" : ""

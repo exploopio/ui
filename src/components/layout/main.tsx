@@ -33,7 +33,7 @@ export const Main = forwardRef<HTMLElement, MainProps>(
         ref={ref}
         data-layout={fixed ? "fixed" : "auto"}
         className={cn(
-          "px-4 py-6 overflow-x-hidden",
+          "px-4 py-6 overflow-x-hidden sm:px-6 lg:px-8",
           fixed && "flex flex-col flex-grow overflow-hidden",
           !fluid && "w-full mx-auto",
           className

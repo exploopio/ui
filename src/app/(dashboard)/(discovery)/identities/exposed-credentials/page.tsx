@@ -67,7 +67,7 @@ export default function ExposedCredentialsPage() {
           description="Credentials found in code, logs, or breaches"
         />
 
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
           {exposedCredentialStats.map((stat) => (
             <Card key={stat.title}>
               <CardHeader className="pb-2">

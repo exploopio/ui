@@ -697,19 +697,19 @@ export default function InternalSurfacePage() {
           </CardHeader>
           <CardContent>
             <div className="flex gap-4">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="outline" className={zoneColors.dmz}>DMZ</Badge>
                 <span className="text-sm font-medium">{stats.byZone.dmz}</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="outline" className={zoneColors.internal}>Internal</Badge>
                 <span className="text-sm font-medium">{stats.byZone.internal}</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="outline" className={zoneColors.restricted}>Restricted</Badge>
                 <span className="text-sm font-medium">{stats.byZone.restricted}</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="outline" className={zoneColors.guest}>Guest</Badge>
                 <span className="text-sm font-medium">{stats.byZone.guest}</span>
               </div>
@@ -732,7 +732,7 @@ export default function InternalSurfacePage() {
                   />
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Filter className="h-4 w-4 text-muted-foreground" />
                 <Select value={filterType} onValueChange={(v) => setFilterType(v as AssetType | "all")}>
                   <SelectTrigger className="w-36">

@@ -391,7 +391,7 @@ export default function RunnersPage() {
       ),
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
-          <Zap className={`h-4 w-4 ${row.original.jobsRunning > 0 ? "text-yellow-500" : "text-muted-foreground"}`} />
+          <Zap className={`h-4 w-4 shrink-0 ${row.original.jobsRunning > 0 ? "text-yellow-500" : "text-muted-foreground"}`} />
           <span>{row.original.jobsRunning}</span>
         </div>
       ),
@@ -643,7 +643,7 @@ export default function RunnersPage() {
 
       <Main>
         <PageHeader title="Runners" description={`${stats.total} runners - ${stats.totalJobs} active jobs`}>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
               <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
               Refresh
@@ -822,7 +822,7 @@ export default function RunnersPage() {
               <p className="text-sm text-muted-foreground">
                 {table.getFilteredSelectedRowModel().rows.length} of {table.getFilteredRowModel().rows.length} row(s) selected
               </p>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Button variant="outline" size="sm" onClick={() => table.setPageIndex(0)} disabled={!table.getCanPreviousPage()}>
                   <ChevronsLeft className="h-4 w-4" />
                 </Button>

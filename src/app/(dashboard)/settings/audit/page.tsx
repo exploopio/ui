@@ -203,7 +203,7 @@ export default function AuditLogPage() {
         </PageHeader>
 
         {/* Stats Cards */}
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
           <Card>
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
@@ -275,7 +275,7 @@ export default function AuditLogPage() {
                 />
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {/* Result Filter */}
                 <Select
                   value={filters.result?.[0] || "all"}
@@ -396,7 +396,7 @@ export default function AuditLogPage() {
                                 </div>
                               </TableCell>
                               <TableCell>
-                                <div className="flex items-center gap-2">
+                                <div className="flex flex-wrap items-center gap-2">
                                   <Avatar className="h-7 w-7">
                                     <AvatarFallback className="text-xs">
                                       {log.actor_email?.substring(0, 2).toUpperCase() || "?"}
@@ -408,7 +408,7 @@ export default function AuditLogPage() {
                                 </div>
                               </TableCell>
                               <TableCell>
-                                <div className="flex items-center gap-2">
+                                <div className="flex flex-wrap items-center gap-2">
                                   <ActionIcon className="h-4 w-4 text-muted-foreground" />
                                   <span className="text-sm">{formatAction(log.action)}</span>
                                 </div>
@@ -443,7 +443,7 @@ export default function AuditLogPage() {
                   <p className="text-sm text-muted-foreground">
                     Showing {logs.length} of {total} events
                   </p>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Button
                       variant="outline"
                       size="sm"

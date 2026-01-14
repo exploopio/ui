@@ -339,14 +339,14 @@ export default function CloudPage() {
       ),
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
-          <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${
+          <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${
             providerStyles[row.original.metadata.cloudProvider || ""]?.bg || "bg-muted"
           }`}>
             {getResourceIcon(row.original.metadata.resourceType)}
           </div>
-          <div>
-            <p className="font-medium">{row.original.name}</p>
-            <p className="text-muted-foreground text-xs truncate max-w-[200px]">
+          <div className="min-w-0">
+            <p className="font-medium truncate">{row.original.name}</p>
+            <p className="text-muted-foreground text-xs truncate">
               {row.original.description}
             </p>
           </div>
@@ -787,7 +787,7 @@ export default function CloudPage() {
                 />
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {/* Provider filter */}
                 <Select
                   value={providerFilter}
@@ -886,7 +886,7 @@ export default function CloudPage() {
                 {table.getFilteredSelectedRowModel().rows.length} of{" "}
                 {table.getFilteredRowModel().rows.length} row(s) selected
               </p>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"

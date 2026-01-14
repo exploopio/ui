@@ -165,7 +165,7 @@ export default function AllComponentsPage() {
         </PageHeader>
 
         {/* Stats Cards */}
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
           <Card
             className="cursor-pointer hover:border-primary transition-colors"
             onClick={() => setFilterType("all")}
@@ -321,7 +321,7 @@ export default function AllComponentsPage() {
                   className="pl-9"
                 />
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Filter className="h-4 w-4 text-muted-foreground" />
                 <Select value={ecosystemFilter} onValueChange={setEcosystemFilter}>
                   <SelectTrigger className="w-[150px]">

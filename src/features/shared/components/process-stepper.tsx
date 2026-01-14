@@ -11,8 +11,8 @@ interface ProcessStepperProps {
 
 export function ProcessStepper({ currentStep, className }: ProcessStepperProps) {
   return (
-    <div className={cn("w-full overflow-x-auto", className)}>
-      <div className="flex items-center justify-between min-w-max sm:min-w-0">
+    <div className={cn("w-full", className)}>
+      <div className="flex items-center justify-between min-w-[480px] sm:min-w-0">
         {SECURITY_PROCESS_STEPS.map((step, index) => {
           const isCompleted = index < currentStep;
           const isCurrent = index === currentStep;

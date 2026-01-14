@@ -242,7 +242,7 @@ export default function IntegrationsPage() {
         />
 
         {/* Stats */}
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
           <Card>
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
@@ -327,7 +327,7 @@ export default function IntegrationsPage() {
                           <integration.icon className="text-primary h-5 w-5" />
                         </div>
                         <div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
                             <h4 className="font-medium">{integration.name}</h4>
                             <Badge className={`${categoryColors[integration.category]} border-0 text-xs`}>
                               {integration.category}
@@ -387,7 +387,7 @@ export default function IntegrationsPage() {
                       )}
                     </div>
                     <div className="mt-3">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <h4 className="font-medium">{integration.name}</h4>
                       </div>
                       <Badge className={`${categoryColors[integration.category]} border-0 mt-1 text-xs`}>

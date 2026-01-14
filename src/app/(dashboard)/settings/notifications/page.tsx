@@ -286,7 +286,7 @@ export default function NotificationsSettingsPage() {
                         </Select>
                       </div>
                       <div className="flex items-center gap-6">
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <Switch
                             id={`${notification.id}-email`}
                             checked={notification.email}
@@ -302,7 +302,7 @@ export default function NotificationsSettingsPage() {
                             Email
                           </Label>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <Switch
                             id={`${notification.id}-inapp`}
                             checked={notification.inApp}
@@ -318,7 +318,7 @@ export default function NotificationsSettingsPage() {
                             In-App
                           </Label>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <Switch
                             id={`${notification.id}-slack`}
                             checked={notification.slack}

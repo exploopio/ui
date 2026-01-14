@@ -161,7 +161,7 @@ export default function VulnerableComponentsPage() {
         </PageHeader>
 
         {/* Stats Cards */}
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
           <Card
             className={`cursor-pointer hover:border-red-500 transition-colors ${
               severityFilter === "all" ? "border-red-500" : ""

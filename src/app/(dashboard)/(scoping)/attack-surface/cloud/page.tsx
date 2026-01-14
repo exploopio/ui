@@ -733,15 +733,15 @@ export default function CloudSurfacePage() {
           </CardHeader>
           <CardContent>
             <div className="flex gap-6">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="outline" className={providerColors.aws}>AWS</Badge>
                 <span className="text-sm font-medium">{stats.byProvider.aws} resources</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="outline" className={providerColors.azure}>Azure</Badge>
                 <span className="text-sm font-medium">{stats.byProvider.azure} resources</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="outline" className={providerColors.gcp}>GCP</Badge>
                 <span className="text-sm font-medium">{stats.byProvider.gcp} resources</span>
               </div>
@@ -764,7 +764,7 @@ export default function CloudSurfacePage() {
                   />
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Filter className="h-4 w-4 text-muted-foreground" />
                 <Select value={filterProvider} onValueChange={(v) => setFilterProvider(v as CloudProvider | "all")}>
                   <SelectTrigger className="w-28">

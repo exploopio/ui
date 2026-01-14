@@ -11,7 +11,7 @@
  * TenantGate only handles tenant check for authenticated users
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useTenant } from "@/context/tenant-provider";
 import { getCookie } from "@/lib/cookies";
@@ -37,11 +37,11 @@ export function TenantGate({ children }: TenantGateProps) {
   const router = useRouter();
   const { tenants, isLoading, currentTenant, error } = useTenant();
   const [hasCheckedTenant, setHasCheckedTenant] = useState(false);
+  const hasRedirected = useRef(false);
 
   // Check for tenant cookie on mount
   // NOTE: Authentication is handled by proxy.ts (server-side)
   // TenantGate only handles tenant selection for authenticated users
-
   useEffect(() => {
     const tenantCookie = getCookie("rediver_tenant");
     if (!tenantCookie) {
@@ -75,6 +75,16 @@ export function TenantGate({ children }: TenantGateProps) {
     }
   }, [error, router]);
 
+  // Edge case: API returned empty tenants but user has token
+  // Handle redirect in effect to avoid React Compiler error
+  useEffect(() => {
+    if (!isLoading && hasCheckedTenant && tenants.length === 0 && !currentTenant && !hasRedirected.current) {
+      hasRedirected.current = true;
+      console.log("[TenantGate] Empty tenants - redirecting to onboarding");
+      window.location.href = "/onboarding/create-team";
+    }
+  }, [isLoading, hasCheckedTenant, tenants.length, currentTenant]);
+
   // Wait for initial tenant check
   if (!hasCheckedTenant) {
     return <LoadingScreen />;
@@ -85,10 +95,8 @@ export function TenantGate({ children }: TenantGateProps) {
     return <LoadingScreen />;
   }
 
-  // Edge case: API returned empty tenants but user has token
+  // Show loading while redirecting for empty tenants
   if (tenants.length === 0 && !currentTenant) {
-    // Redirect to onboarding
-    window.location.href = "/onboarding/create-team";
     return <LoadingScreen message="Redirecting..." />;
   }
 

@@ -329,14 +329,14 @@ export default function CompliancePage() {
             {/* Filters */}
             <Card className="mb-6">
               <CardHeader className="pb-3">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Filter className="h-4 w-4" />
                   <CardTitle className="text-sm">Filters</CardTitle>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-4">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Label className="text-sm">Framework:</Label>
                     <Select
                       value={selectedFramework}
@@ -354,7 +354,7 @@ export default function CompliancePage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Label className="text-sm">Status:</Label>
                     <Select
                       value={selectedStatus}
@@ -412,7 +412,7 @@ export default function CompliancePage() {
                             <StatusIcon className="h-4 w-4" />
                           </div>
                           <div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                               <Badge variant="outline">{frameworkNames[req.framework]}</Badge>
                               <span className="font-mono text-sm text-muted-foreground">
                                 {req.controlId}
