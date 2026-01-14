@@ -28,15 +28,14 @@ services:
         # These are visible to browser - NEVER put secrets here!
         # =====================================================================
 
-        # API URL for browser - should be same origin as frontend (BFF pattern)
-        # Browser calls Next.js API routes, which proxy to backend internally
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+        # Application URL
         NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
 
         # Auth configuration (visible to browser for UI decisions)
         NEXT_PUBLIC_AUTH_PROVIDER: ${NEXT_PUBLIC_AUTH_PROVIDER:-local}
         NEXT_PUBLIC_AUTH_COOKIE_NAME: ${NEXT_PUBLIC_AUTH_COOKIE_NAME:-rediver_auth_token}
         NEXT_PUBLIC_REFRESH_COOKIE_NAME: ${NEXT_PUBLIC_REFRESH_COOKIE_NAME:-rediver_refresh_token}
+        NEXT_PUBLIC_OAUTH_CALLBACK_URL: ${NEXT_PUBLIC_OAUTH_CALLBACK_URL:-}
 
         # Keycloak (only if using OIDC auth)
         NEXT_PUBLIC_KEYCLOAK_URL: ${NEXT_PUBLIC_KEYCLOAK_URL:-}

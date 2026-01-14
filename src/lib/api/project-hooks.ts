@@ -58,12 +58,11 @@ export const defaultProjectSwrConfig: SWRConfiguration = {
  * ```
  */
 export function useProjects(
-  tenantId: string | null,
   filters?: ProjectFilters,
   config?: SWRConfiguration
 ) {
   return useSWR<ProjectListResponse>(
-    tenantId ? projectEndpoints.list(tenantId, filters) : null,
+    projectEndpoints.list(filters),
     get,
     { ...defaultProjectSwrConfig, ...config }
   )
@@ -74,16 +73,15 @@ export function useProjects(
  *
  * @example
  * ```typescript
- * const { data: project } = useProject('tenant-123', 'project-456')
+ * const { data: project } = useProject('project-456')
  * ```
  */
 export function useProject(
-  tenantId: string | null,
   projectId: string | null,
   config?: SWRConfiguration
 ) {
   return useSWR<Project>(
-    tenantId && projectId ? projectEndpoints.get(tenantId, projectId) : null,
+    projectId ? projectEndpoints.get(projectId) : null,
     get,
     { ...defaultProjectSwrConfig, ...config }
   )
@@ -94,7 +92,7 @@ export function useProject(
  *
  * @example
  * ```typescript
- * const { trigger, isMutating } = useCreateProject('tenant-123')
+ * const { trigger, isMutating } = useCreateProject()
  *
  * const handleSubmit = async (data) => {
  *   try {
@@ -106,9 +104,9 @@ export function useProject(
  * }
  * ```
  */
-export function useCreateProject(tenantId: string) {
+export function useCreateProject() {
   return useSWRMutation(
-    projectEndpoints.create(tenantId),
+    projectEndpoints.create(),
     (url, { arg }: { arg: CreateProjectRequest }) => post<Project>(url, arg)
   )
 }
@@ -116,9 +114,9 @@ export function useCreateProject(tenantId: string) {
 /**
  * Update project mutation
  */
-export function useUpdateProject(tenantId: string, projectId: string) {
+export function useUpdateProject(projectId: string) {
   return useSWRMutation(
-    projectEndpoints.update(tenantId, projectId),
+    projectEndpoints.update(projectId),
     (url, { arg }: { arg: UpdateProjectRequest }) => put<Project>(url, arg)
   )
 }
@@ -126,9 +124,9 @@ export function useUpdateProject(tenantId: string, projectId: string) {
 /**
  * Delete project mutation
  */
-export function useDeleteProject(tenantId: string, projectId: string) {
+export function useDeleteProject(projectId: string) {
   return useSWRMutation(
-    projectEndpoints.delete(tenantId, projectId),
+    projectEndpoints.delete(projectId),
     (url) => del(url)
   )
 }
@@ -141,25 +139,25 @@ export function useDeleteProject(tenantId: string, projectId: string) {
  * Build cache key for projects list
  * Useful for manual cache invalidation
  */
-export function getProjectsListKey(tenantId: string, filters?: ProjectFilters) {
-  return projectEndpoints.list(tenantId, filters)
+export function getProjectsListKey(filters?: ProjectFilters) {
+  return projectEndpoints.list(filters)
 }
 
 /**
  * Build cache key for single project
  */
-export function getProjectKey(tenantId: string, projectId: string) {
-  return projectEndpoints.get(tenantId, projectId)
+export function getProjectKey(projectId: string) {
+  return projectEndpoints.get(projectId)
 }
 
 /**
  * Mutate (revalidate) projects cache after mutation
  */
-export async function invalidateProjectsCache(tenantId: string) {
+export async function invalidateProjectsCache() {
   const { mutate } = await import('swr')
   // Mutate all keys matching the project list pattern
   await mutate(
-    (key: string) => typeof key === 'string' && key.includes(`/tenants/${tenantId}/projects`),
+    (key: string) => typeof key === 'string' && key.includes('/api/v1/projects'),
     undefined,
     { revalidate: true }
   )
