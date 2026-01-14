@@ -1,17 +1,20 @@
 /**
- * Next.js Middleware
+ * Next.js 16 Proxy
+ *
+ * Replaces middleware.ts in Next.js 16
+ * Runs on Node.js runtime (not Edge)
  *
  * Handles:
  * 1. Authentication - Protected route checking
  * 2. Internationalization - Locale detection and injection
  *
- * @see https://nextjs.org/docs/app/building-your-application/routing/middleware
+ * @see https://nextjs.org/blog/next-16
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { handleAuth, handleI18n } from '@/lib/middleware'
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   // ============================================
   // 1. AUTHENTICATION CHECK
   // ============================================
@@ -36,7 +39,7 @@ export function middleware(req: NextRequest) {
 }
 
 // ============================================
-// MIDDLEWARE CONFIGURATION
+// PROXY CONFIGURATION
 // ============================================
 export const config = {
   matcher: [
