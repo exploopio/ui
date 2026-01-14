@@ -41,7 +41,6 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
-  Loader2,
   AlertCircle,
   Package,
   type LucideIcon,
@@ -111,12 +110,18 @@ export function AssetsDataTable({
   showAddButton = true,
   showExportButton = true,
   showBulkActions = true,
-  totalItems,
-  currentPage = 1,
-  pageSize = 20,
-  onPageChange,
-  onPageSizeChange,
+  totalItems: _totalItems,
+  currentPage: _currentPage = 1,
+  pageSize: _pageSize = 20,
+  onPageChange: _onPageChange,
+  onPageSizeChange: _onPageSizeChange,
 }: AssetsDataTableProps) {
+  // Note: Server-side pagination props are available but not yet implemented
+  void _totalItems;
+  void _currentPage;
+  void _pageSize;
+  void _onPageChange;
+  void _onPageSizeChange;
   // Table state
   const [sorting, setSorting] = useState<SortingState>([])
   const [globalFilter, setGlobalFilter] = useState('')

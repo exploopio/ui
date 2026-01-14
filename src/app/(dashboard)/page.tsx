@@ -18,12 +18,9 @@ import {
   AlertTriangle,
   ShieldAlert,
   ListChecks,
-  TrendingUp,
-  TrendingDown,
   Plus,
   FileWarning,
   ArrowRight,
-  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";

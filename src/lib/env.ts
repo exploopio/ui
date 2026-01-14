@@ -73,8 +73,8 @@ export const env = {
 
   // API Configuration - Single source of truth for backend API URL
   api: {
-    /** Backend API URL (e.g., http://localhost:8080) */
-    url: getEnvVar('NEXT_PUBLIC_API_URL', 'http://localhost:8080'),
+    /** Backend API URL (e.g., http://localhost:8080) - Server-side only */
+    url: getEnvVar('BACKEND_API_URL', 'http://localhost:8080'),
     /** Request timeout in milliseconds */
     timeout: parseInt(getEnvVar('API_TIMEOUT', '30000'), 10),
   },
@@ -150,9 +150,9 @@ export function validateEnv() {
   const warnings: string[] = []
   const authProvider = process.env.NEXT_PUBLIC_AUTH_PROVIDER || 'local'
 
-  // Always required: API URL
-  if (!process.env.NEXT_PUBLIC_API_URL) {
-    warnings.push('NEXT_PUBLIC_API_URL is not set (using default: http://localhost:8080)')
+  // Always required: Backend API URL (server-side only)
+  if (!process.env.BACKEND_API_URL) {
+    warnings.push('BACKEND_API_URL is not set (using default: http://localhost:8080)')
   }
 
   // Only validate Keycloak vars if OIDC is enabled

@@ -1,10 +1,17 @@
 import type { NextConfig } from 'next'
-import bundleAnalyzer from '@next/bundle-analyzer'
 import { validateEnv } from './src/lib/env'
 
-const withBundleAnalyzer = bundleAnalyzer({
-  enabled: process.env.ANALYZE === 'true',
-})
+// Optional bundle analyzer - only used when ANALYZE=true
+let withBundleAnalyzer = (config: NextConfig) => config
+if (process.env.ANALYZE === 'true') {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const bundleAnalyzer = require('@next/bundle-analyzer')
+    withBundleAnalyzer = bundleAnalyzer({ enabled: true })
+  } catch {
+    console.warn('Bundle analyzer not available - install @next/bundle-analyzer to use ANALYZE=true')
+  }
+}
 
 // Validate environment variables at build time
 // This will throw an error if required vars are missing or invalid

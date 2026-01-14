@@ -129,7 +129,7 @@ export function TenantGate({ children }: TenantGateProps) {
 
   // Check for tenant cookie on mount - syncing with external storage
   // New users without tenants won't have this cookie
-  // eslint-disable-next-line react-hooks/set-state-in-effect
+   
   useEffect(() => {
     const tenantCookie = getCookie("rediver_tenant");
     if (!tenantCookie) {
@@ -146,7 +146,7 @@ export function TenantGate({ children }: TenantGateProps) {
   }, []);
 
   // Handle authentication errors - syncing with external state
-  // eslint-disable-next-line react-hooks/set-state-in-effect
+   
   useEffect(() => {
     if (error && !showCreateTeam) {
       const isAuthError =

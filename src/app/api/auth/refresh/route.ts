@@ -15,7 +15,7 @@
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
+const BACKEND_URL = process.env.BACKEND_API_URL || 'http://localhost:8080'
 // Frontend cookie names
 const ACCESS_TOKEN_COOKIE = process.env.NEXT_PUBLIC_AUTH_COOKIE_NAME || 'rediver_auth_token'
 const REFRESH_TOKEN_COOKIE = process.env.NEXT_PUBLIC_REFRESH_COOKIE_NAME || 'refresh_token'
@@ -36,7 +36,7 @@ interface TenantInfo {
   role: string
 }
 
-export async function POST(request: NextRequest): Promise<NextResponse> {
+export async function POST(_request: NextRequest): Promise<NextResponse> {
   console.log('[Refresh] Token refresh request received')
   try {
     const cookieStore = await cookies()

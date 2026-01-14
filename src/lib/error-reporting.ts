@@ -3,6 +3,13 @@
  *
  * Centralized error reporting integrated with Sentry.
  *
+ * NOTE: @sentry/nextjs is an optional dependency.
+ * This file provides no-op stubs when Sentry is not installed.
+ *
+ * To enable error reporting:
+ * 1. Install: npm install @sentry/nextjs
+ * 2. Set NEXT_PUBLIC_SENTRY_DSN in .env.local
+ *
  * Usage:
  * ```typescript
  * import { reportError, reportRouteError } from '@/lib/error-reporting'
@@ -14,8 +21,6 @@
  * reportRouteError(error, '/dashboard', { digest: error.digest })
  * ```
  */
-
-import * as Sentry from '@sentry/nextjs'
 
 interface ErrorContext {
   /**
@@ -43,7 +48,9 @@ interface ErrorContext {
 }
 
 /**
- * Report error to Sentry
+ * Report error
+ * Logs to console in development. When @sentry/nextjs is installed,
+ * also reports to Sentry.
  *
  * @param error - The error to report
  * @param context - Additional context about the error
@@ -55,7 +62,7 @@ export function reportError(error: Error | unknown, context?: ErrorContext): voi
   const errorMessage = error instanceof Error ? error.message : String(error)
   const errorStack = error instanceof Error ? error.stack : undefined
 
-  // Always log to console
+  // Always log to console in development
   if (process.env.NODE_ENV === 'development') {
     console.group(`[${level.toUpperCase()}] Error Report`)
     console.error('Message:', errorMessage)
@@ -65,28 +72,7 @@ export function reportError(error: Error | unknown, context?: ErrorContext): voi
     console.groupEnd()
   }
 
-  // Report to Sentry
-  try {
-    Sentry.captureException(error, {
-      level: level === 'fatal' ? 'fatal' : level,
-      contexts: {
-        custom: {
-          context: context?.context,
-          ...context?.metadata,
-        },
-      },
-      user: context?.user ? {
-        id: context.user.id,
-        email: context.user.email,
-      } : undefined,
-    })
-  } catch (_err) {
-    // Sentry capture failed, log to console
-    console.error('[Error Report - Sentry failed]', {
-      message: errorMessage,
-      context: context?.context,
-    })
-  }
+  // Note: Sentry reporting is disabled. Install @sentry/nextjs to enable.
 }
 
 /**
@@ -94,33 +80,19 @@ export function reportError(error: Error | unknown, context?: ErrorContext): voi
  *
  * @param error - The error object from Next.js error boundary
  * @param route - The route where the error occurred
- * @param extra - Additional error info (digest, etc.)
+ * @param _extra - Additional error info (digest, etc.) - currently unused
  */
 export function reportRouteError(
   error: Error & { digest?: string },
   route: string,
-  extra?: Record<string, unknown>
+  _extra?: Record<string, unknown>
 ): void {
-  Sentry.captureException(error, {
-    level: 'error',
-    tags: {
-      route,
-      errorBoundary: 'true',
-      digest: error.digest,
-    },
-    contexts: {
-      route: {
-        path: route,
-        digest: error.digest,
-        ...extra,
-      },
-    },
-  })
-
-  // Also log to console in development
+  // Log to console in development
   if (process.env.NODE_ENV === 'development') {
     console.error(`[Route Error: ${route}]`, error)
   }
+
+  // Note: Sentry reporting is disabled. Install @sentry/nextjs to enable.
 }
 
 /**

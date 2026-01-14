@@ -23,32 +23,57 @@ services:
       dockerfile: Dockerfile
       target: production
       args:
+        # =====================================================================
         # Build-time variables (NEXT_PUBLIC_* are baked into client bundle)
-        NEXT_PUBLIC_KEYCLOAK_URL: ${NEXT_PUBLIC_KEYCLOAK_URL}
-        NEXT_PUBLIC_KEYCLOAK_REALM: ${NEXT_PUBLIC_KEYCLOAK_REALM}
-        NEXT_PUBLIC_KEYCLOAK_CLIENT_ID: ${NEXT_PUBLIC_KEYCLOAK_CLIENT_ID}
-        NEXT_PUBLIC_KEYCLOAK_REDIRECT_URI: ${NEXT_PUBLIC_KEYCLOAK_REDIRECT_URI}
-        NEXT_PUBLIC_AUTH_COOKIE_NAME: ${NEXT_PUBLIC_AUTH_COOKIE_NAME:-kc_auth_token}
-        NEXT_PUBLIC_REFRESH_COOKIE_NAME: ${NEXT_PUBLIC_REFRESH_COOKIE_NAME:-kc_refresh_token}
-        NEXT_PUBLIC_BACKEND_API_URL: ${NEXT_PUBLIC_BACKEND_API_URL}
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
-        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
+        # These are visible to browser - NEVER put secrets here!
+        # =====================================================================
+
+        # API URL for browser - should be same origin as frontend (BFF pattern)
+        # Browser calls Next.js API routes, which proxy to backend internally
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+
+        # Auth configuration (visible to browser for UI decisions)
+        NEXT_PUBLIC_AUTH_PROVIDER: ${NEXT_PUBLIC_AUTH_PROVIDER:-local}
+        NEXT_PUBLIC_AUTH_COOKIE_NAME: ${NEXT_PUBLIC_AUTH_COOKIE_NAME:-rediver_auth_token}
+        NEXT_PUBLIC_REFRESH_COOKIE_NAME: ${NEXT_PUBLIC_REFRESH_COOKIE_NAME:-rediver_refresh_token}
+
+        # Keycloak (only if using OIDC auth)
+        NEXT_PUBLIC_KEYCLOAK_URL: ${NEXT_PUBLIC_KEYCLOAK_URL:-}
+        NEXT_PUBLIC_KEYCLOAK_REALM: ${NEXT_PUBLIC_KEYCLOAK_REALM:-}
+        NEXT_PUBLIC_KEYCLOAK_CLIENT_ID: ${NEXT_PUBLIC_KEYCLOAK_CLIENT_ID:-}
+        NEXT_PUBLIC_KEYCLOAK_REDIRECT_URI: ${NEXT_PUBLIC_KEYCLOAK_REDIRECT_URI:-}
+
+        # Monitoring (DSN is safe to expose - not a secret)
         NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN:-}
 
     container_name: rediver-ui-prod
 
+    # =========================================================================
     # Runtime environment variables (server-side only, NOT in browser)
+    # These are NEVER sent to browser - only available on Next.js server
+    # =========================================================================
     environment:
-      - NODE_ENV=production
-      - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET}
-      - BACKEND_API_URL=${BACKEND_API_URL}
-      - API_URL=${API_URL}
-      - CSRF_SECRET=${CSRF_SECRET}
-      - SECURE_COOKIES=${SECURE_COOKIES:-true}
-      - COOKIE_MAX_AGE=${COOKIE_MAX_AGE:-604800}
-      - ENABLE_TOKEN_REFRESH=${ENABLE_TOKEN_REFRESH:-true}
-      - TOKEN_REFRESH_BEFORE_EXPIRY=${TOKEN_REFRESH_BEFORE_EXPIRY:-300}
-      - API_TIMEOUT=${API_TIMEOUT:-30000}
+      NODE_ENV: production
+
+      # Internal backend URL - used by Next.js server to proxy requests
+      # This is HIDDEN from browser - only server can see this
+      # In Docker: use service name (e.g., http://api:8080)
+      # Standalone: use internal network URL
+      BACKEND_API_URL: ${BACKEND_API_URL:-http://api:8080}
+      API_TIMEOUT: ${API_TIMEOUT:-30000}
+
+      # Security secrets - MUST be server-only
+      CSRF_SECRET: ${CSRF_SECRET}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-}
+
+      # Cookie settings
+      SECURE_COOKIES: ${SECURE_COOKIES:-true}
+      COOKIE_MAX_AGE: ${COOKIE_MAX_AGE:-604800}
+
+      # Token refresh
+      ENABLE_TOKEN_REFRESH: ${ENABLE_TOKEN_REFRESH:-true}
+      TOKEN_REFRESH_BEFORE_EXPIRY: ${TOKEN_REFRESH_BEFORE_EXPIRY:-300}
 
     # Port mapping
     ports:

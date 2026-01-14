@@ -20,7 +20,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -42,7 +41,6 @@ import {
 import {
   Sheet,
   SheetContent,
-  SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
 import {
@@ -89,7 +87,6 @@ import {
   Filter,
   Eye,
   Pencil,
-  History,
   Activity,
   Calendar,
   Loader2,
@@ -101,16 +98,12 @@ import {
   useMemberStats,
   useInvitations,
   useCreateInvitation,
-  getMembersKey,
-  getMemberStatsKey,
-  getInvitationsKey,
   type MemberWithUser,
   type MemberRole,
   ROLE_DISPLAY,
   STATUS_DISPLAY,
   INVITABLE_ROLES,
 } from "@/features/organization";
-import { mutate } from "swr";
 import { fetcherWithOptions } from "@/lib/api/client";
 import { tenantEndpoints } from "@/lib/api/endpoints";
 
@@ -891,7 +884,7 @@ export default function UsersPage() {
                             });
                             toast.success("Invitation cancelled");
                             refreshData();
-                          } catch (error) {
+                          } catch {
                             toast.error("Failed to cancel invitation");
                           }
                         }}

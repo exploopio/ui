@@ -9,7 +9,6 @@ import { PageHeader } from '@/features/shared'
 import { AssetsDataTable, type AssetColumnConfig } from './assets-data-table'
 import {
   useAssets,
-  useCreateAsset,
   createAsset,
   updateAsset,
   deleteAsset,

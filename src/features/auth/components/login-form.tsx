@@ -21,7 +21,6 @@ import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { isLocalAuthEnabled, isOidcAuthEnabled, isLocalAuthOnly } from '@/lib/env'
 import { redirectToLogin } from '@/lib/keycloak'
-import { useAuthStore } from '@/stores/auth-store'
 import { Button } from '@/components/ui/button'
 import {
   Form,

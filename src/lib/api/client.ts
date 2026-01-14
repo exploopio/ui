@@ -34,13 +34,13 @@ export function getApiBaseUrl(): string {
   }
 
   // On server-side, use direct backend URL
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL
+  const baseUrl = process.env.BACKEND_API_URL
 
   if (!baseUrl) {
     // Return default in development, throw in production
     if (process.env.NODE_ENV === 'production') {
       throw new Error(
-        'NEXT_PUBLIC_API_URL is not defined. Please set it in environment variables.'
+        'BACKEND_API_URL is not defined. Please set it in environment variables.'
       )
     }
     return 'http://localhost:8080'

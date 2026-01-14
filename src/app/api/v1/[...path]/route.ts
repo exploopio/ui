@@ -14,7 +14,7 @@ import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 
 // Use 127.0.0.1 instead of localhost to avoid IPv6 resolution issues in Node.js
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL?.replace('localhost', '127.0.0.1') || 'http://127.0.0.1:8080'
+const BACKEND_URL = process.env.BACKEND_API_URL?.replace('localhost', '127.0.0.1') || 'http://127.0.0.1:8080'
 const ACCESS_TOKEN_COOKIE = process.env.NEXT_PUBLIC_AUTH_COOKIE_NAME || 'rediver_auth_token'
 
 async function proxyRequest(
