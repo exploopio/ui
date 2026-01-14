@@ -3,7 +3,21 @@
 import useSWR from 'swr'
 import { get, post, put, del } from '@/lib/api/client'
 import { endpoints } from '@/lib/api/endpoints'
-import type { Asset, AssetType, AssetScope, ExposureLevel, Criticality, CreateAssetInput, UpdateAssetInput } from '../types'
+import type {
+  Asset,
+  AssetType,
+  AssetScope,
+  ExposureLevel,
+  Criticality,
+  CreateAssetInput,
+  UpdateAssetInput,
+  RepositoryExtension,
+  AssetWithRepository,
+  CreateRepositoryAssetInput,
+  UpdateRepositoryExtensionInput,
+  RepoVisibility,
+  SCMProvider,
+} from '../types'
 
 /**
  * Backend paginated response format (matches Go ListResponse struct)
@@ -119,6 +133,87 @@ function transformAssetStats(backend: BackendAssetStats): AssetStatsData {
     byType: backend.by_type || {},
     byStatus: backend.by_status || {},
     averageRiskScore: backend.average_risk_score || 0,
+  }
+}
+
+// Backend repository extension type (matches Go RepositoryExtensionResponse struct)
+interface BackendRepositoryExtension {
+  asset_id: string
+  repo_id?: string
+  full_name: string
+  scm_organization?: string
+  clone_url?: string
+  web_url?: string
+  ssh_url?: string
+  default_branch?: string
+  visibility: string
+  language?: string
+  languages?: Record<string, number>
+  topics?: string[]
+  stars: number
+  forks: number
+  watchers: number
+  open_issues: number
+  contributors_count: number
+  size_kb: number
+  branch_count: number
+  protected_branch_count: number
+  component_count: number
+  vulnerable_component_count: number
+  finding_count: number
+  scan_enabled: boolean
+  scan_schedule?: string
+  last_scanned_at?: string
+  repo_created_at?: string
+  repo_updated_at?: string
+  repo_pushed_at?: string
+}
+
+// Transform backend repository extension to frontend format
+function transformRepositoryExtension(backend: BackendRepositoryExtension): RepositoryExtension {
+  return {
+    assetId: backend.asset_id,
+    repoId: backend.repo_id,
+    fullName: backend.full_name,
+    scmOrganization: backend.scm_organization,
+    cloneUrl: backend.clone_url,
+    webUrl: backend.web_url,
+    sshUrl: backend.ssh_url,
+    defaultBranch: backend.default_branch,
+    visibility: backend.visibility as RepoVisibility,
+    language: backend.language,
+    languages: backend.languages,
+    topics: backend.topics,
+    stars: backend.stars,
+    forks: backend.forks,
+    watchers: backend.watchers,
+    openIssues: backend.open_issues,
+    contributorsCount: backend.contributors_count,
+    sizeKb: backend.size_kb,
+    branchCount: backend.branch_count,
+    protectedBranchCount: backend.protected_branch_count,
+    componentCount: backend.component_count,
+    vulnerableComponentCount: backend.vulnerable_component_count,
+    findingCount: backend.finding_count,
+    scanEnabled: backend.scan_enabled,
+    scanSchedule: backend.scan_schedule,
+    lastScannedAt: backend.last_scanned_at,
+    repoCreatedAt: backend.repo_created_at,
+    repoUpdatedAt: backend.repo_updated_at,
+    repoPushedAt: backend.repo_pushed_at,
+  }
+}
+
+// Backend asset with repository response (matches Go AssetWithRepositoryResponse struct)
+interface BackendAssetWithRepository extends BackendAsset {
+  repository?: BackendRepositoryExtension
+}
+
+// Transform backend asset with repository to frontend format
+function transformAssetWithRepository(backend: BackendAssetWithRepository): AssetWithRepository {
+  return {
+    ...transformAsset(backend),
+    repository: backend.repository ? transformRepositoryExtension(backend.repository) : undefined,
   }
 }
 
@@ -315,4 +410,155 @@ export function useAssetStats() {
     isLoading,
     error,
   }
+}
+
+// ============================================
+// REPOSITORY EXTENSION HOOKS
+// ============================================
+
+/**
+ * Hook to fetch an asset with its repository extension
+ */
+export function useAssetWithRepository(assetId: string | null) {
+  const { data, error, isLoading, mutate } = useSWR<BackendAssetWithRepository>(
+    assetId ? ['asset-with-repository', assetId] : null,
+    () => get<BackendAssetWithRepository>(endpoints.assets.getFull(assetId!)),
+    {
+      revalidateOnFocus: false,
+    }
+  )
+
+  return {
+    asset: data ? transformAssetWithRepository(data) : null,
+    isLoading,
+    error,
+    mutate,
+  }
+}
+
+/**
+ * Hook to fetch just the repository extension for an asset
+ */
+export function useRepositoryExtension(assetId: string | null) {
+  const { data, error, isLoading, mutate } = useSWR<BackendRepositoryExtension>(
+    assetId ? ['repository-extension', assetId] : null,
+    () => get<BackendRepositoryExtension>(endpoints.assets.getRepository(assetId!)),
+    {
+      revalidateOnFocus: false,
+    }
+  )
+
+  return {
+    repository: data ? transformRepositoryExtension(data) : null,
+    isLoading,
+    error,
+    mutate,
+  }
+}
+
+/**
+ * Hook to fetch repository assets (assets with type="repository")
+ */
+export function useRepositoryAssets(additionalFilters?: Omit<AssetSearchFilters, 'types'>) {
+  return useAssetsByType('repository', additionalFilters)
+}
+
+/**
+ * Create a repository asset (creates both asset and repository extension)
+ */
+export async function createRepositoryAsset(input: CreateRepositoryAssetInput): Promise<AssetWithRepository> {
+  const response = await post<BackendAssetWithRepository>(endpoints.assets.createRepository(), {
+    // Asset fields
+    name: input.name,
+    criticality: input.criticality || 'medium',
+    scope: input.scope || 'internal',
+    exposure: input.exposure || 'unknown',
+    description: input.description,
+    tags: input.tags,
+    // Repository extension fields
+    provider: input.provider,
+    external_id: input.externalId,
+    repo_id: input.repoId,
+    full_name: input.fullName,
+    scm_organization: input.scmOrganization,
+    clone_url: input.cloneUrl,
+    web_url: input.webUrl,
+    ssh_url: input.sshUrl,
+    default_branch: input.defaultBranch,
+    visibility: input.visibility || 'private',
+    language: input.language,
+    languages: input.languages,
+    topics: input.topics,
+    stars: input.stars,
+    forks: input.forks,
+    watchers: input.watchers,
+    open_issues: input.openIssues,
+    size_kb: input.sizeKb,
+    scan_enabled: input.scanEnabled,
+    scan_schedule: input.scanSchedule,
+    repo_created_at: input.repoCreatedAt,
+    repo_updated_at: input.repoUpdatedAt,
+    repo_pushed_at: input.repoPushedAt,
+  })
+  return transformAssetWithRepository(response)
+}
+
+/**
+ * Update a repository extension
+ */
+export async function updateRepositoryExtension(
+  assetId: string,
+  input: UpdateRepositoryExtensionInput
+): Promise<RepositoryExtension> {
+  const response = await put<BackendRepositoryExtension>(endpoints.assets.updateRepository(assetId), {
+    full_name: input.fullName,
+    scm_organization: input.scmOrganization,
+    clone_url: input.cloneUrl,
+    web_url: input.webUrl,
+    ssh_url: input.sshUrl,
+    default_branch: input.defaultBranch,
+    visibility: input.visibility,
+    language: input.language,
+    languages: input.languages,
+    topics: input.topics,
+    stars: input.stars,
+    forks: input.forks,
+    watchers: input.watchers,
+    open_issues: input.openIssues,
+    size_kb: input.sizeKb,
+    scan_enabled: input.scanEnabled,
+    scan_schedule: input.scanSchedule,
+    repo_created_at: input.repoCreatedAt,
+    repo_updated_at: input.repoUpdatedAt,
+    repo_pushed_at: input.repoPushedAt,
+  })
+  return transformRepositoryExtension(response)
+}
+
+// ============================================
+// ASSET STATUS OPERATIONS
+// ============================================
+
+/**
+ * Activate an asset (set status to active)
+ */
+export async function activateAsset(assetId: string): Promise<Asset> {
+  const response = await post<BackendAsset>(endpoints.assets.activate(assetId), {})
+  return transformAsset(response)
+}
+
+/**
+ * Deactivate an asset (set status to inactive)
+ */
+export async function deactivateAsset(assetId: string): Promise<Asset> {
+  const response = await post<BackendAsset>(endpoints.assets.deactivate(assetId), {})
+  return transformAsset(response)
+}
+
+/**
+ * Archive an asset (set status to archived)
+ */
+export async function archiveAsset(assetId: string): Promise<Asset> {
+  const response = await post<BackendAsset>(endpoints.assets.archive(assetId), {})
+  return transformAsset(response)
 }

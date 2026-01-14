@@ -171,8 +171,8 @@ export const sidebarData: SidebarData = {
               icon: Zap,
             },
             {
-              title: "Projects",
-              url: "/assets/projects",
+              title: "Repositories",
+              url: "/assets/repositories",
               icon: GitBranch,
             },
             {
