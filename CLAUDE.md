@@ -261,21 +261,26 @@ const dir = ["ar","he","fa","ur"].includes(locale) ? "rtl" : "ltr"
 
 ## 🔐 Authentication
 
-```tsx
-// Zustand store: src/stores/auth-store.ts
-interface User {
-  accountNo: string
-  email: string
-  role: string
-  exp: number
-}
+Multi-tenant auth with local, social, and OIDC support. See [auth.md](.claude/auth.md) for complete guide.
 
-// ⚠️ TODO PRODUCTION: Change cookie key from test value
-// Current: 'thisisjustarandomstring' → Use secure key
-
-// Usage
-const { user, accessToken, setAuth, logout } = useAuthStore()
+**Auth Flow:**
 ```
+Unauthenticated → /login
+    ↓ login
+No Tenant → /onboarding/create-team
+    ↓ create team
+Has Tenant → / (Dashboard)
+```
+
+**Key Files:**
+```
+src/features/auth/actions/     # Server actions (login, register, etc.)
+src/lib/middleware/auth.ts     # Route protection
+src/components/layout/tenant-gate.tsx  # Dashboard guard
+proxy.ts                       # Next.js 16 middleware
+```
+
+**Important:** After auth changes, use `window.location.href` (not `router.push`) to ensure cookies are picked up.
 
 ## 🎨 UI & Theming
 
@@ -314,6 +319,7 @@ toast.error("Failed!")
 
 **Guides:**
 - [architecture.md](.claude/architecture.md) - Structure deep dive
+- [auth.md](.claude/auth.md) - Authentication & multi-tenant flow
 - [patterns.md](.claude/patterns.md) - Code patterns & examples
 - [i18n.md](.claude/i18n.md) - Internationalization guide
 - [troubleshooting.md](.claude/troubleshooting.md) - Common issues

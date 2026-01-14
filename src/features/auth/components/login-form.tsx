@@ -146,10 +146,10 @@ export function LoginForm({
           return
         }
 
-        // Case 2: No tenants - redirect to dashboard (TenantGate will show Create Team)
+        // Case 2: No tenants - redirect to onboarding to create first team
         if (result.tenants && result.tenants.length === 0) {
           toast.success('Please create your first team to get started')
-          router.push('/')
+          window.location.href = '/onboarding/create-team'
           return
         }
 

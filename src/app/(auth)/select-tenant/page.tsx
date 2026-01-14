@@ -42,6 +42,14 @@ export default function SelectTenantPage() {
   // Parse tenants once using useMemo
   const { tenants, error: parseError } = useMemo(() => parsePendingTenants(), [])
 
+  // Check if user already has a tenant selected - redirect to dashboard
+  useEffect(() => {
+    const tenantCookie = getCookie('rediver_tenant')
+    if (tenantCookie) {
+      window.location.href = '/'
+    }
+  }, [])
+
   // Handle redirect on error - use effect only for side effects (navigation)
   useEffect(() => {
     if (parseError) {
@@ -58,8 +66,9 @@ export default function SelectTenantPage() {
 
       if (result.success) {
         toast.success('Team selected successfully')
-        router.push('/dashboard')
-        router.refresh()
+        // Use full page reload to ensure cookies are picked up
+        // router.push() doesn't work reliably after server action sets cookies
+        window.location.href = '/'
       } else {
         setSelectedId(null)
         toast.error(result.error || 'Failed to select team')

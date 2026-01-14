@@ -356,8 +356,8 @@ export default function Dashboard() {
                 </CardHeader>
                 <CardContent>
                   {assetDistribution.length > 0 ? (
-                    <ResponsiveContainer width="100%" height={250}>
-                      <BarChart data={assetDistribution} layout="vertical">
+                    <ResponsiveContainer width="100%" height={assetDistribution.length * 40}>
+                      <BarChart data={assetDistribution} layout="vertical" barCategoryGap="20%">
                         <XAxis type="number" hide />
                         <YAxis
                           dataKey="name"
@@ -368,7 +368,7 @@ export default function Dashboard() {
                           width={100}
                         />
                         <Tooltip />
-                        <Bar dataKey="count" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+                        <Bar dataKey="count" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={20} />
                       </BarChart>
                     </ResponsiveContainer>
                   ) : (

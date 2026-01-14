@@ -1,5 +1,5 @@
-'use client'
-import { useSearchParams } from "next/navigation";
+import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
 import Link from "next/link"
 import {
   Card,
@@ -9,17 +9,36 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { validateRedirectUrl } from '@/lib/redirect'
+import { env } from '@/lib/env'
 
 // Use refactored LoginForm from features directory
 import { LoginForm } from '@/features/auth/components/login-form'
 
-export default function SignIn() {
-  const searchParams = useSearchParams();
+interface LoginPageProps {
+  searchParams: Promise<{ redirect?: string }>
+}
 
-  // ⚠️ SECURITY: Validate redirect URL to prevent open redirect attacks
-  const redirectParam = searchParams.get("redirect")
-  const redirectTo = validateRedirectUrl(redirectParam, "/dashboard")
+export default async function SignIn({ searchParams }: LoginPageProps) {
+  // Check if user is already authenticated
+  const cookieStore = await cookies()
+  const hasAuthToken = cookieStore.get(env.auth.cookieName)?.value
+  const hasRefreshToken = cookieStore.get(env.auth.refreshCookieName)?.value
+
+  if (hasAuthToken || hasRefreshToken) {
+    // User is authenticated - check if they have a tenant
+    const hasTenant = cookieStore.get('rediver_tenant')?.value
+    if (hasTenant) {
+      // Has tenant - redirect to dashboard
+      redirect('/')
+    } else {
+      // No tenant - redirect to onboarding
+      redirect('/onboarding/create-team')
+    }
+  }
+
+  // Get redirect URL from search params
+  const params = await searchParams
+  const redirectTo = params.redirect || '/'
 
   return (
     <Card className='gap-4'>
