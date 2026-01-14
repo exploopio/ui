@@ -54,22 +54,27 @@ const EXTENDED_ASSET_TYPE_COLORS: Record<ExtendedAssetType, { bg: string; text: 
   website: { bg: "bg-cyan-500/20", text: "text-cyan-500" },
   api: { bg: "bg-emerald-500/20", text: "text-emerald-500" },
   mobile_app: { bg: "bg-pink-500/20", text: "text-pink-500" },
+  application: { bg: "bg-blue-400/20", text: "text-blue-400" },
+  endpoint: { bg: "bg-teal-400/20", text: "text-teal-400" },
   // Cloud
   cloud_account: { bg: "bg-sky-500/20", text: "text-sky-500" },
   compute: { bg: "bg-orange-500/20", text: "text-orange-500" },
   storage: { bg: "bg-amber-500/20", text: "text-amber-500" },
   serverless: { bg: "bg-violet-500/20", text: "text-violet-500" },
+  cloud: { bg: "bg-cyan-500/20", text: "text-cyan-500" },
   // Infrastructure
   host: { bg: "bg-slate-500/20", text: "text-slate-500" },
+  server: { bg: "bg-slate-400/20", text: "text-slate-400" },
   container: { bg: "bg-indigo-500/20", text: "text-indigo-500" },
   database: { bg: "bg-yellow-500/20", text: "text-yellow-500" },
   network: { bg: "bg-gray-500/20", text: "text-gray-500" },
   // Code & CI/CD
   project: { bg: "bg-orange-500/20", text: "text-orange-500" },
   repository: { bg: "bg-orange-500/20", text: "text-orange-500" }, // @deprecated
+  // Other
+  other: { bg: "bg-gray-400/20", text: "text-gray-400" },
   // Legacy types (deprecated)
   service: { bg: "bg-purple-500/20", text: "text-purple-500" },
-  cloud: { bg: "bg-cyan-500/20", text: "text-cyan-500" },
   credential: { bg: "bg-red-500/20", text: "text-red-500" },
   mobile: { bg: "bg-pink-500/20", text: "text-pink-500" },
   // Extended types

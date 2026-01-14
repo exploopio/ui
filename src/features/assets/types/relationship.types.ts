@@ -169,22 +169,27 @@ export const EXTENDED_ASSET_TYPE_LABELS: Record<ExtendedAssetType, string> = {
   website: "Website",
   api: "API",
   mobile_app: "Mobile App",
+  application: "Application",
+  endpoint: "Endpoint",
   // Base asset types - Cloud
   cloud_account: "Cloud Account",
   compute: "Compute",
   storage: "Storage",
   serverless: "Serverless",
+  cloud: "Cloud Resource",
   // Base asset types - Infrastructure
   host: "Host",
+  server: "Server",
   container: "Container",
   database: "Database",
   network: "Network",
   // Base asset types - Code
   project: "Project",
   repository: "Repository", // @deprecated - Use project instead
+  // Other
+  other: "Other",
   // Legacy base types (deprecated)
   service: "Service",
-  cloud: "Cloud Resource",
   credential: "Credential",
   mobile: "Mobile App",
   // Extended types

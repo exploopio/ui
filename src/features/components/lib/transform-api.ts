@@ -105,7 +105,11 @@ function detectLicenseCategory(licenseId?: string): LicenseCategory {
  */
 export function transformApiComponent(api: ApiComponent): Component {
   const ecosystem = mapEcosystem(api.ecosystem)
-  const licenseCategory = detectLicenseCategory(api.license_id)
+  const licenseCategory = detectLicenseCategory(api.license)
+  const isDirect = api.dependency_type === 'direct'
+
+  // Extract additional info from metadata if available
+  const metadata = api.metadata || {}
 
   return {
     id: api.id,
@@ -114,31 +118,31 @@ export function transformApiComponent(api: ApiComponent): Component {
     ecosystem,
     type: 'library' as ComponentType,
     purl: api.purl,
-    description: api.description,
-    homepage: api.homepage,
-    repositoryUrl: api.repository_url,
+    description: (metadata.description as string) || undefined,
+    homepage: (metadata.homepage as string) || undefined,
+    repositoryUrl: (metadata.repository_url as string) || undefined,
     sources: [],
     sourceCount: 0,
-    isDirect: api.direct,
-    depth: api.direct ? 0 : 1,
-    latestVersion: api.latest_version,
-    isOutdated: api.outdated,
+    isDirect,
+    depth: isDirect ? 0 : 1,
+    latestVersion: (metadata.latest_version as string) || null,
+    isOutdated: (metadata.outdated as boolean) || false,
     vulnerabilities: [],
     vulnerabilityCount: {
-      critical: api.vulnerability_count?.critical || 0,
-      high: api.vulnerability_count?.high || 0,
-      medium: api.vulnerability_count?.medium || 0,
-      low: api.vulnerability_count?.low || 0,
+      critical: 0,
+      high: 0,
+      medium: 0,
+      low: api.vulnerability_count || 0,
       info: 0,
     },
-    riskScore: api.risk_score || 0,
-    license: api.license_name || null,
-    licenseId: api.license_id || null,
+    riskScore: (metadata.risk_score as number) || 0,
+    license: api.license || null,
+    licenseId: api.license || null,
     licenseCategory,
-    licenseRisk: mapLicenseRisk(api.license_risk),
-    author: api.author,
-    publishedAt: api.published_at,
-    status: api.status === 'active' ? 'active' : 'active',
+    licenseRisk: mapLicenseRisk((metadata.license_risk as string) || undefined),
+    author: (metadata.author as string) || undefined,
+    publishedAt: (metadata.published_at as string) || undefined,
+    status: 'active' as const,
     firstSeen: api.created_at,
     lastSeen: api.updated_at,
     createdAt: api.created_at,
