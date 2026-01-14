@@ -1,0 +1,140 @@
+name: Docker Publish
+
+on:
+  push:
+    tags:
+      - "v*" # Trigger on version tags (v0.1.0, v1.0.0, etc.)
+  workflow_dispatch: # Manual trigger
+    inputs:
+      version:
+        description: "Version tag (e.g., v0.1.1, v0.1.1-staging)"
+        required: true
+        type: string
+      environment:
+        description: "Environment"
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+        default: staging
+
+env:
+  REGISTRY: docker.io
+  IMAGE_NAME: rediverio/rediver-ui
+
+jobs:
+  # ============================================
+  # Build and Push Docker Image
+  # ============================================
+  build-and-push:
+    name: Build and Push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Determine version and environment
+      - name: Set build variables
+        id: vars
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+            ENVIRONMENT="${{ github.event.inputs.environment }}"
+          else
+            # Extract version from tag
+            VERSION="${GITHUB_REF#refs/tags/}"
+            # Determine environment from tag suffix
+            if [[ "$VERSION" == *"-staging"* ]]; then
+              ENVIRONMENT="staging"
+            else
+              ENVIRONMENT="production"
+            fi
+          fi
+
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "ENVIRONMENT=$ENVIRONMENT" >> $GITHUB_OUTPUT
+
+          # Build image tags
+          if [ "$ENVIRONMENT" = "staging" ]; then
+            # For staging: v0.1.1-staging
+            if [[ "$VERSION" != *"-staging"* ]]; then
+              VERSION="${VERSION}-staging"
+            fi
+            echo "TAGS=${{ env.IMAGE_NAME }}:${VERSION},${{ env.IMAGE_NAME }}:staging-latest" >> $GITHUB_OUTPUT
+          else
+            # For production: v0.1.1, latest
+            echo "TAGS=${{ env.IMAGE_NAME }}:${VERSION},${{ env.IMAGE_NAME }}:latest" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ steps.vars.outputs.VERSION }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          target: production
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.vars.outputs.TAGS }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NEXT_PUBLIC_APP_URL=${{ vars.NEXT_PUBLIC_APP_URL || 'https://app.rediver.io' }}
+            NEXT_PUBLIC_AUTH_PROVIDER=${{ vars.NEXT_PUBLIC_AUTH_PROVIDER || 'local' }}
+
+      - name: Generate build summary
+        run: |
+          echo "## Docker Image Published" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** \`${{ env.IMAGE_NAME }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** \`${{ steps.vars.outputs.VERSION }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** \`${{ steps.vars.outputs.ENVIRONMENT }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Platforms:** \`linux/amd64, linux/arm64\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Tags" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.vars.outputs.TAGS }}" | tr ',' '\n' >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+  # ============================================
+  # Notify on completion (optional)
+  # ============================================
+  notify:
+    name: Notify
+    runs-on: ubuntu-latest
+    needs: [build-and-push]
+    if: always()
+    steps:
+      - name: Send notification
+        run: |
+          if [ "${{ needs.build-and-push.result }}" = "success" ]; then
+            echo "Docker image published successfully!"
+          else
+            echo "Docker image publish failed!"
+            exit 1
+          fi
