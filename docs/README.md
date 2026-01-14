@@ -9,6 +9,7 @@ docs/
 ├── README.md                        # This file - documentation overview
 ├── ARCHITECTURE.md                  # System architecture (frontend + backend)
 ├── API_INTEGRATION.md               # Complete API client integration guide
+├── ENVIRONMENT_VARIABLES.md         # Environment variables guide (NEXT_PUBLIC_* vs server-only)
 ├── CUSTOMIZE_TYPES_GUIDE.md         # How to customize types for your backend
 ├── ORGANIZING_TYPES_AT_SCALE.md     # Scaling types for large projects
 ├── DEPLOYMENT.md                    # Production deployment guide
@@ -77,6 +78,15 @@ Complete Keycloak OAuth2/OIDC integration:
 
 **Start here:** [auth/README.md](./auth/README.md)
 
+### 🔧 Environment Variables
+
+**[ENVIRONMENT_VARIABLES.md](./ENVIRONMENT_VARIABLES.md)**
+- Understanding `NEXT_PUBLIC_*` vs server-only variables
+- Security implications of each type
+- Request flow: Browser → Next.js → Backend
+- Code examples for API routes and client code
+- Common mistakes and how to avoid them
+
 ### 🔌 Backend API Integration
 
 **[API_INTEGRATION.md](./API_INTEGRATION.md)**
@@ -129,6 +139,7 @@ Complete Keycloak OAuth2/OIDC integration:
 |------|---------------|
 | **Setup project** | [README.md](../README.md) |
 | **Understand architecture** | [ARCHITECTURE.md](./ARCHITECTURE.md) |
+| **Configure env variables** | [ENVIRONMENT_VARIABLES.md](./ENVIRONMENT_VARIABLES.md) |
 | **Add login/logout** | [auth/AUTH_USAGE.md](./auth/AUTH_USAGE.md) |
 | **Protect a route** | [auth/AUTH_USAGE.md#protected-routes](./auth/AUTH_USAGE.md#protected-routes) |
 | **Check user roles** | [auth/AUTH_USAGE.md#role-based-access](./auth/AUTH_USAGE.md#role-based-access) |

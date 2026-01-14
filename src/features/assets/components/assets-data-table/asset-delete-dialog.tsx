@@ -34,7 +34,6 @@ export function AssetDeleteDialog({
   bulkCount,
 }: AssetDeleteDialogProps) {
   const isBulkDelete = bulkCount !== undefined && bulkCount > 0
-  const itemName = asset?.name || `${bulkCount} ${assetTypeName.toLowerCase()}s`
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>

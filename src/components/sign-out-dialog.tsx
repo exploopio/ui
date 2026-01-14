@@ -12,7 +12,7 @@
 import { useTransition } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
 import { ConfirmDialog } from '@/components/confirm-dialog'
-import { env, isLocalAuthOnly } from '@/lib/env'
+import { isLocalAuthOnly } from '@/lib/env'
 import { localLogoutAction } from '@/features/auth/actions/local-auth-actions'
 
 // ============================================

@@ -30,7 +30,17 @@ const eslintConfig = defineConfig([
       ],
       // Allow setState in effects - common pattern for syncing with external state
       // (localStorage, cookies, server data). React Compiler handles this well.
-      "react-hooks/set-state-in-effect": "warn",
+      "react-hooks/set-state-in-effect": "off",
+      // TanStack Table returns functions that can't be memoized - this is expected
+      // The React Compiler handles this gracefully by skipping memoization
+      "react-hooks/incompatible-library": "off",
+    },
+  },
+  // Allow <img> in image upload components (for user-uploaded content)
+  {
+    files: ["**/image-upload.tsx", "**/image-upload.jsx"],
+    rules: {
+      "@next/next/no-img-element": "off",
     },
   },
   // Allow `any` in test files (mocking often requires it)

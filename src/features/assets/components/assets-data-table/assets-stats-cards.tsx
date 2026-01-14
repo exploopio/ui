@@ -72,10 +72,6 @@ export function AssetsStatsCards({
   const active = assets.filter((a) => a.status === 'active').length
   const inactive = assets.filter((a) => a.status === 'inactive').length
   const withFindings = assets.filter((a) => a.findingCount > 0).length
-  const avgRiskScore =
-    assets.length > 0
-      ? Math.round(assets.reduce((sum, a) => sum + a.riskScore, 0) / assets.length)
-      : 0
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

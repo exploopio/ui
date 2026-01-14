@@ -7,7 +7,6 @@
 
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
-import { Loader2 } from 'lucide-react'
 
 import { handleOAuthCallback, type SocialProvider } from '@/features/auth/actions/social-auth-actions'
 

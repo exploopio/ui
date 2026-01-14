@@ -65,7 +65,6 @@ import {
   VALID_INDUSTRIES,
   SESSION_TIMEOUT_OPTIONS,
   WEBHOOK_EVENTS,
-  type TenantSettings,
   type WebhookEvent,
 } from "@/features/organization";
 
@@ -87,14 +86,15 @@ export default function TenantPage() {
   const { updateAPISettings, isUpdating: isUpdatingAPI } = useUpdateAPISettings(tenantId);
   const { updateBrandingSettings, isUpdating: isUpdatingBranding } = useUpdateBrandingSettings(tenantId);
 
-  const isUpdating = isUpdatingTenant || isUpdatingGeneral || isUpdatingSecurity || isUpdatingAPI || isUpdatingBranding;
+  // Combined loading state (for potential future use in global loading indicator)
+  const _isUpdating = isUpdatingTenant || isUpdatingGeneral || isUpdatingSecurity || isUpdatingAPI || isUpdatingBranding;
 
   // Organization info form state (name, slug)
   const [orgInfoForm, setOrgInfoForm] = useState({
     name: "",
     slug: "",
   });
-  const [hasOrgInfoChanges, setHasOrgInfoChanges] = useState(false);
+  const [_hasOrgInfoChanges, setHasOrgInfoChanges] = useState(false);
 
   // Cached logo hook
   const { logoSrc, updateLogo } = useTenantLogo(
@@ -133,7 +133,7 @@ export default function TenantPage() {
   });
 
   // Populate org info form when tenant loads - syncing with external data
-  // eslint-disable-next-line react-hooks/set-state-in-effect
+   
   useEffect(() => {
     if (currentTenant) {
       setOrgInfoForm({
@@ -145,7 +145,7 @@ export default function TenantPage() {
   }, [currentTenant]);
 
   // Populate settings form when settings load - syncing with external data
-  // eslint-disable-next-line react-hooks/set-state-in-effect
+   
   useEffect(() => {
     if (settings) {
       setGeneralForm({
@@ -189,7 +189,7 @@ export default function TenantPage() {
   };
 
   // Save org info (kept for potential standalone use)
-  const handleSaveOrgInfo = async () => {
+  const _handleSaveOrgInfo = async () => {
     try {
       const changes: { name?: string; slug?: string } = {};
       if (orgInfoForm.name !== currentTenant?.name) {

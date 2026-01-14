@@ -39,16 +39,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import {
   History,
   Search as SearchIcon,
-  Filter,
   RefreshCw,
   ChevronLeft,
   ChevronRight,
@@ -64,12 +58,9 @@ import {
   Key,
   Mail,
   Building,
-  Clock,
   Calendar,
   Activity,
-  FileText,
   Loader2,
-  ExternalLink,
 } from "lucide-react";
 import {
   useAuditLogs,
@@ -166,7 +157,7 @@ export default function AuditLogPage() {
   }), [filters, searchTerm]);
 
   // Fetch data (tenant is extracted from JWT token by backend)
-  const { logs, total, page, perPage, totalPages, isLoading, isError, mutate } = useAuditLogs(activeFilters);
+  const { logs, total, page, totalPages, isLoading, isError, mutate } = useAuditLogs(activeFilters);
   const { stats, isLoading: statsLoading } = useAuditStats();
 
   // Filter options

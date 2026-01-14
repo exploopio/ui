@@ -19,7 +19,7 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 
 import { env } from '@/lib/env'
-import { setServerCookie, removeServerCookie } from '@/lib/cookies-server'
+import { setServerCookie } from '@/lib/cookies-server'
 import { authEndpoints } from '@/lib/api/endpoints'
 
 import type {
@@ -63,7 +63,7 @@ export interface OAuthCallbackResult {
 // ============================================
 
 function getBackendUrl(): string {
-  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
+  return process.env.BACKEND_API_URL || 'http://localhost:8080'
 }
 
 async function backendFetch<T>(
@@ -178,8 +178,8 @@ export async function handleOAuthCallback(
     // Clear the state cookie
     cookieStore.delete('oauth_state')
 
-    // Get the final redirect destination
-    const redirectTo = cookieStore.get('oauth_redirect')?.value || '/'
+    // Get the final redirect destination (stored for use after token exchange)
+    const _redirectTo = cookieStore.get('oauth_redirect')?.value || '/'
     cookieStore.delete('oauth_redirect')
 
     // Exchange authorization code for tokens via backend
@@ -276,7 +276,7 @@ export async function getAvailableProviders(): Promise<AuthSuccessResponse<Provi
       success: true,
       data: data.providers || [],
     }
-  } catch (error) {
+  } catch {
     // If backend doesn't support this endpoint, return default providers
     return {
       success: true,

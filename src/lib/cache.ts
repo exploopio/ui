@@ -152,7 +152,7 @@ export function createCachedApiClient<T>(
   return unstable_cache(
     async () => {
       try {
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+        const baseUrl = process.env.BACKEND_API_URL || "http://localhost:8080";
         const res = await fetch(`${baseUrl}${endpoint}`, {
           headers: {
             "Content-Type": "application/json",

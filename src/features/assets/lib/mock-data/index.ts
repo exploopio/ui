@@ -14,7 +14,7 @@ export type { BaseAsset } from "./helpers";
 import { domainAssets } from "./domains";
 import { websiteAssets } from "./websites";
 import { serviceAssets } from "./services";
-import { projectAssets, repositoryAssets } from "./projects";
+import { projectAssets } from "./projects";
 import { cloudAssets } from "./cloud";
 import { hostAssets } from "./hosts";
 import { containerAssets } from "./containers";
