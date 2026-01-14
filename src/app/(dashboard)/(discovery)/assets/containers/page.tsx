@@ -632,20 +632,21 @@ export default function KubernetesPage() {
       cell: ({ row }) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
               <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => setSelectedCluster(row.original)}>
+          <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSelectedCluster(row.original); }}>
               <Eye className="mr-2 h-4 w-4" />
               View Details
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleEditCluster(row.original)}>
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditCluster(row.original); }}>
               <Pencil className="mr-2 h-4 w-4" />
               Edit
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => {
+            <DropdownMenuItem onClick={(e) => {
+              e.stopPropagation();
               setClusterFilter(row.original.id);
               setMainTab("workloads");
             }}>
@@ -653,13 +654,13 @@ export default function KubernetesPage() {
               View Workloads
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => toast.info("Scanning cluster...")}>
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); toast.info("Scanning cluster..."); }}>
               <RefreshCw className="mr-2 h-4 w-4" />
               Rescan
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              onClick={() => handleDeleteClick("clusters", row.original)}
+              onClick={(e) => { e.stopPropagation(); handleDeleteClick("clusters", row.original); }}
               className="text-red-600"
             >
               <Trash2 className="mr-2 h-4 w-4" />
@@ -781,20 +782,21 @@ export default function KubernetesPage() {
       cell: ({ row }) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
               <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => setSelectedWorkload(row.original)}>
+          <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSelectedWorkload(row.original); }}>
               <Eye className="mr-2 h-4 w-4" />
               View Details
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleEditWorkload(row.original)}>
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditWorkload(row.original); }}>
               <Pencil className="mr-2 h-4 w-4" />
               Edit
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => {
+            <DropdownMenuItem onClick={(e) => {
+              e.stopPropagation();
               navigator.clipboard.writeText(row.original.images[0] || "");
               toast.success("Image copied");
             }}>
@@ -803,7 +805,7 @@ export default function KubernetesPage() {
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              onClick={() => handleDeleteClick("workloads", row.original)}
+              onClick={(e) => { e.stopPropagation(); handleDeleteClick("workloads", row.original); }}
               className="text-red-600"
             >
               <Trash2 className="mr-2 h-4 w-4" />
@@ -926,20 +928,21 @@ export default function KubernetesPage() {
       cell: ({ row }) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
               <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => setSelectedImage(row.original)}>
+          <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSelectedImage(row.original); }}>
               <Eye className="mr-2 h-4 w-4" />
               View Details
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleEditImage(row.original)}>
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditImage(row.original); }}>
               <Pencil className="mr-2 h-4 w-4" />
               Edit
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => {
+            <DropdownMenuItem onClick={(e) => {
+              e.stopPropagation();
               navigator.clipboard.writeText(row.original.fullName);
               toast.success("Image name copied");
             }}>
@@ -947,13 +950,13 @@ export default function KubernetesPage() {
               Copy Full Name
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => toast.info("Scanning image...")}>
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); toast.info("Scanning image..."); }}>
               <RefreshCw className="mr-2 h-4 w-4" />
               Rescan
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              onClick={() => handleDeleteClick("images", row.original)}
+              onClick={(e) => { e.stopPropagation(); handleDeleteClick("images", row.original); }}
               className="text-red-600"
             >
               <Trash2 className="mr-2 h-4 w-4" />

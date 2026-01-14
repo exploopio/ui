@@ -103,7 +103,16 @@ import {
   Github,
   GitlabIcon,
 } from "lucide-react";
-import { getProjects, getAssetRelationships, ClassificationBadges, type Asset } from "@/features/assets";
+import {
+  useAssets,
+  createAsset,
+  updateAsset,
+  deleteAsset,
+  bulkDeleteAssets,
+  getAssetRelationships,
+  ClassificationBadges,
+  type Asset
+} from "@/features/assets";
 import { mockAssetGroups } from "@/features/asset-groups";
 import type { Status } from "@/features/shared/types";
 import {
@@ -156,7 +165,11 @@ const emptyProjectForm = {
 };
 
 export default function ProjectsPage() {
-  const [projects, setProjects] = useState<Asset[]>(getProjects());
+  // Fetch projects from API
+  const { assets: projects, isLoading, isError, error: fetchError, mutate } = useAssets({
+    types: ['project'],
+  });
+
   const [selectedProject, setSelectedProject] = useState<Asset | null>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
@@ -164,6 +177,7 @@ export default function ProjectsPage() {
   const [visibilityFilter, setVisibilityFilter] = useState<VisibilityFilter>("all");
   const [providerFilter, setProviderFilter] = useState<ProviderFilter>("all");
   const [rowSelection, setRowSelection] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Dialog states
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -415,31 +429,32 @@ export default function ProjectsPage() {
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setSelectedProject(project)}>
+            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSelectedProject(project); }}>
                 <Eye className="mr-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleOpenEdit(project)}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenEdit(project); }}>
                 <Pencil className="mr-2 h-4 w-4" />
                 Edit
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleCopyProject(project)}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleCopyProject(project); }}>
                 <Copy className="mr-2 h-4 w-4" />
                 Copy URL
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleOpenExternal(project)}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenExternal(project); }}>
                 <ExternalLink className="mr-2 h-4 w-4" />
                 Open in Browser
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-red-400"
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   setProjectToDelete(project);
                   setDeleteDialogOpen(true);
                 }}
@@ -509,98 +524,108 @@ export default function ProjectsPage() {
     setEditDialogOpen(true);
   };
 
-  const handleAddProject = () => {
-    if (!formData.name || !formData.groupId) {
+  const handleAddProject = async () => {
+    if (!formData.name) {
       toast.error("Please fill in required fields");
       return;
     }
 
-    const newProject: Asset = {
-      id: `proj-${Date.now()}`,
-      type: "project",
-      name: formData.name,
-      description: formData.description,
-      criticality: "medium",
-      status: "active",
-      scope: "internal",
-      exposure: "restricted",
-      riskScore: 0,
-      findingCount: 0,
-      groupId: formData.groupId,
-      groupName: mockAssetGroups.find((g) => g.id === formData.groupId)?.name,
-      metadata: {
-        projectProvider: formData.provider,
-        visibility: formData.visibility,
-        language: formData.language || undefined,
-        stars: formData.stars ? parseInt(formData.stars) : undefined,
-      },
-      tags: formData.tags
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean),
-      firstSeen: new Date().toISOString(),
-      lastSeen: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    setProjects([newProject, ...projects]);
-    setFormData(emptyProjectForm);
-    setAddDialogOpen(false);
-    toast.success("Project added successfully");
+    setIsSubmitting(true);
+    try {
+      await createAsset({
+        name: formData.name,
+        type: "project",
+        description: formData.description,
+        criticality: "medium",
+        scope: "internal",
+        exposure: "restricted",
+        tags: formData.tags
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean),
+        metadata: {
+          projectProvider: formData.provider,
+          visibility: formData.visibility,
+          language: formData.language || undefined,
+          stars: formData.stars ? parseInt(formData.stars) : undefined,
+        },
+      });
+      await mutate();
+      setFormData(emptyProjectForm);
+      setAddDialogOpen(false);
+      toast.success("Project added successfully");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to add project");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleEditProject = () => {
-    if (!selectedProject || !formData.name || !formData.groupId) {
+  const handleEditProject = async () => {
+    if (!selectedProject || !formData.name) {
       toast.error("Please fill in required fields");
       return;
     }
 
-    const updatedProjects = projects.map((p) =>
-      p.id === selectedProject.id
-        ? {
-            ...p,
-            name: formData.name,
-            description: formData.description,
-            groupId: formData.groupId,
-            groupName: mockAssetGroups.find((g) => g.id === formData.groupId)?.name,
-            metadata: {
-              ...p.metadata,
-              projectProvider: formData.provider,
-              visibility: formData.visibility,
-              language: formData.language || undefined,
-              stars: formData.stars ? parseInt(formData.stars) : undefined,
-            },
-            tags: formData.tags
-              .split(",")
-              .map((s) => s.trim())
-              .filter(Boolean),
-            updatedAt: new Date().toISOString(),
-          }
-        : p
-    );
-
-    setProjects(updatedProjects);
-    setFormData(emptyProjectForm);
-    setEditDialogOpen(false);
-    setSelectedProject(null);
-    toast.success("Project updated successfully");
+    setIsSubmitting(true);
+    try {
+      await updateAsset(selectedProject.id, {
+        name: formData.name,
+        description: formData.description,
+        tags: formData.tags
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean),
+        metadata: {
+          ...selectedProject.metadata,
+          projectProvider: formData.provider,
+          visibility: formData.visibility,
+          language: formData.language || undefined,
+          stars: formData.stars ? parseInt(formData.stars) : undefined,
+        },
+      });
+      await mutate();
+      setFormData(emptyProjectForm);
+      setEditDialogOpen(false);
+      setSelectedProject(null);
+      toast.success("Project updated successfully");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update project");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleDeleteProject = () => {
+  const handleDeleteProject = async () => {
     if (!projectToDelete) return;
-    setProjects(projects.filter((p) => p.id !== projectToDelete.id));
-    setDeleteDialogOpen(false);
-    setProjectToDelete(null);
-    toast.success("Project deleted successfully");
+    setIsSubmitting(true);
+    try {
+      await deleteAsset(projectToDelete.id);
+      await mutate();
+      setDeleteDialogOpen(false);
+      setProjectToDelete(null);
+      toast.success("Project deleted successfully");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete project");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleBulkDelete = () => {
-    const selectedIds = Object.keys(rowSelection);
+  const handleBulkDelete = async () => {
     const selectedProjectIds = table.getSelectedRowModel().rows.map((r) => r.original.id);
-    setProjects(projects.filter((p) => !selectedProjectIds.includes(p.id)));
-    setRowSelection({});
-    toast.success(`Deleted ${selectedIds.length} projects`);
+    if (selectedProjectIds.length === 0) return;
+    setIsSubmitting(true);
+    try {
+      await bulkDeleteAssets(selectedProjectIds);
+      await mutate();
+      setRowSelection({});
+      toast.success(`Deleted ${selectedProjectIds.length} projects`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete projects");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleExport = () => {

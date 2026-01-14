@@ -31,21 +31,26 @@ export type AssetType =
   | "website"
   | "api"
   | "mobile_app"
+  | "application"  // Network services/applications
+  | "endpoint"     // Service endpoints
   // Cloud
   | "cloud_account"
   | "compute"
   | "storage"
   | "serverless"
+  | "cloud"        // General cloud resources
   // Infrastructure
   | "host"
+  | "server"       // Physical/virtual servers
   | "container"
   | "database"
   | "network"
   // Code & CI/CD
   | "project"
+  // Other
+  | "other"        // Miscellaneous assets
   // Legacy types (deprecated - kept for backwards compatibility)
-  | "service"      // @deprecated - Use specific service type
-  | "cloud"        // @deprecated - Use cloud_account, compute, storage, serverless
+  | "service"      // @deprecated - Use application instead
   | "credential"   // @deprecated - Moved to Identities module
   | "mobile"       // @deprecated - Use mobile_app instead
   | "repository";  // @deprecated - Use project instead
@@ -72,8 +77,8 @@ export const ASSET_TYPE_CATEGORIES: Record<AssetTypeCategory, {
   },
   applications: {
     label: "Applications",
-    description: "Web, mobile, and API applications",
-    types: ["website", "api", "mobile_app", "mobile", "service"],
+    description: "Web, mobile, API, and network services",
+    types: ["website", "api", "mobile_app", "service", "application", "endpoint"],
   },
   cloud: {
     label: "Cloud",
@@ -83,7 +88,7 @@ export const ASSET_TYPE_CATEGORIES: Record<AssetTypeCategory, {
   infrastructure: {
     label: "Infrastructure",
     description: "Servers, containers, and network infrastructure",
-    types: ["host", "container", "database", "network", "credential"],
+    types: ["host", "server", "container", "database", "network"],
   },
   code: {
     label: "Code & CI/CD",
@@ -95,7 +100,7 @@ export const ASSET_TYPE_CATEGORIES: Record<AssetTypeCategory, {
 /**
  * Legacy asset types that are deprecated but still supported
  */
-export const LEGACY_ASSET_TYPES: AssetType[] = ["service", "cloud", "credential", "mobile", "repository"];
+export const LEGACY_ASSET_TYPES: AssetType[] = ["service", "credential", "mobile", "repository"];
 
 /**
  * Check if an asset type is deprecated
@@ -187,21 +192,26 @@ export const ASSET_TYPE_LABELS: Record<AssetType, string> = {
   website: "Website",
   api: "API",
   mobile_app: "Mobile App",
+  application: "Application",
+  endpoint: "Endpoint",
   // Cloud
   cloud_account: "Cloud Account",
   compute: "Compute",
   storage: "Storage",
   serverless: "Serverless",
+  cloud: "Cloud",
   // Infrastructure
   host: "Host",
+  server: "Server",
   container: "Container",
   database: "Database",
   network: "Network",
   // Code & CI/CD
   project: "Project",
+  // Other
+  other: "Other",
   // Legacy types (deprecated)
   service: "Service",
-  cloud: "Cloud",
   credential: "Credential",
   mobile: "Mobile App",
   repository: "Repository",
@@ -214,18 +224,22 @@ export const ASSET_TYPE_ICONS: Record<AssetType, string> = {
   website: "MonitorSmartphone",
   api: "Zap",
   mobile_app: "Smartphone",
+  application: "AppWindow",
+  endpoint: "Link",
   cloud_account: "Cloud",
   compute: "Server",
   storage: "HardDrive",
   serverless: "Cpu",
+  cloud: "Cloud",
   host: "Server",
+  server: "Server",
   container: "Boxes",
   database: "Database",
   network: "Network",
   project: "GitBranch",
+  other: "Box",
   // Legacy types (deprecated)
   service: "Zap",
-  cloud: "Cloud",
   credential: "KeyRound",
   mobile: "Smartphone",
   repository: "GitBranch",
@@ -238,18 +252,22 @@ export const ASSET_TYPE_DESCRIPTIONS: Record<AssetType, string> = {
   website: "Web applications and sites",
   api: "REST, GraphQL, gRPC endpoints",
   mobile_app: "iOS and Android applications",
+  application: "Software applications",
+  endpoint: "Service endpoints",
   cloud_account: "AWS accounts, GCP projects, Azure subscriptions",
   compute: "Virtual machines and instances",
   storage: "S3 buckets, Azure Blobs, GCS buckets",
   serverless: "Lambda functions, Cloud Functions, Cloud Run",
+  cloud: "General cloud resources",
   host: "Physical and virtual servers",
+  server: "Physical and virtual servers",
   container: "Docker and Kubernetes workloads",
   database: "Database instances and clusters",
   network: "VPCs, firewalls, load balancers",
   project: "Source code projects",
+  other: "Miscellaneous assets",
   // Legacy types (deprecated)
-  service: "Network services (deprecated)",
-  cloud: "Cloud resources (deprecated - use cloud_account, compute, storage, serverless)",
+  service: "Network services (SSH, HTTP, DB services)",
   credential: "Credentials (deprecated - moved to Identities)",
   mobile: "Mobile applications (deprecated - use mobile_app)",
   repository: "Source code repositories (deprecated - use project)",
@@ -267,21 +285,26 @@ export const ASSET_TYPE_COLORS: Record<AssetType, { bg: string; text: string }> 
   website: { bg: "bg-cyan-500/15", text: "text-cyan-600" },
   api: { bg: "bg-indigo-500/15", text: "text-indigo-600" },
   mobile_app: { bg: "bg-pink-500/15", text: "text-pink-600" },
+  application: { bg: "bg-lime-500/15", text: "text-lime-600" },
+  endpoint: { bg: "bg-emerald-500/15", text: "text-emerald-600" },
   // Cloud
   cloud_account: { bg: "bg-sky-500/15", text: "text-sky-600" },
   compute: { bg: "bg-orange-500/15", text: "text-orange-600" },
   storage: { bg: "bg-amber-500/15", text: "text-amber-600" },
   serverless: { bg: "bg-violet-500/15", text: "text-violet-600" },
+  cloud: { bg: "bg-sky-500/15", text: "text-sky-600" },
   // Infrastructure
   host: { bg: "bg-slate-500/15", text: "text-slate-600" },
+  server: { bg: "bg-slate-500/15", text: "text-slate-600" },
   container: { bg: "bg-teal-500/15", text: "text-teal-600" },
   database: { bg: "bg-emerald-500/15", text: "text-emerald-600" },
   network: { bg: "bg-rose-500/15", text: "text-rose-600" },
   // Code & CI/CD
   project: { bg: "bg-fuchsia-500/15", text: "text-fuchsia-600" },
+  // Other
+  other: { bg: "bg-gray-500/15", text: "text-gray-600" },
   // Legacy types (deprecated)
   service: { bg: "bg-yellow-500/15", text: "text-yellow-600" },
-  cloud: { bg: "bg-sky-500/15", text: "text-sky-600" },
   credential: { bg: "bg-red-500/15", text: "text-red-600" },
   mobile: { bg: "bg-pink-500/15", text: "text-pink-600" },
   repository: { bg: "bg-fuchsia-500/15", text: "text-fuchsia-600" },
@@ -329,17 +352,76 @@ export const CLOUD_PROVIDER_LABELS: Record<CloudProvider, string> = {
 };
 
 /**
+ * Domain Discovery Source
+ * How the domain was discovered
+ */
+export type DomainDiscoverySource =
+  | "dns"              // DNS enumeration
+  | "cert_transparency" // Certificate Transparency logs
+  | "bruteforce"       // Subdomain bruteforce
+  | "passive"          // Passive recon (search engines, etc.)
+  | "manual"           // Manually added
+  | "api_discovery"    // Discovered via API endpoints
+  | "web_crawl";       // Web crawler discovery
+
+/**
  * Asset metadata varies by asset type
  */
 export interface AssetMetadata {
   // ============================================
-  // Domain-specific
+  // Domain-specific - Hierarchy (NEW - Best Practice)
+  // ============================================
+  /** Root/apex domain (e.g., "techviet.vn") */
+  rootDomain?: string;
+  /** Domain level: 1=root, 2=subdomain, 3=sub-subdomain, etc. */
+  domainLevel?: number;
+  /** Parent domain (e.g., "api.techviet.vn" -> "techviet.vn") */
+  parentDomain?: string;
+  /** Is this a wildcard domain (*.domain.com) */
+  isWildcard?: boolean;
+  /** How the domain was discovered */
+  discoverySource?: DomainDiscoverySource;
+
+  // ============================================
+  // Domain-specific - DNS Information
+  // ============================================
+  /** DNS record types (A, AAAA, CNAME, MX, NS, TXT, etc.) */
+  dnsRecordTypes?: string[];
+  /** IP addresses this domain resolves to */
+  resolvedIPs?: string[];
+  /** MX (mail exchange) records */
+  mxRecords?: string[];
+  /** CNAME target if applicable */
+  cnameTarget?: string;
+  /** DNS TTL in seconds */
+  ttl?: number;
+
+  // ============================================
+  // Domain-specific - WHOIS & Registration
   // ============================================
   registrar?: string;
   expiryDate?: string;
   nameservers?: string[];
   whoisOrganization?: string;
+  registrationDate?: string;
+  updatedDate?: string;
+
+  // ============================================
+  // Domain-specific - Security
+  // ============================================
   dnssecEnabled?: boolean;
+  /** CAA record value */
+  caa?: string;
+  /** SPF record */
+  spf?: string;
+  /** DKIM record */
+  dkim?: string;
+  /** DMARC record */
+  dmarc?: string;
+  /** Has linked SSL/TLS certificate */
+  hasCertificate?: boolean;
+  /** Link to certificate asset ID */
+  certificateAssetId?: string;
 
   // ============================================
   // Certificate-specific (NEW)

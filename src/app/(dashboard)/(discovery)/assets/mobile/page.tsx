@@ -99,7 +99,16 @@ import {
   Star,
   ExternalLink,
 } from "lucide-react";
-import { getMobileApps, getAssetRelationships, ClassificationBadges, type Asset } from "@/features/assets";
+import {
+  useAssets,
+  createAsset,
+  updateAsset,
+  deleteAsset,
+  bulkDeleteAssets,
+  getAssetRelationships,
+  ClassificationBadges,
+  type Asset
+} from "@/features/assets";
 import { mockAssetGroups } from "@/features/asset-groups";
 import type { Status } from "@/features/shared/types";
 
@@ -156,13 +165,18 @@ const formatDownloads = (downloads?: number) => {
 };
 
 export default function MobileAppsPage() {
-  const [mobileApps, setMobileApps] = useState<Asset[]>(getMobileApps());
+  // Fetch mobile apps from API
+  const { assets: mobileApps, isLoading, isError, error: fetchError, mutate } = useAssets({
+    types: ['mobile_app'],
+  });
+
   const [selectedMobileApp, setSelectedMobileApp] = useState<Asset | null>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [platformFilter, setPlatformFilter] = useState<PlatformFilter>("all");
   const [rowSelection, setRowSelection] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Dialog states
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -370,27 +384,27 @@ export default function MobileAppsPage() {
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setSelectedMobileApp(app)}>
+            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSelectedMobileApp(app); }}>
                 <Eye className="mr-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleOpenEdit(app)}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenEdit(app); }}>
                 <Pencil className="mr-2 h-4 w-4" />
                 Edit
               </DropdownMenuItem>
               {app.metadata.bundleId && (
-                <DropdownMenuItem onClick={() => handleCopyBundleId(app)}>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleCopyBundleId(app); }}>
                   <Copy className="mr-2 h-4 w-4" />
                   Copy Bundle ID
                 </DropdownMenuItem>
               )}
               {app.metadata.storeUrl && (
-                <DropdownMenuItem onClick={() => window.open(app.metadata.storeUrl, "_blank")}>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); window.open(app.metadata.storeUrl, "_blank"); }}>
                   <ExternalLink className="mr-2 h-4 w-4" />
                   Open Store
                 </DropdownMenuItem>
@@ -398,7 +412,8 @@ export default function MobileAppsPage() {
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-red-400"
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   setMobileAppToDelete(app);
                   setDeleteDialogOpen(true);
                 }}
@@ -445,88 +460,98 @@ export default function MobileAppsPage() {
     setEditDialogOpen(true);
   };
 
-  const handleAddMobileApp = () => {
-    if (!formData.name || !formData.bundleId || !formData.groupId) {
+  const handleAddMobileApp = async () => {
+    if (!formData.name || !formData.bundleId) {
       toast.error("Please fill in required fields");
       return;
     }
 
-    const newMobileApp: Asset = {
-      id: `mobile-${Date.now()}`,
-      type: "mobile",
-      name: formData.name,
-      criticality: "medium",
-      status: "pending",
-      scope: "external",
-      exposure: "public",
-      riskScore: 0,
-      findingCount: 0,
-      groupId: formData.groupId,
-      groupName: mockAssetGroups.find((g) => g.id === formData.groupId)?.name,
-      metadata: {
-        platform: formData.platform,
-        bundleId: formData.bundleId,
-        appVersion: formData.appVersion,
-        storeUrl: formData.storeUrl,
-      },
-      firstSeen: new Date().toISOString(),
-      lastSeen: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    setMobileApps([newMobileApp, ...mobileApps]);
-    setFormData(emptyMobileForm);
-    setAddDialogOpen(false);
-    toast.success("Mobile app added successfully");
+    setIsSubmitting(true);
+    try {
+      await createAsset({
+        name: formData.name,
+        type: "mobile_app",
+        criticality: "medium",
+        scope: "external",
+        exposure: "public",
+        metadata: {
+          platform: formData.platform,
+          bundleId: formData.bundleId,
+          appVersion: formData.appVersion,
+          storeUrl: formData.storeUrl,
+        },
+      });
+      await mutate();
+      setFormData(emptyMobileForm);
+      setAddDialogOpen(false);
+      toast.success("Mobile app added successfully");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to add mobile app");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleEditMobileApp = () => {
-    if (!selectedMobileApp || !formData.name || !formData.bundleId || !formData.groupId) {
+  const handleEditMobileApp = async () => {
+    if (!selectedMobileApp || !formData.name || !formData.bundleId) {
       toast.error("Please fill in required fields");
       return;
     }
 
-    const updatedMobileApps = mobileApps.map((a) =>
-      a.id === selectedMobileApp.id
-        ? {
-            ...a,
-            name: formData.name,
-            groupId: formData.groupId,
-            groupName: mockAssetGroups.find((g) => g.id === formData.groupId)?.name,
-            metadata: {
-              ...a.metadata,
-              platform: formData.platform,
-              bundleId: formData.bundleId,
-              appVersion: formData.appVersion,
-              storeUrl: formData.storeUrl,
-            },
-            updatedAt: new Date().toISOString(),
-          }
-        : a
-    );
-
-    setMobileApps(updatedMobileApps);
-    setFormData(emptyMobileForm);
-    setEditDialogOpen(false);
-    setSelectedMobileApp(null);
-    toast.success("Mobile app updated successfully");
+    setIsSubmitting(true);
+    try {
+      await updateAsset(selectedMobileApp.id, {
+        name: formData.name,
+        metadata: {
+          ...selectedMobileApp.metadata,
+          platform: formData.platform,
+          bundleId: formData.bundleId,
+          appVersion: formData.appVersion,
+          storeUrl: formData.storeUrl,
+        },
+      });
+      await mutate();
+      setFormData(emptyMobileForm);
+      setEditDialogOpen(false);
+      setSelectedMobileApp(null);
+      toast.success("Mobile app updated successfully");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update mobile app");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleDeleteMobileApp = () => {
+  const handleDeleteMobileApp = async () => {
     if (!mobileAppToDelete) return;
-    setMobileApps(mobileApps.filter((a) => a.id !== mobileAppToDelete.id));
-    setDeleteDialogOpen(false);
-    setMobileAppToDelete(null);
-    toast.success("Mobile app deleted successfully");
+    setIsSubmitting(true);
+    try {
+      await deleteAsset(mobileAppToDelete.id);
+      await mutate();
+      setDeleteDialogOpen(false);
+      setMobileAppToDelete(null);
+      toast.success("Mobile app deleted successfully");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete mobile app");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleBulkDelete = () => {
-    const selectedIds = Object.keys(rowSelection);
+  const handleBulkDelete = async () => {
     const selectedMobileAppIds = table.getSelectedRowModel().rows.map((r) => r.original.id);
-    setMobileApps(mobileApps.filter((a) => !selectedMobileAppIds.includes(a.id)));
-    setRowSelection({});
-    toast.success(`Deleted ${selectedIds.length} mobile apps`);
+    if (selectedMobileAppIds.length === 0) return;
+    setIsSubmitting(true);
+    try {
+      await bulkDeleteAssets(selectedMobileAppIds);
+      await mutate();
+      setRowSelection({});
+      toast.success(`Deleted ${selectedMobileAppIds.length} mobile apps`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete mobile apps");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleExport = () => {

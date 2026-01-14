@@ -109,7 +109,16 @@ import {
   Lock,
   Save,
 } from "lucide-react";
-import { getDatabases, getAssetRelationships, ClassificationBadges, type Asset } from "@/features/assets";
+import {
+  useAssets,
+  createAsset,
+  updateAsset,
+  deleteAsset,
+  bulkDeleteAssets,
+  getAssetRelationships,
+  ClassificationBadges,
+  type Asset
+} from "@/features/assets";
 import { mockAssetGroups } from "@/features/asset-groups";
 import type { Status } from "@/features/shared/types";
 
@@ -152,13 +161,18 @@ const emptyDatabaseForm = {
 };
 
 export default function DatabasesPage() {
-  const [databases, setDatabases] = useState<Asset[]>(getDatabases());
+  // Fetch databases from API
+  const { assets: databases, isLoading, isError, error: fetchError, mutate } = useAssets({
+    types: ['database'],
+  });
+
   const [selectedDatabase, setSelectedDatabase] = useState<Asset | null>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [engineFilter, setEngineFilter] = useState<EngineFilter>("all");
   const [rowSelection, setRowSelection] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Dialog states
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -399,27 +413,28 @@ export default function DatabasesPage() {
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setSelectedDatabase(database)}>
+            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSelectedDatabase(database); }}>
                 <Eye className="mr-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleOpenEdit(database)}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenEdit(database); }}>
                 <Pencil className="mr-2 h-4 w-4" />
                 Edit
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleCopyConnection(database)}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleCopyConnection(database); }}>
                 <Copy className="mr-2 h-4 w-4" />
                 Copy Connection
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-red-400"
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   setDatabaseToDelete(database);
                   setDeleteDialogOpen(true);
                 }}
@@ -473,100 +488,90 @@ export default function DatabasesPage() {
     setEditDialogOpen(true);
   };
 
-  const handleAddDatabase = () => {
-    if (!formData.name || !formData.groupId || !formData.dbHost) {
+  const handleAddDatabase = async () => {
+    if (!formData.name) {
       toast.error("Please fill in required fields");
       return;
     }
 
-    const newDatabase: Asset = {
-      id: `database-${Date.now()}`,
-      type: "database",
-      name: formData.name,
-      description: formData.description,
-      criticality: "high",
-      status: "active",
-      scope: "internal",
-      exposure: "private",
-      riskScore: 0,
-      findingCount: 0,
-      groupId: formData.groupId,
-      groupName: mockAssetGroups.find((g) => g.id === formData.groupId)?.name,
-      metadata: {
-        engine: formData.engine,
-        dbVersion: formData.dbVersion,
-        dbHost: formData.dbHost,
-        dbPort: formData.dbPort ? parseInt(formData.dbPort) : undefined,
-        sizeGB: formData.sizeGB ? parseInt(formData.sizeGB) : undefined,
-        encryption: formData.encryption,
-        backupEnabled: formData.backupEnabled,
-        replication: formData.replication,
-      },
-      tags: formData.tags.split(",").map((s) => s.trim()).filter(Boolean),
-      firstSeen: new Date().toISOString(),
-      lastSeen: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    setDatabases([newDatabase, ...databases]);
-    setFormData(emptyDatabaseForm);
-    setAddDialogOpen(false);
-    toast.success("Database added successfully");
+    setIsSubmitting(true);
+    try {
+      await createAsset({
+        name: formData.name,
+        type: "database",
+        criticality: "high",
+        description: formData.description,
+        scope: "internal",
+        exposure: "private",
+        tags: formData.tags.split(",").map((s) => s.trim()).filter(Boolean),
+      });
+      await mutate();
+      setFormData(emptyDatabaseForm);
+      setAddDialogOpen(false);
+      toast.success("Database added successfully");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to add database");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleEditDatabase = () => {
-    if (!selectedDatabase || !formData.name || !formData.groupId || !formData.dbHost) {
+  const handleEditDatabase = async () => {
+    if (!selectedDatabase || !formData.name) {
       toast.error("Please fill in required fields");
       return;
     }
 
-    const updatedDatabases = databases.map((d) =>
-      d.id === selectedDatabase.id
-        ? {
-            ...d,
-            name: formData.name,
-            description: formData.description,
-            groupId: formData.groupId,
-            groupName: mockAssetGroups.find((g) => g.id === formData.groupId)?.name,
-            metadata: {
-              ...d.metadata,
-              engine: formData.engine,
-              dbVersion: formData.dbVersion,
-              dbHost: formData.dbHost,
-              dbPort: formData.dbPort ? parseInt(formData.dbPort) : undefined,
-              sizeGB: formData.sizeGB ? parseInt(formData.sizeGB) : undefined,
-              encryption: formData.encryption,
-              backupEnabled: formData.backupEnabled,
-              replication: formData.replication,
-            },
-            tags: formData.tags.split(",").map((s) => s.trim()).filter(Boolean),
-            updatedAt: new Date().toISOString(),
-          }
-        : d
-    );
-
-    setDatabases(updatedDatabases);
-    setFormData(emptyDatabaseForm);
-    setEditDialogOpen(false);
-    setSelectedDatabase(null);
-    toast.success("Database updated successfully");
+    setIsSubmitting(true);
+    try {
+      await updateAsset(selectedDatabase.id, {
+        name: formData.name,
+        description: formData.description,
+        tags: formData.tags.split(",").map((s) => s.trim()).filter(Boolean),
+      });
+      await mutate();
+      setFormData(emptyDatabaseForm);
+      setEditDialogOpen(false);
+      setSelectedDatabase(null);
+      toast.success("Database updated successfully");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update database");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleDeleteDatabase = () => {
+  const handleDeleteDatabase = async () => {
     if (!databaseToDelete) return;
-    setDatabases(databases.filter((d) => d.id !== databaseToDelete.id));
-    setDeleteDialogOpen(false);
-    setDatabaseToDelete(null);
-    toast.success("Database deleted successfully");
+    setIsSubmitting(true);
+    try {
+      await deleteAsset(databaseToDelete.id);
+      await mutate();
+      setDeleteDialogOpen(false);
+      setDatabaseToDelete(null);
+      toast.success("Database deleted successfully");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete database");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleBulkDelete = () => {
-    const selectedIds = Object.keys(rowSelection);
+  const handleBulkDelete = async () => {
     const selectedDatabaseIds = table.getSelectedRowModel().rows.map((r) => r.original.id);
-    setDatabases(databases.filter((d) => !selectedDatabaseIds.includes(d.id)));
-    setRowSelection({});
-    toast.success(`Deleted ${selectedIds.length} databases`);
+    if (selectedDatabaseIds.length === 0) return;
+
+    setIsSubmitting(true);
+    try {
+      await bulkDeleteAssets(selectedDatabaseIds);
+      await mutate();
+      setRowSelection({});
+      toast.success(`Deleted ${selectedDatabaseIds.length} databases`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete databases");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleExport = () => {

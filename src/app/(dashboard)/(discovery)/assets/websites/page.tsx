@@ -102,7 +102,16 @@ import {
   Zap,
   Lock,
 } from "lucide-react";
-import { getWebsites, getAssetRelationships, ClassificationBadges, type Asset } from "@/features/assets";
+import {
+  useAssets,
+  createAsset,
+  updateAsset,
+  deleteAsset,
+  bulkDeleteAssets,
+  getAssetRelationships,
+  ClassificationBadges,
+  type Asset
+} from "@/features/assets";
 import { mockAssetGroups } from "@/features/asset-groups";
 import type { Status } from "@/features/shared/types";
 import {
@@ -169,13 +178,18 @@ const emptyWebsiteForm = {
 };
 
 export default function WebsitesPage() {
-  const [websites, setWebsites] = useState<Asset[]>(getWebsites());
+  // Fetch websites from API
+  const { assets: websites, isLoading, isError, error: fetchError, mutate } = useAssets({
+    types: ['website'],
+  });
+
   const [selectedWebsite, setSelectedWebsite] = useState<Asset | null>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [sslFilter, setSSLFilter] = useState<SSLFilter>("all");
   const [rowSelection, setRowSelection] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Dialog states
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -426,25 +440,25 @@ export default function WebsitesPage() {
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setSelectedWebsite(website)}>
+            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSelectedWebsite(website); }}>
                 <Eye className="mr-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleOpenEdit(website)}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenEdit(website); }}>
                 <Pencil className="mr-2 h-4 w-4" />
                 Edit
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleCopyURL(website)}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleCopyURL(website); }}>
                 <Copy className="mr-2 h-4 w-4" />
                 Copy URL
               </DropdownMenuItem>
               <DropdownMenuItem
-                onClick={() => window.open(website.name, "_blank")}
+                onClick={(e) => { e.stopPropagation(); window.open(website.name, "_blank"); }}
               >
                 <ExternalLink className="mr-2 h-4 w-4" />
                 Open in Browser
@@ -452,7 +466,8 @@ export default function WebsitesPage() {
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-red-400"
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   setWebsiteToDelete(website);
                   setDeleteDialogOpen(true);
                 }}
@@ -502,113 +517,90 @@ export default function WebsitesPage() {
     setEditDialogOpen(true);
   };
 
-  const handleAddWebsite = () => {
-    if (!formData.name || !formData.groupId) {
+  const handleAddWebsite = async () => {
+    if (!formData.name) {
       toast.error("Please fill in required fields");
       return;
     }
 
-    const newWebsite: Asset = {
-      id: `web-${Date.now()}`,
-      type: "website",
-      name: formData.name,
-      description: formData.description,
-      criticality: "high",
-      status: "active",
-      scope: "external",
-      exposure: "public",
-      riskScore: 0,
-      findingCount: 0,
-      groupId: formData.groupId,
-      groupName: mockAssetGroups.find((g) => g.id === formData.groupId)?.name,
-      metadata: {
-        technology: formData.technology
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean),
-        ssl: formData.ssl,
-        httpStatus: parseInt(formData.httpStatus) || 200,
-        responseTime: formData.responseTime
-          ? parseInt(formData.responseTime)
-          : undefined,
-        server: formData.server || undefined,
-      },
-      tags: formData.tags
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean),
-      firstSeen: new Date().toISOString(),
-      lastSeen: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    setWebsites([newWebsite, ...websites]);
-    setFormData(emptyWebsiteForm);
-    setAddDialogOpen(false);
-    toast.success("Website added successfully");
+    setIsSubmitting(true);
+    try {
+      await createAsset({
+        name: formData.name,
+        type: "website",
+        criticality: "high",
+        description: formData.description,
+        scope: "external",
+        exposure: "public",
+        tags: formData.tags.split(",").map((s) => s.trim()).filter(Boolean),
+      });
+      await mutate();
+      setFormData(emptyWebsiteForm);
+      setAddDialogOpen(false);
+      toast.success("Website added successfully");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to add website");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleEditWebsite = () => {
-    if (!selectedWebsite || !formData.name || !formData.groupId) {
+  const handleEditWebsite = async () => {
+    if (!selectedWebsite || !formData.name) {
       toast.error("Please fill in required fields");
       return;
     }
 
-    const updatedWebsites = websites.map((w) =>
-      w.id === selectedWebsite.id
-        ? {
-            ...w,
-            name: formData.name,
-            description: formData.description,
-            groupId: formData.groupId,
-            groupName: mockAssetGroups.find((g) => g.id === formData.groupId)
-              ?.name,
-            metadata: {
-              ...w.metadata,
-              technology: formData.technology
-                .split(",")
-                .map((s) => s.trim())
-                .filter(Boolean),
-              ssl: formData.ssl,
-              httpStatus: parseInt(formData.httpStatus) || 200,
-              responseTime: formData.responseTime
-                ? parseInt(formData.responseTime)
-                : undefined,
-              server: formData.server || undefined,
-            },
-            tags: formData.tags
-              .split(",")
-              .map((s) => s.trim())
-              .filter(Boolean),
-            updatedAt: new Date().toISOString(),
-          }
-        : w
-    );
-
-    setWebsites(updatedWebsites);
-    setFormData(emptyWebsiteForm);
-    setEditDialogOpen(false);
-    setSelectedWebsite(null);
-    toast.success("Website updated successfully");
+    setIsSubmitting(true);
+    try {
+      await updateAsset(selectedWebsite.id, {
+        name: formData.name,
+        description: formData.description,
+        tags: formData.tags.split(",").map((s) => s.trim()).filter(Boolean),
+      });
+      await mutate();
+      setFormData(emptyWebsiteForm);
+      setEditDialogOpen(false);
+      setSelectedWebsite(null);
+      toast.success("Website updated successfully");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update website");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleDeleteWebsite = () => {
+  const handleDeleteWebsite = async () => {
     if (!websiteToDelete) return;
-    setWebsites(websites.filter((w) => w.id !== websiteToDelete.id));
-    setDeleteDialogOpen(false);
-    setWebsiteToDelete(null);
-    toast.success("Website deleted successfully");
+    setIsSubmitting(true);
+    try {
+      await deleteAsset(websiteToDelete.id);
+      await mutate();
+      setDeleteDialogOpen(false);
+      setWebsiteToDelete(null);
+      toast.success("Website deleted successfully");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete website");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleBulkDelete = () => {
-    const selectedIds = Object.keys(rowSelection);
-    const selectedWebsiteIds = table
-      .getSelectedRowModel()
-      .rows.map((r) => r.original.id);
-    setWebsites(websites.filter((w) => !selectedWebsiteIds.includes(w.id)));
-    setRowSelection({});
-    toast.success(`Deleted ${selectedIds.length} websites`);
+  const handleBulkDelete = async () => {
+    const selectedWebsiteIds = table.getSelectedRowModel().rows.map((r) => r.original.id);
+    if (selectedWebsiteIds.length === 0) return;
+
+    setIsSubmitting(true);
+    try {
+      await bulkDeleteAssets(selectedWebsiteIds);
+      await mutate();
+      setRowSelection({});
+      toast.success(`Deleted ${selectedWebsiteIds.length} websites`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete websites");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleExport = () => {

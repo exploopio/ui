@@ -3,8 +3,57 @@
 import useSWR from 'swr'
 import { get, post, put, del } from '@/lib/api/client'
 import { endpoints } from '@/lib/api/endpoints'
-import type { PaginatedResponse, SearchFilters } from '@/lib/api/types'
 import type { Asset, AssetType, AssetScope, ExposureLevel, Criticality, CreateAssetInput, UpdateAssetInput } from '../types'
+
+/**
+ * Backend paginated response format (matches Go ListResponse struct)
+ */
+interface BackendListResponse<T> {
+  data: T[]
+  total: number
+  page: number
+  per_page: number
+  total_pages: number
+  links?: {
+    self?: string
+    first?: string
+    prev?: string
+    next?: string
+    last?: string
+  }
+}
+
+/**
+ * Asset-specific search filters
+ * Maps to backend ListAssetsInput struct
+ */
+export interface AssetSearchFilters {
+  // Pagination
+  page?: number
+  pageSize?: number
+
+  // Filtering
+  name?: string
+  types?: AssetType[]
+  criticalities?: Criticality[]
+  statuses?: ('active' | 'inactive' | 'archived')[]
+  scopes?: AssetScope[]
+  exposures?: ExposureLevel[]
+  tags?: string[]
+
+  // Search
+  search?: string
+
+  // Risk score range
+  minRiskScore?: number
+  maxRiskScore?: number
+
+  // Has findings filter
+  hasFindings?: boolean
+
+  // Sorting (e.g., "-created_at", "name", "-risk_score")
+  sort?: string
+}
 
 // Backend asset type mapping (matches Go AssetResponse struct)
 interface BackendAsset {
@@ -74,12 +123,56 @@ function transformAssetStats(backend: BackendAssetStats): AssetStatsData {
 }
 
 /**
+ * Build query params from AssetSearchFilters
+ * Converts frontend filter format to backend query string
+ */
+function buildAssetQueryParams(filters?: AssetSearchFilters): Record<string, string> {
+  if (!filters) return {}
+
+  const params: Record<string, string> = {}
+
+  // Pagination
+  if (filters.page) params.page = String(filters.page)
+  if (filters.pageSize) params.per_page = String(filters.pageSize)
+
+  // Filtering - arrays need to be comma-separated for backend
+  if (filters.name) params.name = filters.name
+  if (filters.types?.length) params.types = filters.types.join(',')
+  if (filters.criticalities?.length) params.criticalities = filters.criticalities.join(',')
+  if (filters.statuses?.length) params.statuses = filters.statuses.join(',')
+  if (filters.scopes?.length) params.scopes = filters.scopes.join(',')
+  if (filters.exposures?.length) params.exposures = filters.exposures.join(',')
+  if (filters.tags?.length) params.tags = filters.tags.join(',')
+
+  // Search
+  if (filters.search) params.search = filters.search
+
+  // Risk score range
+  if (filters.minRiskScore !== undefined) params.min_risk_score = String(filters.minRiskScore)
+  if (filters.maxRiskScore !== undefined) params.max_risk_score = String(filters.maxRiskScore)
+
+  // Has findings
+  if (filters.hasFindings !== undefined) params.has_findings = String(filters.hasFindings)
+
+  // Sorting
+  if (filters.sort) params.sort = filters.sort
+
+  return params
+}
+
+/**
  * Hook to fetch paginated assets list
  */
-export function useAssets(filters?: SearchFilters) {
-  const { data, error, isLoading, mutate } = useSWR<PaginatedResponse<BackendAsset>>(
+export function useAssets(filters?: AssetSearchFilters) {
+  // Build query string from filters
+  const queryParams = buildAssetQueryParams(filters)
+  const queryString = Object.keys(queryParams).length > 0
+    ? '?' + new URLSearchParams(queryParams).toString()
+    : ''
+
+  const { data, error, isLoading, mutate } = useSWR<BackendListResponse<BackendAsset>>(
     ['assets', filters],
-    () => get<PaginatedResponse<BackendAsset>>(endpoints.assets.list(filters)),
+    () => get<BackendListResponse<BackendAsset>>(`/api/v1/assets${queryString}`),
     {
       revalidateOnFocus: false,
       dedupingInterval: 10000,
@@ -88,10 +181,12 @@ export function useAssets(filters?: SearchFilters) {
 
   return {
     assets: data?.data?.map(transformAsset) || [],
-    total: data?.pagination?.total || 0,
-    page: data?.pagination?.page || 1,
-    pageSize: data?.pagination?.pageSize || 10,
+    total: data?.total || 0,
+    page: data?.page || 1,
+    pageSize: data?.per_page || 20,
+    totalPages: data?.total_pages || 1,
     isLoading,
+    isError: !!error,
     error,
     mutate,
   }
@@ -120,15 +215,20 @@ export function useAsset(assetId: string | null) {
 /**
  * Hook to fetch assets by type
  */
-export function useAssetsByType(type: AssetType) {
-  const { assets, total, isLoading, error, mutate } = useAssets({
-    asset_type: type
-  } as SearchFilters)
+export function useAssetsByType(type: AssetType, additionalFilters?: Omit<AssetSearchFilters, 'types'>) {
+  const { assets, total, isLoading, isError, error, mutate, totalPages, page, pageSize } = useAssets({
+    types: [type],
+    ...additionalFilters,
+  })
 
   return {
     assets,
     total,
+    totalPages,
+    page,
+    pageSize,
     isLoading,
+    isError,
     error,
     mutate,
   }
@@ -170,6 +270,19 @@ export async function updateAsset(assetId: string, input: UpdateAssetInput): Pro
  */
 export async function deleteAsset(assetId: string): Promise<void> {
   await del(endpoints.assets.delete(assetId))
+}
+
+/**
+ * Bulk delete multiple assets
+ * Deletes assets sequentially to avoid overwhelming the server
+ */
+export async function bulkDeleteAssets(assetIds: string[]): Promise<void> {
+  // Delete assets in parallel with a concurrency limit
+  const BATCH_SIZE = 5
+  for (let i = 0; i < assetIds.length; i += BATCH_SIZE) {
+    const batch = assetIds.slice(i, i + BATCH_SIZE)
+    await Promise.all(batch.map(id => del(endpoints.assets.delete(id))))
+  }
 }
 
 /**

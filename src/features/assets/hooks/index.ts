@@ -10,5 +10,6 @@ export {
   createAsset,
   updateAsset,
   deleteAsset,
+  bulkDeleteAssets,
 } from './use-assets'
-export type { AssetStatsData } from './use-assets'
+export type { AssetStatsData, AssetSearchFilters } from './use-assets'

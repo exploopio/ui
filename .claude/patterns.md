@@ -874,6 +874,177 @@ export async function DELETE(
 
 ---
 
+---
+
+## 🏢 Asset API Pattern {#asset-api-pattern}
+
+Pattern for asset pages with real API integration using SWR.
+
+### 1. Import Required Functions
+
+```tsx
+import {
+  useAssets,
+  createAsset,
+  updateAsset,
+  deleteAsset,
+  bulkDeleteAssets,
+  type Asset,
+  type AssetSearchFilters,
+} from "@/features/assets";
+```
+
+### 2. Component Setup
+
+```tsx
+"use client";
+
+export default function HostsPage() {
+  // Fetch assets from API
+  const { assets: hosts, isLoading, isError, error, mutate } = useAssets({
+    types: ['host'],
+  });
+
+  // Local states
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
+
+  // Dialog states
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+```
+
+### 3. CRUD Handlers
+
+```tsx
+  // Create
+  const handleCreate = async () => {
+    if (!formData.name) {
+      toast.error("Name is required");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await createAsset({
+        name: formData.name,
+        type: "host",
+        criticality: "medium",
+        description: formData.description,
+        scope: "internal",
+        exposure: "private",
+        tags: formData.tags.split(",").map(s => s.trim()).filter(Boolean),
+      });
+      await mutate();
+      setFormData(emptyForm);
+      setAddDialogOpen(false);
+      toast.success("Asset created successfully");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to create");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Update
+  const handleUpdate = async () => {
+    if (!selectedAsset || !formData.name) {
+      toast.error("Please fill required fields");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await updateAsset(selectedAsset.id, {
+        name: formData.name,
+        description: formData.description,
+        tags: formData.tags.split(",").map(s => s.trim()).filter(Boolean),
+      });
+      await mutate();
+      setSelectedAsset(null);
+      toast.success("Asset updated successfully");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Delete
+  const handleDelete = async () => {
+    if (!assetToDelete) return;
+
+    setIsSubmitting(true);
+    try {
+      await deleteAsset(assetToDelete.id);
+      await mutate();
+      setDeleteDialogOpen(false);
+      toast.success("Asset deleted successfully");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Bulk Delete
+  const handleBulkDelete = async () => {
+    const selectedIds = table.getSelectedRowModel().rows.map(r => r.original.id);
+    if (selectedIds.length === 0) return;
+
+    setIsSubmitting(true);
+    try {
+      await bulkDeleteAssets(selectedIds);
+      await mutate();
+      setRowSelection({});
+      toast.success(`Deleted ${selectedIds.length} assets`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+```
+
+### 4. Render with Loading States
+
+```tsx
+  if (isLoading) {
+    return <LoadingSkeleton />;
+  }
+
+  if (isError) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-destructive">{error?.message || "Failed to load"}</p>
+        <Button onClick={() => mutate()}>Retry</Button>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <DataTable
+        data={hosts}
+        columns={columns}
+        onDelete={handleDelete}
+        onBulkDelete={handleBulkDelete}
+      />
+    </div>
+  );
+}
+```
+
+### Key Points
+
+1. **Always call `mutate()` after mutations** to refresh data
+2. **Use `isSubmitting` state** to disable buttons during operations
+3. **Handle errors with try/catch** and show user-friendly messages
+4. **Transform form data to API format** before sending
+
+---
+
 **See also:**
 - [architecture.md](architecture.md) - Project structure
 - [troubleshooting.md](troubleshooting.md) - Common issues
+- [ASSETS_API_INTEGRATION.md](../docs/ASSETS_API_INTEGRATION.md) - Complete asset API guide
