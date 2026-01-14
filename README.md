@@ -2,6 +2,8 @@
 
 Continuous Threat Exposure Management (CTEM) platform built with Next.js 16, featuring the complete 5-stage CTEM process: Scoping, Discovery, Prioritization, Validation, and Mobilization.
 
+![Rediver Dashboard](docs/images/dashboard.png)
+
 ## Overview
 
 Rediver is an enterprise-grade Attack Surface Management (ASM) and Vulnerability Management platform that helps security teams continuously monitor, assess, and remediate security risks across their digital infrastructure.
@@ -235,9 +237,14 @@ rediver-ui/
 │   └── stores/                   # Zustand stores
 ├── docs/                         # Documentation
 ├── nginx/                        # Nginx configuration
+│   ├── nginx.conf               # Main Nginx config (SSL, rate limiting)
+│   ├── ssl/                     # SSL certificates directory
+│   └── README.md                # SSL setup instructions
+├── docs/images/                  # README images/screenshots
 ├── Dockerfile                    # Multi-stage build (dev & prod targets)
 ├── docker-compose.yml            # Development with hot reload
-└── docker-compose.prod.yml       # Production deployment
+├── docker-compose.prod.yml       # Production with Nginx/SSL
+└── docker-compose.prod-simple.yml # Production without Nginx
 ```
 
 ---
@@ -290,19 +297,70 @@ See [Deployment Guide](./docs/DEPLOYMENT.md#vercel) for details.
 
 ### Option 2: Docker (Recommended for production)
 
-```bash
-# Development (with hot reload)
-docker compose up --build
+#### Docker Compose Files
 
-# Production
+| File | Purpose | Includes Nginx |
+|------|---------|----------------|
+| `docker-compose.yml` | Development | No |
+| `docker-compose.prod.yml` | Production (full) | Yes (SSL/TLS) |
+| `docker-compose.prod-simple.yml` | Production (simple) | No |
+
+#### Development (with hot reload)
+
+```bash
+docker compose up --build
+```
+
+Features:
+- Hot reload with volume mounts
+- Port 3000 exposed
+- Environment from `.env.local`
+
+#### Production with Nginx (Recommended)
+
+Full production setup with built-in Nginx reverse proxy for SSL/TLS termination.
+
+```bash
+# 1. Setup SSL certificates (see nginx/README.md)
+#    - Option A: Let's Encrypt (recommended for public domains)
+#    - Option B: Self-signed (for testing only)
+
+# 2. Update nginx/nginx.conf with your domain
+sed -i 's/your-domain.com/yourdomain.com/g' nginx/nginx.conf
+
+# 3. Create .env file
+cp .env.example .env
+# Edit with your values
+
+# 4. Start
 docker compose -f docker-compose.prod.yml up --build -d
 
 # View logs
-docker compose logs -f nextjs
-
-# Stop
-docker compose down
+docker compose -f docker-compose.prod.yml logs -f
 ```
+
+Features:
+- Nginx reverse proxy (ports 80, 443)
+- HTTP to HTTPS redirect
+- SSL/TLS termination
+- Security headers (HSTS, X-Frame-Options, etc.)
+- Rate limiting
+- Gzip compression
+- Static asset caching
+
+#### Production without Nginx (External Proxy)
+
+Use this when you have an external reverse proxy (cloud load balancer, Traefik, Kubernetes Ingress).
+
+```bash
+docker compose -f docker-compose.prod-simple.yml up --build -d
+```
+
+When to use:
+- AWS ALB, GCP Load Balancer, Azure App Gateway
+- Kubernetes Ingress
+- Traefik, Caddy as external proxy
+- Cloudflare Tunnel
 
 **Docker Image Sizes:**
 | Target | Size | Use Case |

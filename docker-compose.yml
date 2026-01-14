@@ -1,33 +1,34 @@
-# ==============================================================================
+# =============================================================================
 # Docker Compose - Development Configuration
-# ==============================================================================
+# =============================================================================
 # Development environment with hot reload support.
 #
 # Usage:
-#   Start:    docker-compose up
-#   Rebuild:  docker-compose up --build
-#   Stop:     docker-compose down
-#   Logs:     docker-compose logs -f nextjs
-#   Shell:    docker-compose exec nextjs sh
+#   Start:    docker compose up
+#   Rebuild:  docker compose up --build
+#   Stop:     docker compose down
+#   Logs:     docker compose logs -f nextjs
+#   Shell:    docker compose exec nextjs sh
 #
 # Hot Reload:
 #   - Source code is mounted as volume
 #   - Changes are detected automatically
 #   - Browser refreshes on save
-# ==============================================================================
+#
+# Environment:
+#   Create .env.local with your configuration (copy from .env.example)
+# =============================================================================
 
 services:
-  # ----------------------------------------------------------------------------
+  # ---------------------------------------------------------------------------
   # Next.js Development Server
-  # ----------------------------------------------------------------------------
+  # ---------------------------------------------------------------------------
   nextjs:
     build:
       context: .
       dockerfile: Dockerfile
       target: development
-
     container_name: rediver-ui-dev
-
     # Mount source code for hot reload
     volumes:
       # Mount source code (enables hot reload)
@@ -36,26 +37,13 @@ services:
       - /app/node_modules
       # Exclude .next to avoid conflicts
       - /app/.next
-
     # Development ports
     ports:
-      - "3000:3000"
-
+      - "${UI_PORT:-3000}:3000"
     # Environment variables from .env.local
-    # Contains both NEXT_PUBLIC_* (browser) and server-only variables
     env_file:
       - .env.local
-
     # Override environment for development
-    # =========================================================================
-    # Note on environment variables:
-    # - NEXT_PUBLIC_*: Visible to browser, bundled into client JS
-    # - Without prefix: Server-only, hidden from browser
-    #
-    # Example:
-    #   NEXT_PUBLIC_API_URL=http://localhost:3000  (browser calls this)
-    #   BACKEND_API_URL=http://api:8080            (server proxies to this)
-    # =========================================================================
     environment:
       NODE_ENV: development
       WATCHPACK_POLLING: "true"
@@ -64,21 +52,18 @@ services:
       # - Use http://host.docker.internal:8080 for API running on host machine
       # - Use http://api:8080 if API is in same docker-compose network
       BACKEND_API_URL: ${BACKEND_API_URL:-http://host.docker.internal:8080}
-
     # Keep stdin open for debugging
     stdin_open: true
     tty: true
-
     # Restart on failure
     restart: unless-stopped
-
     # Network
     networks:
       - app-network
 
-# ==============================================================================
+# =============================================================================
 # Networks
-# ==============================================================================
+# =============================================================================
 networks:
   app-network:
     driver: bridge
