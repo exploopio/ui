@@ -99,7 +99,16 @@ import {
   Copy,
   RefreshCw,
 } from "lucide-react";
-import { getDomains, getAssetRelationships, ClassificationBadges, type Asset } from "@/features/assets";
+import {
+  useAssets,
+  createAsset,
+  updateAsset,
+  deleteAsset,
+  bulkDeleteAssets,
+  getAssetRelationships,
+  ClassificationBadges,
+  type Asset
+} from "@/features/assets";
 import { mockAssetGroups } from "@/features/asset-groups";
 import type { Status } from "@/features/shared/types";
 import {
@@ -134,12 +143,17 @@ const emptyDomainForm = {
 };
 
 export default function DomainsPage() {
-  const [domains, setDomains] = useState<Asset[]>(getDomains());
+  // Fetch domains from API
+  const { assets: domains, isLoading, isError, error: fetchError, mutate } = useAssets({
+    types: ['domain'],
+  });
+
   const [selectedDomain, setSelectedDomain] = useState<Asset | null>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [rowSelection, setRowSelection] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Dialog states
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -336,31 +350,37 @@ export default function DomainsPage() {
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setSelectedDomain(domain)}>
+            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSelectedDomain(domain); }}>
                 <Eye className="mr-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleOpenEdit(domain)}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenEdit(domain); }}>
                 <Pencil className="mr-2 h-4 w-4" />
                 Edit
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleCopyDomain(domain)}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleCopyDomain(domain); }}>
                 <Copy className="mr-2 h-4 w-4" />
                 Copy Name
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => window.open(`https://${domain.name}`, "_blank")}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); window.open(`https://${domain.name}`, "_blank"); }}>
                 <ExternalLink className="mr-2 h-4 w-4" />
                 Open in Browser
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-red-400"
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   setDomainToDelete(domain);
                   setDeleteDialogOpen(true);
                 }}
@@ -408,90 +428,90 @@ export default function DomainsPage() {
     setEditDialogOpen(true);
   };
 
-  const handleAddDomain = () => {
-    if (!formData.name || !formData.groupId) {
+  const handleAddDomain = async () => {
+    if (!formData.name) {
       toast.error("Please fill in required fields");
       return;
     }
 
-    const newDomain: Asset = {
-      id: `dom-${Date.now()}`,
-      type: "domain",
-      name: formData.name,
-      description: formData.description,
-      criticality: "high",
-      status: "active",
-      scope: "external",
-      exposure: "public",
-      riskScore: 0,
-      findingCount: 0,
-      groupId: formData.groupId,
-      groupName: mockAssetGroups.find((g) => g.id === formData.groupId)?.name,
-      metadata: {
-        registrar: formData.registrar,
-        expiryDate: formData.expiryDate,
-        nameservers: formData.nameservers.split(",").map((s) => s.trim()).filter(Boolean),
-      },
-      tags: formData.tags.split(",").map((s) => s.trim()).filter(Boolean),
-      firstSeen: new Date().toISOString(),
-      lastSeen: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    setDomains([newDomain, ...domains]);
-    setFormData(emptyDomainForm);
-    setAddDialogOpen(false);
-    toast.success("Domain added successfully");
+    setIsSubmitting(true);
+    try {
+      await createAsset({
+        name: formData.name,
+        type: "domain",
+        criticality: "high",
+        description: formData.description,
+        scope: "external",
+        exposure: "public",
+        tags: formData.tags.split(",").map((s) => s.trim()).filter(Boolean),
+      });
+      await mutate();
+      setFormData(emptyDomainForm);
+      setAddDialogOpen(false);
+      toast.success("Domain added successfully");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to add domain");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleEditDomain = () => {
-    if (!selectedDomain || !formData.name || !formData.groupId) {
+  const handleEditDomain = async () => {
+    if (!selectedDomain || !formData.name) {
       toast.error("Please fill in required fields");
       return;
     }
 
-    const updatedDomains = domains.map((d) =>
-      d.id === selectedDomain.id
-        ? {
-            ...d,
-            name: formData.name,
-            description: formData.description,
-            groupId: formData.groupId,
-            groupName: mockAssetGroups.find((g) => g.id === formData.groupId)?.name,
-            metadata: {
-              ...d.metadata,
-              registrar: formData.registrar,
-              expiryDate: formData.expiryDate,
-              nameservers: formData.nameservers.split(",").map((s) => s.trim()).filter(Boolean),
-            },
-            tags: formData.tags.split(",").map((s) => s.trim()).filter(Boolean),
-            updatedAt: new Date().toISOString(),
-          }
-        : d
-    );
-
-    setDomains(updatedDomains);
-    setFormData(emptyDomainForm);
-    setEditDialogOpen(false);
-    setSelectedDomain(null);
-    toast.success("Domain updated successfully");
+    setIsSubmitting(true);
+    try {
+      await updateAsset(selectedDomain.id, {
+        name: formData.name,
+        description: formData.description,
+        tags: formData.tags.split(",").map((s) => s.trim()).filter(Boolean),
+      });
+      await mutate();
+      setFormData(emptyDomainForm);
+      setEditDialogOpen(false);
+      setSelectedDomain(null);
+      toast.success("Domain updated successfully");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update domain");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleDeleteDomain = () => {
+  const handleDeleteDomain = async () => {
     if (!domainToDelete) return;
-    setDomains(domains.filter((d) => d.id !== domainToDelete.id));
-    setDeleteDialogOpen(false);
-    setDomainToDelete(null);
-    toast.success("Domain deleted successfully");
+    setIsSubmitting(true);
+    try {
+      await deleteAsset(domainToDelete.id);
+      await mutate();
+      setDeleteDialogOpen(false);
+      setDomainToDelete(null);
+      toast.success("Domain deleted successfully");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete domain");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleBulkDelete = () => {
-    const selectedIds = Object.keys(rowSelection);
+  const handleBulkDelete = async () => {
     const selectedDomainIds = table.getSelectedRowModel().rows.map((r) => r.original.id);
-    setDomains(domains.filter((d) => !selectedDomainIds.includes(d.id)));
-    setRowSelection({});
-    toast.success(`Deleted ${selectedIds.length} domains`);
+    if (selectedDomainIds.length === 0) return;
+
+    setIsSubmitting(true);
+    try {
+      await bulkDeleteAssets(selectedDomainIds);
+      await mutate();
+      setRowSelection({});
+      toast.success(`Deleted ${selectedDomainIds.length} domains`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete domains");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleExport = () => {

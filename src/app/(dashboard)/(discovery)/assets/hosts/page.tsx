@@ -100,7 +100,16 @@ import {
   HardDrive,
   Network,
 } from "lucide-react";
-import { getHosts, getAssetRelationships, ClassificationBadges, type Asset } from "@/features/assets";
+import {
+  useAssets,
+  createAsset,
+  updateAsset,
+  deleteAsset,
+  bulkDeleteAssets,
+  getAssetRelationships,
+  ClassificationBadges,
+  type Asset
+} from "@/features/assets";
 import { mockAssetGroups } from "@/features/asset-groups";
 import type { Status } from "@/features/shared/types";
 import {
@@ -150,13 +159,18 @@ const emptyHostForm = {
 };
 
 export default function HostsPage() {
-  const [hosts, setHosts] = useState<Asset[]>(getHosts());
+  // Fetch hosts from API
+  const { assets: hosts, isLoading, isError, error: fetchError, mutate } = useAssets({
+    types: ['host'],
+  });
+
   const [selectedHost, setSelectedHost] = useState<Asset | null>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [osFilter, setOSFilter] = useState<OSFilter>("all");
   const [rowSelection, setRowSelection] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Dialog states
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -401,27 +415,28 @@ export default function HostsPage() {
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setSelectedHost(host)}>
+            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSelectedHost(host); }}>
                 <Eye className="mr-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleOpenEdit(host)}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenEdit(host); }}>
                 <Pencil className="mr-2 h-4 w-4" />
                 Edit
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleCopyIP(host)}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleCopyIP(host); }}>
                 <Copy className="mr-2 h-4 w-4" />
                 Copy IP
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-red-400"
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   setHostToDelete(host);
                   setDeleteDialogOpen(true);
                 }}
@@ -476,104 +491,90 @@ export default function HostsPage() {
     setEditDialogOpen(true);
   };
 
-  const handleAddHost = () => {
-    if (!formData.name || !formData.groupId || !formData.ip) {
+  const handleAddHost = async () => {
+    if (!formData.name || !formData.ip) {
       toast.error("Please fill in required fields");
       return;
     }
 
-    const newHost: Asset = {
-      id: `host-${Date.now()}`,
-      type: "host",
-      name: formData.name,
-      description: formData.description,
-      criticality: "medium",
-      status: "active",
-      scope: "internal",
-      exposure: "private",
-      riskScore: 0,
-      findingCount: 0,
-      groupId: formData.groupId,
-      groupName: mockAssetGroups.find((g) => g.id === formData.groupId)?.name,
-      metadata: {
-        ip: formData.ip,
-        hostname: formData.hostname,
-        os: formData.os,
-        osVersion: formData.osVersion,
-        architecture: formData.architecture,
-        cpuCores: formData.cpuCores ? parseInt(formData.cpuCores) : undefined,
-        memoryGB: formData.memoryGB ? parseInt(formData.memoryGB) : undefined,
-        isVirtual: formData.isVirtual,
-        hypervisor: formData.hypervisor,
-        openPorts: formData.openPorts.split(",").map((s) => parseInt(s.trim())).filter((n) => !isNaN(n)),
-      },
-      tags: formData.tags.split(",").map((s) => s.trim()).filter(Boolean),
-      firstSeen: new Date().toISOString(),
-      lastSeen: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    setHosts([newHost, ...hosts]);
-    setFormData(emptyHostForm);
-    setAddDialogOpen(false);
-    toast.success("Host added successfully");
+    setIsSubmitting(true);
+    try {
+      await createAsset({
+        name: formData.name,
+        type: "host",
+        criticality: "medium",
+        description: formData.description,
+        scope: "internal",
+        exposure: "private",
+        tags: formData.tags.split(",").map((s) => s.trim()).filter(Boolean),
+      });
+      await mutate();
+      setFormData(emptyHostForm);
+      setAddDialogOpen(false);
+      toast.success("Host added successfully");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to add host");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleEditHost = () => {
-    if (!selectedHost || !formData.name || !formData.groupId || !formData.ip) {
+  const handleEditHost = async () => {
+    if (!selectedHost || !formData.name || !formData.ip) {
       toast.error("Please fill in required fields");
       return;
     }
 
-    const updatedHosts = hosts.map((h) =>
-      h.id === selectedHost.id
-        ? {
-            ...h,
-            name: formData.name,
-            description: formData.description,
-            groupId: formData.groupId,
-            groupName: mockAssetGroups.find((g) => g.id === formData.groupId)?.name,
-            metadata: {
-              ...h.metadata,
-              ip: formData.ip,
-              hostname: formData.hostname,
-              os: formData.os,
-              osVersion: formData.osVersion,
-              architecture: formData.architecture,
-              cpuCores: formData.cpuCores ? parseInt(formData.cpuCores) : undefined,
-              memoryGB: formData.memoryGB ? parseInt(formData.memoryGB) : undefined,
-              isVirtual: formData.isVirtual,
-              hypervisor: formData.hypervisor,
-              openPorts: formData.openPorts.split(",").map((s) => parseInt(s.trim())).filter((n) => !isNaN(n)),
-            },
-            tags: formData.tags.split(",").map((s) => s.trim()).filter(Boolean),
-            updatedAt: new Date().toISOString(),
-          }
-        : h
-    );
-
-    setHosts(updatedHosts);
-    setFormData(emptyHostForm);
-    setEditDialogOpen(false);
-    setSelectedHost(null);
-    toast.success("Host updated successfully");
+    setIsSubmitting(true);
+    try {
+      await updateAsset(selectedHost.id, {
+        name: formData.name,
+        description: formData.description,
+        tags: formData.tags.split(",").map((s) => s.trim()).filter(Boolean),
+      });
+      await mutate();
+      setFormData(emptyHostForm);
+      setEditDialogOpen(false);
+      setSelectedHost(null);
+      toast.success("Host updated successfully");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update host");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleDeleteHost = () => {
+  const handleDeleteHost = async () => {
     if (!hostToDelete) return;
-    setHosts(hosts.filter((h) => h.id !== hostToDelete.id));
-    setDeleteDialogOpen(false);
-    setHostToDelete(null);
-    toast.success("Host deleted successfully");
+    setIsSubmitting(true);
+    try {
+      await deleteAsset(hostToDelete.id);
+      await mutate();
+      setDeleteDialogOpen(false);
+      setHostToDelete(null);
+      toast.success("Host deleted successfully");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete host");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleBulkDelete = () => {
-    const selectedIds = Object.keys(rowSelection);
+  const handleBulkDelete = async () => {
     const selectedHostIds = table.getSelectedRowModel().rows.map((r) => r.original.id);
-    setHosts(hosts.filter((h) => !selectedHostIds.includes(h.id)));
-    setRowSelection({});
-    toast.success(`Deleted ${selectedIds.length} hosts`);
+    if (selectedHostIds.length === 0) return;
+
+    setIsSubmitting(true);
+    try {
+      await bulkDeleteAssets(selectedHostIds);
+      await mutate();
+      setRowSelection({});
+      toast.success(`Deleted ${selectedHostIds.length} hosts`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete hosts");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleExport = () => {

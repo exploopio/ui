@@ -98,7 +98,16 @@ import {
   RefreshCw,
   Network,
 } from "lucide-react";
-import { getServices, getAssetRelationships, ClassificationBadges, type Asset } from "@/features/assets";
+import {
+  useAssets,
+  createAsset,
+  updateAsset,
+  deleteAsset,
+  bulkDeleteAssets,
+  getAssetRelationships,
+  ClassificationBadges,
+  type Asset
+} from "@/features/assets";
 import { mockAssetGroups } from "@/features/asset-groups";
 import type { Status } from "@/features/shared/types";
 
@@ -140,13 +149,18 @@ const emptyServiceForm = {
 };
 
 export default function ServicesPage() {
-  const [services, setServices] = useState<Asset[]>(getServices());
+  // Fetch services from API
+  const { assets: services, isLoading, isError, error: fetchError, mutate } = useAssets({
+    types: ['service'],
+  });
+
   const [selectedService, setSelectedService] = useState<Asset | null>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [protocolFilter, setProtocolFilter] = useState<ProtocolFilter>("all");
   const [rowSelection, setRowSelection] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Dialog states
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -349,27 +363,28 @@ export default function ServicesPage() {
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setSelectedService(service)}>
+            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSelectedService(service); }}>
                 <Eye className="mr-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleOpenEdit(service)}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenEdit(service); }}>
                 <Pencil className="mr-2 h-4 w-4" />
                 Edit
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleCopyService(service)}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleCopyService(service); }}>
                 <Copy className="mr-2 h-4 w-4" />
                 Copy Info
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-red-400"
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   setServiceToDelete(service);
                   setDeleteDialogOpen(true);
                 }}
@@ -419,101 +434,90 @@ export default function ServicesPage() {
     setEditDialogOpen(true);
   };
 
-  const handleAddService = () => {
-    if (!formData.name || !formData.groupId || !formData.port) {
+  const handleAddService = async () => {
+    if (!formData.name) {
       toast.error("Please fill in required fields");
       return;
     }
 
-    const newService: Asset = {
-      id: `svc-${Date.now()}`,
-      type: "service",
-      name: formData.name,
-      description: formData.description,
-      criticality: "medium",
-      status: "active",
-      scope: "internal",
-      exposure: "private",
-      riskScore: 0,
-      findingCount: 0,
-      groupId: formData.groupId,
-      groupName: mockAssetGroups.find((g) => g.id === formData.groupId)?.name,
-      metadata: {
-        port: parseInt(formData.port),
-        protocol: formData.protocol,
-        version: formData.version || undefined,
-        banner: formData.banner || undefined,
-      },
-      tags: formData.tags
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean),
-      firstSeen: new Date().toISOString(),
-      lastSeen: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    setServices([newService, ...services]);
-    setFormData(emptyServiceForm);
-    setAddDialogOpen(false);
-    toast.success("Service added successfully");
+    setIsSubmitting(true);
+    try {
+      await createAsset({
+        name: formData.name,
+        type: "service",
+        criticality: "medium",
+        description: formData.description,
+        scope: "internal",
+        exposure: "private",
+        tags: formData.tags.split(",").map((s) => s.trim()).filter(Boolean),
+      });
+      await mutate();
+      setFormData(emptyServiceForm);
+      setAddDialogOpen(false);
+      toast.success("Service added successfully");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to add service");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleEditService = () => {
-    if (!selectedService || !formData.name || !formData.groupId || !formData.port) {
+  const handleEditService = async () => {
+    if (!selectedService || !formData.name) {
       toast.error("Please fill in required fields");
       return;
     }
 
-    const updatedServices = services.map((s) =>
-      s.id === selectedService.id
-        ? {
-            ...s,
-            name: formData.name,
-            description: formData.description,
-            groupId: formData.groupId,
-            groupName: mockAssetGroups.find((g) => g.id === formData.groupId)
-              ?.name,
-            metadata: {
-              ...s.metadata,
-              port: parseInt(formData.port),
-              protocol: formData.protocol,
-              version: formData.version || undefined,
-              banner: formData.banner || undefined,
-            },
-            tags: formData.tags
-              .split(",")
-              .map((s) => s.trim())
-              .filter(Boolean),
-            updatedAt: new Date().toISOString(),
-          }
-        : s
-    );
-
-    setServices(updatedServices);
-    setFormData(emptyServiceForm);
-    setEditDialogOpen(false);
-    setSelectedService(null);
-    toast.success("Service updated successfully");
+    setIsSubmitting(true);
+    try {
+      await updateAsset(selectedService.id, {
+        name: formData.name,
+        description: formData.description,
+        tags: formData.tags.split(",").map((s) => s.trim()).filter(Boolean),
+      });
+      await mutate();
+      setFormData(emptyServiceForm);
+      setEditDialogOpen(false);
+      setSelectedService(null);
+      toast.success("Service updated successfully");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update service");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleDeleteService = () => {
+  const handleDeleteService = async () => {
     if (!serviceToDelete) return;
-    setServices(services.filter((s) => s.id !== serviceToDelete.id));
-    setDeleteDialogOpen(false);
-    setServiceToDelete(null);
-    toast.success("Service deleted successfully");
+    setIsSubmitting(true);
+    try {
+      await deleteAsset(serviceToDelete.id);
+      await mutate();
+      setDeleteDialogOpen(false);
+      setServiceToDelete(null);
+      toast.success("Service deleted successfully");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete service");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleBulkDelete = () => {
-    const selectedIds = Object.keys(rowSelection);
-    const selectedServiceIds = table
-      .getSelectedRowModel()
-      .rows.map((r) => r.original.id);
-    setServices(services.filter((s) => !selectedServiceIds.includes(s.id)));
-    setRowSelection({});
-    toast.success(`Deleted ${selectedIds.length} services`);
+  const handleBulkDelete = async () => {
+    const selectedServiceIds = table.getSelectedRowModel().rows.map((r) => r.original.id);
+    if (selectedServiceIds.length === 0) return;
+
+    setIsSubmitting(true);
+    try {
+      await bulkDeleteAssets(selectedServiceIds);
+      await mutate();
+      setRowSelection({});
+      toast.success(`Deleted ${selectedServiceIds.length} services`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete services");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleExport = () => {

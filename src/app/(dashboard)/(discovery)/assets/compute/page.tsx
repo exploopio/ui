@@ -495,16 +495,17 @@ export default function ComputePage() {
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => toast.info(`Viewing ${instance.name}`)}>
+            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); toast.info(`Viewing ${instance.name}`); }}>
                 <Eye className="mr-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => {
+              <DropdownMenuItem onClick={(e) => {
+                e.stopPropagation();
                 navigator.clipboard.writeText(instance.instanceId);
                 toast.success("Instance ID copied");
               }}>
@@ -512,7 +513,7 @@ export default function ComputePage() {
                 Copy Instance ID
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => toast.info("Scanning instance...")}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); toast.info("Scanning instance..."); }}>
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Rescan
               </DropdownMenuItem>

@@ -99,7 +99,13 @@ import {
   Cloud,
   Network,
 } from "lucide-react";
-import { getServerlessFunctions, getAssetRelationships, type Asset } from "@/features/assets";
+import {
+  useAssets,
+  deleteAsset,
+  bulkDeleteAssets,
+  getAssetRelationships,
+  type Asset
+} from "@/features/assets";
 import type { Status } from "@/features/shared/types";
 import type { CloudProvider } from "@/features/assets/types/asset.types";
 
@@ -156,7 +162,11 @@ const getRuntimeCategory = (runtime: string): string => {
 };
 
 export default function ServerlessPage() {
-  const [functions, setFunctions] = useState<Asset[]>(getServerlessFunctions());
+  // Fetch serverless functions from API
+  const { assets: functions, isLoading, isError, error: fetchError, mutate } = useAssets({
+    types: ['serverless'],
+  });
+
   const [selectedFunction, setSelectedFunction] = useState<Asset | null>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
@@ -164,6 +174,7 @@ export default function ServerlessPage() {
   const [runtimeFilter, setRuntimeFilter] = useState<RuntimeFilter>("all");
   const [providerFilter, setProviderFilter] = useState<ProviderFilter>("all");
   const [rowSelection, setRowSelection] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Dialog states
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -387,28 +398,29 @@ export default function ServerlessPage() {
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setSelectedFunction(fn)}>
+            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSelectedFunction(fn); }}>
                 <Eye className="mr-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleCopyArn(fn)}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleCopyArn(fn); }}>
                 <Copy className="mr-2 h-4 w-4" />
                 Copy ARN
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => toast.info("Scanning function...")}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); toast.info("Scanning function..."); }}>
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Rescan
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-red-400"
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   setFunctionToDelete(fn);
                   setDeleteDialogOpen(true);
                 }}
@@ -443,20 +455,36 @@ export default function ServerlessPage() {
     toast.success("ARN copied to clipboard");
   };
 
-  const handleDeleteFunction = () => {
+  const handleDeleteFunction = async () => {
     if (!functionToDelete) return;
-    setFunctions(functions.filter((f) => f.id !== functionToDelete.id));
-    setDeleteDialogOpen(false);
-    setFunctionToDelete(null);
-    toast.success("Function removed from inventory");
+    setIsSubmitting(true);
+    try {
+      await deleteAsset(functionToDelete.id);
+      await mutate();
+      setDeleteDialogOpen(false);
+      setFunctionToDelete(null);
+      toast.success("Function removed from inventory");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete function");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleBulkDelete = () => {
-    const selectedIds = Object.keys(rowSelection);
+  const handleBulkDelete = async () => {
     const selectedFunctionIds = table.getSelectedRowModel().rows.map((r) => r.original.id);
-    setFunctions(functions.filter((f) => !selectedFunctionIds.includes(f.id)));
-    setRowSelection({});
-    toast.success(`Removed ${selectedIds.length} functions from inventory`);
+    if (selectedFunctionIds.length === 0) return;
+    setIsSubmitting(true);
+    try {
+      await bulkDeleteAssets(selectedFunctionIds);
+      await mutate();
+      setRowSelection({});
+      toast.success(`Removed ${selectedFunctionIds.length} functions from inventory`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete functions");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleExport = () => {

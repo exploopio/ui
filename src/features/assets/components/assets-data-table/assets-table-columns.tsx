@@ -242,25 +242,45 @@ export function createAssetColumns(
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
               {handlers.onView && (
-                <DropdownMenuItem onClick={() => handlers.onView?.(asset)}>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handlers.onView?.(asset)
+                  }}
+                >
                   <Eye className="mr-2 h-4 w-4" />
                   View Details
                 </DropdownMenuItem>
               )}
               {handlers.onEdit && (
-                <DropdownMenuItem onClick={() => handlers.onEdit?.(asset)}>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handlers.onEdit?.(asset)
+                  }}
+                >
                   <Pencil className="mr-2 h-4 w-4" />
                   Edit
                 </DropdownMenuItem>
               )}
               {handlers.onCopy && (
-                <DropdownMenuItem onClick={() => handlers.onCopy?.(asset)}>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handlers.onCopy?.(asset)
+                  }}
+                >
                   <Copy className="mr-2 h-4 w-4" />
                   Copy Name
                 </DropdownMenuItem>
@@ -270,7 +290,10 @@ export function createAssetColumns(
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     className="text-red-400"
-                    onClick={() => handlers.onDelete?.(asset)}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handlers.onDelete?.(asset)
+                    }}
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
                     Delete

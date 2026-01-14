@@ -384,25 +384,25 @@ export default function ApisPage() {
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setSelectedApi(api)}>
+            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSelectedApi(api); }}>
                 <Eye className="mr-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleOpenEdit(api)}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenEdit(api); }}>
                 <Pencil className="mr-2 h-4 w-4" />
                 Edit
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleCopyUrl(api)}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleCopyUrl(api); }}>
                 <Copy className="mr-2 h-4 w-4" />
                 Copy URL
               </DropdownMenuItem>
               {api.documentationUrl && (
-                <DropdownMenuItem onClick={() => window.open(api.documentationUrl, "_blank")}>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); window.open(api.documentationUrl, "_blank"); }}>
                   <ExternalLink className="mr-2 h-4 w-4" />
                   View Docs
                 </DropdownMenuItem>
@@ -410,7 +410,8 @@ export default function ApisPage() {
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-red-400"
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   setApiToDelete(api);
                   setDeleteDialogOpen(true);
                 }}

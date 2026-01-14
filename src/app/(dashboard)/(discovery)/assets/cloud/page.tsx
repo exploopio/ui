@@ -103,7 +103,16 @@ import {
   Globe,
   MapPin,
 } from "lucide-react";
-import { getCloudAssets, getAssetRelationships, ClassificationBadges, type Asset } from "@/features/assets";
+import {
+  useAssets,
+  createAsset,
+  updateAsset,
+  deleteAsset,
+  bulkDeleteAssets,
+  getAssetRelationships,
+  ClassificationBadges,
+  type Asset
+} from "@/features/assets";
 import { mockAssetGroups } from "@/features/asset-groups";
 import type { Status } from "@/features/shared/types";
 import {
@@ -193,13 +202,18 @@ const emptyCloudForm = {
 };
 
 export default function CloudPage() {
-  const [cloudAssets, setCloudAssets] = useState<Asset[]>(getCloudAssets());
+  // Fetch cloud assets from API (compute, storage, serverless types)
+  const { assets: cloudAssets, isLoading, isError, error: fetchError, mutate } = useAssets({
+    types: ['compute', 'storage', 'serverless'],
+  });
+
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [providerFilter, setProviderFilter] = useState<ProviderFilter>("all");
   const [rowSelection, setRowSelection] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Dialog states
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -412,27 +426,28 @@ export default function CloudPage() {
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setSelectedAsset(asset)}>
+            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSelectedAsset(asset); }}>
                 <Eye className="mr-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleOpenEdit(asset)}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenEdit(asset); }}>
                 <Pencil className="mr-2 h-4 w-4" />
                 Edit
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleOpenConsole(asset)}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenConsole(asset); }}>
                 <Globe className="mr-2 h-4 w-4" />
                 Open Console
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-red-400"
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   setAssetToDelete(asset);
                   setDeleteDialogOpen(true);
                 }}
@@ -493,96 +508,90 @@ export default function CloudPage() {
     setEditDialogOpen(true);
   };
 
-  const handleAddAsset = () => {
-    if (!formData.name || !formData.groupId || !formData.region || !formData.resourceType) {
+  const handleAddAsset = async () => {
+    if (!formData.name) {
       toast.error("Please fill in required fields");
       return;
     }
 
-    const newAsset: Asset = {
-      id: `cloud-${Date.now()}`,
-      type: "cloud",
-      name: formData.name,
-      description: formData.description,
-      criticality: "medium",
-      status: "active",
-      scope: "cloud",
-      exposure: "private",
-      riskScore: 0,
-      findingCount: 0,
-      groupId: formData.groupId,
-      groupName: mockAssetGroups.find((g) => g.id === formData.groupId)?.name,
-      metadata: {
-        cloudProvider: formData.cloudProvider,
-        region: formData.region,
-        resourceType: formData.resourceType,
-      },
-      tags: formData.tags
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean),
-      firstSeen: new Date().toISOString(),
-      lastSeen: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    setCloudAssets([newAsset, ...cloudAssets]);
-    setFormData(emptyCloudForm);
-    setAddDialogOpen(false);
-    toast.success("Cloud asset added successfully");
+    setIsSubmitting(true);
+    try {
+      await createAsset({
+        name: formData.name,
+        type: "compute",
+        criticality: "medium",
+        description: formData.description,
+        scope: "cloud",
+        exposure: "private",
+        tags: formData.tags.split(",").map((s) => s.trim()).filter(Boolean),
+      });
+      await mutate();
+      setFormData(emptyCloudForm);
+      setAddDialogOpen(false);
+      toast.success("Cloud asset added successfully");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to add cloud asset");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleEditAsset = () => {
-    if (!selectedAsset || !formData.name || !formData.groupId) {
+  const handleEditAsset = async () => {
+    if (!selectedAsset || !formData.name) {
       toast.error("Please fill in required fields");
       return;
     }
 
-    const updatedAssets = cloudAssets.map((a) =>
-      a.id === selectedAsset.id
-        ? {
-            ...a,
-            name: formData.name,
-            description: formData.description,
-            groupId: formData.groupId,
-            groupName: mockAssetGroups.find((g) => g.id === formData.groupId)?.name,
-            metadata: {
-              ...a.metadata,
-              cloudProvider: formData.cloudProvider,
-              region: formData.region,
-              resourceType: formData.resourceType,
-            },
-            tags: formData.tags
-              .split(",")
-              .map((s) => s.trim())
-              .filter(Boolean),
-            updatedAt: new Date().toISOString(),
-          }
-        : a
-    );
-
-    setCloudAssets(updatedAssets);
-    setFormData(emptyCloudForm);
-    setEditDialogOpen(false);
-    setSelectedAsset(null);
-    toast.success("Cloud asset updated successfully");
+    setIsSubmitting(true);
+    try {
+      await updateAsset(selectedAsset.id, {
+        name: formData.name,
+        description: formData.description,
+        tags: formData.tags.split(",").map((s) => s.trim()).filter(Boolean),
+      });
+      await mutate();
+      setFormData(emptyCloudForm);
+      setEditDialogOpen(false);
+      setSelectedAsset(null);
+      toast.success("Cloud asset updated successfully");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update cloud asset");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleDeleteAsset = () => {
+  const handleDeleteAsset = async () => {
     if (!assetToDelete) return;
-    setCloudAssets(cloudAssets.filter((a) => a.id !== assetToDelete.id));
-    setDeleteDialogOpen(false);
-    setAssetToDelete(null);
-    toast.success("Cloud asset deleted successfully");
+    setIsSubmitting(true);
+    try {
+      await deleteAsset(assetToDelete.id);
+      await mutate();
+      setDeleteDialogOpen(false);
+      setAssetToDelete(null);
+      toast.success("Cloud asset deleted successfully");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete cloud asset");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleBulkDelete = () => {
-    const selectedIds = Object.keys(rowSelection);
+  const handleBulkDelete = async () => {
     const selectedAssetIds = table.getSelectedRowModel().rows.map((r) => r.original.id);
-    setCloudAssets(cloudAssets.filter((a) => !selectedAssetIds.includes(a.id)));
-    setRowSelection({});
-    toast.success(`Deleted ${selectedIds.length} cloud assets`);
+    if (selectedAssetIds.length === 0) return;
+
+    setIsSubmitting(true);
+    try {
+      await bulkDeleteAssets(selectedAssetIds);
+      await mutate();
+      setRowSelection({});
+      toast.success(`Deleted ${selectedAssetIds.length} cloud assets`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete cloud assets");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleExport = () => {
