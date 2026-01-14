@@ -91,7 +91,7 @@ import {
 } from "lucide-react";
 import {
   mockProjects,
-  mockBranches,
+  mockBranchDetails,
   mockFindings,
   mockActivities,
   mockSLAPolicy,
@@ -1207,7 +1207,7 @@ export default function ProjectDetailPage() {
 
   // Get project data
   const project = mockProjects.find(p => p.id === projectId);
-  const branches = mockBranches.filter(b => b.project_id === projectId);
+  const branches = mockBranchDetails.filter(b => b.project_id === projectId);
   const findings = mockFindings.filter(f => f.project_id === projectId);
   const activities = mockActivities.filter(a => a.project_id === projectId);
 

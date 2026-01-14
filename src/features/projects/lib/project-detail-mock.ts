@@ -38,7 +38,7 @@ const daysFromNow = (days: number): string => {
 // Mock Branches for proj-001 (api-gateway)
 // ============================================
 
-export const mockBranches: BranchDetail[] = [
+export const mockBranchDetails: BranchDetail[] = [
   {
     id: 'branch-001',
     project_id: 'proj-001',
@@ -873,7 +873,7 @@ export const mockSLAPolicy: SLAPolicy = {
 
 export function getProjectDetailMockData(projectId: string) {
   return {
-    branches: mockBranches.filter(b => b.project_id === projectId),
+    branches: mockBranchDetails.filter(b => b.project_id === projectId),
     findings: mockFindings.filter(f => f.project_id === projectId),
     activities: mockActivities.filter(a => a.project_id === projectId),
     slaPolicy: mockSLAPolicy,
