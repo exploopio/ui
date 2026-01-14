@@ -620,14 +620,14 @@ export default function CrownJewelsPage() {
         {/* Filters */}
         <Card className="mb-6">
           <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Filter className="h-4 w-4" />
               <CardTitle className="text-sm">Filters</CardTitle>
             </div>
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-4">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Label className="text-sm">Status:</Label>
                 <Select value={filterStatus} onValueChange={setFilterStatus}>
                   <SelectTrigger className="w-36">
@@ -642,7 +642,7 @@ export default function CrownJewelsPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Label className="text-sm">Category:</Label>
                 <Select value={filterCategory} onValueChange={setFilterCategory}>
                   <SelectTrigger className="w-40">
@@ -865,11 +865,11 @@ export default function CrownJewelsPage() {
                         {getDependencies(viewJewel.id).map((dep) => (
                           <Card key={dep.id} className="p-3">
                             <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
+                              <div className="flex flex-wrap items-center gap-2">
                                 <Link2 className="h-4 w-4 text-muted-foreground" />
                                 <span className="font-medium">{dep.dependsOnName}</span>
                               </div>
-                              <div className="flex items-center gap-2">
+                              <div className="flex flex-wrap items-center gap-2">
                                 <Badge variant="outline">{dep.dependencyType}</Badge>
                                 <Badge
                                   variant="outline"

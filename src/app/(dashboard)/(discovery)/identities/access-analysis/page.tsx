@@ -67,7 +67,7 @@ export default function AccessAnalysisPage() {
           description="Permission and access analysis"
         />
 
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
           {accessAnalysisStats.map((stat) => (
             <Card key={stat.title}>
               <CardHeader className="pb-2">

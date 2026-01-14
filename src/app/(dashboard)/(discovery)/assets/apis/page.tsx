@@ -617,7 +617,7 @@ export default function ApisPage() {
         </PageHeader>
 
         {/* Stats Cards */}
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
           <Card className="cursor-pointer hover:border-primary transition-colors" onClick={() => setStatusFilter("all")}>
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
@@ -716,7 +716,7 @@ export default function ApisPage() {
                 />
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {Object.keys(rowSelection).length > 0 && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -795,7 +795,7 @@ export default function ApisPage() {
                 {table.getFilteredSelectedRowModel().rows.length} of{" "}
                 {table.getFilteredRowModel().rows.length} row(s) selected
               </p>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
@@ -906,7 +906,7 @@ export default function ApisPage() {
                               key={endpoint.id}
                               className="rounded-lg border p-3 bg-card hover:bg-accent/50 transition-colors"
                             >
-                              <div className="flex items-center gap-2">
+                              <div className="flex flex-wrap items-center gap-2">
                                 <Badge
                                   variant={
                                     endpoint.method === "GET" ? "secondary" :
@@ -993,7 +993,7 @@ export default function ApisPage() {
                   <div className="rounded-xl border p-4 bg-card space-y-3">
                     <SectionTitle>Scope Information</SectionTitle>
                     <div className="space-y-3">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <span className="text-sm text-muted-foreground">Status:</span>
                         <ScopeBadge match={scopeMatch} />
                       </div>
@@ -1036,21 +1036,21 @@ export default function ApisPage() {
                 <div className="rounded-xl border p-4 bg-card space-y-3">
                   <SectionTitle>Traffic Statistics</SectionTitle>
                   <div className="grid grid-cols-3 gap-4">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <Activity className="h-4 w-4 text-green-500" />
                       <div>
                         <p className="text-lg font-bold">{formatNumber(selectedApi.requestsPerDay)}</p>
                         <p className="text-xs text-muted-foreground">Req/Day</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <Zap className="h-4 w-4 text-blue-500" />
                       <div>
                         <p className="text-lg font-bold">{selectedApi.avgResponseTime}ms</p>
                         <p className="text-xs text-muted-foreground">Avg Response</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <AlertTriangle className="h-4 w-4 text-orange-500" />
                       <div>
                         <p className="text-lg font-bold">{((selectedApi.errorRate || 0) * 100).toFixed(2)}%</p>

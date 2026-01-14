@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import {
   ColumnDef,
   flexRender,
@@ -15,19 +16,13 @@ import { Header, Main } from "@/components/layout";
 import { ProfileDropdown } from "@/components/profile-dropdown";
 import { Search } from "@/components/search";
 import { ThemeSwitch } from "@/components/theme-switch";
-import { PageHeader, StatusBadge, RiskScoreBadge } from "@/features/shared";
-import {
-  AssetDetailSheet,
-  StatCardCentered,
-  StatsGrid,
-  SectionTitle,
-} from "@/features/assets";
+import { PageHeader, RiskScoreBadge } from "@/features/shared";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Textarea } from "@/components/ui/textarea";
+import { Progress } from "@/components/ui/progress";
 import {
   Card,
   CardContent,
@@ -75,7 +70,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+} from "@/components/ui/sheet";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import {
   Plus,
@@ -83,7 +89,6 @@ import {
   Search as SearchIcon,
   MoreHorizontal,
   Eye,
-  Pencil,
   Trash2,
   ArrowUpDown,
   ChevronLeft,
@@ -98,95 +103,186 @@ import {
   RefreshCw,
   Lock,
   Globe,
-  Star,
   ExternalLink,
   Github,
   GitlabIcon,
+  Cloud,
+  Upload,
+  XCircle,
+  Clock,
+  AlertCircle,
+  Package,
+  FileCode,
+  Users,
+  Activity,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  Settings,
+  Play,
 } from "lucide-react";
 import {
-  useAssets,
-  createAsset,
-  updateAsset,
-  deleteAsset,
-  bulkDeleteAssets,
-  getAssetRelationships,
-  ClassificationBadges,
-  type Asset
-} from "@/features/assets";
-import { mockAssetGroups } from "@/features/asset-groups";
-import type { Status } from "@/features/shared/types";
-import {
-  ScopeBadgeSimple,
-  ScopeCoverageCard,
-  getScopeMatchesForAsset,
-  calculateScopeCoverage,
-  getActiveScopeTargets,
-  getActiveScopeExclusions,
-} from "@/features/scope";
+  mockProjects,
+  mockSCMConnections,
+  getProjectStats,
+  type Project,
+  type SCMProvider,
+  type ProjectStatus,
+  type SyncStatus,
+  type ComplianceStatus,
+  type QualityGateStatus,
+  type Criticality,
+  SCM_PROVIDER_LABELS,
+  SCM_PROVIDER_COLORS,
+  PROJECT_STATUS_LABELS,
+  SYNC_STATUS_LABELS,
+} from "@/features/projects";
+import { cn } from "@/lib/utils";
 
-// Filter types
-type StatusFilter = Status | "all";
-type VisibilityFilter = "all" | "public" | "private";
-type ProviderFilter = "all" | "github" | "gitlab" | "bitbucket";
+// ============================================
+// Filter Types
+// ============================================
+
+type StatusFilter = ProjectStatus | "all";
+type ProviderFilter = SCMProvider | "all";
+type SCMConnectionFilter = string | "all";
 
 const statusFilters: { value: StatusFilter; label: string }[] = [
   { value: "all", label: "All" },
   { value: "active", label: "Active" },
   { value: "inactive", label: "Inactive" },
-  { value: "pending", label: "Pending" },
+  { value: "archived", label: "Archived" },
+  { value: "importing", label: "Importing" },
 ];
 
-// Common languages
-const commonLanguages = [
-  "JavaScript",
-  "TypeScript",
-  "Python",
-  "Java",
-  "Go",
-  "Rust",
-  "PHP",
-  "Ruby",
-  "C#",
-  "C++",
-  "Swift",
-  "Kotlin",
-];
+// ============================================
+// Helper Components
+// ============================================
 
-// Empty form state
-const emptyProjectForm = {
-  name: "",
-  description: "",
-  groupId: "",
-  provider: "github" as "github" | "gitlab" | "bitbucket",
-  visibility: "private" as "public" | "private",
-  language: "",
-  stars: "",
-  tags: "",
-};
+function ProviderIcon({ provider, className }: { provider: SCMProvider; className?: string }) {
+  switch (provider) {
+    case "github":
+      return <Github className={cn("h-4 w-4", className)} />;
+    case "gitlab":
+      return <GitlabIcon className={cn("h-4 w-4", className)} />;
+    case "bitbucket":
+      return <Cloud className={cn("h-4 w-4", className)} />;
+    case "azure_devops":
+      return <Cloud className={cn("h-4 w-4", className)} />;
+    default:
+      return <GitBranch className={cn("h-4 w-4", className)} />;
+  }
+}
+
+function SyncStatusBadge({ status }: { status: SyncStatus }) {
+  const config: Record<SyncStatus, { variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ReactNode }> = {
+    synced: { variant: "default", icon: <CheckCircle className="h-3 w-3" /> },
+    pending: { variant: "secondary", icon: <Clock className="h-3 w-3" /> },
+    syncing: { variant: "outline", icon: <RefreshCw className="h-3 w-3 animate-spin" /> },
+    error: { variant: "destructive", icon: <XCircle className="h-3 w-3" /> },
+    disabled: { variant: "secondary", icon: <Minus className="h-3 w-3" /> },
+  };
+  const { variant, icon } = config[status];
+  return (
+    <Badge variant={variant} className="gap-1">
+      {icon}
+      {SYNC_STATUS_LABELS[status]}
+    </Badge>
+  );
+}
+
+function QualityGateBadge({ status }: { status: QualityGateStatus }) {
+  const config: Record<QualityGateStatus, { color: string; icon: React.ReactNode; label: string }> = {
+    passed: { color: "text-green-500", icon: <CheckCircle className="h-3.5 w-3.5" />, label: "Passed" },
+    failed: { color: "text-red-500", icon: <XCircle className="h-3.5 w-3.5" />, label: "Failed" },
+    warning: { color: "text-yellow-500", icon: <AlertTriangle className="h-3.5 w-3.5" />, label: "Warning" },
+    not_computed: { color: "text-muted-foreground", icon: <Minus className="h-3.5 w-3.5" />, label: "N/A" },
+  };
+  const { color, icon, label } = config[status];
+  return (
+    <span className={cn("flex items-center gap-1 text-sm", color)}>
+      {icon}
+      {label}
+    </span>
+  );
+}
+
+function ComplianceBadge({ status }: { status: ComplianceStatus }) {
+  const config: Record<ComplianceStatus, { color: string; label: string }> = {
+    compliant: { color: "bg-green-500/10 text-green-500 border-green-500/20", label: "Compliant" },
+    non_compliant: { color: "bg-red-500/10 text-red-500 border-red-500/20", label: "Non-Compliant" },
+    partial: { color: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20", label: "Partial" },
+    not_assessed: { color: "bg-gray-500/10 text-gray-500 border-gray-500/20", label: "Not Assessed" },
+  };
+  const { color, label } = config[status];
+  return <Badge variant="outline" className={cn("text-xs", color)}>{label}</Badge>;
+}
+
+function CriticalityBadge({ criticality }: { criticality: Criticality }) {
+  const config: Record<Criticality, string> = {
+    critical: "bg-red-500/10 text-red-500 border-red-500/20",
+    high: "bg-orange-500/10 text-orange-500 border-orange-500/20",
+    medium: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
+    low: "bg-blue-500/10 text-blue-500 border-blue-500/20",
+  };
+  return (
+    <Badge variant="outline" className={cn("text-xs capitalize", config[criticality])}>
+      {criticality}
+    </Badge>
+  );
+}
+
+function FindingsTrendIcon({ trend }: { trend?: "increasing" | "decreasing" | "stable" }) {
+  if (!trend) return null;
+  switch (trend) {
+    case "increasing":
+      return <TrendingUp className="h-3 w-3 text-red-500" />;
+    case "decreasing":
+      return <TrendingDown className="h-3 w-3 text-green-500" />;
+    default:
+      return <Minus className="h-3 w-3 text-muted-foreground" />;
+  }
+}
+
+function ProjectStatusBadge({ status }: { status: ProjectStatus }) {
+  const config: Record<ProjectStatus, { variant: "default" | "secondary" | "destructive" | "outline"; color?: string }> = {
+    active: { variant: "default" },
+    inactive: { variant: "secondary" },
+    archived: { variant: "outline", color: "text-muted-foreground" },
+    importing: { variant: "outline", color: "text-blue-500" },
+  };
+  const { variant, color } = config[status];
+  return (
+    <Badge variant={variant} className={color}>
+      {PROJECT_STATUS_LABELS[status]}
+    </Badge>
+  );
+}
+
+// ============================================
+// Main Component
+// ============================================
 
 export default function ProjectsPage() {
-  // Fetch projects from API
-  const { assets: projects, isLoading, isError, error: fetchError, mutate } = useAssets({
-    types: ['project'],
-  });
+  const router = useRouter();
 
-  const [selectedProject, setSelectedProject] = useState<Asset | null>(null);
+  // Use mock data (will be replaced with API hooks)
+  const projects = mockProjects;
+  const scmConnections = mockSCMConnections;
+  const stats = useMemo(() => getProjectStats(), []);
+
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [visibilityFilter, setVisibilityFilter] = useState<VisibilityFilter>("all");
   const [providerFilter, setProviderFilter] = useState<ProviderFilter>("all");
+  const [scmConnectionFilter, setSCMConnectionFilter] = useState<SCMConnectionFilter>("all");
   const [rowSelection, setRowSelection] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Dialog states
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [projectToDelete, setProjectToDelete] = useState<Asset | null>(null);
-
-  // Form state
-  const [formData, setFormData] = useState(emptyProjectForm);
+  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   // Filter data
   const filteredData = useMemo(() => {
@@ -194,87 +290,22 @@ export default function ProjectsPage() {
     if (statusFilter !== "all") {
       data = data.filter((p) => p.status === statusFilter);
     }
-    if (visibilityFilter !== "all") {
-      data = data.filter((p) => p.metadata.visibility === visibilityFilter);
-    }
     if (providerFilter !== "all") {
-      data = data.filter((p) => p.metadata.projectProvider === providerFilter);
+      data = data.filter((p) => p.scm_provider === providerFilter);
+    }
+    if (scmConnectionFilter !== "all") {
+      data = data.filter((p) => p.scm_connection_id === scmConnectionFilter);
     }
     return data;
-  }, [projects, statusFilter, visibilityFilter, providerFilter]);
-
-  // Status counts
-  const statusCounts = useMemo(
-    () => ({
-      all: projects.length,
-      active: projects.filter((p) => p.status === "active").length,
-      inactive: projects.filter((p) => p.status === "inactive").length,
-      pending: projects.filter((p) => p.status === "pending").length,
-    }),
-    [projects]
-  );
-
-  // Visibility counts
-  const visibilityCounts = useMemo(
-    () => ({
-      public: projects.filter((p) => p.metadata.visibility === "public").length,
-      private: projects.filter((p) => p.metadata.visibility === "private").length,
-    }),
-    [projects]
-  );
-
-  // Scope computation
-  const scopeTargets = useMemo(() => getActiveScopeTargets(), []);
-  const scopeExclusions = useMemo(() => getActiveScopeExclusions(), []);
-
-  const scopeMatchesMap = useMemo(() => {
-    const map: Record<string, { inScope: boolean; excluded: boolean }> = {};
-    projects.forEach((project) => {
-      const match = getScopeMatchesForAsset(
-        { id: project.id, type: "project", name: project.name, metadata: project.metadata as unknown as Record<string, unknown> },
-        scopeTargets,
-        scopeExclusions
-      );
-      map[project.id] = {
-        inScope: match.inScope,
-        excluded: match.matchedExclusions.length > 0,
-      };
-    });
-    return map;
-  }, [projects, scopeTargets, scopeExclusions]);
-
-  const scopeCoverage = useMemo(
-    () =>
-      calculateScopeCoverage(
-        projects.map((p) => ({ id: p.id, type: "project", name: p.name, metadata: p.metadata as unknown as Record<string, unknown> })),
-        scopeTargets,
-        scopeExclusions
-      ),
-    [projects, scopeTargets, scopeExclusions]
-  );
-
-  // Provider icon
-  const getProviderIcon = (provider?: string) => {
-    switch (provider) {
-      case "github":
-        return <Github className="h-4 w-4" />;
-      case "gitlab":
-        return <GitlabIcon className="h-4 w-4" />;
-      default:
-        return <GitBranch className="h-4 w-4" />;
-    }
-  };
+  }, [projects, statusFilter, providerFilter, scmConnectionFilter]);
 
   // Table columns
-  const columns: ColumnDef<Asset>[] = [
+  const columns: ColumnDef<Project>[] = [
     {
       id: "select",
       header: ({ table }) => (
         <Checkbox
-          checked={
-            table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && "indeterminate")
-          }
+          checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
           onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
           aria-label="Select all"
         />
@@ -291,136 +322,131 @@ export default function ProjectsPage() {
     {
       accessorKey: "name",
       header: ({ column }) => (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="-ml-4"
-        >
+        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} className="-ml-4">
           Project
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
-          {getProviderIcon(row.original.metadata.projectProvider)}
-          <div>
-            <p className="font-medium">{row.original.name}</p>
+          <div className="shrink-0">
+            <ProviderIcon provider={row.original.scm_provider} />
+          </div>
+          <div className="min-w-0">
+            <p className="font-medium truncate">{row.original.name}</p>
             <p className="text-muted-foreground text-xs truncate max-w-[200px]">
-              {row.original.description}
+              {row.original.description || "No description"}
             </p>
           </div>
         </div>
       ),
     },
     {
-      accessorKey: "metadata.projectProvider",
-      header: "Provider",
-      cell: ({ row }) => (
-        <Badge variant="outline" className="capitalize">
-          {row.original.metadata.projectProvider}
-        </Badge>
-      ),
+      id: "scm_connection",
+      header: "Source",
+      cell: ({ row }) => {
+        const connection = scmConnections.find((c) => c.id === row.original.scm_connection_id);
+        return (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center gap-1.5">
+                  <Badge variant="outline" className={cn("text-xs", SCM_PROVIDER_COLORS[row.original.scm_provider])}>
+                    {SCM_PROVIDER_LABELS[row.original.scm_provider]}
+                  </Badge>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="font-medium">{connection?.name || "Manual"}</p>
+                {connection && <p className="text-xs text-muted-foreground">{connection.base_url}</p>}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        );
+      },
     },
     {
-      accessorKey: "metadata.visibility",
+      accessorKey: "visibility",
       header: "Visibility",
       cell: ({ row }) =>
-        row.original.metadata.visibility === "private" ? (
+        row.original.visibility === "private" ? (
           <span className="flex items-center gap-1 text-sm text-muted-foreground">
-            <Lock className="h-3 w-3" /> Private
+            <Lock className="h-3 w-3 shrink-0" /> Private
+          </span>
+        ) : row.original.visibility === "internal" ? (
+          <span className="flex items-center gap-1 text-sm text-blue-500">
+            <Users className="h-3 w-3 shrink-0" /> Internal
           </span>
         ) : (
           <span className="flex items-center gap-1 text-sm text-green-500">
-            <Globe className="h-3 w-3" /> Public
+            <Globe className="h-3 w-3 shrink-0" /> Public
           </span>
         ),
     },
     {
-      accessorKey: "metadata.language",
+      accessorKey: "primary_language",
       header: "Language",
       cell: ({ row }) => (
-        <Badge variant="secondary">{row.original.metadata.language || "-"}</Badge>
+        <Badge variant="secondary" className="text-xs">
+          {row.original.primary_language || "-"}
+        </Badge>
       ),
     },
     {
-      accessorKey: "metadata.stars",
+      id: "findings",
       header: ({ column }) => (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="-ml-4"
-        >
-          Stars
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      ),
-      cell: ({ row }) => {
-        const stars = row.original.metadata.stars;
-        if (!stars) return <span className="text-muted-foreground">-</span>;
-        return (
-          <span className="flex items-center gap-1 text-sm">
-            <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
-            {stars.toLocaleString()}
-          </span>
-        );
-      },
-    },
-    {
-      accessorKey: "status",
-      header: "Status",
-      cell: ({ row }) => <StatusBadge status={row.original.status} />,
-    },
-    {
-      id: "classification",
-      header: "Classification",
-      cell: ({ row }) => (
-        <ClassificationBadges
-          scope={row.original.scope}
-          exposure={row.original.exposure}
-          size="sm"
-          showTooltips
-        />
-      ),
-    },
-    {
-      id: "scope",
-      header: "Scope",
-      cell: ({ row }) => {
-        const scopeMatch = scopeMatchesMap[row.original.id];
-        return (
-          <ScopeBadgeSimple
-            inScope={scopeMatch?.inScope ?? false}
-            excluded={scopeMatch?.excluded}
-          />
-        );
-      },
-    },
-    {
-      accessorKey: "findingCount",
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="-ml-4"
-        >
+        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} className="-ml-4">
           Findings
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
+      accessorFn: (row) => row.findings_summary.total,
       cell: ({ row }) => {
-        const count = row.original.findingCount;
-        if (count === 0) return <span className="text-muted-foreground">0</span>;
+        const { total, by_severity, trend } = row.original.findings_summary;
+        if (total === 0) return <span className="text-muted-foreground">0</span>;
         return (
-          <Badge variant={count > 5 ? "destructive" : "secondary"}>{count}</Badge>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
+              {by_severity.critical > 0 && (
+                <Badge variant="destructive" className="h-5 px-1.5 text-xs">
+                  {by_severity.critical}C
+                </Badge>
+              )}
+              {by_severity.high > 0 && (
+                <Badge className="h-5 px-1.5 text-xs bg-orange-500">
+                  {by_severity.high}H
+                </Badge>
+              )}
+              {(by_severity.medium > 0 || by_severity.low > 0) && (
+                <Badge variant="secondary" className="h-5 px-1.5 text-xs">
+                  +{by_severity.medium + by_severity.low}
+                </Badge>
+              )}
+            </div>
+            <FindingsTrendIcon trend={trend} />
+          </div>
         );
       },
     },
     {
-      accessorKey: "riskScore",
+      accessorKey: "risk_score",
       header: "Risk",
-      cell: ({ row }) => (
-        <RiskScoreBadge score={row.original.riskScore} size="sm" />
-      ),
+      cell: ({ row }) => <RiskScoreBadge score={row.original.risk_score} size="sm" />,
+    },
+    {
+      accessorKey: "quality_gate_status",
+      header: "Quality Gate",
+      cell: ({ row }) => <QualityGateBadge status={row.original.quality_gate_status} />,
+    },
+    {
+      accessorKey: "sync_status",
+      header: "Sync",
+      cell: ({ row }) => <SyncStatusBadge status={row.original.sync_status} />,
+    },
+    {
+      accessorKey: "status",
+      header: "Status",
+      cell: ({ row }) => <ProjectStatusBadge status={row.original.status} />,
     },
     {
       id: "actions",
@@ -434,27 +460,35 @@ export default function ProjectsPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSelectedProject(project); }}>
+              <DropdownMenuItem onClick={() => router.push(`/assets/projects/${project.id}`)}>
                 <Eye className="mr-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenEdit(project); }}>
-                <Pencil className="mr-2 h-4 w-4" />
-                Edit
+              <DropdownMenuItem onClick={() => toast.info("Triggering scan...")}>
+                <Play className="mr-2 h-4 w-4" />
+                Trigger Scan
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleCopyProject(project); }}>
+              <DropdownMenuItem onClick={() => toast.info("Syncing project...")}>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Sync Now
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleCopyUrl(project)}>
                 <Copy className="mr-2 h-4 w-4" />
                 Copy URL
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenExternal(project); }}>
+              <DropdownMenuItem onClick={() => handleOpenExternal(project)}>
                 <ExternalLink className="mr-2 h-4 w-4" />
                 Open in Browser
               </DropdownMenuItem>
               <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => toast.info("Opening settings...")}>
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-red-400"
-                onClick={(e) => {
-                  e.stopPropagation();
+                onClick={() => {
                   setProjectToDelete(project);
                   setDeleteDialogOpen(true);
                 }}
@@ -483,164 +517,46 @@ export default function ProjectsPage() {
   });
 
   // Handlers
-  const handleCopyProject = (project: Asset) => {
-    const url = getProjectUrl(project);
-    navigator.clipboard.writeText(url);
-    toast.success("Project URL copied to clipboard");
-  };
-
-  const handleOpenExternal = (project: Asset) => {
-    const url = getProjectUrl(project);
-    window.open(url, "_blank");
-  };
-
-  const getProjectUrl = (project: Asset) => {
-    const provider = project.metadata.projectProvider;
-    const name = project.name;
-    switch (provider) {
-      case "github":
-        return `https://github.com/${name}`;
-      case "gitlab":
-        return `https://gitlab.com/${name}`;
-      case "bitbucket":
-        return `https://bitbucket.org/${name}`;
-      default:
-        return `https://github.com/${name}`;
+  const handleCopyUrl = (project: Project) => {
+    if (project.web_url) {
+      navigator.clipboard.writeText(project.web_url);
+      toast.success("URL copied to clipboard");
     }
   };
 
-  const handleOpenEdit = (project: Asset) => {
-    setFormData({
-      name: project.name,
-      description: project.description || "",
-      groupId: project.groupId || "",
-      provider: (project.metadata.projectProvider as "github" | "gitlab" | "bitbucket") || "github",
-      visibility: (project.metadata.visibility as "public" | "private") || "private",
-      language: project.metadata.language || "",
-      stars: String(project.metadata.stars || ""),
-      tags: project.tags?.join(", ") || "",
-    });
-    setSelectedProject(project);
-    setEditDialogOpen(true);
-  };
-
-  const handleAddProject = async () => {
-    if (!formData.name) {
-      toast.error("Please fill in required fields");
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      await createAsset({
-        name: formData.name,
-        type: "project",
-        description: formData.description,
-        criticality: "medium",
-        scope: "internal",
-        exposure: "restricted",
-        tags: formData.tags
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean),
-        metadata: {
-          projectProvider: formData.provider,
-          visibility: formData.visibility,
-          language: formData.language || undefined,
-          stars: formData.stars ? parseInt(formData.stars) : undefined,
-        },
-      });
-      await mutate();
-      setFormData(emptyProjectForm);
-      setAddDialogOpen(false);
-      toast.success("Project added successfully");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to add project");
-    } finally {
-      setIsSubmitting(false);
+  const handleOpenExternal = (project: Project) => {
+    if (project.web_url) {
+      window.open(project.web_url, "_blank");
     }
   };
 
-  const handleEditProject = async () => {
-    if (!selectedProject || !formData.name) {
-      toast.error("Please fill in required fields");
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      await updateAsset(selectedProject.id, {
-        name: formData.name,
-        description: formData.description,
-        tags: formData.tags
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean),
-        metadata: {
-          ...selectedProject.metadata,
-          projectProvider: formData.provider,
-          visibility: formData.visibility,
-          language: formData.language || undefined,
-          stars: formData.stars ? parseInt(formData.stars) : undefined,
-        },
-      });
-      await mutate();
-      setFormData(emptyProjectForm);
-      setEditDialogOpen(false);
-      setSelectedProject(null);
-      toast.success("Project updated successfully");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to update project");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleDeleteProject = async () => {
+  const handleDelete = async () => {
     if (!projectToDelete) return;
-    setIsSubmitting(true);
-    try {
-      await deleteAsset(projectToDelete.id);
-      await mutate();
-      setDeleteDialogOpen(false);
-      setProjectToDelete(null);
-      toast.success("Project deleted successfully");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete project");
-    } finally {
-      setIsSubmitting(false);
-    }
+    toast.success(`Project "${projectToDelete.name}" deleted`);
+    setDeleteDialogOpen(false);
+    setProjectToDelete(null);
   };
 
   const handleBulkDelete = async () => {
-    const selectedProjectIds = table.getSelectedRowModel().rows.map((r) => r.original.id);
-    if (selectedProjectIds.length === 0) return;
-    setIsSubmitting(true);
-    try {
-      await bulkDeleteAssets(selectedProjectIds);
-      await mutate();
-      setRowSelection({});
-      toast.success(`Deleted ${selectedProjectIds.length} projects`);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete projects");
-    } finally {
-      setIsSubmitting(false);
-    }
+    const selectedIds = table.getSelectedRowModel().rows.map((r) => r.original.id);
+    if (selectedIds.length === 0) return;
+    toast.success(`Deleted ${selectedIds.length} projects`);
+    setRowSelection({});
   };
 
   const handleExport = () => {
     const csv = [
-      ["Name", "Provider", "Visibility", "Language", "Stars", "Status", "Risk Score", "Findings"].join(","),
+      ["Name", "Provider", "Visibility", "Language", "Risk Score", "Findings", "Quality Gate", "Status"].join(","),
       ...projects.map((p) =>
         [
           p.name,
-          p.metadata.projectProvider || "",
-          p.metadata.visibility || "",
-          p.metadata.language || "",
-          p.metadata.stars || 0,
+          p.scm_provider,
+          p.visibility,
+          p.primary_language || "",
+          p.risk_score,
+          p.findings_summary.total,
+          p.quality_gate_status,
           p.status,
-          p.riskScore,
-          p.findingCount,
         ].join(",")
       ),
     ].join("\n");
@@ -666,20 +582,19 @@ export default function ProjectsPage() {
 
       <Main>
         <PageHeader
-          title="Project Assets"
-          description={`${projects.length} projects in your organization`}
+          title="Git Projects"
+          description={`${projects.length} projects from ${scmConnections.filter((c) => c.status === "connected").length} SCM connections`}
         >
           <div className="flex gap-2">
             <Button variant="outline" onClick={handleExport}>
               <Download className="mr-2 h-4 w-4" />
               Export
             </Button>
-            <Button
-              onClick={() => {
-                setFormData(emptyProjectForm);
-                setAddDialogOpen(true);
-              }}
-            >
+            <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
+              <Upload className="mr-2 h-4 w-4" />
+              Import
+            </Button>
+            <Button onClick={() => toast.info("Add project dialog coming soon")}>
               <Plus className="mr-2 h-4 w-4" />
               Add Project
             </Button>
@@ -687,67 +602,100 @@ export default function ProjectsPage() {
         </PageHeader>
 
         {/* Stats Cards */}
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Card
-            className="cursor-pointer hover:border-primary transition-colors"
-            onClick={() => setStatusFilter("all")}
-          >
+        <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-5">
+          <Card className="cursor-pointer hover:border-primary transition-colors" onClick={() => setStatusFilter("all")}>
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
-                <GitBranch className="h-4 w-4" />
+                <GitBranch className="h-4 w-4 shrink-0" />
                 Total Projects
               </CardDescription>
-              <CardTitle className="text-3xl">{statusCounts.all}</CardTitle>
+              <CardTitle className="text-3xl">{stats.total}</CardTitle>
             </CardHeader>
           </Card>
-          <Card
-            className={`cursor-pointer hover:border-green-500 transition-colors ${visibilityFilter === "public" ? "border-green-500" : ""}`}
-            onClick={() =>
-              setVisibilityFilter(visibilityFilter === "public" ? "all" : "public")
-            }
-          >
+
+          <Card className="cursor-pointer hover:border-red-500 transition-colors">
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
-                <Globe className="h-4 w-4 text-green-500" />
-                Public
+                <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />
+                Critical Findings
               </CardDescription>
-              <CardTitle className="text-3xl text-green-500">
-                {visibilityCounts.public}
-              </CardTitle>
+              <CardTitle className="text-3xl text-red-500">{stats.with_critical_findings}</CardTitle>
             </CardHeader>
+            <CardContent className="pt-0">
+              <p className="text-xs text-muted-foreground">
+                {stats.total_findings} total findings
+              </p>
+            </CardContent>
           </Card>
-          <Card
-            className={`cursor-pointer hover:border-gray-500 transition-colors ${visibilityFilter === "private" ? "border-gray-500" : ""}`}
-            onClick={() =>
-              setVisibilityFilter(visibilityFilter === "private" ? "all" : "private")
-            }
-          >
+
+          <Card className="cursor-pointer hover:border-green-500 transition-colors">
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
-                <Lock className="h-4 w-4 text-gray-500" />
-                Private
+                <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
+                Quality Gate Passed
               </CardDescription>
-              <CardTitle className="text-3xl text-gray-500">
-                {visibilityCounts.private}
-              </CardTitle>
+              <CardTitle className="text-3xl text-green-500">{stats.by_quality_gate.passed}</CardTitle>
             </CardHeader>
+            <CardContent className="pt-0">
+              <Progress
+                value={(stats.by_quality_gate.passed / stats.total) * 100}
+                className="h-1"
+              />
+            </CardContent>
           </Card>
-          <Card>
+
+          <Card className="cursor-pointer hover:border-blue-500 transition-colors">
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-orange-500" />
-                With Findings
+                <Package className="h-4 w-4 text-blue-500 shrink-0" />
+                Components
               </CardDescription>
-              <CardTitle className="text-3xl text-orange-500">
-                {projects.filter((p) => p.findingCount > 0).length}
-              </CardTitle>
+              <CardTitle className="text-3xl text-blue-500">{stats.total_components}</CardTitle>
             </CardHeader>
+            <CardContent className="pt-0">
+              <p className="text-xs text-muted-foreground">
+                {stats.vulnerable_components} vulnerable
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="cursor-pointer hover:border-purple-500 transition-colors">
+            <CardHeader className="pb-2">
+              <CardDescription className="flex items-center gap-2">
+                <Activity className="h-4 w-4 text-purple-500 shrink-0" />
+                Avg Risk Score
+              </CardDescription>
+              <CardTitle className="text-3xl text-purple-500">{stats.avg_risk_score}</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <p className="text-xs text-muted-foreground">
+                {stats.scanned_last_24h} scanned today
+              </p>
+            </CardContent>
           </Card>
         </div>
 
-        {/* Scope Coverage Card */}
-        <div className="mt-4">
-          <ScopeCoverageCard coverage={scopeCoverage} showBreakdown={false} />
+        {/* SCM Connections Overview */}
+        <div className="mt-4 flex flex-wrap gap-2">
+          {scmConnections.map((conn) => (
+            <Badge
+              key={conn.id}
+              variant={scmConnectionFilter === conn.id ? "default" : "outline"}
+              className={cn(
+                "cursor-pointer gap-1.5 py-1.5",
+                conn.status === "error" && "border-red-500/50",
+                conn.status === "connected" && scmConnectionFilter !== conn.id && "border-green-500/50"
+              )}
+              onClick={() => setSCMConnectionFilter(scmConnectionFilter === conn.id ? "all" : conn.id)}
+            >
+              <ProviderIcon provider={conn.provider} className="h-3.5 w-3.5" />
+              {conn.name}
+              {conn.status === "error" && <AlertCircle className="h-3 w-3 text-red-500" />}
+              <span className="text-muted-foreground">
+                ({projects.filter((p) => p.scm_connection_id === conn.id).length})
+              </span>
+            </Badge>
+          ))}
         </div>
 
         {/* Table Card */}
@@ -759,25 +707,21 @@ export default function ProjectsPage() {
                   <GitBranch className="h-5 w-5" />
                   All Projects
                 </CardTitle>
-                <CardDescription>
-                  Manage your source code projects
-                </CardDescription>
+                <CardDescription>Manage your source code repositories and security scans</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent>
             {/* Quick Filter Tabs */}
-            <Tabs
-              value={statusFilter}
-              onValueChange={(v) => setStatusFilter(v as StatusFilter)}
-              className="mb-4"
-            >
+            <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)} className="mb-4">
               <TabsList>
                 {statusFilters.map((filter) => (
                   <TabsTrigger key={filter.value} value={filter.value} className="gap-1.5">
                     {filter.label}
                     <Badge variant="secondary" className="h-5 px-1.5 text-xs">
-                      {statusCounts[filter.value as keyof typeof statusCounts] || 0}
+                      {filter.value === "all"
+                        ? stats.total
+                        : stats.by_status[filter.value as ProjectStatus] || 0}
                     </Badge>
                   </TabsTrigger>
                 ))}
@@ -796,13 +740,10 @@ export default function ProjectsPage() {
                 />
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {/* Provider filter */}
-                <Select
-                  value={providerFilter}
-                  onValueChange={(v) => setProviderFilter(v as ProviderFilter)}
-                >
-                  <SelectTrigger className="w-[130px]">
+                <Select value={providerFilter} onValueChange={(v) => setProviderFilter(v as ProviderFilter)}>
+                  <SelectTrigger className="w-[140px]">
                     <SelectValue placeholder="Provider" />
                   </SelectTrigger>
                   <SelectContent>
@@ -810,6 +751,7 @@ export default function ProjectsPage() {
                     <SelectItem value="github">GitHub</SelectItem>
                     <SelectItem value="gitlab">GitLab</SelectItem>
                     <SelectItem value="bitbucket">Bitbucket</SelectItem>
+                    <SelectItem value="azure_devops">Azure DevOps</SelectItem>
                   </SelectContent>
                 </Select>
 
@@ -821,11 +763,13 @@ export default function ProjectsPage() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        onClick={() => toast.info("Scanning selected projects...")}
-                      >
+                      <DropdownMenuItem onClick={() => toast.info("Scanning selected projects...")}>
+                        <Play className="mr-2 h-4 w-4" />
+                        Scan Selected
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => toast.info("Syncing selected projects...")}>
                         <RefreshCw className="mr-2 h-4 w-4" />
-                        Rescan Selected
+                        Sync Selected
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem className="text-red-400" onClick={handleBulkDelete}>
@@ -846,9 +790,7 @@ export default function ProjectsPage() {
                     <TableRow key={headerGroup.id}>
                       {headerGroup.headers.map((header) => (
                         <TableHead key={header.id}>
-                          {header.isPlaceholder
-                            ? null
-                            : flexRender(header.column.columnDef.header, header.getContext())}
+                          {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                         </TableHead>
                       ))}
                     </TableRow>
@@ -868,7 +810,7 @@ export default function ProjectsPage() {
                           ) {
                             return;
                           }
-                          setSelectedProject(row.original);
+                          router.push(`/assets/projects/${row.original.id}`);
                         }}
                       >
                         {row.getVisibleCells().map((cell) => (
@@ -892,43 +834,22 @@ export default function ProjectsPage() {
             {/* Pagination */}
             <div className="flex items-center justify-between mt-4">
               <p className="text-sm text-muted-foreground">
-                {table.getFilteredSelectedRowModel().rows.length} of{" "}
-                {table.getFilteredRowModel().rows.length} row(s) selected
+                {table.getFilteredSelectedRowModel().rows.length} of {table.getFilteredRowModel().rows.length} row(s) selected
               </p>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => table.setPageIndex(0)}
-                  disabled={!table.getCanPreviousPage()}
-                >
+              <div className="flex flex-wrap items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => table.setPageIndex(0)} disabled={!table.getCanPreviousPage()}>
                   <ChevronsLeft className="h-4 w-4" />
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => table.previousPage()}
-                  disabled={!table.getCanPreviousPage()}
-                >
+                <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
                 <span className="text-sm">
                   Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
                 </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => table.nextPage()}
-                  disabled={!table.getCanNextPage()}
-                >
+                <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
                   <ChevronRight className="h-4 w-4" />
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-                  disabled={!table.getCanNextPage()}
-                >
+                <Button variant="outline" size="sm" onClick={() => table.setPageIndex(table.getPageCount() - 1)} disabled={!table.getCanNextPage()}>
                   <ChevronsRight className="h-4 w-4" />
                 </Button>
               </div>
@@ -937,390 +858,347 @@ export default function ProjectsPage() {
         </Card>
       </Main>
 
-      {/* Project Details Sheet */}
-      <AssetDetailSheet
-        asset={selectedProject}
-        open={!!selectedProject && !editDialogOpen}
-        onOpenChange={() => setSelectedProject(null)}
-        icon={GitBranch}
-        iconColor="text-purple-500"
-        gradientFrom="from-purple-500/20"
-        gradientVia="via-purple-500/10"
-        assetTypeName="Project"
-        relationships={selectedProject ? getAssetRelationships(selectedProject.id) : []}
-        onEdit={() => selectedProject && handleOpenEdit(selectedProject)}
-        onDelete={() => {
-          if (selectedProject) {
-            setProjectToDelete(selectedProject);
-            setDeleteDialogOpen(true);
-            setSelectedProject(null);
-          }
-        }}
-        quickActions={
-          selectedProject && (
+      {/* Project Detail Sheet */}
+      <Sheet open={!!selectedProject} onOpenChange={() => setSelectedProject(null)}>
+        <SheetContent className="w-full sm:max-w-2xl p-0 flex flex-col h-full gap-0">
+          {selectedProject && (
             <>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handleOpenExternal(selectedProject)}
-              >
-                <ExternalLink className="mr-2 h-4 w-4" />
-                Open
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handleCopyProject(selectedProject)}
-              >
-                <Copy className="mr-2 h-4 w-4" />
-                Copy
-              </Button>
-            </>
-          )
-        }
-        statsContent={
-          selectedProject && (
-            <StatsGrid columns={3}>
-              <StatCardCentered
-                icon={Star}
-                iconBg="bg-yellow-500/10"
-                iconColor="text-yellow-500"
-                value={selectedProject.metadata.stars?.toLocaleString() || 0}
-                label="Stars"
-              />
-              <StatCardCentered
-                icon={Shield}
-                iconBg="bg-orange-500/10"
-                iconColor="text-orange-500"
-                value={selectedProject.riskScore}
-                label="Risk"
-              />
-              <StatCardCentered
-                icon={AlertTriangle}
-                iconBg="bg-red-500/10"
-                iconColor="text-red-500"
-                value={selectedProject.findingCount}
-                label="Findings"
-              />
-            </StatsGrid>
-          )
-        }
-        overviewContent={
-          selectedProject && (
-            <div className="rounded-xl border p-4 bg-card space-y-3">
-              <SectionTitle>Project Information</SectionTitle>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-muted-foreground">Provider</p>
-                  <Badge variant="outline" className="capitalize">
-                    {selectedProject.metadata.projectProvider}
-                  </Badge>
+              {/* Fixed Header */}
+              <div className="shrink-0 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-6 py-4">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 via-primary/10 to-transparent border">
+                    <ProviderIcon provider={selectedProject.scm_provider} className="h-6 w-6" />
+                  </div>
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-lg font-semibold truncate">{selectedProject.name}</h2>
+                      <ProjectStatusBadge status={selectedProject.status} />
+                    </div>
+                    <p className="text-sm text-muted-foreground line-clamp-2">
+                      {selectedProject.description || "No description"}
+                    </p>
+                    <div className="flex items-center gap-2 pt-1">
+                      <Badge variant="outline" className={cn("text-xs", SCM_PROVIDER_COLORS[selectedProject.scm_provider])}>
+                        {SCM_PROVIDER_LABELS[selectedProject.scm_provider]}
+                      </Badge>
+                      <SyncStatusBadge status={selectedProject.sync_status} />
+                      <QualityGateBadge status={selectedProject.quality_gate_status} />
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-muted-foreground">Visibility</p>
-                  <span className="flex items-center gap-1">
-                    {selectedProject.metadata.visibility === "private" ? (
-                      <>
-                        <Lock className="h-3 w-3" /> Private
-                      </>
-                    ) : (
-                      <>
-                        <Globe className="h-3 w-3" /> Public
-                      </>
+
+                {/* Quick Actions */}
+                <div className="flex flex-wrap gap-2 mt-4">
+                  <Button size="sm" onClick={() => handleOpenExternal(selectedProject)}>
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    Open in Browser
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => toast.info("Triggering scan...")}>
+                    <Play className="mr-2 h-4 w-4" />
+                    Scan
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => toast.info("Syncing...")}>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Sync
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => handleCopyUrl(selectedProject)}>
+                    <Copy className="mr-2 h-4 w-4" />
+                    Copy URL
+                  </Button>
+                </div>
+              </div>
+
+              {/* Scrollable Content */}
+              <div className="flex-1 min-h-0 overflow-y-auto">
+                <div className="p-6 space-y-6">
+                  {/* Stats Grid */}
+                  <div className="grid grid-cols-4 gap-3">
+                    <div className="text-center p-4 rounded-xl border bg-card">
+                      <RiskScoreBadge score={selectedProject.risk_score} size="lg" />
+                      <p className="text-xs text-muted-foreground mt-2">Risk Score</p>
+                    </div>
+                    <div className="text-center p-4 rounded-xl border bg-card">
+                      <p className="text-2xl font-bold">{selectedProject.findings_summary.total}</p>
+                      <p className="text-xs text-muted-foreground mt-1">Total Findings</p>
+                    </div>
+                    <div className="text-center p-4 rounded-xl border bg-card">
+                      <p className="text-2xl font-bold text-red-500">
+                        {selectedProject.findings_summary.by_severity.critical + selectedProject.findings_summary.by_severity.high}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">Critical/High</p>
+                    </div>
+                    <div className="text-center p-4 rounded-xl border bg-card">
+                      <p className="text-2xl font-bold text-blue-500">{selectedProject.components_summary?.total || 0}</p>
+                      <p className="text-xs text-muted-foreground mt-1">Components</p>
+                    </div>
+                  </div>
+
+                  {/* Findings Breakdown */}
+                  <div className="rounded-xl border bg-card">
+                    <div className="px-4 py-3 border-b">
+                      <h4 className="font-semibold flex items-center gap-2 text-sm">
+                        <AlertTriangle className="h-4 w-4" />
+                        Findings by Severity
+                      </h4>
+                    </div>
+                    <div className="p-4">
+                      <div className="flex items-center gap-2">
+                        {[
+                          { key: "critical", label: "Critical", color: "bg-red-500" },
+                          { key: "high", label: "High", color: "bg-orange-500" },
+                          { key: "medium", label: "Medium", color: "bg-yellow-500" },
+                          { key: "low", label: "Low", color: "bg-blue-500" },
+                          { key: "info", label: "Info", color: "bg-gray-400" },
+                        ].map(({ key, label, color }) => {
+                          const count = selectedProject.findings_summary.by_severity[key as keyof typeof selectedProject.findings_summary.by_severity];
+                          const total = selectedProject.findings_summary.total || 1;
+                          const percentage = (count / total) * 100;
+                          return (
+                            <TooltipProvider key={key}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div
+                                    className={cn("h-8 rounded-md transition-all cursor-pointer hover:opacity-80", color)}
+                                    style={{ width: `${Math.max(percentage, count > 0 ? 8 : 0)}%`, minWidth: count > 0 ? "32px" : 0 }}
+                                  />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="font-medium">{label}: {count}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          );
+                        })}
+                      </div>
+                      <div className="flex justify-between mt-3 text-xs">
+                        <div className="flex items-center gap-4">
+                          <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-500" /> Critical: {selectedProject.findings_summary.by_severity.critical}</span>
+                          <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-orange-500" /> High: {selectedProject.findings_summary.by_severity.high}</span>
+                          <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-yellow-500" /> Medium: {selectedProject.findings_summary.by_severity.medium}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Project Info */}
+                  <div className="rounded-xl border bg-card">
+                    <div className="px-4 py-3 border-b">
+                      <h4 className="font-semibold flex items-center gap-2 text-sm">
+                        <FileCode className="h-4 w-4" />
+                        Project Information
+                      </h4>
+                    </div>
+                    <div className="p-4">
+                      <div className="grid grid-cols-2 gap-y-4 gap-x-6 text-sm">
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground uppercase tracking-wide">Visibility</p>
+                          <p className="flex items-center gap-1.5 font-medium">
+                            {selectedProject.visibility === "private" ? (
+                              <><Lock className="h-3.5 w-3.5 text-muted-foreground" /> Private</>
+                            ) : selectedProject.visibility === "internal" ? (
+                              <><Users className="h-3.5 w-3.5 text-blue-500" /> Internal</>
+                            ) : (
+                              <><Globe className="h-3.5 w-3.5 text-green-500" /> Public</>
+                            )}
+                          </p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground uppercase tracking-wide">Language</p>
+                          <Badge variant="secondary">{selectedProject.primary_language || "-"}</Badge>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground uppercase tracking-wide">Default Branch</p>
+                          <code className="text-xs bg-muted px-2 py-1 rounded">{selectedProject.default_branch}</code>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground uppercase tracking-wide">Criticality</p>
+                          <CriticalityBadge criticality={selectedProject.criticality} />
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground uppercase tracking-wide">Compliance</p>
+                          <ComplianceBadge status={selectedProject.compliance_status} />
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground uppercase tracking-wide">Repository</p>
+                          <p className="font-mono text-xs truncate">{selectedProject.scm_organization}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Security Features */}
+                  <div className="rounded-xl border bg-card">
+                    <div className="px-4 py-3 border-b">
+                      <h4 className="font-semibold flex items-center gap-2 text-sm">
+                        <Shield className="h-4 w-4" />
+                        Security Features
+                      </h4>
+                    </div>
+                    <div className="p-4">
+                      <div className="grid grid-cols-2 gap-3">
+                        {Object.entries(selectedProject.security_features).map(([key, enabled]) => (
+                          <div key={key} className={cn(
+                            "flex items-center gap-2.5 p-2.5 rounded-lg border text-sm",
+                            enabled ? "bg-green-500/5 border-green-500/20" : "bg-muted/30"
+                          )}>
+                            {enabled ? (
+                              <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
+                            ) : (
+                              <XCircle className="h-4 w-4 text-muted-foreground shrink-0" />
+                            )}
+                            <span className={cn("text-xs", !enabled && "text-muted-foreground")}>
+                              {key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Scan Settings */}
+                  <div className="rounded-xl border bg-card">
+                    <div className="px-4 py-3 border-b">
+                      <h4 className="font-semibold flex items-center gap-2 text-sm">
+                        <Settings className="h-4 w-4" />
+                        Scan Configuration
+                      </h4>
+                    </div>
+                    <div className="p-4 space-y-3">
+                      <div>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Enabled Scanners</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {selectedProject.scan_settings.enabled_scanners.map((scanner) => (
+                            <Badge key={scanner} className="text-xs uppercase">
+                              {scanner}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                      <Separator />
+                      <div className="grid grid-cols-3 gap-4 text-sm">
+                        <div className="flex items-center gap-2">
+                          {selectedProject.scan_settings.auto_scan ? (
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <XCircle className="h-4 w-4 text-muted-foreground" />
+                          )}
+                          <span>Auto Scan</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {selectedProject.scan_settings.scan_on_push ? (
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <XCircle className="h-4 w-4 text-muted-foreground" />
+                          )}
+                          <span>On Push</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {selectedProject.scan_settings.scan_on_pr ? (
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <XCircle className="h-4 w-4 text-muted-foreground" />
+                          )}
+                          <span>On PR</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Tags */}
+                  {selectedProject.tags.length > 0 && (
+                    <div className="rounded-xl border bg-card">
+                      <div className="px-4 py-3 border-b">
+                        <h4 className="font-semibold flex items-center gap-2 text-sm">
+                          Tags
+                        </h4>
+                      </div>
+                      <div className="p-4">
+                        <div className="flex flex-wrap gap-1.5">
+                          {selectedProject.tags.map((tag) => (
+                            <Badge key={tag} variant="outline" className="text-xs">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Timestamps */}
+                  <div className="rounded-xl border bg-muted/30 p-4 text-xs text-muted-foreground space-y-1.5">
+                    {selectedProject.last_scanned_at && (
+                      <p className="flex items-center gap-2">
+                        <Activity className="h-3.5 w-3.5" />
+                        Last scanned: {new Date(selectedProject.last_scanned_at).toLocaleString()}
+                      </p>
                     )}
-                  </span>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Language</p>
-                  <Badge variant="secondary">
-                    {selectedProject.metadata.language || "-"}
-                  </Badge>
+                    {selectedProject.last_synced_at && (
+                      <p className="flex items-center gap-2">
+                        <RefreshCw className="h-3.5 w-3.5" />
+                        Last synced: {new Date(selectedProject.last_synced_at).toLocaleString()}
+                      </p>
+                    )}
+                    <p className="flex items-center gap-2">
+                      <Clock className="h-3.5 w-3.5" />
+                      Created: {new Date(selectedProject.created_at).toLocaleString()}
+                    </p>
+                  </div>
                 </div>
               </div>
-              {selectedProject.description && (
-                <div>
-                  <p className="text-muted-foreground text-sm mb-1">Description</p>
-                  <p className="text-sm">{selectedProject.description}</p>
-                </div>
-              )}
-            </div>
-          )
-        }
-      />
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
 
-      {/* Add Project Dialog */}
-      <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+      {/* Import Dialog */}
+      <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <GitBranch className="h-5 w-5" />
-              Add Project
+              <Upload className="h-5 w-5" />
+              Import Projects
             </DialogTitle>
-            <DialogDescription>Add a new project to your asset inventory</DialogDescription>
+            <DialogDescription>
+              Import projects from your connected SCM providers
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
+          <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Project Name *</Label>
-              <Input
-                id="name"
-                placeholder="org/project-name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="groupId">Asset Group *</Label>
-              <Select
-                value={formData.groupId}
-                onValueChange={(value) => setFormData({ ...formData, groupId: value })}
-              >
+              <Label>Select SCM Connection</Label>
+              <Select>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select group" />
+                  <SelectValue placeholder="Choose a connection" />
                 </SelectTrigger>
                 <SelectContent>
-                  {mockAssetGroups.map((group) => (
-                    <SelectItem key={group.id} value={group.id}>
-                      {group.name}
-                    </SelectItem>
-                  ))}
+                  {scmConnections
+                    .filter((c) => c.status === "connected")
+                    .map((conn) => (
+                      <SelectItem key={conn.id} value={conn.id}>
+                        <div className="flex items-center gap-2">
+                          <ProviderIcon provider={conn.provider} className="h-4 w-4" />
+                          {conn.name}
+                        </div>
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="provider">Provider</Label>
-                <Select
-                  value={formData.provider}
-                  onValueChange={(value) =>
-                    setFormData({
-                      ...formData,
-                      provider: value as "github" | "gitlab" | "bitbucket",
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="github">GitHub</SelectItem>
-                    <SelectItem value="gitlab">GitLab</SelectItem>
-                    <SelectItem value="bitbucket">Bitbucket</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="visibility">Visibility</Label>
-                <Select
-                  value={formData.visibility}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, visibility: value as "public" | "private" })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="private">Private</SelectItem>
-                    <SelectItem value="public">Public</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="language">Language</Label>
-                <Select
-                  value={formData.language}
-                  onValueChange={(value) => setFormData({ ...formData, language: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select language" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {commonLanguages.map((lang) => (
-                      <SelectItem key={lang} value={lang}>
-                        {lang}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="stars">Stars</Label>
-                <Input
-                  id="stars"
-                  type="number"
-                  placeholder="0"
-                  value={formData.stars}
-                  onChange={(e) => setFormData({ ...formData, stars: e.target.value })}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                placeholder="Optional description"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="tags">Tags (comma separated)</Label>
-              <Input
-                id="tags"
-                placeholder="production, critical"
-                value={formData.tags}
-                onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-              />
+            <div className="rounded-lg border p-4 bg-muted/50">
+              <p className="text-sm text-muted-foreground">
+                After selecting a connection, you can choose which repositories to import
+                and configure default scan settings.
+              </p>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAddDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setImportDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleAddProject}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Project
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Project Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Pencil className="h-5 w-5" />
-              Edit Project
-            </DialogTitle>
-            <DialogDescription>Update project information</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
-            <div className="space-y-2">
-              <Label htmlFor="edit-name">Project Name *</Label>
-              <Input
-                id="edit-name"
-                placeholder="org/project-name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-groupId">Asset Group *</Label>
-              <Select
-                value={formData.groupId}
-                onValueChange={(value) => setFormData({ ...formData, groupId: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select group" />
-                </SelectTrigger>
-                <SelectContent>
-                  {mockAssetGroups.map((group) => (
-                    <SelectItem key={group.id} value={group.id}>
-                      {group.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-provider">Provider</Label>
-                <Select
-                  value={formData.provider}
-                  onValueChange={(value) =>
-                    setFormData({
-                      ...formData,
-                      provider: value as "github" | "gitlab" | "bitbucket",
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="github">GitHub</SelectItem>
-                    <SelectItem value="gitlab">GitLab</SelectItem>
-                    <SelectItem value="bitbucket">Bitbucket</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-visibility">Visibility</Label>
-                <Select
-                  value={formData.visibility}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, visibility: value as "public" | "private" })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="private">Private</SelectItem>
-                    <SelectItem value="public">Public</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-language">Language</Label>
-                <Select
-                  value={formData.language}
-                  onValueChange={(value) => setFormData({ ...formData, language: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select language" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {commonLanguages.map((lang) => (
-                      <SelectItem key={lang} value={lang}>
-                        {lang}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-stars">Stars</Label>
-                <Input
-                  id="edit-stars"
-                  type="number"
-                  placeholder="0"
-                  value={formData.stars}
-                  onChange={(e) => setFormData({ ...formData, stars: e.target.value })}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-description">Description</Label>
-              <Textarea
-                id="edit-description"
-                placeholder="Optional description"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-tags">Tags (comma separated)</Label>
-              <Input
-                id="edit-tags"
-                placeholder="production, critical"
-                value={formData.tags}
-                onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleEditProject}>
-              <CheckCircle className="mr-2 h-4 w-4" />
-              Save Changes
+            <Button onClick={() => {
+              toast.info("Import wizard coming soon");
+              setImportDialogOpen(false);
+            }}>
+              Continue
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1332,13 +1210,13 @@ export default function ProjectsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Project</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete <strong>{projectToDelete?.name}</strong>? This action
-              cannot be undone.
+              Are you sure you want to delete <strong>{projectToDelete?.name}</strong>? This action cannot be undone.
+              All associated scan data and findings will be removed.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction className="bg-red-500 hover:bg-red-600" onClick={handleDeleteProject}>
+            <AlertDialogAction className="bg-red-500 hover:bg-red-600" onClick={handleDelete}>
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

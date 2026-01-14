@@ -477,7 +477,7 @@ export default function RemediationPage() {
         accessorKey: "assigneeName",
         header: ({ column }) => <DataTableColumnHeader column={column} title="Assignee" />,
         cell: ({ row }) => (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Avatar className="h-6 w-6">
               <AvatarFallback className="text-xs">
                 {row.original.assigneeName.split(" ").map((n) => n[0]).join("")}
@@ -578,7 +578,7 @@ export default function RemediationPage() {
           title="Remediation Tasks"
           description={`${filteredData.length} of ${tasks.length} tasks`}
         >
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
               <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
               Refresh
@@ -749,7 +749,7 @@ export default function RemediationPage() {
               <span className="text-sm font-medium">
                 {selectedIds.length} task(s) selected
               </span>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Button variant="outline" size="sm" onClick={() => handleBulkAction("Reassigned")}>
                   <UserPlus className="mr-2 h-4 w-4" />
                   Reassign
@@ -875,7 +875,7 @@ export default function RemediationPage() {
                 <Card key={status} className="bg-muted/30">
                   <CardHeader className="pb-3">
                     <CardTitle className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <div className={`h-2 w-2 rounded-full ${statusColors[status].split(" ")[0]}`} />
                         <span>{TASK_STATUS_LABELS[status]}</span>
                       </div>
@@ -901,7 +901,7 @@ export default function RemediationPage() {
                             {task.findingTitle}
                           </p>
                           <div className="mt-3 flex items-center justify-between">
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                               <Avatar className="h-5 w-5">
                                 <AvatarFallback className="text-[10px]">
                                   {task.assigneeName.split(" ").map((n) => n[0]).join("")}
@@ -993,7 +993,7 @@ export default function RemediationPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="rounded-xl border bg-card p-4">
                     <p className="text-xs text-muted-foreground mb-2">Assignee</p>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <Avatar className="h-8 w-8">
                         <AvatarFallback>
                           {viewTask.assigneeName.split(" ").map((n) => n[0]).join("")}

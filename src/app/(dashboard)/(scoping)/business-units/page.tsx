@@ -313,7 +313,7 @@ export default function BusinessUnitsPage() {
       cell: ({ row }) => {
         const score = row.original.complianceScore;
         return (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Progress value={score} className="w-16 h-2" />
             <span className="text-sm font-medium">{score}%</span>
           </div>
@@ -555,14 +555,14 @@ export default function BusinessUnitsPage() {
         {/* Filters */}
         <Card className="mb-6">
           <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Filter className="h-4 w-4" />
               <CardTitle className="text-sm">Filters</CardTitle>
             </div>
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-4">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Label className="text-sm">Criticality:</Label>
                 <Select value={filterCriticality} onValueChange={setFilterCriticality}>
                   <SelectTrigger className="w-32">
@@ -577,7 +577,7 @@ export default function BusinessUnitsPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Label className="text-sm">Risk Tolerance:</Label>
                 <Select value={filterRiskTolerance} onValueChange={setFilterRiskTolerance}>
                   <SelectTrigger className="w-32">
@@ -787,7 +787,7 @@ export default function BusinessUnitsPage() {
                     <div className="mb-4">
                       <p className="text-sm text-muted-foreground mb-2">Parent Unit</p>
                       <Card className="p-3">
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <ChevronRight className="h-4 w-4 text-muted-foreground" />
                           <span className="font-medium">
                             {mockBusinessUnits.find((u) => u.id === viewUnit.parentId)?.name}
@@ -804,7 +804,7 @@ export default function BusinessUnitsPage() {
                         {getChildBusinessUnits(viewUnit.id).map((child) => (
                           <Card key={child.id} className="p-3">
                             <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
+                              <div className="flex flex-wrap items-center gap-2">
                                 <Building2 className="h-4 w-4 text-muted-foreground" />
                                 <span className="font-medium">{child.name}</span>
                               </div>

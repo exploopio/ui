@@ -299,12 +299,12 @@ export default function WebsitesPage() {
       ),
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
-          <MonitorSmartphone className="h-4 w-4 text-muted-foreground" />
-          <div>
-            <p className="font-medium truncate max-w-[200px]">
+          <MonitorSmartphone className="h-4 w-4 text-muted-foreground shrink-0" />
+          <div className="min-w-0">
+            <p className="font-medium truncate">
               {row.original.name}
             </p>
-            <p className="text-muted-foreground text-xs">
+            <p className="text-muted-foreground text-xs truncate">
               {row.original.groupName}
             </p>
           </div>
@@ -669,7 +669,7 @@ export default function WebsitesPage() {
         </PageHeader>
 
         {/* Stats Cards */}
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
           <Card
             className="cursor-pointer hover:border-primary transition-colors"
             onClick={() => setStatusFilter("all")}
@@ -787,7 +787,7 @@ export default function WebsitesPage() {
                 />
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {/* SSL Filter Button */}
                 <Button
                   variant={sslFilter !== "all" ? "secondary" : "outline"}
@@ -906,7 +906,7 @@ export default function WebsitesPage() {
                 {table.getFilteredSelectedRowModel().rows.length} of{" "}
                 {table.getFilteredRowModel().rows.length} row(s) selected
               </p>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"

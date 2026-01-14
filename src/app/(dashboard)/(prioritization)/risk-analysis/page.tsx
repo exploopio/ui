@@ -230,7 +230,7 @@ export default function RiskAnalysisPage() {
                 <div key={cat.category} className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">{cat.category}</span>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className={`text-sm font-bold ${getScoreColor(cat.score)}`}>
                         {cat.score}
                       </span>

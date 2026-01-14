@@ -160,7 +160,7 @@ ${components
         />
 
         {/* Summary Stats */}
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
           <Card>
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
@@ -244,7 +244,7 @@ ${components
                   <SelectContent>
                     {Object.entries(SBOM_FORMAT_LABELS).map(([value, label]) => (
                       <SelectItem key={value} value={value}>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           {value.includes("cyclonedx") ? (
                             <FileJson className="h-4 w-4 text-blue-500" />
                           ) : (
@@ -303,7 +303,7 @@ ${components
                       onCheckedChange={(checked) => setIncludeVulnerabilities(!!checked)}
                     />
                     <Label htmlFor="vulnerabilities" className="cursor-pointer">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <Shield className="h-4 w-4 text-red-500" />
                         Vulnerability Information
                       </div>
@@ -320,7 +320,7 @@ ${components
                       onCheckedChange={(checked) => setIncludeLicenses(!!checked)}
                     />
                     <Label htmlFor="licenses" className="cursor-pointer">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <Scale className="h-4 w-4 text-blue-500" />
                         License Information
                       </div>
@@ -337,7 +337,7 @@ ${components
                       onCheckedChange={(checked) => setIncludeMetadata(!!checked)}
                     />
                     <Label htmlFor="metadata" className="cursor-pointer">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <FileText className="h-4 w-4 text-slate-500" />
                         Document Metadata
                       </div>

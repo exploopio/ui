@@ -365,7 +365,7 @@ export default function FindingsPage() {
           title="Security Findings"
           description={`${stats.total} total findings${assetIdFilter ? ` for "${filteredAssetName}"` : ""} - ${stats.overdueCount} overdue`}
         >
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
               <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
               Refresh
@@ -420,7 +420,7 @@ export default function FindingsPage() {
               <span className="text-sm font-medium">
                 {selectedCount} finding(s) selected
               </span>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Button variant="outline" size="sm" onClick={handleBulkAssign}>
                   <UserPlus className="mr-2 h-4 w-4" />
                   Assign

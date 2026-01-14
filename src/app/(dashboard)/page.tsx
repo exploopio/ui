@@ -49,8 +49,9 @@ const SEVERITY_COLORS: Record<string, string> = {
   info: "#6b7280",
 };
 
-// Mock finding trends (this could be fetched from a separate API in the future)
-const mockFindingTrends = [
+// TODO: Replace with real API data when endpoint is available
+// API endpoint needed: GET /api/v1/analytics/finding-trend?period=6m
+const MOCK_FINDING_TRENDS = [
   { date: "Jul", critical: 4, high: 12, medium: 18, low: 25 },
   { date: "Aug", critical: 3, high: 15, medium: 22, low: 28 },
   { date: "Sep", critical: 5, high: 14, medium: 20, low: 24 },
@@ -63,7 +64,7 @@ function DashboardSkeleton() {
   return (
     <>
       {/* Stats Cards Skeleton */}
-      <section className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         {[1, 2, 3, 4].map((i) => (
           <Card key={i}>
             <CardHeader className="pb-2">
@@ -170,7 +171,7 @@ export default function Dashboard() {
           </Card>
 
           {/* Process Stepper */}
-          <Card className="md:col-span-1 lg:col-span-3">
+          <Card className="md:col-span-1 lg:col-span-3 overflow-x-auto">
             <CardHeader className="pb-2">
               <CardTitle className="text-base">CTEM Process</CardTitle>
               <CardDescription>
@@ -204,7 +205,7 @@ export default function Dashboard() {
         {/* Stats Cards */}
         {!isLoading && !error && (
           <>
-            <section className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <section className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
               <StatsCard
                 title="Total Assets"
                 value={stats.assets.total}
@@ -245,7 +246,7 @@ export default function Dashboard() {
 
             {/* Charts Row */}
             <section className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-7">
-              {/* Findings Trend Chart */}
+              {/* Findings Trend Chart - TODO: Replace MOCK_FINDING_TRENDS with real API data */}
               <Card className="col-span-1 lg:col-span-4">
                 <CardHeader>
                   <CardTitle>Findings Trend</CardTitle>
@@ -255,7 +256,7 @@ export default function Dashboard() {
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={300}>
-                    <AreaChart data={mockFindingTrends}>
+                    <AreaChart data={MOCK_FINDING_TRENDS}>
                       <XAxis
                         dataKey="date"
                         tick={{ fontSize: 12 }}
@@ -415,7 +416,7 @@ export default function Dashboard() {
                   <CardDescription>Key metrics overview</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
                     <QuickStat
                       label="Total Findings"
                       value={stats.findings.total}

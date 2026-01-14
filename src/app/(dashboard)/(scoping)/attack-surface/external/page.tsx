@@ -586,7 +586,7 @@ export default function ExternalSurfacePage() {
                   />
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Filter className="h-4 w-4 text-muted-foreground" />
                 <Select value={filterType} onValueChange={(v) => setFilterType(v as AssetType | "all")}>
                   <SelectTrigger className="w-32">
@@ -864,7 +864,7 @@ export default function ExternalSurfacePage() {
                       <CardTitle className="text-sm">SSL Expiry</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         {viewAsset.sslExpiry ? (
                           <Lock className="h-4 w-4 text-green-500" />
                         ) : (

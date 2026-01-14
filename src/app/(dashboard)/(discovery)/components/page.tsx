@@ -70,7 +70,7 @@ export default function ComponentsOverviewPage() {
         </PageHeader>
 
         {/* Key Metrics */}
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Components</CardTitle>
@@ -164,7 +164,7 @@ export default function ComponentsOverviewPage() {
                     <div className="flex items-center gap-3 min-w-0">
                       <Package className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                       <div className="min-w-0">
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <span className="font-medium truncate">{component.name}</span>
                           <Badge variant="outline" className="text-xs font-mono">
                             {component.version}
@@ -178,7 +178,7 @@ export default function ComponentsOverviewPage() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       {component.vulnerabilityCount.critical > 0 && (
                         <Badge variant="destructive">{component.vulnerabilityCount.critical}C</Badge>
                       )}
@@ -222,7 +222,7 @@ export default function ComponentsOverviewPage() {
                 {ecosystemStats.slice(0, 5).map((eco) => (
                   <div key={eco.ecosystem} className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <EcosystemBadge ecosystem={eco.ecosystem} />
                         <span className="text-sm font-medium">{eco.count}</span>
                       </div>

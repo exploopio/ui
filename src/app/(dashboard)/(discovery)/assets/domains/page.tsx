@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import {
   ColumnDef,
   flexRender,
@@ -21,6 +21,8 @@ import {
   StatCard,
   StatsGrid,
   SectionTitle,
+  flattenDomainTreeForTable,
+  type DomainTableRow,
 } from "@/features/assets";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -76,6 +78,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import {
   Plus,
@@ -90,6 +98,8 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  ChevronDown,
+  ChevronUp,
   Download,
   ExternalLink,
   Shield,
@@ -98,6 +108,9 @@ import {
   Clock,
   Copy,
   RefreshCw,
+  List,
+  Network,
+  CornerDownRight,
 } from "lucide-react";
 import {
   useAssets,
@@ -120,6 +133,9 @@ import {
   getActiveScopeExclusions,
   type ScopeMatchResult,
 } from "@/features/scope";
+
+// View mode type
+type ViewMode = "list" | "tree";
 
 // Filter types
 type StatusFilter = Status | "all";
@@ -155,6 +171,10 @@ export default function DomainsPage() {
   const [rowSelection, setRowSelection] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // View mode state
+  const [viewMode, setViewMode] = useState<ViewMode>("tree");
+  const [expandedRoots, setExpandedRoots] = useState<Set<string>>(new Set());
+
   // Dialog states
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -164,14 +184,56 @@ export default function DomainsPage() {
   // Form state
   const [formData, setFormData] = useState(emptyDomainForm);
 
-  // Filter data
+  // Tree data - flatten domains into hierarchical rows
+  const treeData = useMemo(() => {
+    return flattenDomainTreeForTable(domains);
+  }, [domains]);
+
+  // Toggle root domain expansion
+  const toggleRootExpansion = useCallback((rootDomain: string) => {
+    setExpandedRoots((prev) => {
+      const next = new Set(prev);
+      if (next.has(rootDomain)) {
+        next.delete(rootDomain);
+      } else {
+        next.add(rootDomain);
+      }
+      return next;
+    });
+  }, []);
+
+  // Expand/collapse all
+  const expandAll = useCallback(() => {
+    const allRoots = treeData.filter((d) => d._isRoot).map((d) => d._rootDomain);
+    setExpandedRoots(new Set(allRoots));
+  }, [treeData]);
+
+  const collapseAll = useCallback(() => {
+    setExpandedRoots(new Set());
+  }, []);
+
+  // Filter data based on view mode
   const filteredData = useMemo(() => {
-    let data = [...domains];
-    if (statusFilter !== "all") {
-      data = data.filter((d) => d.status === statusFilter);
+    if (viewMode === "list") {
+      // List view - flat list
+      let data = [...domains];
+      if (statusFilter !== "all") {
+        data = data.filter((d) => d.status === statusFilter);
+      }
+      return data as (Asset | DomainTableRow)[];
+    } else {
+      // Tree view - hierarchical list with expansion
+      let data = [...treeData];
+      if (statusFilter !== "all") {
+        data = data.filter((d) => d.status === statusFilter);
+      }
+      // Filter out collapsed children
+      return data.filter((d) => {
+        if (d._isRoot) return true;
+        return expandedRoots.has(d._rootDomain);
+      }) as (Asset | DomainTableRow)[];
     }
-    return data;
-  }, [domains, statusFilter]);
+  }, [domains, treeData, statusFilter, viewMode, expandedRoots]);
 
   // Status counts
   const statusCounts = useMemo(() => ({
@@ -209,8 +271,8 @@ export default function DomainsPage() {
     return calculateScopeCoverage(assets, scopeTargets, scopeExclusions);
   }, [domains, scopeTargets, scopeExclusions]);
 
-  // Table columns
-  const columns: ColumnDef<Asset>[] = [
+  // Table columns - support both Asset and DomainTableRow
+  const columns: ColumnDef<Asset | DomainTableRow>[] = [
     {
       id: "select",
       header: ({ table }) => (
@@ -244,15 +306,69 @@ export default function DomainsPage() {
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
-      cell: ({ row }) => (
-        <div className="flex items-center gap-2">
-          <Globe className="h-4 w-4 text-muted-foreground" />
-          <div>
-            <p className="font-medium">{row.original.name}</p>
-            <p className="text-muted-foreground text-xs">{row.original.groupName}</p>
+      cell: ({ row }) => {
+        const domain = row.original;
+        const treeRow = domain as DomainTableRow;
+        const isTreeView = viewMode === "tree" && "_isRoot" in domain;
+        const isRoot = isTreeView && treeRow._isRoot;
+        const hasChildren = isTreeView && treeRow._hasChildren;
+        const level = isTreeView ? treeRow._level : 0;
+        const isExpanded = isRoot && expandedRoots.has(treeRow._rootDomain);
+
+        return (
+          <div className="flex items-center gap-2">
+            {/* Tree controls - only in tree view */}
+            {isTreeView && (
+              <>
+                {/* Indentation spacer */}
+                {level > 0 && (
+                  <div
+                    className="flex items-center"
+                    style={{ width: `${level * 20}px` }}
+                  >
+                    <CornerDownRight className="h-3 w-3 text-muted-foreground/50 ml-auto" />
+                  </div>
+                )}
+                {/* Expand/collapse button for root domains */}
+                {isRoot && hasChildren && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleRootExpansion(treeRow._rootDomain);
+                    }}
+                  >
+                    {isExpanded ? (
+                      <ChevronDown className="h-4 w-4" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4" />
+                    )}
+                  </Button>
+                )}
+                {/* Spacer for alignment when no expand button */}
+                {isRoot && !hasChildren && <div className="w-6" />}
+              </>
+            )}
+            {/* Domain icon and info */}
+            <Globe className={`h-4 w-4 ${isRoot ? "text-blue-500" : "text-muted-foreground"}`} />
+            <div>
+              <div className="flex items-center gap-2">
+                <p className={`font-medium ${!isRoot && isTreeView ? "text-muted-foreground" : ""}`}>
+                  {domain.name}
+                </p>
+                {isRoot && hasChildren && (
+                  <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                    {treeRow._subdomainCount}
+                  </Badge>
+                )}
+              </div>
+              <p className="text-muted-foreground text-xs">{domain.groupName}</p>
+            </div>
           </div>
-        </div>
-      ),
+        );
+      },
     },
     {
       accessorKey: "metadata.registrar",
@@ -569,7 +685,7 @@ export default function DomainsPage() {
         </PageHeader>
 
         {/* Stats Cards */}
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
           <Card className="cursor-pointer hover:border-primary transition-colors" onClick={() => setStatusFilter("all")}>
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
@@ -622,13 +738,69 @@ export default function DomainsPage() {
         {/* Table Card */}
         <Card className="mt-6">
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <Globe className="h-5 w-5" />
                   All Domains
                 </CardTitle>
                 <CardDescription>Manage your domain assets</CardDescription>
+              </div>
+              {/* View Mode Toggle */}
+              <div className="flex items-center gap-2">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant={viewMode === "list" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setViewMode("list")}
+                      >
+                        <List className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>List View</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant={viewMode === "tree" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setViewMode("tree")}
+                      >
+                        <Network className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Tree View (Hierarchy)</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                {viewMode === "tree" && (
+                  <>
+                    <div className="h-4 w-px bg-border mx-1" />
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="sm" onClick={expandAll}>
+                            <ChevronDown className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Expand All</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="sm" onClick={collapseAll}>
+                            <ChevronUp className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Collapse All</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </>
+                )}
               </div>
             </div>
           </CardHeader>
@@ -659,7 +831,7 @@ export default function DomainsPage() {
                 />
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {Object.keys(rowSelection).length > 0 && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -738,7 +910,7 @@ export default function DomainsPage() {
                 {table.getFilteredSelectedRowModel().rows.length} of{" "}
                 {table.getFilteredRowModel().rows.length} row(s) selected
               </p>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"

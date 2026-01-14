@@ -449,7 +449,7 @@ export default function UsersPage() {
         {/* Stats */}
         {!membersLoading && !membersError && (
         <>
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
           <Card
             className="cursor-pointer hover:border-primary transition-colors"
             onClick={() => setStatusFilter("all")}
@@ -578,7 +578,7 @@ export default function UsersPage() {
                 />
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" size="sm" className="gap-2">
@@ -729,7 +729,7 @@ export default function UsersPage() {
                 {table.getFilteredSelectedRowModel().rows.length} of{" "}
                 {table.getFilteredRowModel().rows.length} row(s) selected
               </p>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
@@ -850,7 +850,7 @@ export default function UsersPage() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -1111,7 +1111,7 @@ export default function UsersPage() {
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <span className="font-medium">{roleDisplay.label}</span>
                           <Badge className={`${roleDisplay.color} border-0 text-xs`}>
                             {role}

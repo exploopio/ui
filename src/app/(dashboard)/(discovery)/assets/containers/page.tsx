@@ -553,10 +553,10 @@ export default function KubernetesPage() {
       ),
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
-          <Server className="h-4 w-4 text-blue-500" />
-          <div>
-            <p className="font-medium">{row.original.name}</p>
-            <p className="text-muted-foreground text-xs">{row.original.version}</p>
+          <Server className="h-4 w-4 text-blue-500 shrink-0" />
+          <div className="min-w-0">
+            <p className="font-medium truncate">{row.original.name}</p>
+            <p className="text-muted-foreground text-xs truncate">{row.original.version}</p>
           </div>
         </div>
       ),
@@ -701,7 +701,7 @@ export default function KubernetesPage() {
         </Button>
       ),
       cell: ({ row }) => (
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Layers className="h-4 w-4 text-purple-500" />
           <div>
             <p className="font-medium">{row.original.name}</p>
@@ -846,7 +846,7 @@ export default function KubernetesPage() {
         </Button>
       ),
       cell: ({ row }) => (
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Container className="h-4 w-4 text-cyan-500" />
           <div>
             <p className="font-medium font-mono text-sm">{row.original.name}</p>
@@ -1110,7 +1110,7 @@ export default function KubernetesPage() {
         <p className="text-sm text-muted-foreground">
           {table.getFilteredSelectedRowModel().rows.length} of {table.getFilteredRowModel().rows.length} row(s) selected
         </p>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => table.setPageIndex(0)} disabled={!table.getCanPreviousPage()}>
             <ChevronsLeft className="h-4 w-4" />
           </Button>
@@ -1159,7 +1159,7 @@ export default function KubernetesPage() {
         </PageHeader>
 
         {/* Stats Cards */}
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
           <Card className="cursor-pointer hover:border-blue-500 transition-colors" onClick={() => setMainTab("clusters")}>
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
@@ -1263,7 +1263,7 @@ export default function KubernetesPage() {
                 />
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {mainTab === "workloads" && (
                   <>
                     <Select value={clusterFilter} onValueChange={(v) => setClusterFilter(v as ClusterFilter)}>
@@ -1737,14 +1737,14 @@ export default function KubernetesPage() {
               <div className="rounded-xl border p-4 bg-card space-y-3">
                 <SectionTitle>Resource Configuration</SectionTitle>
                 <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Cpu className="h-4 w-4 text-blue-500" />
                     <div>
                       <p className="text-muted-foreground">CPU Request/Limit</p>
                       <p className="font-medium">{selectedWorkload.cpuRequest || "-"} / {selectedWorkload.cpuLimit || "-"}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <HardDrive className="h-4 w-4 text-purple-500" />
                     <div>
                       <p className="text-muted-foreground">Memory Request/Limit</p>

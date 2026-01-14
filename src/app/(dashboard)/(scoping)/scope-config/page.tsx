@@ -811,7 +811,7 @@ export default function ScopeConfigPage() {
                 </div>
                 {category.types.map((type) => (
                   <SelectItem key={type} value={type}>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       {targetTypeIcons[type]}
                       {formatTypeLabel(type)}
                     </div>
@@ -875,7 +875,7 @@ export default function ScopeConfigPage() {
                 </div>
                 {category.types.map((type) => (
                   <SelectItem key={type} value={type}>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       {targetTypeIcons[type]}
                       {formatTypeLabel(type)}
                     </div>
@@ -1000,7 +1000,7 @@ export default function ScopeConfigPage() {
         />
 
         {/* Stats */}
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
           <Card>
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
@@ -1100,7 +1100,7 @@ export default function ScopeConfigPage() {
                           </div>
                           {category.types.map((type) => (
                             <SelectItem key={type} value={type}>
-                              <div className="flex items-center gap-2">
+                              <div className="flex flex-wrap items-center gap-2">
                                 {targetTypeIcons[type]}
                                 {formatTypeLabel(type)}
                               </div>
@@ -1137,7 +1137,7 @@ export default function ScopeConfigPage() {
                       filteredTargets.map((target) => (
                         <TableRow key={target.id}>
                           <TableCell>
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                               {targetTypeIcons[target.type]}
                               <span className="text-sm capitalize">
                                 {target.type.replace("_", " ")}
@@ -1153,7 +1153,7 @@ export default function ScopeConfigPage() {
                             {target.description}
                           </TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                               <Switch
                                 checked={target.status === "active"}
                                 onCheckedChange={() => toggleTargetStatus(target.id)}
@@ -1237,7 +1237,7 @@ export default function ScopeConfigPage() {
                           </div>
                           {category.types.map((type) => (
                             <SelectItem key={type} value={type}>
-                              <div className="flex items-center gap-2">
+                              <div className="flex flex-wrap items-center gap-2">
                                 {targetTypeIcons[type]}
                                 {formatTypeLabel(type)}
                               </div>
@@ -1274,7 +1274,7 @@ export default function ScopeConfigPage() {
                       filteredExclusions.map((exclusion) => (
                         <TableRow key={exclusion.id}>
                           <TableCell>
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                               {targetTypeIcons[exclusion.type] || <Ban className="h-4 w-4" />}
                               <span className="text-sm capitalize">
                                 {exclusion.type.replace("_", " ")}
@@ -1290,7 +1290,7 @@ export default function ScopeConfigPage() {
                             {exclusion.reason}
                           </TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                               <Switch
                                 checked={exclusion.status === "active"}
                                 onCheckedChange={() => toggleExclusionStatus(exclusion.id)}
@@ -1429,7 +1429,7 @@ export default function ScopeConfigPage() {
                               {schedule.nextRun ? formatDate(schedule.nextRun) : "On trigger"}
                             </TableCell>
                             <TableCell>
-                              <div className="flex items-center gap-2">
+                              <div className="flex flex-wrap items-center gap-2">
                                 <Switch
                                   checked={schedule.status === "active"}
                                   onCheckedChange={() => toggleScheduleStatus(schedule.id)}

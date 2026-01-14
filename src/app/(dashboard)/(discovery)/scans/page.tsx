@@ -232,9 +232,9 @@ export default function ScansPage() {
           <div className="flex items-center gap-2">
             <Progress
               value={row.original.progress}
-              className={`h-2 w-20 ${isActive ? "[&>div]:animate-pulse" : ""}`}
+              className={`h-2 w-20 shrink-0 ${isActive ? "[&>div]:animate-pulse" : ""}`}
             />
-            <span className="text-muted-foreground text-xs w-10">
+            <span className="text-muted-foreground text-xs w-10 shrink-0">
               {row.original.progress}%
             </span>
           </div>
@@ -525,7 +525,7 @@ export default function ScansPage() {
                 />
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" size="sm" className="gap-2">
@@ -677,7 +677,7 @@ export default function ScansPage() {
                 {table.getFilteredSelectedRowModel().rows.length} of{" "}
                 {table.getFilteredRowModel().rows.length} row(s) selected
               </p>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
@@ -977,7 +977,7 @@ export default function ScansPage() {
                     <h4 className="text-sm font-medium mb-3">Schedule Settings</h4>
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <Calendar className="h-4 w-4 text-muted-foreground" />
                           <span className="text-sm">Frequency</span>
                         </div>
@@ -989,7 +989,7 @@ export default function ScansPage() {
                       </div>
                       {!selectedScan.schedule.runImmediately && selectedScan.schedule.time && (
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
                             <Clock className="h-4 w-4 text-muted-foreground" />
                             <span className="text-sm">Time</span>
                           </div>
@@ -997,7 +997,7 @@ export default function ScansPage() {
                         </div>
                       )}
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <Layers className="h-4 w-4 text-muted-foreground" />
                           <span className="text-sm">Max Concurrent</span>
                         </div>

@@ -111,6 +111,15 @@ import {
 } from "@/features/assets";
 import { mockAssetGroups } from "@/features/asset-groups";
 import type { Status } from "@/features/shared/types";
+import {
+  ScopeBadge,
+  ScopeCoverageCard,
+  getScopeMatchesForAsset,
+  calculateScopeCoverage,
+  getActiveScopeTargets,
+  getActiveScopeExclusions,
+  type ScopeMatchResult,
+} from "@/features/scope";
 
 // Filter types
 type StatusFilter = Status | "all";
@@ -214,6 +223,34 @@ export default function MobileAppsPage() {
     withFindings: mobileApps.filter((a) => a.findingCount > 0).length,
   }), [mobileApps]);
 
+  // Scope data
+  const scopeTargets = useMemo(() => getActiveScopeTargets(), []);
+  const scopeExclusions = useMemo(() => getActiveScopeExclusions(), []);
+
+  // Compute scope matches for each mobile app
+  const scopeMatchesMap = useMemo(() => {
+    const map = new Map<string, ScopeMatchResult>();
+    mobileApps.forEach((app) => {
+      const match = getScopeMatchesForAsset(
+        { id: app.id, type: "mobile_app", name: app.name },
+        scopeTargets,
+        scopeExclusions
+      );
+      map.set(app.id, match);
+    });
+    return map;
+  }, [mobileApps, scopeTargets, scopeExclusions]);
+
+  // Calculate scope coverage for all mobile apps
+  const scopeCoverage = useMemo(() => {
+    const assets = mobileApps.map((a) => ({
+      id: a.id,
+      name: a.name,
+      type: "mobile_app",
+    }));
+    return calculateScopeCoverage(assets, scopeTargets, scopeExclusions);
+  }, [mobileApps, scopeTargets, scopeExclusions]);
+
   // Table columns
   const columns: ColumnDef<Asset>[] = [
     {
@@ -250,29 +287,16 @@ export default function MobileAppsPage() {
         </Button>
       ),
       cell: ({ row }) => (
-        <div className="flex items-center gap-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted">
             {getPlatformIcon(row.original.metadata.platform || "android")}
           </div>
-          <div>
-            <p className="font-medium">{row.original.name}</p>
-            <p className="text-muted-foreground text-xs font-mono">{row.original.metadata.bundleId}</p>
+          <div className="min-w-0">
+            <p className="font-medium truncate">{row.original.name}</p>
+            <p className="text-muted-foreground text-xs font-mono truncate">{row.original.metadata.bundleId}</p>
           </div>
         </div>
       ),
-    },
-    {
-      accessorKey: "metadata.platform",
-      header: "Platform",
-      cell: ({ row }) => {
-        const platform = row.original.metadata.platform;
-        return (
-          <div className="flex items-center gap-2">
-            {getPlatformIcon(platform || "android")}
-            <span>{platformLabels[platform || "android"] || platform}</span>
-          </div>
-        );
-      },
     },
     {
       accessorKey: "metadata.appVersion",
@@ -289,45 +313,18 @@ export default function MobileAppsPage() {
       },
     },
     {
-      accessorKey: "metadata.downloads",
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="-ml-4"
-        >
-          Downloads
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      ),
-      cell: ({ row }) => {
-        const downloads = row.original.metadata.downloads;
-        return <span className="font-mono">{formatDownloads(downloads)}</span>;
-      },
-      sortingFn: (a, b) => {
-        const aDownloads = a.original.metadata.downloads || 0;
-        const bDownloads = b.original.metadata.downloads || 0;
-        return aDownloads - bDownloads;
-      },
-    },
-    {
-      accessorKey: "metadata.rating",
-      header: "Rating",
-      cell: ({ row }) => {
-        const rating = row.original.metadata.rating;
-        if (!rating) return <span className="text-muted-foreground">N/A</span>;
-        return (
-          <div className="flex items-center gap-1">
-            <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-            <span>{rating.toFixed(1)}</span>
-          </div>
-        );
-      },
-    },
-    {
       accessorKey: "status",
       header: "Status",
       cell: ({ row }) => <StatusBadge status={row.original.status} />,
+    },
+    {
+      id: "scope",
+      header: "Scope",
+      cell: ({ row }) => {
+        const match = scopeMatchesMap.get(row.original.id);
+        if (!match) return <span className="text-muted-foreground">-</span>;
+        return <ScopeBadge match={match} />;
+      },
     },
     {
       id: "classification",
@@ -556,15 +553,13 @@ export default function MobileAppsPage() {
 
   const handleExport = () => {
     const csv = [
-      ["Name", "Bundle ID", "Platform", "Version", "Downloads", "Rating", "Status", "Risk Score", "Findings"].join(","),
+      ["Name", "Bundle ID", "Platform", "Version", "Status", "Risk Score", "Findings"].join(","),
       ...mobileApps.map((a) =>
         [
           a.name,
           a.metadata.bundleId || "",
           a.metadata.platform || "",
           a.metadata.appVersion || "",
-          a.metadata.downloads || "",
-          a.metadata.rating || "",
           a.status,
           a.riskScore,
           a.findingCount,
@@ -612,7 +607,7 @@ export default function MobileAppsPage() {
         </PageHeader>
 
         {/* Stats Cards */}
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
           <Card className="cursor-pointer hover:border-primary transition-colors" onClick={() => setStatusFilter("all")}>
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
@@ -649,6 +644,15 @@ export default function MobileAppsPage() {
               <CardTitle className="text-3xl text-orange-500">{stats.withFindings}</CardTitle>
             </CardHeader>
           </Card>
+        </div>
+
+        {/* Scope Coverage Card */}
+        <div className="mt-4">
+          <ScopeCoverageCard
+            coverage={scopeCoverage}
+            title="Scope Coverage"
+            showBreakdown={false}
+          />
         </div>
 
         {/* Table Card */}
@@ -706,7 +710,7 @@ export default function MobileAppsPage() {
                 />
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {Object.keys(rowSelection).length > 0 && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -785,7 +789,7 @@ export default function MobileAppsPage() {
                 {table.getFilteredSelectedRowModel().rows.length} of{" "}
                 {table.getFilteredRowModel().rows.length} row(s) selected
               </p>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
@@ -878,6 +882,48 @@ export default function MobileAppsPage() {
         overviewContent={
           selectedMobileApp && (
             <>
+              {/* Scope Status Section */}
+              {scopeMatchesMap.get(selectedMobileApp.id) && (
+                <div className="rounded-xl border p-4 bg-card space-y-3">
+                  <SectionTitle>Scope Status</SectionTitle>
+                  <div className="flex items-center gap-3">
+                    <ScopeBadge match={scopeMatchesMap.get(selectedMobileApp.id)!} showDetails />
+                  </div>
+                  {scopeMatchesMap.get(selectedMobileApp.id)!.matchedTargets.length > 0 && (
+                    <div className="text-sm">
+                      <p className="text-muted-foreground mb-1">Matching Rules</p>
+                      <div className="space-y-1">
+                        {scopeMatchesMap.get(selectedMobileApp.id)!.matchedTargets.map((target) => (
+                          <div key={target.targetId} className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs">
+                              {target.pattern}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">({target.matchType})</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {scopeMatchesMap.get(selectedMobileApp.id)!.matchedExclusions.length > 0 && (
+                    <div className="text-sm">
+                      <p className="text-muted-foreground mb-1">Exclusions Applied</p>
+                      <div className="space-y-1">
+                        {scopeMatchesMap.get(selectedMobileApp.id)!.matchedExclusions.map((exclusion) => (
+                          <div key={exclusion.exclusionId} className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs border-orange-500/50 text-orange-500">
+                              {exclusion.pattern}
+                            </Badge>
+                            {exclusion.reason && (
+                              <span className="text-xs text-muted-foreground">{exclusion.reason}</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Platform Info */}
               <div className="rounded-xl border p-4 bg-card space-y-3">
                 <SectionTitle>Platform Information</SectionTitle>

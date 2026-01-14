@@ -240,10 +240,10 @@ export default function CredentialsPage() {
       ),
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
-          <KeyRound className="h-4 w-4 text-red-500" />
-          <div>
-            <p className="font-medium">{row.original.name}</p>
-            <p className="text-muted-foreground text-xs">{row.original.description}</p>
+          <KeyRound className="h-4 w-4 text-red-500 shrink-0" />
+          <div className="min-w-0">
+            <p className="font-medium truncate">{row.original.name}</p>
+            <p className="text-muted-foreground text-xs truncate">{row.original.description}</p>
           </div>
         </div>
       ),
@@ -734,7 +734,7 @@ export default function CredentialsPage() {
                 {table.getFilteredSelectedRowModel().rows.length} of{" "}
                 {table.getFilteredRowModel().rows.length} row(s) selected.
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"

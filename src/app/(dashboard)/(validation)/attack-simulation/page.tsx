@@ -292,7 +292,7 @@ export default function AttackSimulationPage() {
                         </TableCell>
                         <TableCell>
                           {technique.status !== "running" ? (
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                               <Progress value={technique.successRate} className="h-2 w-16" />
                               <span className="text-sm">{technique.successRate}%</span>
                             </div>
@@ -366,7 +366,7 @@ export default function AttackSimulationPage() {
             <CardDescription>Run common attack scenarios</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
               {[
                 { name: "Phishing Test", icon: Target, desc: "Email-based attack" },
                 { name: "Ransomware Sim", icon: AlertTriangle, desc: "Encryption attack" },
