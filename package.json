@@ -1,6 +1,6 @@
 {
   "name": "rediver-ui",
-  "version": "0.1.4-refactor",
+  "version": "0.1.5-staging",
   "private": true,
   "scripts": {
     "dev": "next dev",

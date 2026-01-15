@@ -1830,11 +1830,11 @@ export default function RepositoryDetailPage() {
     mutate: mutateRepo
   } = useRepository(repositoryId);
 
-  // Fetch branches from API (if available)
+  // Fetch branches from API only after repository is successfully loaded
   const {
     data: _branchesData,
     isLoading: _branchesLoading
-  } = useRepositoryBranches(repositoryId);
+  } = useRepositoryBranches(repositoryData ? repositoryId : null);
 
   // Transform API response to RepositoryView
   const repository = useMemo(() => {

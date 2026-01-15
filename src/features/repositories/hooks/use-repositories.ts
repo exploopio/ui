@@ -39,6 +39,15 @@ const defaultConfig: SWRConfiguration = {
   errorRetryCount: 3,
   errorRetryInterval: 1000,
   dedupingInterval: 2000,
+  onErrorRetry: (error, _key, _config, revalidate, { retryCount }) => {
+    // Don't retry on client errors (4xx) - they won't change
+    if (error?.statusCode && error.statusCode >= 400 && error.statusCode < 500) {
+      return;
+    }
+    // Only retry server errors (5xx) up to 3 times
+    if (retryCount >= 3) return;
+    setTimeout(() => revalidate({ retryCount }), 1000);
+  },
   onError: (error) => {
     handleApiError(error, {
       showToast: true,
