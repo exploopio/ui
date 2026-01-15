@@ -163,7 +163,7 @@ const getRuntimeCategory = (runtime: string): string => {
 
 export default function ServerlessPage() {
   // Fetch serverless functions from API
-  const { assets: functions, isLoading, isError, error: fetchError, mutate } = useAssets({
+  const { assets: functions, isLoading: _isLoading, isError: _isError, error: _fetchError, mutate } = useAssets({
     types: ['serverless'],
   });
 
@@ -174,7 +174,7 @@ export default function ServerlessPage() {
   const [runtimeFilter, setRuntimeFilter] = useState<RuntimeFilter>("all");
   const [providerFilter, setProviderFilter] = useState<ProviderFilter>("all");
   const [rowSelection, setRowSelection] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [_isSubmitting, setIsSubmitting] = useState(false);
 
   // Dialog states
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);

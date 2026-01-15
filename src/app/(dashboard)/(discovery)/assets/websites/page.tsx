@@ -179,7 +179,7 @@ const emptyWebsiteForm = {
 
 export default function WebsitesPage() {
   // Fetch websites from API
-  const { assets: websites, isLoading, isError, error: fetchError, mutate } = useAssets({
+  const { assets: websites, isLoading: _isLoading, isError: _isError, error: _fetchError, mutate } = useAssets({
     types: ['website'],
   });
 
@@ -189,7 +189,7 @@ export default function WebsitesPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [sslFilter, setSSLFilter] = useState<SSLFilter>("all");
   const [rowSelection, setRowSelection] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [_isSubmitting, setIsSubmitting] = useState(false);
 
   // Dialog states
   const [addDialogOpen, setAddDialogOpen] = useState(false);

@@ -20,7 +20,7 @@ interface FindingStats {
   average_cvss: number
 }
 
-interface ProjectStats {
+interface RepositoryStats {
   total: number
   with_findings: number
 }
@@ -36,7 +36,7 @@ interface ActivityItem {
 interface DashboardStatsResponse {
   assets: AssetStats
   findings: FindingStats
-  projects: ProjectStats
+  repositories: RepositoryStats
   recent_activity: ActivityItem[]
 }
 
@@ -55,7 +55,7 @@ export interface DashboardStats {
     overdue: number
     averageCvss: number
   }
-  projects: {
+  repositories: {
     total: number
     withFindings: number
   }
@@ -78,9 +78,9 @@ function transformStats(response: DashboardStatsResponse): DashboardStats {
       overdue: response.findings.overdue,
       averageCvss: response.findings.average_cvss,
     },
-    projects: {
-      total: response.projects.total,
-      withFindings: response.projects.with_findings,
+    repositories: {
+      total: response.repositories.total,
+      withFindings: response.repositories.with_findings,
     },
     recentActivity: response.recent_activity || [],
   }
@@ -101,7 +101,7 @@ const emptyStats: DashboardStats = {
     overdue: 0,
     averageCvss: 0,
   },
-  projects: {
+  repositories: {
     total: 0,
     withFindings: 0,
   },

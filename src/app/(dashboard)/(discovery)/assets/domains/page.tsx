@@ -160,7 +160,7 @@ const emptyDomainForm = {
 
 export default function DomainsPage() {
   // Fetch domains from API
-  const { assets: domains, isLoading, isError, error: fetchError, mutate } = useAssets({
+  const { assets: domains, isLoading: _isLoading, isError: _isError, error: _fetchError, mutate } = useAssets({
     types: ['domain'],
   });
 
@@ -169,7 +169,7 @@ export default function DomainsPage() {
   const [globalFilter, setGlobalFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [rowSelection, setRowSelection] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [_isSubmitting, setIsSubmitting] = useState(false);
 
   // View mode state
   const [viewMode, setViewMode] = useState<ViewMode>("tree");

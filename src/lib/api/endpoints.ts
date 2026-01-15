@@ -351,8 +351,13 @@ export const invitationEndpoints = {
 
 /**
  * Asset endpoints (global resources)
+ * Supports unified asset types including repositories (git repos)
  */
 export const assetEndpoints = {
+  // ============================================
+  // BASIC CRUD
+  // ============================================
+
   /**
    * List assets
    */
@@ -367,27 +372,73 @@ export const assetEndpoints = {
   get: (assetId: string) => `${API_BASE.ASSETS}/${assetId}`,
 
   /**
-   * Create asset (admin only)
+   * Create asset
    */
   create: () => API_BASE.ASSETS,
 
   /**
-   * Update asset (admin only)
+   * Update asset
    */
   update: (assetId: string) => `${API_BASE.ASSETS}/${assetId}`,
 
   /**
-   * Delete asset (admin only)
+   * Delete asset
    */
   delete: (assetId: string) => `${API_BASE.ASSETS}/${assetId}`,
+
+  // ============================================
+  // REPOSITORY EXTENSION
+  // ============================================
+
+  /**
+   * Get asset with repository extension (full data)
+   */
+  getFull: (assetId: string) => `${API_BASE.ASSETS}/${assetId}/full`,
+
+  /**
+   * Get repository extension for an asset
+   */
+  getRepository: (assetId: string) => `${API_BASE.ASSETS}/${assetId}/repository`,
+
+  /**
+   * Create repository asset (creates asset + repository extension)
+   */
+  createRepository: () => `${API_BASE.ASSETS}/repository`,
+
+  /**
+   * Update repository extension
+   */
+  updateRepository: (assetId: string) => `${API_BASE.ASSETS}/${assetId}/repository`,
+
+  // ============================================
+  // STATUS OPERATIONS
+  // ============================================
+
+  /**
+   * Activate asset (set status to active)
+   */
+  activate: (assetId: string) => `${API_BASE.ASSETS}/${assetId}/activate`,
+
+  /**
+   * Deactivate asset (set status to inactive)
+   */
+  deactivate: (assetId: string) => `${API_BASE.ASSETS}/${assetId}/deactivate`,
+
+  /**
+   * Archive asset (set status to archived)
+   */
+  archive: (assetId: string) => `${API_BASE.ASSETS}/${assetId}/archive`,
 } as const
 
 // ============================================
 // PROJECT ENDPOINTS (Tenant-scoped)
+// @deprecated Use assetEndpoints with type="repository" instead
 // ============================================
 
 /**
  * Project endpoints (tenant-scoped repositories/code projects)
+ * @deprecated Use assetEndpoints with type="repository" instead.
+ * Projects are now unified under the Asset domain as repository type assets.
  */
 export const projectEndpoints = {
   /**

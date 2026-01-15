@@ -51,7 +51,7 @@ function buildComponentsEndpoint(filters?: ComponentApiFilters): string {
 
   const params = new URLSearchParams()
 
-  if (filters.project_id) params.set('project_id', filters.project_id)
+  if (filters.asset_id) params.set('asset_id', filters.asset_id)
   if (filters.name) params.set('name', filters.name)
   if (filters.page) params.set('page', String(filters.page))
   if (filters.per_page) params.set('per_page', String(filters.per_page))
@@ -72,12 +72,12 @@ function buildComponentEndpoint(componentId: string): string {
   return `/api/v1/components/${componentId}`
 }
 
-function buildProjectComponentsEndpoint(
-  projectId: string,
+function buildAssetComponentsEndpoint(
+  assetId: string,
   page?: number,
   perPage?: number
 ): string {
-  const baseUrl = `/api/v1/projects/${projectId}/components`
+  const baseUrl = `/api/v1/assets/${assetId}/components`
   const params = new URLSearchParams()
 
   if (page) params.set('page', String(page))
@@ -156,18 +156,18 @@ export function useComponentApi(componentId: string | null, config?: SWRConfigur
 }
 
 /**
- * Fetch components for a specific project
+ * Fetch components for a specific asset
  */
-export function useProjectComponentsApi(
-  projectId: string | null,
+export function useAssetComponentsApi(
+  assetId: string | null,
   page?: number,
   perPage?: number,
   config?: SWRConfiguration
 ) {
   const { currentTenant } = useTenant()
 
-  const key = currentTenant && projectId
-    ? buildProjectComponentsEndpoint(projectId, page, perPage)
+  const key = currentTenant && assetId
+    ? buildAssetComponentsEndpoint(assetId, page, perPage)
     : null
 
   return useSWR<ApiComponentListResponse>(

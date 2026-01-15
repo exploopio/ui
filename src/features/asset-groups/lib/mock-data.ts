@@ -24,8 +24,8 @@ export const mockAssetGroups: AssetGroup[] = [
     domainCount: 8,
     websiteCount: 12,
     serviceCount: 15,
-    projectCount: 5,
-    repositoryCount: 5, // @deprecated
+    projectCount: 5, // @deprecated
+    repositoryCount: 5,
     cloudCount: 3,
     credentialCount: 2,
     riskScore: 78,
@@ -43,8 +43,8 @@ export const mockAssetGroups: AssetGroup[] = [
     domainCount: 12,
     websiteCount: 25,
     serviceCount: 18,
-    projectCount: 8,
-    repositoryCount: 8, // @deprecated
+    projectCount: 8, // @deprecated
+    repositoryCount: 8,
     cloudCount: 3,
     credentialCount: 1,
     riskScore: 65,
@@ -62,8 +62,8 @@ export const mockAssetGroups: AssetGroup[] = [
     domainCount: 4,
     websiteCount: 8,
     serviceCount: 12,
-    projectCount: 4,
-    repositoryCount: 4, // @deprecated
+    projectCount: 4, // @deprecated
+    repositoryCount: 4,
     cloudCount: 3,
     credentialCount: 1,
     riskScore: 72,
@@ -81,8 +81,8 @@ export const mockAssetGroups: AssetGroup[] = [
     domainCount: 6,
     websiteCount: 15,
     serviceCount: 14,
-    projectCount: 6,
-    repositoryCount: 6, // @deprecated
+    projectCount: 6, // @deprecated
+    repositoryCount: 6,
     cloudCount: 3,
     credentialCount: 1,
     riskScore: 42,
@@ -100,8 +100,8 @@ export const mockAssetGroups: AssetGroup[] = [
     domainCount: 5,
     websiteCount: 8,
     serviceCount: 10,
-    projectCount: 3,
-    repositoryCount: 3, // @deprecated
+    projectCount: 3, // @deprecated
+    repositoryCount: 3,
     cloudCount: 1,
     credentialCount: 1,
     riskScore: 58,
@@ -119,8 +119,8 @@ export const mockAssetGroups: AssetGroup[] = [
     domainCount: 2,
     websiteCount: 5,
     serviceCount: 8,
-    projectCount: 5,
-    repositoryCount: 5, // @deprecated
+    projectCount: 5, // @deprecated
+    repositoryCount: 5,
     cloudCount: 12,
     credentialCount: 3,
     riskScore: 68,
@@ -138,8 +138,8 @@ export const mockAssetGroups: AssetGroup[] = [
     domainCount: 3,
     websiteCount: 10,
     serviceCount: 8,
-    projectCount: 3,
-    repositoryCount: 3, // @deprecated
+    projectCount: 3, // @deprecated
+    repositoryCount: 3,
     cloudCount: 1,
     credentialCount: 0,
     riskScore: 35,
@@ -157,8 +157,8 @@ export const mockAssetGroups: AssetGroup[] = [
     domainCount: 2,
     websiteCount: 6,
     serviceCount: 5,
-    projectCount: 4,
-    repositoryCount: 4, // @deprecated
+    projectCount: 4, // @deprecated
+    repositoryCount: 4,
     cloudCount: 1,
     credentialCount: 0,
     riskScore: 22,
@@ -176,8 +176,8 @@ export const mockAssetGroups: AssetGroup[] = [
     domainCount: 3,
     websiteCount: 3,
     serviceCount: 2,
-    projectCount: 0,
-    repositoryCount: 0, // @deprecated
+    projectCount: 0, // @deprecated
+    repositoryCount: 0,
     cloudCount: 0,
     credentialCount: 0,
     riskScore: 82,
@@ -200,7 +200,7 @@ export const getAssetGroups = (): AssetGroup[] => {
 // Mock assets for groups (simplified for demo)
 export interface GroupAsset {
   id: string;
-  type: "domain" | "website" | "api" | "host" | "cloud" | "project" | "database";
+  type: "domain" | "website" | "api" | "host" | "cloud" | "repository" | "database";
   name: string;
   status: "active" | "inactive" | "monitoring";
   riskScore: number;
@@ -214,7 +214,7 @@ export const getAssetsByGroupId = (groupId: string): GroupAsset[] => {
   if (!group) return [];
 
   const assets: GroupAsset[] = [];
-  const types: GroupAsset["type"][] = ["domain", "website", "api", "host", "cloud", "project", "database"];
+  const types: GroupAsset["type"][] = ["domain", "website", "api", "host", "cloud", "repository", "database"];
   const statuses: GroupAsset["status"][] = ["active", "inactive", "monitoring"];
 
   // Generate assets based on group's asset count
@@ -235,8 +235,8 @@ export const getAssetsByGroupId = (groupId: string): GroupAsset[] => {
         ? `192.168.1.${100 + typeIndex}`
         : type === "cloud"
         ? `aws-${typeIndex}-${group.id}`
-        : type === "project"
-        ? `github.com/example/project-${typeIndex}`
+        : type === "repository"
+        ? `github.com/example/repo-${typeIndex}`
         : `db-${typeIndex}.example.vn`,
       status: statuses[i % statuses.length],
       riskScore: Math.floor(Math.random() * 100),

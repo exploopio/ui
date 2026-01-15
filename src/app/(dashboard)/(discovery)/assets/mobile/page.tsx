@@ -175,7 +175,7 @@ const formatDownloads = (downloads?: number) => {
 
 export default function MobileAppsPage() {
   // Fetch mobile apps from API
-  const { assets: mobileApps, isLoading, isError, error: fetchError, mutate } = useAssets({
+  const { assets: mobileApps, isLoading: _isLoading, isError: _isError, error: _fetchError, mutate } = useAssets({
     types: ['mobile_app'],
   });
 
@@ -185,7 +185,7 @@ export default function MobileAppsPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [platformFilter, setPlatformFilter] = useState<PlatformFilter>("all");
   const [rowSelection, setRowSelection] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [_isSubmitting, setIsSubmitting] = useState(false);
 
   // Dialog states
   const [addDialogOpen, setAddDialogOpen] = useState(false);

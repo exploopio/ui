@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Header, Main } from "@/components/layout";
 import { ProfileDropdown } from "@/components/profile-dropdown";
@@ -48,6 +48,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -88,43 +89,576 @@ import {
   History,
   Layers,
   Timer,
+  Loader2,
 } from "lucide-react";
 import {
-  mockProjects,
-  mockBranchDetails,
-  mockFindings,
-  mockActivities,
-  mockSLAPolicy,
-  getOverdueFindingsCount,
-  getSLAWarningsCount,
-  type Project,
-  type BranchDetail,
-  type FindingDetail,
-  type ActivityLog,
+  useRepository,
+  useRepositoryBranches,
+  type RepositoryView,
   type SCMProvider,
-  type BranchStatus,
   type Severity,
-  type FindingStatus,
-  type TriageStatus,
+  type BranchStatus,
   type SLAStatus,
-  type ActivityAction,
-  type ProjectDetailTab,
+  type ScannerType,
   SCM_PROVIDER_LABELS,
-  SCM_PROVIDER_COLORS,
-  PROJECT_STATUS_LABELS,
-  BRANCH_STATUS_LABELS,
-  BRANCH_STATUS_COLORS,
   SEVERITY_LABELS,
   SEVERITY_COLORS,
-  FINDING_STATUS_LABELS,
-  FINDING_STATUS_COLORS,
-  TRIAGE_STATUS_LABELS,
-  TRIAGE_STATUS_COLORS,
+  BRANCH_STATUS_LABELS,
+  BRANCH_STATUS_COLORS,
   SLA_STATUS_LABELS,
   SLA_STATUS_COLORS,
-  ACTIVITY_ACTION_LABELS,
   SCANNER_TYPE_LABELS,
-} from "@/features/projects";
+} from "@/features/repositories";
+
+// Additional types for detail page
+type Repository = RepositoryView;
+type FindingStatus = "open" | "confirmed" | "in_progress" | "resolved" | "false_positive" | "accepted_risk";
+type TriageStatus = "needs_triage" | "triaged" | "escalated";
+type ActivityAction =
+  | "scan_started"
+  | "scan_completed"
+  | "scan_failed"
+  | "finding_created"
+  | "finding_resolved"
+  | "finding_regressed"
+  | "finding_status_changed"
+  | "finding_assigned"
+  | "finding_triaged"
+  | "finding_commented"
+  | "branch_created"
+  | "branch_added"
+  | "branch_deleted"
+  | "pr_opened"
+  | "pr_merged"
+  | "pr_closed"
+  | "repository_synced"
+  | "settings_changed"
+  | "config_updated"
+  | "notification_sent"
+  | "issue_created";
+type DetailTab = "overview" | "branches" | "findings" | "components" | "activity" | "settings";
+
+// Labels
+const STATUS_LABELS: Record<string, string> = {
+  active: "Active",
+  inactive: "Inactive",
+  archived: "Archived",
+  pending: "Pending",
+  completed: "Completed",
+  failed: "Failed",
+};
+
+const FINDING_STATUS_LABELS: Record<FindingStatus, string> = {
+  open: "Open",
+  confirmed: "Confirmed",
+  in_progress: "In Progress",
+  resolved: "Resolved",
+  false_positive: "False Positive",
+  accepted_risk: "Accepted Risk",
+};
+
+const FINDING_STATUS_COLORS: Record<FindingStatus, { bg: string; text: string }> = {
+  open: { bg: "bg-red-500/15", text: "text-red-600" },
+  confirmed: { bg: "bg-orange-500/15", text: "text-orange-600" },
+  in_progress: { bg: "bg-blue-500/15", text: "text-blue-600" },
+  resolved: { bg: "bg-green-500/15", text: "text-green-600" },
+  false_positive: { bg: "bg-gray-500/15", text: "text-gray-600" },
+  accepted_risk: { bg: "bg-yellow-500/15", text: "text-yellow-600" },
+};
+
+const TRIAGE_STATUS_LABELS: Record<TriageStatus, string> = {
+  needs_triage: "Needs Triage",
+  triaged: "Triaged",
+  escalated: "Escalated",
+};
+
+const TRIAGE_STATUS_COLORS: Record<TriageStatus, { bg: string; text: string }> = {
+  needs_triage: { bg: "bg-yellow-500/15", text: "text-yellow-600" },
+  triaged: { bg: "bg-blue-500/15", text: "text-blue-600" },
+  escalated: { bg: "bg-red-500/15", text: "text-red-600" },
+};
+
+const ACTIVITY_ACTION_LABELS: Record<ActivityAction, string> = {
+  scan_started: "Scan Started",
+  scan_completed: "Scan Completed",
+  scan_failed: "Scan Failed",
+  finding_created: "Finding Created",
+  finding_resolved: "Finding Resolved",
+  finding_regressed: "Finding Regressed",
+  finding_status_changed: "Finding Status Changed",
+  finding_assigned: "Finding Assigned",
+  finding_triaged: "Finding Triaged",
+  finding_commented: "Comment Added",
+  branch_created: "Branch Created",
+  branch_added: "Branch Added",
+  branch_deleted: "Branch Deleted",
+  pr_opened: "Pull Request Opened",
+  pr_merged: "Pull Request Merged",
+  pr_closed: "Pull Request Closed",
+  repository_synced: "Repository Synced",
+  settings_changed: "Settings Changed",
+  config_updated: "Config Updated",
+  notification_sent: "Notification Sent",
+  issue_created: "Issue Created",
+};
+
+const SCM_PROVIDER_COLORS: Record<SCMProvider, string> = {
+  github: "bg-gray-900 text-white",
+  gitlab: "bg-orange-600 text-white",
+  bitbucket: "bg-blue-600 text-white",
+  azure_devops: "bg-blue-500 text-white",
+  codecommit: "bg-yellow-600 text-white",
+  local: "bg-gray-500 text-white",
+};
+
+// Mock data for detail page
+interface BranchFindingsSummary {
+  total: number;
+  by_severity: {
+    critical: number;
+    high: number;
+    medium: number;
+    low: number;
+    info: number;
+  };
+}
+
+interface BranchDetail {
+  id: string;
+  name: string;
+  type: "main" | "develop" | "feature" | "release" | "hotfix" | "other";
+  is_default: boolean;
+  is_protected: boolean;
+  scan_status: BranchStatus;
+  last_commit_sha: string;
+  last_commit_message: string;
+  last_commit_author: string;
+  last_commit_author_avatar?: string;
+  last_commit_at: string;
+  findings_summary: BranchFindingsSummary;
+  compared_to_default?: {
+    new_findings: number;
+    resolved_findings: number;
+  };
+  last_scanned_at?: string;
+}
+
+interface FindingDetail {
+  id: string;
+  title: string;
+  description: string;
+  severity: Severity;
+  status: FindingStatus;
+  triage_status: TriageStatus;
+  scanner_type: ScannerType;
+  file_path?: string;
+  line_start?: number;
+  branches: string[];
+  sla_status: SLAStatus;
+  sla_days_remaining?: number;
+  first_detected_at: string;
+  assigned_to_name?: string;
+  assigned_to_avatar?: string;
+  comments_count: number;
+  cwe_ids?: string[];
+}
+
+interface ActivityLog {
+  id: string;
+  action: ActivityAction;
+  actor_type: 'user' | 'system';
+  actor_name: string;
+  actor_avatar?: string;
+  entity_name?: string;
+  comment?: string;
+  timestamp: string;
+  changes?: Array<{ field: string; old_value?: string | number | boolean; new_value: string | number | boolean }>;
+  scan_summary?: {
+    branch: string;
+    findings_total: number;
+    findings_new: number;
+    findings_resolved: number;
+    duration_seconds: number;
+    quality_gate_passed: boolean;
+  };
+  pr_info?: {
+    number: number;
+    title: string;
+    url: string;
+    source_branch: string;
+    target_branch: string;
+  };
+}
+
+interface SLAPolicy {
+  id: string;
+  name: string;
+  rules: Array<{
+    severity: Severity;
+    days_to_remediate: number;
+    warning_threshold_percent: number;
+  }>;
+}
+
+const mockBranchDetails: BranchDetail[] = [
+  {
+    id: "branch-1",
+    name: "main",
+    type: "main",
+    is_default: true,
+    is_protected: true,
+    scan_status: "passed",
+    last_commit_sha: "abc123",
+    last_commit_message: "feat: add new feature",
+    last_commit_author: "John Doe",
+    last_commit_author_avatar: "",
+    last_commit_at: "2024-01-15T10:30:00Z",
+    findings_summary: {
+      total: 5,
+      by_severity: { critical: 1, high: 2, medium: 1, low: 1, info: 0 },
+    },
+    last_scanned_at: "2024-01-15T10:30:00Z",
+  },
+  {
+    id: "branch-2",
+    name: "develop",
+    type: "develop",
+    is_default: false,
+    is_protected: true,
+    scan_status: "warning",
+    last_commit_sha: "def456",
+    last_commit_message: "fix: resolve bug",
+    last_commit_author: "Jane Smith",
+    last_commit_author_avatar: "",
+    last_commit_at: "2024-01-14T14:00:00Z",
+    findings_summary: {
+      total: 8,
+      by_severity: { critical: 0, high: 3, medium: 3, low: 2, info: 0 },
+    },
+    compared_to_default: {
+      new_findings: 3,
+      resolved_findings: 0,
+    },
+    last_scanned_at: "2024-01-14T14:00:00Z",
+  },
+];
+
+const mockFindings: FindingDetail[] = [
+  {
+    id: "finding-1",
+    title: "SQL Injection vulnerability",
+    description: "User input not sanitized before database query",
+    severity: "critical",
+    status: "open",
+    triage_status: "triaged",
+    scanner_type: "sast",
+    file_path: "src/api/users.go",
+    line_start: 45,
+    branches: ["main"],
+    sla_status: "warning",
+    sla_days_remaining: 5,
+    first_detected_at: "2024-01-10T00:00:00Z",
+    assigned_to_name: "John Doe",
+    assigned_to_avatar: "",
+    comments_count: 2,
+    cwe_ids: ["CWE-89"],
+  },
+  {
+    id: "finding-2",
+    title: "Vulnerable dependency: lodash < 4.17.21",
+    description: "Known prototype pollution vulnerability",
+    severity: "high",
+    status: "in_progress",
+    triage_status: "triaged",
+    scanner_type: "sca",
+    file_path: "package.json",
+    line_start: 15,
+    branches: ["main", "develop"],
+    sla_status: "on_track",
+    sla_days_remaining: 10,
+    first_detected_at: "2024-01-12T00:00:00Z",
+    comments_count: 1,
+    cwe_ids: ["CWE-1321"],
+  },
+];
+
+const mockActivities: ActivityLog[] = [
+  {
+    id: "activity-1",
+    action: "scan_completed",
+    actor_type: "system",
+    actor_name: "System",
+    entity_name: "main",
+    timestamp: "2024-01-15T10:30:00Z",
+    scan_summary: {
+      branch: "main",
+      findings_total: 5,
+      findings_new: 3,
+      findings_resolved: 0,
+      duration_seconds: 180,
+      quality_gate_passed: true,
+    },
+  },
+  {
+    id: "activity-2",
+    action: "finding_resolved",
+    actor_type: "user",
+    actor_name: "John Doe",
+    actor_avatar: "",
+    entity_name: "SQL Injection in login",
+    timestamp: "2024-01-14T14:00:00Z",
+    changes: [
+      { field: "status", old_value: "open", new_value: "resolved" },
+    ],
+  },
+];
+
+const mockSLAPolicy: SLAPolicy = {
+  id: "sla-1",
+  name: "Default Security SLA",
+  rules: [
+    { severity: "critical", days_to_remediate: 2, warning_threshold_percent: 50 },
+    { severity: "high", days_to_remediate: 15, warning_threshold_percent: 70 },
+    { severity: "medium", days_to_remediate: 30, warning_threshold_percent: 80 },
+    { severity: "low", days_to_remediate: 60, warning_threshold_percent: 90 },
+    { severity: "info", days_to_remediate: 90, warning_threshold_percent: 90 },
+  ],
+};
+
+const getOverdueFindingsCount = (findings: FindingDetail[]) =>
+  findings.filter(f => f.sla_status === "overdue" || f.sla_status === "exceeded").length;
+
+const getSLAWarningsCount = (findings: FindingDetail[]) =>
+  findings.filter(f => f.sla_status === "warning").length;
+
+// ============================================
+// API Response Types & Transformation
+// ============================================
+
+interface ApiAssetResponse {
+  id: string;
+  tenant_id?: string;
+  name: string;
+  type: string;
+  criticality: string;
+  status: string;
+  scope: string;
+  exposure: string;
+  risk_score: number;
+  finding_count: number;
+  description?: string;
+  tags?: string[];
+  metadata?: Record<string, unknown>;
+  first_seen: string;
+  last_seen: string;
+  created_at: string;
+  updated_at: string;
+  repository?: {
+    asset_id: string;
+    repo_id?: string;
+    full_name: string;
+    scm_connection_id?: string;
+    scm_provider: string;
+    scm_organization?: string;
+    visibility?: string;
+    default_branch?: string;
+    primary_language?: string;
+    languages?: string[];
+    topics?: string[];
+    description?: string;
+    web_url?: string;
+    clone_url?: string;
+    created_at_source?: string;
+    updated_at_source?: string;
+    pushed_at_source?: string;
+    branch_count?: number;
+    commit_count?: number;
+    contributor_count?: number;
+    open_pr_count?: number;
+    size_kb?: number;
+    is_fork?: boolean;
+    is_archived?: boolean;
+    is_disabled?: boolean;
+    is_template?: boolean;
+    has_issues?: boolean;
+    has_wiki?: boolean;
+    security_features?: {
+      advanced_security?: boolean;
+      secret_scanning?: boolean;
+      secret_scanning_push_protection?: boolean;
+      dependabot_alerts?: boolean;
+      dependabot_updates?: boolean;
+      code_scanning?: boolean;
+    };
+    scan_settings?: {
+      enabled_scanners: string[];
+      auto_scan: boolean;
+      scan_on_push: boolean;
+      scan_on_pr: boolean;
+      schedule?: string;
+      branch_patterns?: string[];
+    };
+    sync_status?: string;
+    last_synced_at?: string;
+    last_scanned_at?: string;
+    findings_summary?: {
+      total: number;
+      by_severity: {
+        critical: number;
+        high: number;
+        medium: number;
+        low: number;
+        info: number;
+      };
+      by_status?: {
+        open: number;
+        in_progress: number;
+        resolved: number;
+        false_positive: number;
+        accepted_risk: number;
+      };
+    };
+    components_summary?: {
+      total: number;
+      vulnerable: number;
+      outdated: number;
+    };
+    quality_gate_status?: string;
+    compliance_status?: string;
+    created_at?: string;
+    updated_at?: string;
+  };
+}
+
+function transformToRepositoryView(asset: ApiAssetResponse): RepositoryView {
+  const repo = asset.repository;
+
+  // Map API scope to AssetScope type
+  const scopeMap: Record<string, string> = {
+    "in_scope": "internal",
+    "out_of_scope": "external",
+    "pending_review": "unknown",
+    "internal": "internal",
+    "external": "external",
+    "cloud": "cloud",
+    "partner": "partner",
+    "vendor": "vendor",
+    "shadow": "shadow",
+  };
+
+  // Map API exposure to ExposureLevel type
+  const exposureMap: Record<string, string> = {
+    "external": "public",
+    "internal": "private",
+    "unknown": "unknown",
+    "public": "public",
+    "restricted": "restricted",
+    "private": "private",
+    "isolated": "isolated",
+  };
+
+  // Build findings summary with all required fields
+  const baseFindingsSummary = repo?.findings_summary || {
+    total: asset.finding_count,
+    by_severity: { critical: 0, high: 0, medium: 0, low: 0, info: 0 },
+  };
+
+  // Ensure by_status has all required fields including 'confirmed'
+  const apiByStatus = baseFindingsSummary.by_status || {};
+  const findingsSummary = {
+    total: baseFindingsSummary.total,
+    by_severity: baseFindingsSummary.by_severity,
+    by_status: {
+      open: (apiByStatus as Record<string, number>).open || 0,
+      confirmed: (apiByStatus as Record<string, number>).confirmed || 0,
+      in_progress: (apiByStatus as Record<string, number>).in_progress || 0,
+      resolved: (apiByStatus as Record<string, number>).resolved || 0,
+      false_positive: (apiByStatus as Record<string, number>).false_positive || 0,
+      accepted_risk: (apiByStatus as Record<string, number>).accepted_risk || 0,
+    },
+    by_type: {
+      sast: 0,
+      sca: 0,
+      secret: 0,
+      iac: 0,
+      container: 0,
+      dast: 0,
+    },
+  };
+
+  // Build scan settings with typed enabled_scanners
+  const scanSettings = {
+    enabled_scanners: (repo?.scan_settings?.enabled_scanners || []) as ScannerType[],
+    auto_scan: repo?.scan_settings?.auto_scan ?? false,
+    scan_on_push: repo?.scan_settings?.scan_on_push ?? false,
+    scan_on_pr: repo?.scan_settings?.scan_on_pr,
+    branch_patterns: repo?.scan_settings?.branch_patterns,
+  };
+
+  return {
+    // Base Asset fields
+    id: asset.id,
+    type: "repository",
+    name: asset.name,
+    description: asset.description || repo?.description || "",
+    criticality: asset.criticality as "critical" | "high" | "medium" | "low",
+    status: asset.status as "active" | "inactive" | "archived" | "pending",
+    scope: (scopeMap[asset.scope] || "internal") as "internal" | "external" | "cloud" | "partner" | "vendor" | "shadow",
+    exposure: (exposureMap[asset.exposure] || "unknown") as "public" | "restricted" | "private" | "isolated" | "unknown",
+    riskScore: asset.risk_score,
+    findingCount: asset.finding_count,
+    tags: asset.tags || [],
+    firstSeen: asset.first_seen,
+    lastSeen: asset.last_seen,
+    createdAt: asset.created_at,
+    updatedAt: asset.updated_at,
+    metadata: asset.metadata || {},
+    // UI-friendly snake_case fields
+    scm_provider: (repo?.scm_provider || "github") as SCMProvider,
+    scm_organization: repo?.scm_organization,
+    default_branch: repo?.default_branch || "main",
+    visibility: (repo?.visibility || "private") as "public" | "private" | "internal",
+    primary_language: repo?.primary_language,
+    risk_score: asset.risk_score,
+    sync_status: (repo?.sync_status || "synced") as "synced" | "syncing" | "pending" | "error",
+    compliance_status: (repo?.compliance_status || "not_assessed") as "compliant" | "non_compliant" | "partial" | "not_assessed",
+    quality_gate_status: (repo?.quality_gate_status || "not_computed") as "passed" | "failed" | "warning" | "not_computed",
+    findings_summary: findingsSummary,
+    components_summary: repo?.components_summary,
+    scan_settings: scanSettings,
+    security_features: repo?.security_features,
+    last_scanned_at: repo?.last_scanned_at,
+    // Repository extension for UI (all required fields with defaults)
+    repository: repo ? {
+      assetId: asset.id,
+      repoId: repo.repo_id,
+      fullName: repo.full_name,
+      scmOrganization: repo.scm_organization,
+      cloneUrl: repo.clone_url,
+      webUrl: repo.web_url,
+      defaultBranch: repo.default_branch,
+      visibility: (repo.visibility || "private") as "public" | "private" | "internal",
+      language: repo.primary_language,
+      languages: repo.languages ? repo.languages.reduce((acc, lang) => ({ ...acc, [lang]: 1 }), {} as Record<string, number>) : undefined,
+      topics: repo.topics,
+      // Required stats with defaults
+      stars: 0,
+      forks: 0,
+      watchers: 0,
+      openIssues: 0,
+      contributorsCount: repo.contributor_count || 0,
+      sizeKb: repo.size_kb || 0,
+      branchCount: repo.branch_count || 0,
+      protectedBranchCount: 0,
+      componentCount: 0,
+      vulnerableComponentCount: 0,
+      findingCount: asset.finding_count,
+      scanEnabled: scanSettings.auto_scan,
+      lastScannedAt: repo.last_scanned_at,
+    } : undefined,
+  };
+}
+
 import { cn } from "@/lib/utils";
 
 // ============================================
@@ -216,7 +750,7 @@ function ActivityIcon({ action }: { action: ActivityAction }) {
     pr_opened: <GitPullRequest className="h-4 w-4 text-blue-500" />,
     pr_merged: <GitMerge className="h-4 w-4 text-purple-500" />,
     pr_closed: <XCircle className="h-4 w-4 text-gray-500" />,
-    project_synced: <RefreshCw className="h-4 w-4 text-blue-500" />,
+    repository_synced: <RefreshCw className="h-4 w-4 text-blue-500" />,
     settings_changed: <Settings className="h-4 w-4 text-gray-500" />,
     notification_sent: <Bell className="h-4 w-4 text-yellow-500" />,
     issue_created: <ExternalLink className="h-4 w-4 text-blue-500" />,
@@ -244,8 +778,8 @@ function formatTimeAgo(dateString: string): string {
 // ============================================
 
 // Overview Tab
-function OverviewTab({ project, branches, findings, activities }: {
-  project: Project;
+function OverviewTab({ repository, branches, findings, activities }: {
+  repository: Repository;
   branches: BranchDetail[];
   findings: FindingDetail[];
   activities: ActivityLog[];
@@ -265,12 +799,12 @@ function OverviewTab({ project, branches, findings, activities }: {
               Critical/High
             </CardDescription>
             <CardTitle className="text-3xl text-red-500">
-              {project.findings_summary.by_severity.critical + project.findings_summary.by_severity.high}
+              {repository.findings_summary.by_severity.critical + repository.findings_summary.by_severity.high}
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
             <p className="text-xs text-muted-foreground">
-              {project.findings_summary.total} total findings
+              {repository.findings_summary.total} total findings
             </p>
           </CardContent>
         </Card>
@@ -314,12 +848,12 @@ function OverviewTab({ project, branches, findings, activities }: {
               Components
             </CardDescription>
             <CardTitle className="text-3xl text-purple-500">
-              {project.components_summary?.total || 0}
+              {repository.components_summary?.total || 0}
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
             <p className="text-xs text-muted-foreground">
-              {project.components_summary?.vulnerable || 0} vulnerable
+              {repository.components_summary?.vulnerable || 0} vulnerable
             </p>
           </CardContent>
         </Card>
@@ -332,7 +866,7 @@ function OverviewTab({ project, branches, findings, activities }: {
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-0">
-            <RiskScoreBadge score={project.risk_score} size="lg" />
+            <RiskScoreBadge score={repository.risk_score} size="lg" />
           </CardContent>
         </Card>
       </div>
@@ -525,7 +1059,7 @@ function OverviewTab({ project, branches, findings, activities }: {
 }
 
 // Branches Tab
-function BranchesTab({ branches, projectName }: { branches: BranchDetail[]; projectName: string }) {
+function BranchesTab({ branches, repositoryName }: { branches: BranchDetail[]; repositoryName: string }) {
   const [_selectedBranch, setSelectedBranch] = useState<string | null>(null);
   const [compareBranch, setCompareBranch] = useState<string>('');
 
@@ -579,7 +1113,7 @@ function BranchesTab({ branches, projectName }: { branches: BranchDetail[]; proj
             All Branches
           </CardTitle>
           <CardDescription>
-            {branches.length} branches in {projectName}
+            {branches.length} branches in {repositoryName}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -1025,7 +1559,7 @@ function ActivityTab({ activities }: { activities: ActivityLog[] }) {
 }
 
 // Settings Tab
-function SettingsTab({ project }: { project: Project }) {
+function SettingsTab({ repository }: { repository: Repository }) {
   return (
     <div className="space-y-6">
       {/* Scan Settings */}
@@ -1040,7 +1574,7 @@ function SettingsTab({ project }: { project: Project }) {
           <div>
             <h4 className="text-sm font-medium mb-3">Enabled Scanners</h4>
             <div className="flex flex-wrap gap-2">
-              {project.scan_settings.enabled_scanners.map(scanner => (
+              {repository.scan_settings.enabled_scanners.map(scanner => (
                 <Badge key={scanner} className="uppercase">{scanner}</Badge>
               ))}
             </div>
@@ -1050,7 +1584,7 @@ function SettingsTab({ project }: { project: Project }) {
 
           <div className="grid grid-cols-3 gap-6">
             <div className="flex items-center gap-3">
-              {project.scan_settings.auto_scan ? (
+              {repository.scan_settings.auto_scan ? (
                 <CheckCircle className="h-5 w-5 text-green-500" />
               ) : (
                 <XCircle className="h-5 w-5 text-muted-foreground" />
@@ -1061,7 +1595,7 @@ function SettingsTab({ project }: { project: Project }) {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              {project.scan_settings.scan_on_push ? (
+              {repository.scan_settings.scan_on_push ? (
                 <CheckCircle className="h-5 w-5 text-green-500" />
               ) : (
                 <XCircle className="h-5 w-5 text-muted-foreground" />
@@ -1072,7 +1606,7 @@ function SettingsTab({ project }: { project: Project }) {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              {project.scan_settings.scan_on_pr ? (
+              {repository.scan_settings.scan_on_pr ? (
                 <CheckCircle className="h-5 w-5 text-green-500" />
               ) : (
                 <XCircle className="h-5 w-5 text-muted-foreground" />
@@ -1089,7 +1623,7 @@ function SettingsTab({ project }: { project: Project }) {
           <div>
             <h4 className="text-sm font-medium mb-3">Branch Patterns</h4>
             <div className="flex flex-wrap gap-2">
-              {project.scan_settings.branch_patterns.map(pattern => (
+              {repository.scan_settings.branch_patterns?.map(pattern => (
                 <code key={pattern} className="text-sm bg-muted px-2 py-1 rounded">{pattern}</code>
               ))}
             </div>
@@ -1142,7 +1676,7 @@ function SettingsTab({ project }: { project: Project }) {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 gap-4">
-            {Object.entries(project.security_features).map(([key, enabled]) => (
+            {repository.security_features && Object.entries(repository.security_features).map(([key, enabled]) => (
               <div key={key} className={cn(
                 "flex items-center gap-3 p-3 rounded-lg border",
                 enabled ? "bg-green-500/5 border-green-500/20" : "bg-muted/30"
@@ -1172,8 +1706,8 @@ function SettingsTab({ project }: { project: Project }) {
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between p-4 rounded-lg border border-red-500/20">
             <div>
-              <p className="font-medium">Archive Project</p>
-              <p className="text-sm text-muted-foreground">Archive this project. It can be restored later.</p>
+              <p className="font-medium">Archive Repository</p>
+              <p className="text-sm text-muted-foreground">Archive this repository. It can be restored later.</p>
             </div>
             <Button variant="outline" className="text-red-500 border-red-500/50 hover:bg-red-500/10">
               Archive
@@ -1181,8 +1715,8 @@ function SettingsTab({ project }: { project: Project }) {
           </div>
           <div className="flex items-center justify-between p-4 rounded-lg border border-red-500/20">
             <div>
-              <p className="font-medium">Delete Project</p>
-              <p className="text-sm text-muted-foreground">Permanently delete this project and all associated data.</p>
+              <p className="font-medium">Delete Repository</p>
+              <p className="text-sm text-muted-foreground">Permanently delete this repository and all associated data.</p>
             </div>
             <Button variant="destructive">
               Delete
@@ -1195,31 +1729,231 @@ function SettingsTab({ project }: { project: Project }) {
 }
 
 // ============================================
+// Loading Skeleton Component
+// ============================================
+
+function DetailPageSkeleton() {
+  return (
+    <>
+      <Header fixed>
+        <div className="ms-auto flex items-center gap-2 sm:gap-4">
+          <Search />
+          <ThemeSwitch />
+          <ProfileDropdown />
+        </div>
+      </Header>
+
+      <Main>
+        <div className="mb-6">
+          <Skeleton className="h-9 w-40 mb-4" />
+          <div className="flex items-start gap-4">
+            <Skeleton className="h-14 w-14 rounded-xl" />
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <Skeleton className="h-8 w-64" />
+                <Skeleton className="h-5 w-16" />
+                <Skeleton className="h-5 w-16" />
+              </div>
+              <Skeleton className="h-4 w-96 mb-2" />
+              <div className="flex gap-4">
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-4 w-32" />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Skeleton className="h-9 w-24" />
+              <Skeleton className="h-9 w-20" />
+              <Skeleton className="h-9 w-24" />
+            </div>
+          </div>
+        </div>
+
+        <Skeleton className="h-10 w-[500px] mb-6" />
+
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-5 mb-6">
+          {[...Array(5)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="pb-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-9 w-16 mt-2" />
+              </CardHeader>
+              <CardContent className="pt-0">
+                <Skeleton className="h-3 w-20" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-5 w-32" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-32 w-full" />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-5 w-32" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-32 w-full" />
+            </CardContent>
+          </Card>
+        </div>
+      </Main>
+    </>
+  );
+}
+
+// ============================================
 // Main Page Component
 // ============================================
 
-export default function ProjectDetailPage() {
+export default function RepositoryDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const projectId = params.id as string;
+  const repositoryId = params.id as string;
 
-  const [activeTab, setActiveTab] = useState<ProjectDetailTab>('overview');
+  const [activeTab, setActiveTab] = useState<DetailTab>('overview');
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  // Get project data
-  const project = mockProjects.find(p => p.id === projectId);
-  const branches = mockBranchDetails.filter(b => b.project_id === projectId);
-  const findings = mockFindings.filter(f => f.project_id === projectId);
-  const activities = mockActivities.filter(a => a.project_id === projectId);
+  // Fetch repository data from API
+  const {
+    data: repositoryData,
+    error: repoError,
+    isLoading: repoLoading,
+    mutate: mutateRepo
+  } = useRepository(repositoryId);
 
-  if (!project) {
+  // Fetch branches from API (if available)
+  const {
+    data: _branchesData,
+    isLoading: _branchesLoading
+  } = useRepositoryBranches(repositoryId);
+
+  // Transform API response to RepositoryView
+  const repository = useMemo(() => {
+    if (!repositoryData) return null;
+    return transformToRepositoryView(repositoryData as unknown as ApiAssetResponse);
+  }, [repositoryData]);
+
+  // TODO: Replace with real API when available
+  // Currently using mock data for branches, findings, and activities
+  const branches = mockBranchDetails;
+  const findings = mockFindings;
+  const activities = mockActivities;
+
+  // Action handlers
+  const handleSync = useCallback(async () => {
+    if (!repository) return;
+    setIsSyncing(true);
+    try {
+      const response = await fetch(`/api/v1/assets/${repository.id}/sync`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!response.ok) {
+        throw new Error("Failed to sync repository");
+      }
+      toast.success("Repository sync initiated");
+      mutateRepo();
+    } catch (error) {
+      toast.error("Failed to sync repository");
+      console.error("Sync error:", error);
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [repository, mutateRepo]);
+
+  const handleScan = useCallback(async () => {
+    if (!repository) return;
+    setIsScanning(true);
+    try {
+      const response = await fetch(`/api/v1/assets/${repository.id}/scan`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scanMode: "full" }),
+      });
+      if (!response.ok) {
+        throw new Error("Failed to trigger scan");
+      }
+      toast.success("Scan initiated successfully");
+      mutateRepo();
+    } catch (error) {
+      toast.error("Failed to trigger scan");
+      console.error("Scan error:", error);
+    } finally {
+      setIsScanning(false);
+    }
+  }, [repository, mutateRepo]);
+
+  const handleDelete = useCallback(async () => {
+    if (!repository) return;
+    if (!confirm(`Are you sure you want to delete "${repository.name}"? This action cannot be undone.`)) {
+      return;
+    }
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/v1/assets/${repository.id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to delete repository");
+      }
+      toast.success("Repository deleted successfully");
+      router.push("/assets/repositories");
+    } catch (error) {
+      toast.error("Failed to delete repository");
+      console.error("Delete error:", error);
+      setIsDeleting(false);
+    }
+  }, [repository, router]);
+
+  // Loading state
+  if (repoLoading) {
+    return <DetailPageSkeleton />;
+  }
+
+  // Error state
+  if (repoError) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="text-center">
-          <h2 className="text-xl font-semibold mb-2">Project Not Found</h2>
-          <p className="text-muted-foreground mb-4">The project you&apos;re looking for doesn&apos;t exist.</p>
-          <Button onClick={() => router.push('/assets/projects')}>
+          <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-red-500" />
+          <h2 className="text-xl font-semibold mb-2">Error Loading Repository</h2>
+          <p className="text-muted-foreground mb-4">
+            {repoError.message || "Failed to load repository data. Please try again."}
+          </p>
+          <div className="flex gap-2 justify-center">
+            <Button variant="outline" onClick={() => mutateRepo()}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Retry
+            </Button>
+            <Button onClick={() => router.push('/assets/repositories')}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Repositories
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Not found state
+  if (!repository) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold mb-2">Repository Not Found</h2>
+          <p className="text-muted-foreground mb-4">The repository you&apos;re looking for doesn&apos;t exist.</p>
+          <Button onClick={() => router.push('/assets/repositories')}>
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Projects
+            Back to Repositories
           </Button>
         </div>
       </div>
@@ -1239,43 +1973,43 @@ export default function ProjectDetailPage() {
       <Main>
         {/* Breadcrumb & Back */}
         <div className="mb-6">
-          <Button variant="ghost" size="sm" onClick={() => router.push('/assets/projects')} className="mb-4">
+          <Button variant="ghost" size="sm" onClick={() => router.push('/assets/repositories')} className="mb-4">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Projects
+            Back to Repositories
           </Button>
 
-          {/* Project Header */}
+          {/* Repository Header */}
           <div className="flex items-start justify-between">
             <div className="flex items-start gap-4">
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 via-primary/10 to-transparent border">
-                <ProviderIcon provider={project.scm_provider} className="h-7 w-7" />
+                <ProviderIcon provider={repository.scm_provider} className="h-7 w-7" />
               </div>
               <div>
                 <div className="flex items-center gap-3 mb-1">
-                  <h1 className="text-2xl font-bold">{project.name}</h1>
-                  <Badge variant="outline" className={cn(SCM_PROVIDER_COLORS[project.scm_provider])}>
-                    {SCM_PROVIDER_LABELS[project.scm_provider]}
+                  <h1 className="text-2xl font-bold">{repository.name}</h1>
+                  <Badge variant="outline" className={cn(SCM_PROVIDER_COLORS[repository.scm_provider])}>
+                    {SCM_PROVIDER_LABELS[repository.scm_provider]}
                   </Badge>
-                  <Badge variant={project.status === 'active' ? 'default' : 'secondary'}>
-                    {PROJECT_STATUS_LABELS[project.status]}
+                  <Badge variant={repository.status === 'active' ? 'default' : 'secondary'}>
+                    {STATUS_LABELS[repository.status]}
                   </Badge>
                 </div>
-                <p className="text-muted-foreground mb-2">{project.description || 'No description'}</p>
+                <p className="text-muted-foreground mb-2">{repository.description || 'No description'}</p>
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
                   <span className="flex items-center gap-1">
-                    {project.visibility === 'private' ? <Lock className="h-3.5 w-3.5" /> : <Globe className="h-3.5 w-3.5" />}
-                    {project.visibility}
+                    {repository.visibility === 'private' ? <Lock className="h-3.5 w-3.5" /> : <Globe className="h-3.5 w-3.5" />}
+                    {repository.visibility}
                   </span>
                   <span className="flex items-center gap-1">
                     <GitBranch className="h-3.5 w-3.5" />
-                    {project.default_branch}
+                    {repository.default_branch}
                   </span>
-                  {project.primary_language && (
-                    <Badge variant="secondary" className="text-xs">{project.primary_language}</Badge>
+                  {repository.primary_language && (
+                    <Badge variant="secondary" className="text-xs">{repository.primary_language}</Badge>
                   )}
                   <span className="flex items-center gap-1">
                     <Clock className="h-3.5 w-3.5" />
-                    Last scan: {project.last_scanned_at ? formatTimeAgo(project.last_scanned_at) : 'Never'}
+                    Last scan: {repository.last_scanned_at ? formatTimeAgo(repository.last_scanned_at) : 'Never'}
                   </span>
                 </div>
               </div>
@@ -1283,36 +2017,48 @@ export default function ProjectDetailPage() {
 
             {/* Actions */}
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => window.open(project.web_url, '_blank')}>
+              <Button variant="outline" size="sm" onClick={() => window.open(repository.repository?.webUrl, '_blank')}>
                 <ExternalLink className="mr-2 h-4 w-4" />
-                Open in {SCM_PROVIDER_LABELS[project.scm_provider]}
+                Open in {SCM_PROVIDER_LABELS[repository.scm_provider]}
               </Button>
-              <Button variant="outline" size="sm" onClick={() => toast.info('Syncing project...')}>
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Sync
+              <Button variant="outline" size="sm" onClick={handleSync} disabled={isSyncing}>
+                {isSyncing ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                )}
+                {isSyncing ? "Syncing..." : "Sync"}
               </Button>
-              <Button size="sm" onClick={() => toast.info('Triggering scan...')}>
-                <Play className="mr-2 h-4 w-4" />
-                Scan Now
+              <Button size="sm" onClick={handleScan} disabled={isScanning}>
+                {isScanning ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Play className="mr-2 h-4 w-4" />
+                )}
+                {isScanning ? "Scanning..." : "Scan Now"}
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm">
-                    <MoreHorizontal className="h-4 w-4" />
+                  <Button variant="ghost" size="sm" disabled={isDeleting}>
+                    {isDeleting ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <MoreHorizontal className="h-4 w-4" />
+                    )}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={() => {
-                    navigator.clipboard.writeText(project.web_url || '');
+                    navigator.clipboard.writeText(repository.repository?.webUrl || '');
                     toast.success('URL copied');
                   }}>
                     <Copy className="mr-2 h-4 w-4" />
                     Copy URL
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-red-500">
+                  <DropdownMenuItem className="text-red-500" onClick={handleDelete}>
                     <Trash2 className="mr-2 h-4 w-4" />
-                    Delete Project
+                    Delete Repository
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -1321,7 +2067,7 @@ export default function ProjectDetailPage() {
         </div>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as ProjectDetailTab)}>
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as DetailTab)}>
           <TabsList className="mb-6">
             <TabsTrigger value="overview" className="gap-2">
               <Layers className="h-4 w-4" />
@@ -1348,11 +2094,11 @@ export default function ProjectDetailPage() {
           </TabsList>
 
           <TabsContent value="overview">
-            <OverviewTab project={project} branches={branches} findings={findings} activities={activities} />
+            <OverviewTab repository={repository} branches={branches} findings={findings} activities={activities} />
           </TabsContent>
 
           <TabsContent value="branches">
-            <BranchesTab branches={branches} projectName={project.name} />
+            <BranchesTab branches={branches} repositoryName={repository.name} />
           </TabsContent>
 
           <TabsContent value="findings">
@@ -1364,7 +2110,7 @@ export default function ProjectDetailPage() {
           </TabsContent>
 
           <TabsContent value="settings">
-            <SettingsTab project={project} />
+            <SettingsTab repository={repository} />
           </TabsContent>
         </Tabs>
       </Main>

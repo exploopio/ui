@@ -13,14 +13,14 @@ import type { Status } from "@/features/shared/types";
  * Applications: website, api, mobile_app
  * Cloud: cloud_account, compute, storage, serverless
  * Infrastructure: host, container, database, network
- * Code & CI/CD: project
+ * Code & CI/CD: repository (unified asset type for git repos)
  *
  * Legacy types (deprecated, kept for backwards compatibility):
  * - service: Use specific service detection instead
  * - cloud: Use cloud_account, compute, storage, or serverless
  * - credential: Moved to Identities module
  * - mobile: Use mobile_app instead
- * - repository: Use project instead
+ * - project: Use repository instead (unified asset architecture)
  */
 export type AssetType =
   // External Attack Surface
@@ -46,14 +46,14 @@ export type AssetType =
   | "database"
   | "network"
   // Code & CI/CD
-  | "project"
+  | "repository"   // Git repositories (unified asset type)
   // Other
   | "other"        // Miscellaneous assets
   // Legacy types (deprecated - kept for backwards compatibility)
   | "service"      // @deprecated - Use application instead
   | "credential"   // @deprecated - Moved to Identities module
   | "mobile"       // @deprecated - Use mobile_app instead
-  | "repository";  // @deprecated - Use project instead
+  | "project";     // @deprecated - Use repository instead
 
 /**
  * Asset Type Category for grouping in UI
@@ -92,15 +92,15 @@ export const ASSET_TYPE_CATEGORIES: Record<AssetTypeCategory, {
   },
   code: {
     label: "Code & CI/CD",
-    description: "Source code projects and pipelines",
-    types: ["project", "repository"],
+    description: "Source code repositories and pipelines",
+    types: ["repository", "project"],
   },
 };
 
 /**
  * Legacy asset types that are deprecated but still supported
  */
-export const LEGACY_ASSET_TYPES: AssetType[] = ["service", "credential", "mobile", "repository"];
+export const LEGACY_ASSET_TYPES: AssetType[] = ["service", "credential", "mobile", "project"];
 
 /**
  * Check if an asset type is deprecated
@@ -207,14 +207,14 @@ export const ASSET_TYPE_LABELS: Record<AssetType, string> = {
   database: "Database",
   network: "Network",
   // Code & CI/CD
-  project: "Project",
+  repository: "Repository",
   // Other
   other: "Other",
   // Legacy types (deprecated)
   service: "Service",
   credential: "Credential",
   mobile: "Mobile App",
-  repository: "Repository",
+  project: "Project",
 };
 
 export const ASSET_TYPE_ICONS: Record<AssetType, string> = {
@@ -236,13 +236,13 @@ export const ASSET_TYPE_ICONS: Record<AssetType, string> = {
   container: "Boxes",
   database: "Database",
   network: "Network",
-  project: "GitBranch",
+  repository: "GitBranch",
   other: "Box",
   // Legacy types (deprecated)
   service: "Zap",
   credential: "KeyRound",
   mobile: "Smartphone",
-  repository: "GitBranch",
+  project: "GitBranch",
 };
 
 export const ASSET_TYPE_DESCRIPTIONS: Record<AssetType, string> = {
@@ -264,13 +264,13 @@ export const ASSET_TYPE_DESCRIPTIONS: Record<AssetType, string> = {
   container: "Docker and Kubernetes workloads",
   database: "Database instances and clusters",
   network: "VPCs, firewalls, load balancers",
-  project: "Source code projects",
+  repository: "Source code repositories",
   other: "Miscellaneous assets",
   // Legacy types (deprecated)
   service: "Network services (SSH, HTTP, DB services)",
   credential: "Credentials (deprecated - moved to Identities)",
   mobile: "Mobile applications (deprecated - use mobile_app)",
-  repository: "Source code repositories (deprecated - use project)",
+  project: "Source code projects (deprecated - use repository)",
 };
 
 /**
@@ -300,14 +300,14 @@ export const ASSET_TYPE_COLORS: Record<AssetType, { bg: string; text: string }> 
   database: { bg: "bg-emerald-500/15", text: "text-emerald-600" },
   network: { bg: "bg-rose-500/15", text: "text-rose-600" },
   // Code & CI/CD
-  project: { bg: "bg-fuchsia-500/15", text: "text-fuchsia-600" },
+  repository: { bg: "bg-fuchsia-500/15", text: "text-fuchsia-600" },
   // Other
   other: { bg: "bg-gray-500/15", text: "text-gray-600" },
   // Legacy types (deprecated)
   service: { bg: "bg-yellow-500/15", text: "text-yellow-600" },
   credential: { bg: "bg-red-500/15", text: "text-red-600" },
   mobile: { bg: "bg-pink-500/15", text: "text-pink-600" },
-  repository: { bg: "bg-fuchsia-500/15", text: "text-fuchsia-600" },
+  project: { bg: "bg-fuchsia-500/15", text: "text-fuchsia-600" },
 };
 
 /**
@@ -752,6 +752,161 @@ export interface AssetStats {
   averageRiskScore: number;
   highRiskCount: number;   // Assets with risk_score >= 70
   totalFindings: number;
+}
+
+// ============================================
+// Repository Extension Types (for repository assets)
+// ============================================
+
+/**
+ * Repository visibility
+ */
+export type RepoVisibility = "public" | "private" | "internal";
+
+export const REPO_VISIBILITY_LABELS: Record<RepoVisibility, string> = {
+  public: "Public",
+  private: "Private",
+  internal: "Internal",
+};
+
+export const REPO_VISIBILITY_COLORS: Record<RepoVisibility, { bg: string; text: string; border: string }> = {
+  public: { bg: "bg-green-500/15", text: "text-green-600", border: "border-green-500/30" },
+  private: { bg: "bg-amber-500/15", text: "text-amber-600", border: "border-amber-500/30" },
+  internal: { bg: "bg-blue-500/15", text: "text-blue-600", border: "border-blue-500/30" },
+};
+
+/**
+ * SCM Provider type
+ */
+export type SCMProvider = "github" | "gitlab" | "bitbucket" | "azure_devops" | "codecommit" | "local";
+
+export const SCM_PROVIDER_LABELS: Record<SCMProvider, string> = {
+  github: "GitHub",
+  gitlab: "GitLab",
+  bitbucket: "Bitbucket",
+  azure_devops: "Azure DevOps",
+  codecommit: "AWS CodeCommit",
+  local: "Local",
+};
+
+/**
+ * RepositoryExtension represents extended data for repository assets.
+ * This is returned alongside the Asset when fetching repository-type assets.
+ */
+export interface RepositoryExtension {
+  assetId: string;              // Link to parent Asset
+  repoId?: string;              // External repo ID from provider
+  fullName: string;             // owner/repo format
+  scmOrganization?: string;     // GitHub org, GitLab group, etc.
+  cloneUrl?: string;
+  webUrl?: string;
+  sshUrl?: string;
+  defaultBranch?: string;
+  visibility: RepoVisibility;
+  language?: string;            // Primary language
+  languages?: Record<string, number>;  // {"Go": 45000, "TypeScript": 30000}
+  topics?: string[];
+  // Repository stats
+  stars: number;
+  forks: number;
+  watchers: number;
+  openIssues: number;
+  contributorsCount: number;
+  sizeKb: number;
+  // Branch stats
+  branchCount: number;
+  protectedBranchCount: number;
+  // Component/dependency stats
+  componentCount: number;
+  vulnerableComponentCount: number;
+  // Finding stats
+  findingCount: number;
+  // Scan configuration
+  scanEnabled: boolean;
+  scanSchedule?: string;        // Cron expression
+  lastScannedAt?: string;
+  // External repository timestamps
+  repoCreatedAt?: string;
+  repoUpdatedAt?: string;
+  repoPushedAt?: string;
+}
+
+/**
+ * Asset with repository extension (combined response)
+ */
+export interface AssetWithRepository extends Asset {
+  repository?: RepositoryExtension;
+}
+
+/**
+ * Input for creating a repository asset
+ */
+export interface CreateRepositoryAssetInput {
+  name: string;
+  criticality?: Criticality;
+  scope?: AssetScope;
+  exposure?: ExposureLevel;
+  description?: string;
+  tags?: string[];
+  // Repository-specific fields
+  provider?: SCMProvider;
+  externalId?: string;
+  repoId?: string;
+  fullName: string;
+  scmOrganization?: string;
+  cloneUrl?: string;
+  webUrl?: string;
+  sshUrl?: string;
+  defaultBranch?: string;
+  visibility?: RepoVisibility;
+  language?: string;
+  languages?: Record<string, number>;
+  topics?: string[];
+  stars?: number;
+  forks?: number;
+  watchers?: number;
+  openIssues?: number;
+  sizeKb?: number;
+  // Scan settings
+  scanEnabled?: boolean;
+  scanSchedule?: string;
+  // Timestamps
+  repoCreatedAt?: string;
+  repoUpdatedAt?: string;
+  repoPushedAt?: string;
+}
+
+/**
+ * Input for updating a repository extension
+ */
+export interface UpdateRepositoryExtensionInput {
+  repoId?: string;
+  fullName?: string;
+  scmOrganization?: string;
+  cloneUrl?: string;
+  webUrl?: string;
+  sshUrl?: string;
+  defaultBranch?: string;
+  visibility?: RepoVisibility;
+  language?: string;
+  languages?: Record<string, number>;
+  topics?: string[];
+  stars?: number;
+  forks?: number;
+  watchers?: number;
+  openIssues?: number;
+  contributorsCount?: number;
+  sizeKb?: number;
+  branchCount?: number;
+  protectedBranchCount?: number;
+  componentCount?: number;
+  // Scan settings
+  scanEnabled?: boolean;
+  scanSchedule?: string;
+  // Timestamps
+  repoCreatedAt?: string;
+  repoUpdatedAt?: string;
+  repoPushedAt?: string;
 }
 
 // ============================================

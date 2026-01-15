@@ -160,7 +160,7 @@ const emptyHostForm = {
 
 export default function HostsPage() {
   // Fetch hosts from API
-  const { assets: hosts, isLoading, isError, error: fetchError, mutate } = useAssets({
+  const { assets: hosts, isLoading: _isLoading, isError: _isError, error: _fetchError, mutate } = useAssets({
     types: ['host'],
   });
 
@@ -170,7 +170,7 @@ export default function HostsPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [osFilter, setOSFilter] = useState<OSFilter>("all");
   const [rowSelection, setRowSelection] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [_isSubmitting, setIsSubmitting] = useState(false);
 
   // Dialog states
   const [addDialogOpen, setAddDialogOpen] = useState(false);

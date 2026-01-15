@@ -333,9 +333,87 @@ toast.error("Failed!")
 ```bash
 npm run dev          # Dev server (Turbopack)
 npm run build        # Production build
-npm run lint         # ESLint
-npm run type-check   # TypeScript
+npm run lint         # ESLint check
+npm run lint:fix     # ESLint auto-fix
+npm run type-check   # TypeScript check
+npm run validate     # Run type-check + lint (use before commit)
 ```
+
+## 🔍 Code Quality Checklist
+
+**IMPORTANT**: Before committing or completing a task, ALWAYS run:
+
+```bash
+npm run validate     # Quick check: type-check + lint
+npm run build        # Full check: production build
+```
+
+### Pre-commit Hook (Automatic)
+
+This project uses **Husky + lint-staged** to automatically check code before commits:
+- TypeScript type checking runs on all staged files
+- ESLint auto-fixes staged `.ts` and `.tsx` files
+
+### Common Issues to Avoid
+
+| Issue | Problem | Solution |
+|-------|---------|----------|
+| **Unused imports** | Lint warning | Remove or prefix with `_` |
+| **Missing type imports** | Build error | Import all types used in interfaces |
+| **Property mismatch** | Build error | Check type definitions before accessing |
+| **Snake vs Camel case** | Runtime error | UI uses `snake_case`, backend uses `camelCase` |
+
+### Naming Convention for Unused Variables
+
+```tsx
+// ✅ Prefix with underscore for intentionally unused
+const { data, isLoading: _isLoading } = useQuery()
+const [_unused, setUsed] = useState()
+
+// ❌ Don't leave unused without prefix (causes lint warning)
+const { data, isLoading } = useQuery() // warning if isLoading not used
+```
+
+### Type Safety Tips
+
+```tsx
+// ✅ Always import types you use
+import type { ScannerType, FindingStatus } from "../types"
+
+// ✅ Use Record for flexible object types
+const labels: Record<string, string> = { ... }
+
+// ✅ Add optional chaining for possibly undefined
+selectedItem?.property
+
+// ✅ Add null checks before accessing
+{selectedItem.tags && selectedItem.tags.map(...)}
+```
+
+## 🔄 CI/CD Workflows
+
+### PR to main/develop
+```
+├── quality (type-check + lint + prettier)  ─┐
+└── test                                     ─┴── Done (no build)
+```
+
+### Push to main/develop
+```
+├── quality ─┐
+└── test    ─┴── build ── Done
+```
+
+### Tag Release (v*)
+```
+prepare ── build (amd64) ─┐
+         ── build (arm64) ─┴── merge ── Push to Docker Hub
+```
+
+**Notes:**
+- PRs skip build to save time (quality + test is enough for review)
+- Docker builds run in parallel for amd64/arm64
+- All builds use GitHub Actions cache for faster subsequent runs
 
 ## 🚀 Claude Code Usage
 
@@ -410,4 +488,4 @@ export const config = {
 
 **Note**: Keep under 12KB. For patterns, examples, troubleshooting → see `.claude/`
 
-**Last Updated**: 2025-12-15
+**Last Updated**: 2026-01-15

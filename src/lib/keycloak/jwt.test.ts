@@ -412,6 +412,7 @@ describe('Role Checking', () => {
       'test-client': ['view', 'edit'],
       'other-client': ['read'],
     },
+    permissions: [],
   }
 
   describe('hasRole', () => {
