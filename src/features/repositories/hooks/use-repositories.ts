@@ -164,8 +164,56 @@ async function fetchRepositoryStats(url: string): Promise<RepositoryStats> {
   return get<RepositoryStats>(url);
 }
 
+// API response uses snake_case, we transform to camelCase for TypeScript
+interface SCMConnectionAPIResponse {
+  id: string;
+  tenant_id: string;
+  name: string;
+  provider: string;
+  base_url: string;
+  auth_type: string;
+  scm_organization?: string;
+  status: string;
+  last_verified_at?: string;
+  verification_error?: string;
+  repository_count: number;
+  permissions?: string[];
+  created_at: string;
+  updated_at: string;
+  created_by?: string;
+}
+
+interface SCMConnectionsListResponse {
+  data: SCMConnectionAPIResponse[];
+  total: number;
+  page: number;
+  per_page: number;
+  total_pages: number;
+}
+
+function transformSCMConnection(api: SCMConnectionAPIResponse): SCMConnection {
+  return {
+    id: api.id,
+    tenantId: api.tenant_id,
+    name: api.name,
+    provider: api.provider as SCMConnection["provider"],
+    baseUrl: api.base_url,
+    authType: api.auth_type as SCMConnection["authType"],
+    scmOrganization: api.scm_organization,
+    status: api.status as SCMConnection["status"],
+    lastValidatedAt: api.last_verified_at,
+    errorMessage: api.verification_error,
+    repositoryCount: api.repository_count,
+    permissions: (api.permissions || []) as SCMConnection["permissions"],
+    createdAt: api.created_at,
+    updatedAt: api.updated_at,
+    createdBy: api.created_by || "",
+  };
+}
+
 async function fetchSCMConnections(url: string): Promise<SCMConnection[]> {
-  return get<SCMConnection[]>(url);
+  const response = await get<SCMConnectionsListResponse>(url);
+  return response.data.map(transformSCMConnection);
 }
 
 async function fetchSCMConnection(url: string): Promise<SCMConnection> {
@@ -301,7 +349,46 @@ export function useCreateRepository() {
   return useSWRMutation(
     currentTenant ? "/api/v1/assets/repository" : null,
     async (url: string, { arg }: { arg: CreateRepositoryAssetInput }) => {
-      return post<AssetWithRepository>(url, arg);
+      // Convert camelCase to snake_case for backend
+      const payload = {
+        // Basic info
+        name: arg.name,
+        description: arg.description,
+        criticality: arg.criticality || "medium",
+        scope: arg.scope,
+        exposure: arg.exposure,
+        tags: arg.tags,
+        // SCM connection info
+        provider: arg.provider,
+        external_id: arg.externalId,
+        repo_id: arg.repoId,
+        full_name: arg.fullName,
+        scm_organization: arg.scmOrganization,
+        // URLs
+        clone_url: arg.cloneUrl,
+        web_url: arg.webUrl,
+        ssh_url: arg.sshUrl,
+        // Repository settings
+        default_branch: arg.defaultBranch,
+        visibility: arg.visibility,
+        language: arg.language,
+        languages: arg.languages,
+        topics: arg.topics,
+        // Stats
+        stars: arg.stars,
+        forks: arg.forks,
+        watchers: arg.watchers,
+        open_issues: arg.openIssues,
+        size_kb: arg.sizeKb,
+        // Scan settings
+        scan_enabled: arg.scanEnabled,
+        scan_schedule: arg.scanSchedule,
+        // Timestamps from SCM
+        repo_created_at: arg.repoCreatedAt,
+        repo_updated_at: arg.repoUpdatedAt,
+        repo_pushed_at: arg.repoPushedAt,
+      };
+      return post<AssetWithRepository>(url, payload);
     }
   );
 }
@@ -461,7 +548,15 @@ export function useCreateSCMConnection() {
   return useSWRMutation(
     currentTenant ? buildSCMConnectionsEndpoint() : null,
     async (url: string, { arg }: { arg: CreateSCMConnectionInput }) => {
-      return post<SCMConnection>(url, arg);
+      // Convert camelCase to snake_case for backend
+      return post<SCMConnection>(url, {
+        name: arg.name,
+        provider: arg.provider,
+        base_url: arg.baseUrl,
+        auth_type: arg.authType,
+        access_token: arg.accessToken,
+        scm_organization: arg.scmOrganization,
+      });
     }
   );
 }
@@ -481,17 +576,128 @@ export function useDeleteSCMConnection(connectionId: string) {
 }
 
 /**
- * Validate an SCM connection
+ * Update SCM connection input
+ */
+export interface UpdateSCMConnectionInput {
+  name?: string;
+  accessToken?: string;
+  scmOrganization?: string;
+}
+
+/**
+ * Update an SCM connection
+ */
+export function useUpdateSCMConnection(connectionId: string) {
+  const { currentTenant } = useTenant();
+
+  return useSWRMutation(
+    currentTenant && connectionId ? buildSCMConnectionEndpoint(connectionId) : null,
+    async (url: string, { arg }: { arg: UpdateSCMConnectionInput }) => {
+      // Convert camelCase to snake_case for backend
+      const response = await put<SCMConnectionAPIResponse>(url, {
+        name: arg.name,
+        access_token: arg.accessToken,
+        scm_organization: arg.scmOrganization,
+      });
+      return transformSCMConnection(response);
+    }
+  );
+}
+
+/**
+ * Test an SCM connection (validates credentials and updates status)
  */
 export function useValidateSCMConnection(connectionId: string) {
   const { currentTenant } = useTenant();
 
   return useSWRMutation(
-    currentTenant && connectionId ? `${buildSCMConnectionEndpoint(connectionId)}/validate` : null,
+    currentTenant && connectionId ? `${buildSCMConnectionEndpoint(connectionId)}/test` : null,
     async (url: string) => {
-      return post<SCMConnection>(url, {});
+      const response = await post<SCMConnectionAPIResponse>(url, {});
+      return transformSCMConnection(response);
     }
   );
+}
+
+/**
+ * SCM Repository from provider (not yet imported)
+ */
+export interface SCMRepository {
+  id: string;
+  name: string;
+  full_name: string;
+  description: string;
+  html_url: string;
+  clone_url: string;
+  ssh_url: string;
+  default_branch: string;
+  is_private: boolean;
+  is_fork: boolean;
+  is_archived: boolean;
+  language: string;
+  languages?: Record<string, number>;
+  topics: string[];
+  stars: number;
+  forks: number;
+  size: number;
+  created_at: string;
+  updated_at: string;
+  pushed_at: string;
+}
+
+/**
+ * Response from listing SCM repositories
+ */
+export interface SCMRepositoriesResponse {
+  repositories: SCMRepository[];
+  total: number;
+  has_more: boolean;
+  next_page: number;
+}
+
+/**
+ * Options for listing SCM repositories
+ */
+export interface SCMRepositoriesOptions {
+  search?: string;
+  page?: number;
+  perPage?: number;
+}
+
+function buildSCMRepositoriesEndpoint(connectionId: string, options?: SCMRepositoriesOptions): string {
+  const baseUrl = `/api/v1/scm-connections/${connectionId}/repositories`;
+  const params = new URLSearchParams();
+
+  if (options?.search) params.set("search", options.search);
+  if (options?.page) params.set("page", String(options.page));
+  if (options?.perPage) params.set("per_page", String(options.perPage));
+
+  const queryString = params.toString();
+  return queryString ? `${baseUrl}?${queryString}` : baseUrl;
+}
+
+async function fetchSCMRepositories(url: string): Promise<SCMRepositoriesResponse> {
+  return get<SCMRepositoriesResponse>(url);
+}
+
+/**
+ * Fetch repositories from an SCM connection (from the provider, not yet imported)
+ */
+export function useSCMRepositories(
+  connectionId: string | null,
+  options?: SCMRepositoriesOptions,
+  config?: SWRConfiguration
+) {
+  const { currentTenant } = useTenant();
+
+  const key = currentTenant && connectionId
+    ? buildSCMRepositoriesEndpoint(connectionId, options)
+    : null;
+
+  return useSWR<SCMRepositoriesResponse>(key, fetchSCMRepositories, {
+    ...defaultConfig,
+    ...config,
+  });
 }
 
 // ============================================
@@ -586,8 +792,9 @@ export function getSCMConnectionsKey() {
  */
 export async function invalidateRepositoriesCache() {
   const { mutate } = await import("swr");
+  // Match any assets endpoint with types=repository (note: 'types' with 's')
   await mutate(
-    (key) => typeof key === "string" && key.includes("/api/v1/assets") && key.includes("type=repository"),
+    (key) => typeof key === "string" && key.includes("/api/v1/assets") && key.includes("types=repository"),
     undefined,
     { revalidate: true }
   );

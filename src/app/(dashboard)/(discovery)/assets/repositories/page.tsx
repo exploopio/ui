@@ -19,7 +19,6 @@ import { ThemeSwitch } from "@/components/theme-switch";
 import { PageHeader, RiskScoreBadge } from "@/features/shared";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
@@ -38,14 +37,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -108,7 +99,6 @@ import {
   Github,
   GitlabIcon,
   Cloud,
-  Upload,
   XCircle,
   Clock,
   AlertCircle,
@@ -126,6 +116,7 @@ import {
 import {
   useRepositories,
   invalidateRepositoriesCache,
+  AddRepositoryDialog,
   type RepositoryView,
   type SCMProvider,
   type SyncStatus,
@@ -136,6 +127,7 @@ import {
   SCM_PROVIDER_LABELS,
   SYNC_STATUS_LABELS,
 } from "@/features/repositories";
+import { SCMConnectionsSection } from "@/features/scm-connections";
 import type { AssetWithRepository } from "@/features/assets/types/asset.types";
 import type { Status } from "@/features/shared/types";
 
@@ -474,7 +466,7 @@ export default function RepositoriesPage() {
   // Dialog states
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [repositoryToDelete, setRepositoryToDelete] = useState<Repository | null>(null);
-  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [addRepositoryDialogOpen, setAddRepositoryDialogOpen] = useState(false);
 
   // Build API filters from UI state
   const apiFilters = useMemo((): RepositoryFilters => {
@@ -638,11 +630,59 @@ export default function RepositoriesPage() {
     {
       accessorKey: "primary_language",
       header: "Language",
-      cell: ({ row }) => (
-        <Badge variant="secondary" className="text-xs">
-          {row.original.primary_language || "-"}
-        </Badge>
-      ),
+      cell: ({ row }) => {
+        const primaryLang = row.original.primary_language;
+        const languages = row.original.repository?.languages;
+
+        // If we have languages object with multiple languages
+        if (languages && Object.keys(languages).length > 0) {
+          // Calculate total bytes to convert to percentages
+          const totalBytes = Object.values(languages).reduce((sum, bytes) => sum + bytes, 0);
+          const sortedLangs = Object.entries(languages)
+            .sort(([, a], [, b]) => b - a) // Sort by bytes descending
+            .map(([lang, bytes]) => ({
+              lang,
+              bytes,
+              percentage: totalBytes > 0 ? ((bytes / totalBytes) * 100).toFixed(1) : "0",
+            }));
+          const topLang = sortedLangs[0]?.lang;
+          const otherCount = sortedLangs.length - 1;
+
+          return (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center gap-1">
+                    <Badge variant="secondary" className="text-xs">
+                      {topLang || primaryLang || "-"}
+                    </Badge>
+                    {otherCount > 0 && (
+                      <span className="text-xs text-muted-foreground">+{otherCount}</span>
+                    )}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-[200px]">
+                  <div className="space-y-1">
+                    {sortedLangs.map(({ lang, percentage }) => (
+                      <div key={lang} className="flex items-center justify-between gap-4 text-xs">
+                        <span>{lang}</span>
+                        <span className="text-muted-foreground">{percentage}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          );
+        }
+
+        // Fallback to primary language only
+        return (
+          <Badge variant="secondary" className="text-xs">
+            {primaryLang || "-"}
+          </Badge>
+        );
+      },
     },
     {
       id: "findings",
@@ -704,6 +744,12 @@ export default function RepositoriesPage() {
       id: "actions",
       cell: ({ row }) => {
         const repository = row.original;
+        // Check if repository can be synced (has SCM provider and organization)
+        const canSync = !!(repository.scm_provider && repository.scm_provider !== "local" && repository.repository?.fullName);
+        const syncDisabledReason = !canSync
+          ? "Repository was added manually. Connect to an SCM provider to enable sync."
+          : undefined;
+
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -727,17 +773,32 @@ export default function RepositoriesPage() {
                 )}
                 Trigger Scan
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => handleSyncRepository(repository)}
-                disabled={actionInProgress === repository.id}
-              >
-                {actionInProgress === repository.id ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                )}
-                Sync Now
-              </DropdownMenuItem>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className={!canSync ? "cursor-not-allowed" : ""}>
+                      <DropdownMenuItem
+                        onClick={() => canSync && handleSyncRepository(repository)}
+                        disabled={!canSync || actionInProgress === repository.id}
+                        className={!canSync ? "opacity-50" : ""}
+                      >
+                        {actionInProgress === repository.id ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <RefreshCw className="mr-2 h-4 w-4" />
+                        )}
+                        Sync Now
+                        {!canSync && <AlertCircle className="ml-auto h-3 w-3 text-muted-foreground" />}
+                      </DropdownMenuItem>
+                    </span>
+                  </TooltipTrigger>
+                  {syncDisabledReason && (
+                    <TooltipContent side="left" className="max-w-[200px]">
+                      <p className="text-xs">{syncDisabledReason}</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
               <DropdownMenuItem onClick={() => handleCopyUrl(repository)}>
                 <Copy className="mr-2 h-4 w-4" />
                 Copy URL
@@ -747,7 +808,7 @@ export default function RepositoriesPage() {
                 Open in Browser
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => toast.info("Opening settings...")}>
+              <DropdownMenuItem onClick={() => router.push(`/assets/repositories/${repository.id}?tab=settings`)}>
                 <Settings className="mr-2 h-4 w-4" />
                 Settings
               </DropdownMenuItem>
@@ -791,6 +852,8 @@ export default function RepositoriesPage() {
     if (webUrl) {
       navigator.clipboard.writeText(webUrl);
       toast.success("URL copied to clipboard");
+    } else {
+      toast.warning("Repository URL not available");
     }
   };
 
@@ -798,6 +861,8 @@ export default function RepositoriesPage() {
     const webUrl = repo.repository?.webUrl;
     if (webUrl) {
       window.open(webUrl, "_blank");
+    } else {
+      toast.warning("Repository URL not available");
     }
   };
 
@@ -807,17 +872,21 @@ export default function RepositoriesPage() {
       const response = await fetch(`/api/v1/assets/${repo.id}/scan`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ scanMode: "full" }),
       });
-      if (!response.ok) throw new Error("Failed to trigger scan");
-      toast.success(`Scan triggered for "${repo.name}"`);
-      await mutateRepos();
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: "Unknown error" }));
+        throw new Error(error.message || "Failed to trigger scan");
+      }
+
+      const result = await response.json();
+      toast.success(result.message || `Scan triggered for "${repo.name}"`);
     } catch (error) {
       toast.error(`Failed to trigger scan: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
       setActionInProgress(null);
     }
-  }, [mutateRepos]);
+  }, []);
 
   const handleSyncRepository = useCallback(async (repo: Repository) => {
     setActionInProgress(repo.id);
@@ -826,9 +895,24 @@ export default function RepositoriesPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       });
-      if (!response.ok) throw new Error("Failed to sync repository");
-      toast.success(`Repository "${repo.name}" synced`);
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: "Unknown error" }));
+        throw new Error(error.message || "Failed to sync repository");
+      }
+
+      const result = await response.json();
+
+      // Show what was updated
+      if (result.updated_fields && result.updated_fields.length > 0) {
+        toast.success(`Synced "${repo.name}": Updated ${result.updated_fields.join(", ")}`);
+      } else {
+        toast.success(result.message || `Repository "${repo.name}" is up to date`);
+      }
+
+      // Refresh the repository list
       await mutateRepos();
+      await invalidateRepositoriesCache();
     } catch (error) {
       toast.error(`Failed to sync: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
@@ -855,6 +939,84 @@ export default function RepositoriesPage() {
       setActionInProgress(null);
     }
   }, [repositoryToDelete, mutateRepos]);
+
+  const handleBulkScan = useCallback(async () => {
+    const selectedRows = table.getSelectedRowModel().rows;
+    if (selectedRows.length === 0) return;
+
+    setActionInProgress("bulk-scan");
+    try {
+      const results = await Promise.allSettled(
+        selectedRows.map((row) =>
+          fetch(`/api/v1/assets/${row.original.id}/scan`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+          })
+        )
+      );
+
+      const successCount = results.filter((r) => r.status === "fulfilled" && (r.value as Response).ok).length;
+      const failedCount = selectedRows.length - successCount;
+
+      if (failedCount > 0) {
+        toast.warning(`Triggered scan for ${successCount} repositories, ${failedCount} failed`);
+      } else {
+        toast.success(`Triggered scan for ${successCount} repositories`);
+      }
+    } catch (error) {
+      toast.error(`Failed to trigger scans: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setRowSelection({});
+      setActionInProgress(null);
+    }
+  }, [table]);
+
+  const handleBulkSync = useCallback(async () => {
+    const selectedRows = table.getSelectedRowModel().rows;
+    // Filter only repos that can be synced
+    const syncableRows = selectedRows.filter((row) => {
+      const repo = row.original;
+      return repo.scm_provider && repo.scm_provider !== "local" && repo.repository?.fullName;
+    });
+
+    if (syncableRows.length === 0) {
+      toast.warning("None of the selected repositories can be synced. They may have been added manually.");
+      return;
+    }
+
+    if (syncableRows.length < selectedRows.length) {
+      toast.info(`Syncing ${syncableRows.length} of ${selectedRows.length} repositories (${selectedRows.length - syncableRows.length} cannot be synced)`);
+    }
+
+    setActionInProgress("bulk-sync");
+    try {
+      const results = await Promise.allSettled(
+        syncableRows.map((row) =>
+          fetch(`/api/v1/assets/${row.original.id}/sync`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+          })
+        )
+      );
+
+      const successCount = results.filter((r) => r.status === "fulfilled" && (r.value as Response).ok).length;
+      const failedCount = syncableRows.length - successCount;
+
+      if (failedCount > 0) {
+        toast.warning(`Synced ${successCount} repositories, ${failedCount} failed`);
+      } else {
+        toast.success(`Synced ${successCount} repositories`);
+      }
+
+      await mutateRepos();
+      await invalidateRepositoriesCache();
+    } catch (error) {
+      toast.error(`Failed to sync repositories: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setRowSelection({});
+      setActionInProgress(null);
+    }
+  }, [table, mutateRepos]);
 
   const handleBulkDelete = useCallback(async () => {
     const selectedIds = table.getSelectedRowModel().rows.map((r) => r.original.id);
@@ -964,11 +1126,7 @@ export default function RepositoriesPage() {
               <Download className="mr-2 h-4 w-4" />
               Export
             </Button>
-            <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
-              <Upload className="mr-2 h-4 w-4" />
-              Import
-            </Button>
-            <Button onClick={() => toast.info("Add repository dialog coming soon")}>
+            <Button onClick={() => setAddRepositoryDialogOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
               Add Repository
             </Button>
@@ -1067,33 +1225,12 @@ export default function RepositoriesPage() {
           )}
         </div>
 
-        {/* SCM Connections Overview */}
-        <div className="mt-4 flex flex-wrap gap-2">
-          {isLoading ? (
-            <>
-              {[...Array(3)].map((_, i) => (
-                <Skeleton key={i} className="h-8 w-32 rounded-full" />
-              ))}
-            </>
-          ) : scmConnections.map((conn) => (
-            <Badge
-              key={conn.id}
-              variant={scmConnectionFilter === conn.id ? "default" : "outline"}
-              className={cn(
-                "cursor-pointer gap-1.5 py-1.5",
-                conn.status === "error" && "border-red-500/50",
-                conn.status === "connected" && scmConnectionFilter !== conn.id && "border-green-500/50"
-              )}
-              onClick={() => setSCMConnectionFilter(scmConnectionFilter === conn.id ? "all" : conn.id)}
-            >
-              <ProviderIcon provider={conn.provider} className="h-3.5 w-3.5" />
-              {conn.name}
-              {conn.status === "error" && <AlertCircle className="h-3 w-3 text-red-500" />}
-              <span className="text-muted-foreground">
-                ({repositories.filter((p) => p.scm_organization === conn.scmOrganization).length})
-              </span>
-            </Badge>
-          ))}
+        {/* SCM Connections Section */}
+        <div className="mt-6">
+          <SCMConnectionsSection
+            selectedConnectionId={scmConnectionFilter === "all" ? null : scmConnectionFilter}
+            onConnectionSelect={(id) => setSCMConnectionFilter(id || "all")}
+          />
         </div>
 
         {/* Table Card */}
@@ -1156,22 +1293,47 @@ export default function RepositoriesPage() {
                 {Object.keys(rowSelection).length > 0 && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" disabled={actionInProgress !== null}>
+                        {actionInProgress?.startsWith("bulk") ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : null}
                         {Object.keys(rowSelection).length} selected
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => toast.info("Scanning selected repositories...")}>
-                        <Play className="mr-2 h-4 w-4" />
+                      <DropdownMenuItem
+                        onClick={handleBulkScan}
+                        disabled={actionInProgress !== null}
+                      >
+                        {actionInProgress === "bulk-scan" ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Play className="mr-2 h-4 w-4" />
+                        )}
                         Scan Selected
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => toast.info("Syncing selected repositories...")}>
-                        <RefreshCw className="mr-2 h-4 w-4" />
+                      <DropdownMenuItem
+                        onClick={handleBulkSync}
+                        disabled={actionInProgress !== null}
+                      >
+                        {actionInProgress === "bulk-sync" ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <RefreshCw className="mr-2 h-4 w-4" />
+                        )}
                         Sync Selected
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-red-400" onClick={handleBulkDelete}>
-                        <Trash2 className="mr-2 h-4 w-4" />
+                      <DropdownMenuItem
+                        className="text-red-400"
+                        onClick={handleBulkDelete}
+                        disabled={actionInProgress !== null}
+                      >
+                        {actionInProgress === "bulk-delete" ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="mr-2 h-4 w-4" />
+                        )}
                         Delete Selected
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -1576,60 +1738,6 @@ export default function RepositoriesPage() {
         </SheetContent>
       </Sheet>
 
-      {/* Import Dialog */}
-      <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Upload className="h-5 w-5" />
-              Import Repositories
-            </DialogTitle>
-            <DialogDescription>
-              Import repositories from your connected SCM providers
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Select SCM Connection</Label>
-              <Select>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose a connection" />
-                </SelectTrigger>
-                <SelectContent>
-                  {scmConnections
-                    .filter((c) => c.status === "connected")
-                    .map((conn) => (
-                      <SelectItem key={conn.id} value={conn.id}>
-                        <div className="flex items-center gap-2">
-                          <ProviderIcon provider={conn.provider} className="h-4 w-4" />
-                          {conn.name}
-                        </div>
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="rounded-lg border p-4 bg-muted/50">
-              <p className="text-sm text-muted-foreground">
-                After selecting a connection, you can choose which repositories to import
-                and configure default scan settings.
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setImportDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={() => {
-              toast.info("Import wizard coming soon");
-              setImportDialogOpen(false);
-            }}>
-              Continue
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
@@ -1648,6 +1756,13 @@ export default function RepositoriesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Add Repository Dialog */}
+      <AddRepositoryDialog
+        open={addRepositoryDialogOpen}
+        onOpenChange={setAddRepositoryDialogOpen}
+        onSuccess={() => mutateRepos()}
+      />
     </>
   );
 }
