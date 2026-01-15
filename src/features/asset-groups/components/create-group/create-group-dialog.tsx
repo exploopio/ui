@@ -126,6 +126,12 @@ export function CreateGroupDialog({
         description: formData.description.trim() || undefined,
         environment: formData.environment,
         criticality: formData.criticality,
+        // Business Context (CTEM Scoping)
+        businessUnit: formData.businessUnit.trim() || undefined,
+        owner: formData.owner.trim() || undefined,
+        ownerEmail: formData.ownerEmail.trim() || undefined,
+        tags: formData.tags.length > 0 ? formData.tags : undefined,
+        // Assets
         existingAssetIds:
           formData.selectedAssetIds.length > 0
             ? formData.selectedAssetIds

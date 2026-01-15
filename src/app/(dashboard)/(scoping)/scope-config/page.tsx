@@ -48,6 +48,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Globe,
   Shield,
@@ -71,15 +72,39 @@ import {
   Mail,
   Folder,
   Link,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
   type ScopeTargetType,
-  type ScopeTargetStatus,
   type ScanType,
   type ScanFrequency,
   getScopeTypeConfig,
+  // API hooks
+  useScopeTargetsApi,
+  useScopeExclusionsApi,
+  useScanSchedulesApi,
+  useScopeStatsApi,
+  useCreateScopeTargetApi,
+  useUpdateScopeTargetApi,
+  useDeleteScopeTargetApi,
+  useCreateScopeExclusionApi,
+  useUpdateScopeExclusionApi,
+  useDeleteScopeExclusionApi,
+  useCreateScanScheduleApi,
+  useUpdateScanScheduleApi,
+  useDeleteScanScheduleApi,
+  invalidateScopeCache,
+  invalidateScopeTargetsCache,
+  invalidateScopeExclusionsCache,
+  invalidateScanSchedulesCache,
+  invalidateScopeStatsCache,
+  // API types
+  type ApiScopeTarget,
+  type ApiScopeExclusion,
+  type ApiScanSchedule,
 } from "@/features/scope";
+import { post } from "@/lib/api/client";
 
 // Use shared validation from scope feature types
 const validatePattern = (type: ScopeTargetType, pattern: string): { valid: boolean; error?: string } => {
@@ -114,195 +139,6 @@ const validatePattern = (type: ScopeTargetType, pattern: string): { valid: boole
   return { valid: true };
 };
 
-// Extended types using shared scope types
-interface ScopeTarget {
-  id: string;
-  type: ScopeTargetType;
-  pattern: string;
-  description: string;
-  status: ScopeTargetStatus;
-  priority?: "critical" | "high" | "medium" | "low";
-  addedAt: string;
-  addedBy: string;
-}
-
-interface Exclusion {
-  id: string;
-  type: ScopeTargetType;
-  pattern: string;
-  reason: string;
-  status: ScopeTargetStatus;
-  addedAt: string;
-  addedBy: string;
-}
-
-interface ScanSchedule {
-  id: string;
-  name: string;
-  type: ScanType;
-  targets: string[];
-  frequency: ScanFrequency;
-  time: string;
-  lastRun: string | null;
-  nextRun: string | null;
-  status: "active" | "paused";
-}
-
-// Mock data for scope targets
-const mockScopeTargets: ScopeTarget[] = [
-  {
-    id: "scope-001",
-    type: "domain",
-    pattern: "*.techcombank.com.vn",
-    description: "Main banking domain and subdomains",
-    status: "active",
-    addedAt: "2024-01-15",
-    addedBy: "Nguyen Van An",
-  },
-  {
-    id: "scope-002",
-    type: "domain",
-    pattern: "*.tcb.com.vn",
-    description: "Short domain alias",
-    status: "active",
-    addedAt: "2024-01-15",
-    addedBy: "Nguyen Van An",
-  },
-  {
-    id: "scope-003",
-    type: "ip_range",
-    pattern: "10.0.0.0/8",
-    description: "Internal network range",
-    status: "active",
-    addedAt: "2024-01-20",
-    addedBy: "Tran Thi Binh",
-  },
-  {
-    id: "scope-004",
-    type: "domain",
-    pattern: "api.techcombank.com.vn",
-    description: "API Gateway endpoint",
-    status: "active",
-    addedAt: "2024-02-01",
-    addedBy: "Le Van Cuong",
-  },
-  {
-    id: "scope-005",
-    type: "project",
-    pattern: "github.com/techcombank/*",
-    description: "All GitHub projects",
-    status: "active",
-    addedAt: "2024-02-10",
-    addedBy: "Pham Thi Dung",
-  },
-  {
-    id: "scope-006",
-    type: "cloud_account",
-    pattern: "AWS:123456789012",
-    description: "Production AWS account",
-    status: "active",
-    addedAt: "2024-02-15",
-    addedBy: "Nguyen Van An",
-  },
-];
-
-const mockExclusions: Exclusion[] = [
-  {
-    id: "excl-001",
-    type: "domain",
-    pattern: "status.techcombank.com.vn",
-    reason: "Third-party status page service",
-    status: "active",
-    addedAt: "2024-01-16",
-    addedBy: "Nguyen Van An",
-  },
-  {
-    id: "excl-002",
-    type: "ip_range",
-    pattern: "10.255.0.0/16",
-    reason: "Guest network - out of scope",
-    status: "active",
-    addedAt: "2024-01-20",
-    addedBy: "Tran Thi Binh",
-  },
-  {
-    id: "excl-003",
-    type: "domain",
-    pattern: "*.cdn.techcombank.com.vn",
-    reason: "CDN managed by third-party",
-    status: "active",
-    addedAt: "2024-02-05",
-    addedBy: "Le Van Cuong",
-  },
-  {
-    id: "excl-004",
-    type: "path",
-    pattern: "/health",
-    reason: "Health check endpoints",
-    status: "active",
-    addedAt: "2024-02-10",
-    addedBy: "Pham Thi Dung",
-  },
-];
-
-const mockScanSchedules: ScanSchedule[] = [
-  {
-    id: "sched-001",
-    name: "Daily Vulnerability Scan",
-    type: "vulnerability",
-    targets: ["*.techcombank.com.vn"],
-    frequency: "daily",
-    time: "02:00",
-    lastRun: "2024-03-10T02:00:00",
-    nextRun: "2024-03-11T02:00:00",
-    status: "active",
-  },
-  {
-    id: "sched-002",
-    name: "Weekly Port Scan",
-    type: "port_scan",
-    targets: ["10.0.0.0/8"],
-    frequency: "weekly",
-    time: "Sunday 03:00",
-    lastRun: "2024-03-03T03:00:00",
-    nextRun: "2024-03-10T03:00:00",
-    status: "active",
-  },
-  {
-    id: "sched-003",
-    name: "Monthly Penetration Test",
-    type: "pentest",
-    targets: ["api.techcombank.com.vn"],
-    frequency: "monthly",
-    time: "1st day 04:00",
-    lastRun: "2024-03-01T04:00:00",
-    nextRun: "2024-04-01T04:00:00",
-    status: "active",
-  },
-  {
-    id: "sched-004",
-    name: "Credential Leak Monitor",
-    type: "credential",
-    targets: ["*@techcombank.com.vn"],
-    frequency: "continuous",
-    time: "Real-time",
-    lastRun: "2024-03-10T10:30:00",
-    nextRun: null,
-    status: "active",
-  },
-  {
-    id: "sched-005",
-    name: "Repository Secret Scan",
-    type: "secret_scan",
-    targets: ["github.com/techcombank/*"],
-    frequency: "on_commit",
-    time: "On push",
-    lastRun: "2024-03-10T09:15:00",
-    nextRun: null,
-    status: "paused",
-  },
-];
-
 // Extended icon mapping for all scope target types
 const targetTypeIcons: Record<string, React.ReactNode> = {
   // Network & External
@@ -325,7 +161,7 @@ const targetTypeIcons: Record<string, React.ReactNode> = {
   network: <Link className="h-4 w-4" />,
   // Code & CI/CD
   project: <GitBranch className="h-4 w-4" />,
-  repository: <GitBranch className="h-4 w-4" />, // @deprecated
+  repository: <GitBranch className="h-4 w-4" />,
   // Generic
   path: <Folder className="h-4 w-4" />,
   email_domain: <Mail className="h-4 w-4" />,
@@ -369,12 +205,25 @@ const scanTypeConfig: Record<string, { label: string; color: string }> = {
   configuration: { label: "Config Audit", color: "bg-indigo-500/20 text-indigo-400" },
 };
 
-export default function ScopeConfigPage() {
-  // State for data
-  const [targets, setTargets] = useState<ScopeTarget[]>(mockScopeTargets);
-  const [exclusions, setExclusions] = useState<Exclusion[]>(mockExclusions);
-  const [schedules, setSchedules] = useState<ScanSchedule[]>(mockScanSchedules);
+// Loading skeleton component - defined outside to avoid recreation on each render
+function TableSkeleton() {
+  return (
+    <>
+      {[1, 2, 3].map((i) => (
+        <TableRow key={i}>
+          <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+          <TableCell><Skeleton className="h-4 w-40" /></TableCell>
+          <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+          <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+          <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+          <TableCell><Skeleton className="h-4 w-8" /></TableCell>
+        </TableRow>
+      ))}
+    </>
+  );
+}
 
+export default function ScopeConfigPage() {
   // Search & filter states
   const [targetSearch, setTargetSearch] = useState("");
   const [targetTypeFilter, setTargetTypeFilter] = useState<string>("all");
@@ -390,12 +239,12 @@ export default function ScopeConfigPage() {
   const [isAddTargetOpen, setIsAddTargetOpen] = useState(false);
   const [isAddExclusionOpen, setIsAddExclusionOpen] = useState(false);
   const [isAddScheduleOpen, setIsAddScheduleOpen] = useState(false);
-  const [editTarget, setEditTarget] = useState<ScopeTarget | null>(null);
-  const [editExclusion, setEditExclusion] = useState<Exclusion | null>(null);
-  const [editSchedule, setEditSchedule] = useState<ScanSchedule | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<ScopeTarget | null>(null);
-  const [deleteExclusion, setDeleteExclusion] = useState<Exclusion | null>(null);
-  const [deleteSchedule, setDeleteSchedule] = useState<ScanSchedule | null>(null);
+  const [editTarget, setEditTarget] = useState<ApiScopeTarget | null>(null);
+  const [editExclusion, setEditExclusion] = useState<ApiScopeExclusion | null>(null);
+  const [editSchedule, setEditSchedule] = useState<ApiScanSchedule | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ApiScopeTarget | null>(null);
+  const [deleteExclusion, setDeleteExclusion] = useState<ApiScopeExclusion | null>(null);
+  const [deleteSchedule, setDeleteSchedule] = useState<ApiScanSchedule | null>(null);
 
   // Form states
   const [targetForm, setTargetForm] = useState({
@@ -418,57 +267,64 @@ export default function ScopeConfigPage() {
     time: "",
   });
 
-  // Filtered data
-  const filteredTargets = useMemo(() => {
-    return targets.filter((t) => {
-      const matchesSearch =
-        t.pattern.toLowerCase().includes(targetSearch.toLowerCase()) ||
-        t.description.toLowerCase().includes(targetSearch.toLowerCase());
-      const matchesType = targetTypeFilter === "all" || t.type === targetTypeFilter;
-      return matchesSearch && matchesType;
-    });
-  }, [targets, targetSearch, targetTypeFilter]);
+  // API hooks for fetching data
+  const { data: targetsData, isLoading: targetsLoading } = useScopeTargetsApi({
+    search: targetSearch || undefined,
+    target_type: targetTypeFilter !== "all" ? targetTypeFilter : undefined,
+  });
 
-  const filteredExclusions = useMemo(() => {
-    return exclusions.filter((e) => {
-      const matchesSearch =
-        e.pattern.toLowerCase().includes(exclusionSearch.toLowerCase()) ||
-        e.reason.toLowerCase().includes(exclusionSearch.toLowerCase());
-      const matchesType = exclusionTypeFilter === "all" || e.type === exclusionTypeFilter;
-      return matchesSearch && matchesType;
-    });
-  }, [exclusions, exclusionSearch, exclusionTypeFilter]);
+  const { data: exclusionsData, isLoading: exclusionsLoading } = useScopeExclusionsApi({
+    search: exclusionSearch || undefined,
+    exclusion_type: exclusionTypeFilter !== "all" ? exclusionTypeFilter : undefined,
+  });
 
-  const filteredSchedules = useMemo(() => {
-    return schedules.filter((s) => {
-      const matchesSearch =
-        s.name.toLowerCase().includes(scheduleSearch.toLowerCase()) ||
-        s.targets.some((t) => t.toLowerCase().includes(scheduleSearch.toLowerCase()));
-      const matchesType = scheduleTypeFilter === "all" || s.type === scheduleTypeFilter;
-      return matchesSearch && matchesType;
-    });
-  }, [schedules, scheduleSearch, scheduleTypeFilter]);
+  const { data: schedulesData, isLoading: schedulesLoading } = useScanSchedulesApi({
+    search: scheduleSearch || undefined,
+    scan_type: scheduleTypeFilter !== "all" ? (scheduleTypeFilter as ScanType) : undefined,
+  });
 
-  // Stats with dynamic coverage calculation
+  const { data: statsData, isLoading: statsLoading } = useScopeStatsApi();
+
+  // Mutation hooks
+  const { trigger: createTarget, isMutating: isCreatingTarget } = useCreateScopeTargetApi();
+  const { trigger: updateTarget, isMutating: isUpdatingTarget } = useUpdateScopeTargetApi(editTarget?.id || "");
+  const { trigger: removeTarget, isMutating: isRemovingTarget } = useDeleteScopeTargetApi(deleteTarget?.id || "");
+
+  const { trigger: createExclusion, isMutating: isCreatingExclusion } = useCreateScopeExclusionApi();
+  const { trigger: updateExclusion, isMutating: isUpdatingExclusion } = useUpdateScopeExclusionApi(editExclusion?.id || "");
+  const { trigger: removeExclusion, isMutating: isRemovingExclusion } = useDeleteScopeExclusionApi(deleteExclusion?.id || "");
+
+  const { trigger: createSchedule, isMutating: isCreatingSchedule } = useCreateScanScheduleApi();
+  const { trigger: updateScheduleApi, isMutating: isUpdatingSchedule } = useUpdateScanScheduleApi(editSchedule?.id || "");
+  const { trigger: removeSchedule, isMutating: isRemovingSchedule } = useDeleteScanScheduleApi(deleteSchedule?.id || "");
+
+  // Extracted data
+  const targets = targetsData?.data || [];
+  const exclusions = exclusionsData?.data || [];
+  const schedules = schedulesData?.data || [];
+
+  // Stats (with fallback to 0 for undefined values)
   const stats = useMemo(() => {
-    const activeTargets = targets.filter((t) => t.status === "active").length;
-    const totalTargets = targets.length;
-    const activeExclusions = exclusions.filter((e) => e.status === "active").length;
-
-    // Coverage = (active targets - active exclusions) / total targets * 100
-    // Simplified: percentage of active targets
-    const coverage = totalTargets > 0
-      ? Math.round((activeTargets / totalTargets) * 100 - (activeExclusions / Math.max(totalTargets, 1)) * 10)
-      : 0;
-
+    if (statsData) {
+      return {
+        targets: statsData.total_targets ?? 0,
+        activeTargets: statsData.active_targets ?? 0,
+        exclusions: statsData.total_exclusions ?? 0,
+        activeSchedules: statsData.enabled_schedules ?? 0,
+        coverage: statsData.coverage ?? 0,
+      };
+    }
+    // Fallback when stats API hasn't loaded yet
     return {
       targets: targets.length,
-      activeTargets,
+      activeTargets: targets.filter((t) => t.status === "active").length,
       exclusions: exclusions.length,
-      activeSchedules: schedules.filter((s) => s.status === "active").length,
-      coverage: Math.max(0, Math.min(100, coverage)), // Clamp between 0-100
+      activeSchedules: schedules.filter((s) => s.enabled).length,
+      coverage: targets.length > 0
+        ? Math.round((targets.filter((t) => t.status === "active").length / targets.length) * 100)
+        : 0,
     };
-  }, [targets, exclusions, schedules]);
+  }, [statsData, targets, exclusions, schedules]);
 
   // Duplicate check helpers
   const checkDuplicateTarget = useCallback((pattern: string, excludeId?: string): boolean => {
@@ -479,42 +335,46 @@ export default function ScopeConfigPage() {
     return exclusions.some((e) => e.pattern === pattern && e.id !== excludeId);
   }, [exclusions]);
 
-  // Toggle target status
-  const toggleTargetStatus = (id: string) => {
-    setTargets((prev) =>
-      prev.map((t) =>
-        t.id === id
-          ? { ...t, status: t.status === "active" ? "inactive" : "active" }
-          : t
-      )
-    );
-    toast.success("Target status updated");
+  // Toggle target status using activate/deactivate endpoints
+  const toggleTargetStatus = async (target: ApiScopeTarget) => {
+    try {
+      const action = target.status === "active" ? "deactivate" : "activate";
+      await post<ApiScopeTarget>(`/api/v1/scope/targets/${target.id}/${action}`);
+      await invalidateScopeTargetsCache();
+      await invalidateScopeStatsCache();
+      toast.success(`Target ${action}d successfully`);
+    } catch {
+      toast.error("Failed to update target status");
+    }
   };
 
-  // Toggle exclusion status
-  const toggleExclusionStatus = (id: string) => {
-    setExclusions((prev) =>
-      prev.map((e) =>
-        e.id === id
-          ? { ...e, status: e.status === "active" ? "inactive" : "active" }
-          : e
-      )
-    );
-    toast.success("Exclusion status updated");
+  // Toggle exclusion status using activate/deactivate endpoints
+  const toggleExclusionStatus = async (exclusion: ApiScopeExclusion) => {
+    try {
+      const action = exclusion.status === "active" ? "deactivate" : "activate";
+      await post<ApiScopeExclusion>(`/api/v1/scope/exclusions/${exclusion.id}/${action}`);
+      await invalidateScopeExclusionsCache();
+      await invalidateScopeStatsCache();
+      toast.success(`Exclusion ${action}d successfully`);
+    } catch {
+      toast.error("Failed to update exclusion status");
+    }
   };
 
-  const toggleScheduleStatus = (id: string) => {
-    setSchedules((prev) =>
-      prev.map((s) =>
-        s.id === id
-          ? { ...s, status: s.status === "active" ? "paused" : "active" }
-          : s
-      )
-    );
-    toast.success("Schedule status updated");
+  // Toggle schedule status using enable/disable endpoints
+  const toggleScheduleStatus = async (schedule: ApiScanSchedule) => {
+    try {
+      const action = schedule.enabled ? "disable" : "enable";
+      await post<ApiScanSchedule>(`/api/v1/scope/schedules/${schedule.id}/${action}`);
+      await invalidateScanSchedulesCache();
+      await invalidateScopeStatsCache();
+      toast.success(`Schedule ${action}d successfully`);
+    } catch {
+      toast.error("Failed to update schedule status");
+    }
   };
 
-  const formatDate = (dateString: string | null) => {
+  const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return "-";
     return new Date(dateString).toLocaleDateString("en-US", {
       month: "short",
@@ -530,7 +390,7 @@ export default function ScopeConfigPage() {
     setValidationError(null);
   };
 
-  const handleAddTarget = () => {
+  const handleAddTarget = async () => {
     // Validate pattern format
     const validation = validatePattern(targetForm.type, targetForm.pattern);
     if (!validation.valid) {
@@ -544,22 +404,22 @@ export default function ScopeConfigPage() {
       return;
     }
 
-    const newTarget: ScopeTarget = {
-      id: `scope-${Date.now()}`,
-      type: targetForm.type,
-      pattern: targetForm.pattern,
-      description: targetForm.description,
-      status: "active",
-      addedAt: new Date().toISOString().split("T")[0],
-      addedBy: "Current User",
-    };
-    setTargets((prev) => [...prev, newTarget]);
-    toast.success("Target added successfully");
-    setIsAddTargetOpen(false);
-    resetTargetForm();
+    try {
+      await createTarget({
+        target_type: targetForm.type,
+        pattern: targetForm.pattern,
+        description: targetForm.description,
+      });
+      await invalidateScopeCache();
+      toast.success("Target added successfully");
+      setIsAddTargetOpen(false);
+      resetTargetForm();
+    } catch {
+      toast.error("Failed to add target");
+    }
   };
 
-  const handleEditTarget = () => {
+  const handleEditTarget = async () => {
     if (!editTarget) return;
 
     // Validate pattern format
@@ -575,33 +435,34 @@ export default function ScopeConfigPage() {
       return;
     }
 
-    setTargets((prev) =>
-      prev.map((t) =>
-        t.id === editTarget.id
-          ? {
-              ...t,
-              type: targetForm.type,
-              pattern: targetForm.pattern,
-              description: targetForm.description,
-            }
-          : t
-      )
-    );
-    toast.success("Target updated successfully");
-    setEditTarget(null);
-    resetTargetForm();
+    try {
+      await updateTarget({
+        description: targetForm.description,
+      });
+      await invalidateScopeCache();
+      toast.success("Target updated successfully");
+      setEditTarget(null);
+      resetTargetForm();
+    } catch {
+      toast.error("Failed to update target");
+    }
   };
 
-  const handleDeleteTarget = () => {
+  const handleDeleteTarget = async () => {
     if (!deleteTarget) return;
-    setTargets((prev) => prev.filter((t) => t.id !== deleteTarget.id));
-    toast.success("Target removed successfully");
-    setDeleteTarget(null);
+    try {
+      await removeTarget();
+      await invalidateScopeCache();
+      toast.success("Target removed successfully");
+      setDeleteTarget(null);
+    } catch {
+      toast.error("Failed to remove target");
+    }
   };
 
-  const openEditTarget = (target: ScopeTarget) => {
+  const openEditTarget = (target: ApiScopeTarget) => {
     setTargetForm({
-      type: target.type,
+      type: target.target_type as ScopeTargetType,
       pattern: target.pattern,
       description: target.description,
     });
@@ -614,7 +475,7 @@ export default function ScopeConfigPage() {
     setValidationError(null);
   };
 
-  const handleAddExclusion = () => {
+  const handleAddExclusion = async () => {
     // Validate pattern format
     const validation = validatePattern(exclusionForm.type, exclusionForm.pattern);
     if (!validation.valid) {
@@ -628,22 +489,22 @@ export default function ScopeConfigPage() {
       return;
     }
 
-    const newExclusion: Exclusion = {
-      id: `excl-${Date.now()}`,
-      type: exclusionForm.type,
-      pattern: exclusionForm.pattern,
-      reason: exclusionForm.reason,
-      status: "active",
-      addedAt: new Date().toISOString().split("T")[0],
-      addedBy: "Current User",
-    };
-    setExclusions((prev) => [...prev, newExclusion]);
-    toast.success("Exclusion added successfully");
-    setIsAddExclusionOpen(false);
-    resetExclusionForm();
+    try {
+      await createExclusion({
+        exclusion_type: exclusionForm.type,
+        pattern: exclusionForm.pattern,
+        reason: exclusionForm.reason,
+      });
+      await invalidateScopeCache();
+      toast.success("Exclusion added successfully");
+      setIsAddExclusionOpen(false);
+      resetExclusionForm();
+    } catch {
+      toast.error("Failed to add exclusion");
+    }
   };
 
-  const handleEditExclusion = () => {
+  const handleEditExclusion = async () => {
     if (!editExclusion) return;
 
     // Validate pattern format
@@ -659,33 +520,34 @@ export default function ScopeConfigPage() {
       return;
     }
 
-    setExclusions((prev) =>
-      prev.map((e) =>
-        e.id === editExclusion.id
-          ? {
-              ...e,
-              type: exclusionForm.type,
-              pattern: exclusionForm.pattern,
-              reason: exclusionForm.reason,
-            }
-          : e
-      )
-    );
-    toast.success("Exclusion updated successfully");
-    setEditExclusion(null);
-    resetExclusionForm();
+    try {
+      await updateExclusion({
+        reason: exclusionForm.reason,
+      });
+      await invalidateScopeCache();
+      toast.success("Exclusion updated successfully");
+      setEditExclusion(null);
+      resetExclusionForm();
+    } catch {
+      toast.error("Failed to update exclusion");
+    }
   };
 
-  const handleDeleteExclusion = () => {
+  const handleDeleteExclusion = async () => {
     if (!deleteExclusion) return;
-    setExclusions((prev) => prev.filter((e) => e.id !== deleteExclusion.id));
-    toast.success("Exclusion removed successfully");
-    setDeleteExclusion(null);
+    try {
+      await removeExclusion();
+      await invalidateScopeCache();
+      toast.success("Exclusion removed successfully");
+      setDeleteExclusion(null);
+    } catch {
+      toast.error("Failed to remove exclusion");
+    }
   };
 
-  const openEditExclusion = (exclusion: Exclusion) => {
+  const openEditExclusion = (exclusion: ApiScopeExclusion) => {
     setExclusionForm({
-      type: exclusion.type,
+      type: exclusion.exclusion_type as ScopeTargetType,
       pattern: exclusion.pattern,
       reason: exclusion.reason,
     });
@@ -697,71 +559,99 @@ export default function ScopeConfigPage() {
     setScheduleForm({ name: "", type: "vulnerability", targets: "", frequency: "daily", time: "" });
   };
 
-  const handleAddSchedule = () => {
+  // Map frontend frequency to backend schedule type and params
+  const mapFrequencyToSchedule = (frequency: ScanFrequency): { schedule_type: string; cron_expression?: string; interval_hours?: number } => {
+    switch (frequency) {
+      case "hourly":
+        return { schedule_type: "interval", interval_hours: 1 };
+      case "daily":
+        return { schedule_type: "cron", cron_expression: "0 2 * * *" };
+      case "weekly":
+        return { schedule_type: "cron", cron_expression: "0 3 * * 0" };
+      case "monthly":
+        return { schedule_type: "cron", cron_expression: "0 4 1 * *" };
+      case "quarterly":
+        return { schedule_type: "cron", cron_expression: "0 4 1 */3 *" };
+      case "continuous":
+        return { schedule_type: "interval", interval_hours: 0 };
+      case "on_commit":
+      case "on_demand":
+      default:
+        return { schedule_type: "cron", cron_expression: "" };
+    }
+  };
+
+  const handleAddSchedule = async () => {
     if (!scheduleForm.name || !scheduleForm.targets) {
       toast.error("Please fill in required fields");
       return;
     }
-    const newSchedule: ScanSchedule = {
-      id: `sched-${Date.now()}`,
-      name: scheduleForm.name,
-      type: scheduleForm.type,
-      targets: scheduleForm.targets.split(",").map((t) => t.trim()),
-      frequency: scheduleForm.frequency,
-      time: scheduleForm.time || "00:00",
-      lastRun: null,
-      nextRun: new Date().toISOString(),
-      status: "active",
-    };
-    setSchedules((prev) => [...prev, newSchedule]);
-    toast.success("Schedule created successfully");
-    setIsAddScheduleOpen(false);
-    resetScheduleForm();
+
+    const scheduleParams = mapFrequencyToSchedule(scheduleForm.frequency);
+
+    try {
+      await createSchedule({
+        name: scheduleForm.name,
+        scan_type: scheduleForm.type,
+        target_tags: scheduleForm.targets.split(",").map((t) => t.trim()),
+        ...scheduleParams,
+      });
+      await invalidateScopeCache();
+      toast.success("Schedule created successfully");
+      setIsAddScheduleOpen(false);
+      resetScheduleForm();
+    } catch {
+      toast.error("Failed to create schedule");
+    }
   };
 
-  const handleEditSchedule = () => {
+  const handleEditSchedule = async () => {
     if (!editSchedule || !scheduleForm.name || !scheduleForm.targets) {
       toast.error("Please fill in required fields");
       return;
     }
-    setSchedules((prev) =>
-      prev.map((s) =>
-        s.id === editSchedule.id
-          ? {
-              ...s,
-              name: scheduleForm.name,
-              type: scheduleForm.type,
-              targets: scheduleForm.targets.split(",").map((t) => t.trim()),
-              frequency: scheduleForm.frequency,
-              time: scheduleForm.time || "00:00",
-            }
-          : s
-      )
-    );
-    toast.success("Schedule updated successfully");
-    setEditSchedule(null);
-    resetScheduleForm();
+
+    const scheduleParams = mapFrequencyToSchedule(scheduleForm.frequency);
+
+    try {
+      await updateScheduleApi({
+        name: scheduleForm.name,
+        target_tags: scheduleForm.targets.split(",").map((t) => t.trim()),
+        ...scheduleParams,
+      });
+      await invalidateScopeCache();
+      toast.success("Schedule updated successfully");
+      setEditSchedule(null);
+      resetScheduleForm();
+    } catch {
+      toast.error("Failed to update schedule");
+    }
   };
 
-  const handleDeleteSchedule = () => {
+  const handleDeleteSchedule = async () => {
     if (!deleteSchedule) return;
-    setSchedules((prev) => prev.filter((s) => s.id !== deleteSchedule.id));
-    toast.success("Schedule deleted successfully");
-    setDeleteSchedule(null);
+    try {
+      await removeSchedule();
+      await invalidateScopeCache();
+      toast.success("Schedule deleted successfully");
+      setDeleteSchedule(null);
+    } catch {
+      toast.error("Failed to delete schedule");
+    }
   };
 
-  const openEditSchedule = (schedule: ScanSchedule) => {
+  const openEditSchedule = (schedule: ApiScanSchedule) => {
     setScheduleForm({
       name: schedule.name,
-      type: schedule.type,
-      targets: schedule.targets.join(", "),
-      frequency: schedule.frequency,
-      time: schedule.time,
+      type: schedule.scan_type as ScanType,
+      targets: schedule.target_tags?.join(", ") || "",
+      frequency: "daily", // Default, backend doesn't store frequency directly
+      time: schedule.cron_expression || "",
     });
     setEditSchedule(schedule);
   };
 
-  const handleRunNow = (schedule: ScanSchedule) => {
+  const handleRunNow = (schedule: ApiScanSchedule) => {
     toast.success(`Started: ${schedule.name}`);
   };
 
@@ -1007,7 +897,11 @@ export default function ScopeConfigPage() {
                 <Target className="h-4 w-4" />
                 In-Scope Targets
               </CardDescription>
-              <CardTitle className="text-3xl">{stats.targets}</CardTitle>
+              {statsLoading ? (
+                <Skeleton className="h-9 w-16" />
+              ) : (
+                <CardTitle className="text-3xl">{stats.targets}</CardTitle>
+              )}
             </CardHeader>
           </Card>
           <Card>
@@ -1016,7 +910,11 @@ export default function ScopeConfigPage() {
                 <Ban className="h-4 w-4" />
                 Exclusions
               </CardDescription>
-              <CardTitle className="text-3xl">{stats.exclusions}</CardTitle>
+              {statsLoading ? (
+                <Skeleton className="h-9 w-16" />
+              ) : (
+                <CardTitle className="text-3xl">{stats.exclusions}</CardTitle>
+              )}
             </CardHeader>
           </Card>
           <Card>
@@ -1025,7 +923,11 @@ export default function ScopeConfigPage() {
                 <Calendar className="h-4 w-4" />
                 Scheduled Scans
               </CardDescription>
-              <CardTitle className="text-3xl">{stats.activeSchedules}</CardTitle>
+              {statsLoading ? (
+                <Skeleton className="h-9 w-16" />
+              ) : (
+                <CardTitle className="text-3xl">{stats.activeSchedules}</CardTitle>
+              )}
             </CardHeader>
           </Card>
           <Card>
@@ -1034,9 +936,13 @@ export default function ScopeConfigPage() {
                 <Shield className="h-4 w-4" />
                 Coverage
               </CardDescription>
-              <CardTitle className={`text-3xl ${stats.coverage >= 80 ? "text-green-500" : stats.coverage >= 50 ? "text-yellow-500" : "text-red-500"}`}>
-                {stats.coverage}%
-              </CardTitle>
+              {statsLoading ? (
+                <Skeleton className="h-9 w-16" />
+              ) : (
+                <CardTitle className={`text-3xl ${stats.coverage >= 80 ? "text-green-500" : stats.coverage >= 50 ? "text-yellow-500" : "text-red-500"}`}>
+                  {stats.coverage}%
+                </CardTitle>
+              )}
             </CardHeader>
             <CardContent className="pt-0">
               <p className="text-muted-foreground text-xs">
@@ -1050,13 +956,13 @@ export default function ScopeConfigPage() {
         <Tabs defaultValue="targets" className="mt-6">
           <TabsList>
             <TabsTrigger value="targets">
-              In-Scope Targets ({targets.length})
+              In-Scope Targets ({targetsLoading ? "..." : targets.length})
             </TabsTrigger>
             <TabsTrigger value="exclusions">
-              Exclusions ({exclusions.length})
+              Exclusions ({exclusionsLoading ? "..." : exclusions.length})
             </TabsTrigger>
             <TabsTrigger value="schedules">
-              Scan Schedules ({schedules.length})
+              Scan Schedules ({schedulesLoading ? "..." : schedules.length})
             </TabsTrigger>
           </TabsList>
 
@@ -1120,12 +1026,14 @@ export default function ScopeConfigPage() {
                       <TableHead>Pattern</TableHead>
                       <TableHead>Description</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Added</TableHead>
+                      <TableHead>Created By</TableHead>
                       <TableHead className="w-[50px]" />
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredTargets.length === 0 ? (
+                    {targetsLoading ? (
+                      <TableSkeleton />
+                    ) : targets.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={6} className="text-muted-foreground py-8 text-center">
                           {targetSearch || targetTypeFilter !== "all"
@@ -1134,13 +1042,13 @@ export default function ScopeConfigPage() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filteredTargets.map((target) => (
+                      targets.map((target) => (
                         <TableRow key={target.id}>
                           <TableCell>
                             <div className="flex flex-wrap items-center gap-2">
-                              {targetTypeIcons[target.type]}
+                              {targetTypeIcons[target.target_type]}
                               <span className="text-sm capitalize">
-                                {target.type.replace("_", " ")}
+                                {target.target_type.replace("_", " ")}
                               </span>
                             </div>
                           </TableCell>
@@ -1156,7 +1064,7 @@ export default function ScopeConfigPage() {
                             <div className="flex flex-wrap items-center gap-2">
                               <Switch
                                 checked={target.status === "active"}
-                                onCheckedChange={() => toggleTargetStatus(target.id)}
+                                onCheckedChange={() => toggleTargetStatus(target)}
                               />
                               <span className={`text-xs ${target.status === "active" ? "text-green-400" : "text-gray-400"}`}>
                                 {target.status}
@@ -1164,7 +1072,7 @@ export default function ScopeConfigPage() {
                             </div>
                           </TableCell>
                           <TableCell className="text-muted-foreground text-sm">
-                            {target.addedBy}
+                            {target.created_by}
                           </TableCell>
                           <TableCell>
                             <DropdownMenu>
@@ -1257,12 +1165,14 @@ export default function ScopeConfigPage() {
                       <TableHead>Pattern</TableHead>
                       <TableHead>Reason</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Added By</TableHead>
+                      <TableHead>Created By</TableHead>
                       <TableHead className="w-[50px]" />
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredExclusions.length === 0 ? (
+                    {exclusionsLoading ? (
+                      <TableSkeleton />
+                    ) : exclusions.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={6} className="text-muted-foreground py-8 text-center">
                           {exclusionSearch || exclusionTypeFilter !== "all"
@@ -1271,13 +1181,13 @@ export default function ScopeConfigPage() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filteredExclusions.map((exclusion) => (
+                      exclusions.map((exclusion) => (
                         <TableRow key={exclusion.id}>
                           <TableCell>
                             <div className="flex flex-wrap items-center gap-2">
-                              {targetTypeIcons[exclusion.type] || <Ban className="h-4 w-4" />}
+                              {targetTypeIcons[exclusion.exclusion_type] || <Ban className="h-4 w-4" />}
                               <span className="text-sm capitalize">
-                                {exclusion.type.replace("_", " ")}
+                                {exclusion.exclusion_type.replace("_", " ")}
                               </span>
                             </div>
                           </TableCell>
@@ -1293,7 +1203,7 @@ export default function ScopeConfigPage() {
                             <div className="flex flex-wrap items-center gap-2">
                               <Switch
                                 checked={exclusion.status === "active"}
-                                onCheckedChange={() => toggleExclusionStatus(exclusion.id)}
+                                onCheckedChange={() => toggleExclusionStatus(exclusion)}
                               />
                               <span className={`text-xs ${exclusion.status === "active" ? "text-orange-400" : "text-gray-400"}`}>
                                 {exclusion.status === "active" ? "Excluded" : "Inactive"}
@@ -1301,7 +1211,7 @@ export default function ScopeConfigPage() {
                             </div>
                           </TableCell>
                           <TableCell className="text-muted-foreground text-sm">
-                            {exclusion.addedBy}
+                            {exclusion.created_by}
                           </TableCell>
                           <TableCell>
                             <DropdownMenu>
@@ -1382,7 +1292,7 @@ export default function ScopeConfigPage() {
                     <TableRow>
                       <TableHead>Name</TableHead>
                       <TableHead>Type</TableHead>
-                      <TableHead>Frequency</TableHead>
+                      <TableHead>Schedule</TableHead>
                       <TableHead>Last Run</TableHead>
                       <TableHead>Next Run</TableHead>
                       <TableHead>Status</TableHead>
@@ -1390,7 +1300,9 @@ export default function ScopeConfigPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredSchedules.length === 0 ? (
+                    {schedulesLoading ? (
+                      <TableSkeleton />
+                    ) : schedules.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={7} className="text-muted-foreground py-8 text-center">
                           {scheduleSearch || scheduleTypeFilter !== "all"
@@ -1399,15 +1311,15 @@ export default function ScopeConfigPage() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filteredSchedules.map((schedule) => {
-                        const typeConfig = scanTypeConfig[schedule.type];
+                      schedules.map((schedule) => {
+                        const typeConfig = scanTypeConfig[schedule.scan_type] || { label: schedule.scan_type, color: "bg-gray-500/20 text-gray-400" };
                         return (
                           <TableRow key={schedule.id}>
                             <TableCell>
                               <div>
                                 <p className="font-medium">{schedule.name}</p>
                                 <p className="text-muted-foreground text-xs">
-                                  {schedule.targets.join(", ")}
+                                  {schedule.target_tags?.join(", ") || schedule.target_scope || "All targets"}
                                 </p>
                               </div>
                             </TableCell>
@@ -1419,22 +1331,22 @@ export default function ScopeConfigPage() {
                             <TableCell>
                               <div className="flex items-center gap-1 text-sm">
                                 <Clock className="text-muted-foreground h-3 w-3" />
-                                {schedule.time}
+                                {schedule.cron_expression || (schedule.interval_hours ? `Every ${schedule.interval_hours}h` : "On demand")}
                               </div>
                             </TableCell>
                             <TableCell className="text-sm">
-                              {formatDate(schedule.lastRun)}
+                              {formatDate(schedule.last_run_at)}
                             </TableCell>
                             <TableCell className="text-sm">
-                              {schedule.nextRun ? formatDate(schedule.nextRun) : "On trigger"}
+                              {schedule.next_run_at ? formatDate(schedule.next_run_at) : "On trigger"}
                             </TableCell>
                             <TableCell>
                               <div className="flex flex-wrap items-center gap-2">
                                 <Switch
-                                  checked={schedule.status === "active"}
-                                  onCheckedChange={() => toggleScheduleStatus(schedule.id)}
+                                  checked={schedule.enabled}
+                                  onCheckedChange={() => toggleScheduleStatus(schedule)}
                                 />
-                                <span className="text-xs capitalize">{schedule.status}</span>
+                                <span className="text-xs capitalize">{schedule.enabled ? "Active" : "Paused"}</span>
                               </div>
                             </TableCell>
                             <TableCell>
@@ -1492,7 +1404,10 @@ export default function ScopeConfigPage() {
             <Button variant="outline" onClick={() => setIsAddTargetOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleAddTarget}>Add Target</Button>
+            <Button onClick={handleAddTarget} disabled={isCreatingTarget}>
+              {isCreatingTarget && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Add Target
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1514,7 +1429,10 @@ export default function ScopeConfigPage() {
             <Button variant="outline" onClick={() => setEditTarget(null)}>
               Cancel
             </Button>
-            <Button onClick={handleEditTarget}>Save Changes</Button>
+            <Button onClick={handleEditTarget} disabled={isUpdatingTarget}>
+              {isUpdatingTarget && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Changes
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1532,7 +1450,8 @@ export default function ScopeConfigPage() {
             <Button variant="outline" onClick={() => setDeleteTarget(null)}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDeleteTarget}>
+            <Button variant="destructive" onClick={handleDeleteTarget} disabled={isRemovingTarget}>
+              {isRemovingTarget && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Remove
             </Button>
           </DialogFooter>
@@ -1556,7 +1475,10 @@ export default function ScopeConfigPage() {
             <Button variant="outline" onClick={() => setIsAddExclusionOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleAddExclusion}>Add Exclusion</Button>
+            <Button onClick={handleAddExclusion} disabled={isCreatingExclusion}>
+              {isCreatingExclusion && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Add Exclusion
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1578,7 +1500,10 @@ export default function ScopeConfigPage() {
             <Button variant="outline" onClick={() => setEditExclusion(null)}>
               Cancel
             </Button>
-            <Button onClick={handleEditExclusion}>Save Changes</Button>
+            <Button onClick={handleEditExclusion} disabled={isUpdatingExclusion}>
+              {isUpdatingExclusion && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Changes
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1596,7 +1521,8 @@ export default function ScopeConfigPage() {
             <Button variant="outline" onClick={() => setDeleteExclusion(null)}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDeleteExclusion}>
+            <Button variant="destructive" onClick={handleDeleteExclusion} disabled={isRemovingExclusion}>
+              {isRemovingExclusion && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Remove
             </Button>
           </DialogFooter>
@@ -1615,7 +1541,10 @@ export default function ScopeConfigPage() {
             <Button variant="outline" onClick={() => setIsAddScheduleOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleAddSchedule}>Create Schedule</Button>
+            <Button onClick={handleAddSchedule} disabled={isCreatingSchedule}>
+              {isCreatingSchedule && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Create Schedule
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1632,7 +1561,10 @@ export default function ScopeConfigPage() {
             <Button variant="outline" onClick={() => setEditSchedule(null)}>
               Cancel
             </Button>
-            <Button onClick={handleEditSchedule}>Save Changes</Button>
+            <Button onClick={handleEditSchedule} disabled={isUpdatingSchedule}>
+              {isUpdatingSchedule && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Changes
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1650,7 +1582,8 @@ export default function ScopeConfigPage() {
             <Button variant="outline" onClick={() => setDeleteSchedule(null)}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDeleteSchedule}>
+            <Button variant="destructive" onClick={handleDeleteSchedule} disabled={isRemovingSchedule}>
+              {isRemovingSchedule && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Delete
             </Button>
           </DialogFooter>

@@ -1,7 +1,7 @@
 "use client";
 
-import { use, useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { use, useState, useMemo, useCallback, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Header, Main } from "@/components/layout";
 import { ProfileDropdown } from "@/components/profile-dropdown";
 import { Search } from "@/components/search";
@@ -13,6 +13,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Pagination } from "@/components/ui/pagination";
 import {
   Card,
   CardContent,
@@ -84,12 +86,25 @@ import {
   X,
   Link,
   Eye,
+  Building2,
+  User,
+  Mail,
+  Tags,
+  Package,
+  FileSearch,
+  RefreshCw,
 } from "lucide-react";
 import {
-  getAssetGroupById,
-  getAssetsByGroupId,
-  getFindingsByGroupId,
+  useAssetGroup,
+  useGroupAssets,
+  useGroupFindings,
+  useUpdateAssetGroup,
+  useDeleteAssetGroup,
+  useRemoveAssetsFromGroup,
+  useAddAssetsToGroup,
 } from "@/features/asset-groups";
+import { useAssets } from "@/features/assets/hooks/use-assets";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 type Environment = "production" | "staging" | "development" | "testing";
 type Criticality = "critical" | "high" | "medium" | "low";
@@ -135,13 +150,43 @@ export default function AssetGroupDetailPage({ params }: PageProps) {
   const { id } = use(params);
   const router = useRouter();
 
-  // Data - must be called before any early returns
-  const group = getAssetGroupById(id);
-  const assets = useMemo(() => getAssetsByGroupId(id), [id]);
-  const findings = useMemo(() => getFindingsByGroupId(id), [id]);
+  // Data fetching with hooks
+  const { data: group, isLoading: groupLoading, mutate: refreshGroup } = useAssetGroup(id);
+  const { data: assets, isLoading: _assetsLoading } = useGroupAssets(id);
+  const { data: findings, isLoading: _findingsLoading } = useGroupFindings(id);
+
+  // Mutations
+  const { trigger: updateGroup, isMutating: isUpdating } = useUpdateAssetGroup(id);
+  const { trigger: deleteGroup, isMutating: isDeleting } = useDeleteAssetGroup(id);
+  const { trigger: removeAssets, isMutating: isRemovingAssets } = useRemoveAssetsFromGroup(id);
+  const { trigger: addAssets, isMutating: isAddingAssets } = useAddAssetsToGroup(id);
+
+  // URL Search Params for tab sync
+  const searchParams = useSearchParams();
+  const tabFromUrl = searchParams.get("tab");
 
   // UI State - must be called before any early returns
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState(tabFromUrl || "overview");
+
+  // Sync tab with URL
+  useEffect(() => {
+    if (tabFromUrl && tabFromUrl !== activeTab) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [tabFromUrl, activeTab]);
+
+  // Update URL when tab changes
+  const handleTabChange = useCallback((tab: string) => {
+    setActiveTab(tab);
+    const params = new URLSearchParams(searchParams.toString());
+    if (tab === "overview") {
+      params.delete("tab");
+    } else {
+      params.set("tab", tab);
+    }
+    const newUrl = params.toString() ? `?${params.toString()}` : window.location.pathname;
+    router.replace(newUrl, { scroll: false });
+  }, [searchParams, router]);
   const [assetSearch, setAssetSearch] = useState("");
   const [selectedAssets, setSelectedAssets] = useState<string[]>([]);
 
@@ -149,6 +194,31 @@ export default function AssetGroupDetailPage({ params }: PageProps) {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [removeAssetsDialogOpen, setRemoveAssetsDialogOpen] = useState(false);
+  const [addAssetsDialogOpen, setAddAssetsDialogOpen] = useState(false);
+  const [addAssetsSearch, setAddAssetsSearch] = useState("");
+  const [assetsToAdd, setAssetsToAdd] = useState<string[]>([]);
+
+  // Pagination State
+  const [assetsPage, setAssetsPage] = useState(1);
+  const [assetsPageSize, setAssetsPageSize] = useState(10);
+  const [findingsPage, setFindingsPage] = useState(1);
+  const [findingsPageSize, setFindingsPageSize] = useState(10);
+
+  // Add Assets Dialog Pagination
+  const [addAssetsPage, setAddAssetsPage] = useState(1);
+  const [addAssetsPageSize] = useState(20);
+
+  // Fetch assets for Add Assets dialog with server-side pagination
+  const {
+    assets: allAssets,
+    isLoading: allAssetsLoading,
+    total: allAssetsTotal,
+    totalPages: allAssetsTotalPages,
+  } = useAssets({
+    search: addAssetsSearch || undefined,
+    page: addAssetsPage,
+    pageSize: addAssetsPageSize,
+  });
 
   // Form State
   const [formData, setFormData] = useState({
@@ -156,31 +226,193 @@ export default function AssetGroupDetailPage({ params }: PageProps) {
     description: group?.description || "",
     environment: (group?.environment || "production") as Environment,
     criticality: (group?.criticality || "medium") as Criticality,
+    businessUnit: group?.businessUnit || "",
+    owner: group?.owner || "",
+    ownerEmail: group?.ownerEmail || "",
+    tags: group?.tags || [] as string[],
   });
+  const [tagInput, setTagInput] = useState("");
+
+  // Derived data from hooks - wrapped in useMemo to prevent unnecessary re-renders
+  const safeAssets = useMemo(() => assets || [], [assets]);
+  const safeFindings = useMemo(() => findings || [], [findings]);
 
   // All useMemo hooks must be called before early return
   const filteredAssets = useMemo(() => {
-    if (!assetSearch) return assets;
-    return assets.filter((a) =>
+    if (!assetSearch) return safeAssets;
+    return safeAssets.filter((a) =>
       a.name.toLowerCase().includes(assetSearch.toLowerCase())
     );
-  }, [assets, assetSearch]);
+  }, [safeAssets, assetSearch]);
+
+  // Paginated assets
+  const paginatedAssets = useMemo(() => {
+    const startIndex = (assetsPage - 1) * assetsPageSize;
+    return filteredAssets.slice(startIndex, startIndex + assetsPageSize);
+  }, [filteredAssets, assetsPage, assetsPageSize]);
+
+  const totalAssetsPages = useMemo(() => {
+    return Math.ceil(filteredAssets.length / assetsPageSize);
+  }, [filteredAssets.length, assetsPageSize]);
+
+  // Paginated findings
+  const paginatedFindings = useMemo(() => {
+    const startIndex = (findingsPage - 1) * findingsPageSize;
+    return safeFindings.slice(startIndex, startIndex + findingsPageSize);
+  }, [safeFindings, findingsPage, findingsPageSize]);
+
+  const totalFindingsPages = useMemo(() => {
+    return Math.ceil(safeFindings.length / findingsPageSize);
+  }, [safeFindings.length, findingsPageSize]);
+
+  // Available assets to add (exclude assets already in group)
+  // Search is handled server-side, only filter out assets already in group
+  const availableAssetsToAdd = useMemo(() => {
+    const groupAssetIds = new Set(safeAssets.map((a) => a.id));
+    return (allAssets || []).filter((a) => !groupAssetIds.has(a.id));
+  }, [allAssets, safeAssets]);
+
+  // Helper function to get asset detail URL based on type
+  const getAssetDetailUrl = useCallback((type: string, assetId: string) => {
+    const typeRoutes: Record<string, string> = {
+      repository: `/assets/repositories/${assetId}`,
+      domain: `/assets/domains/${assetId}`,
+      host: `/assets/hosts/${assetId}`,
+      cloud: `/assets/cloud/${assetId}`,
+      website: `/assets/websites/${assetId}`,
+      service: `/assets/services/${assetId}`,
+      api: `/assets/apis/${assetId}`,
+      database: `/assets/databases/${assetId}`,
+      container: `/assets/containers/${assetId}`,
+      serverless: `/assets/serverless/${assetId}`,
+      mobile: `/assets/mobile/${assetId}`,
+      certificate: `/assets/certificates/${assetId}`,
+      network: `/assets/networks/${assetId}`,
+      storage: `/assets/storage/${assetId}`,
+      compute: `/assets/compute/${assetId}`,
+    };
+    return typeRoutes[type.toLowerCase()] || `/assets/${assetId}`;
+  }, []);
 
   const assetsByType = useMemo(() => {
     const counts: Record<string, number> = {};
-    assets.forEach((a) => {
+    safeAssets.forEach((a) => {
       counts[a.type] = (counts[a.type] || 0) + 1;
     });
     return counts;
-  }, [assets]);
+  }, [safeAssets]);
 
   const findingsBySeverity = useMemo(() => {
     const counts: Record<string, number> = { critical: 0, high: 0, medium: 0, low: 0, info: 0 };
-    findings.forEach((f) => {
+    safeFindings.forEach((f) => {
       counts[f.severity] = (counts[f.severity] || 0) + 1;
     });
     return counts;
-  }, [findings]);
+  }, [safeFindings]);
+
+  // Pagination handlers - must be defined before early returns
+  const handleAssetsPageChange = useCallback((page: number) => {
+    setAssetsPage(page);
+    setSelectedAssets([]); // Clear selection on page change
+  }, []);
+
+  const handleAssetsPageSizeChange = useCallback((pageSize: number) => {
+    setAssetsPageSize(pageSize);
+    setAssetsPage(1); // Reset to first page
+    setSelectedAssets([]);
+  }, []);
+
+  const handleFindingsPageChange = useCallback((page: number) => {
+    setFindingsPage(page);
+  }, []);
+
+  const handleFindingsPageSizeChange = useCallback((pageSize: number) => {
+    setFindingsPageSize(pageSize);
+    setFindingsPage(1); // Reset to first page
+  }, []);
+
+  // Reset assets page when search changes
+  const handleAssetSearchChange = useCallback((value: string) => {
+    setAssetSearch(value);
+    setAssetsPage(1); // Reset to first page on new search
+    setSelectedAssets([]);
+  }, []);
+
+  // Loading state with skeleton UI
+  if (groupLoading) {
+    return (
+      <>
+        <Header fixed>
+          <div className="ms-auto flex items-center gap-2 sm:gap-4">
+            <Search />
+            <ThemeSwitch />
+            <ProfileDropdown />
+          </div>
+        </Header>
+        <Main>
+          {/* Header skeleton */}
+          <div className="flex items-center gap-4 mb-6">
+            <Button variant="ghost" size="icon" disabled>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div className="flex-1">
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-12 w-12 rounded-xl" />
+                <div>
+                  <Skeleton className="h-7 w-48 mb-2" />
+                  <Skeleton className="h-4 w-64" />
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-6 w-20 rounded-full" />
+              <Skeleton className="h-6 w-16 rounded-full" />
+            </div>
+          </div>
+
+          {/* Stats cards skeleton */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            {[...Array(4)].map((_, i) => (
+              <Card key={i}>
+                <CardHeader className="pb-2">
+                  <Skeleton className="h-4 w-24 mb-2" />
+                  <Skeleton className="h-9 w-16" />
+                </CardHeader>
+              </Card>
+            ))}
+          </div>
+
+          {/* Tabs skeleton */}
+          <Skeleton className="h-10 w-80 rounded-md mb-6" />
+
+          {/* Content skeleton */}
+          <div className="grid md:grid-cols-2 gap-6">
+            {[...Array(4)].map((_, i) => (
+              <Card key={i}>
+                <CardHeader>
+                  <Skeleton className="h-5 w-40 mb-2" />
+                  <Skeleton className="h-4 w-56" />
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {[...Array(3)].map((_, j) => (
+                      <div key={j} className="flex items-center gap-3">
+                        <Skeleton className="h-8 w-8 rounded-lg" />
+                        <div className="flex-1">
+                          <Skeleton className="h-4 w-full max-w-[200px] mb-1" />
+                          <Skeleton className="h-2 w-full" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </Main>
+      </>
+    );
+  }
 
   // Not found - early return after all hooks
   if (!group) {
@@ -227,25 +459,92 @@ export default function AssetGroupDetailPage({ params }: PageProps) {
       description: group.description || "",
       environment: group.environment as Environment,
       criticality: group.criticality as Criticality,
+      businessUnit: group.businessUnit || "",
+      owner: group.owner || "",
+      ownerEmail: group.ownerEmail || "",
+      tags: group.tags || [],
     });
+    setTagInput("");
     setEditDialogOpen(true);
   };
 
-  const handleSaveEdit = () => {
-    toast.success("Group updated successfully");
-    setEditDialogOpen(false);
+  const handleAddTag = (tag: string) => {
+    const normalizedTag = tag.trim().toLowerCase();
+    if (normalizedTag && !formData.tags.includes(normalizedTag)) {
+      setFormData({ ...formData, tags: [...formData.tags, normalizedTag] });
+    }
+    setTagInput("");
   };
 
-  const handleDelete = () => {
-    toast.success("Group deleted successfully");
-    setDeleteDialogOpen(false);
-    router.push("/asset-groups");
+  const handleRemoveTag = (tagToRemove: string) => {
+    setFormData({ ...formData, tags: formData.tags.filter((t) => t !== tagToRemove) });
   };
 
-  const handleRemoveAssets = () => {
-    toast.success(`Removed ${selectedAssets.length} assets from group`);
-    setSelectedAssets([]);
-    setRemoveAssetsDialogOpen(false);
+  const handleSaveEdit = async () => {
+    try {
+      await updateGroup({
+        name: formData.name,
+        description: formData.description || undefined,
+        environment: formData.environment,
+        criticality: formData.criticality,
+        businessUnit: formData.businessUnit || undefined,
+        owner: formData.owner || undefined,
+        ownerEmail: formData.ownerEmail || undefined,
+        tags: formData.tags.length > 0 ? formData.tags : undefined,
+      });
+      refreshGroup();
+      setEditDialogOpen(false);
+    } catch {
+      // Error already handled by hook with toast
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      await deleteGroup();
+      setDeleteDialogOpen(false);
+      router.push("/asset-groups");
+    } catch {
+      // Error already handled by hook with toast
+    }
+  };
+
+  const handleRemoveAssets = async () => {
+    try {
+      await removeAssets(selectedAssets);
+      setSelectedAssets([]);
+      setRemoveAssetsDialogOpen(false);
+      // Refresh data to get updated counts
+      refreshGroup();
+    } catch {
+      // Error already handled by hook
+    }
+  };
+
+  const handleAddAssets = async () => {
+    try {
+      await addAssets(assetsToAdd);
+      setAssetsToAdd([]);
+      setAddAssetsSearch("");
+      setAddAssetsDialogOpen(false);
+      // Refresh data to get updated counts
+      refreshGroup();
+    } catch {
+      // Error already handled by hook
+    }
+  };
+
+  const toggleAssetToAdd = (assetId: string) => {
+    setAssetsToAdd((prev) =>
+      prev.includes(assetId)
+        ? prev.filter((id) => id !== assetId)
+        : [...prev, assetId]
+    );
+  };
+
+  const handleAddAssetsSearchChange = (value: string) => {
+    setAddAssetsSearch(value);
+    setAddAssetsPage(1); // Reset to first page on new search
   };
 
   const handleExport = (format: string) => {
@@ -258,14 +557,6 @@ export default function AssetGroupDetailPage({ params }: PageProps) {
         ? prev.filter((id) => id !== assetId)
         : [...prev, assetId]
     );
-  };
-
-  const toggleAllAssets = () => {
-    if (selectedAssets.length === filteredAssets.length) {
-      setSelectedAssets([]);
-    } else {
-      setSelectedAssets(filteredAssets.map((a) => a.id));
-    }
   };
 
   return (
@@ -291,26 +582,24 @@ export default function AssetGroupDetailPage({ params }: PageProps) {
           <div className="flex-1">
             <div className="flex items-center gap-3">
               <div
-                className={`flex h-12 w-12 items-center justify-center rounded-xl ${
-                  group.criticality === "critical"
-                    ? "bg-red-500/20"
-                    : group.criticality === "high"
+                className={`flex h-12 w-12 items-center justify-center rounded-xl ${group.criticality === "critical"
+                  ? "bg-red-500/20"
+                  : group.criticality === "high"
                     ? "bg-orange-500/20"
                     : group.criticality === "medium"
-                    ? "bg-yellow-500/20"
-                    : "bg-blue-500/20"
-                }`}
+                      ? "bg-yellow-500/20"
+                      : "bg-blue-500/20"
+                  }`}
               >
                 <FolderKanban
-                  className={`h-6 w-6 ${
-                    group.criticality === "critical"
-                      ? "text-red-500"
-                      : group.criticality === "high"
+                  className={`h-6 w-6 ${group.criticality === "critical"
+                    ? "text-red-500"
+                    : group.criticality === "high"
                       ? "text-orange-500"
                       : group.criticality === "medium"
-                      ? "text-yellow-500"
-                      : "text-blue-500"
-                  }`}
+                        ? "text-yellow-500"
+                        : "text-blue-500"
+                    }`}
                 />
               </div>
               <div>
@@ -406,7 +695,7 @@ export default function AssetGroupDetailPage({ params }: PageProps) {
         </div>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="assets">
@@ -427,25 +716,32 @@ export default function AssetGroupDetailPage({ params }: PageProps) {
                   <CardDescription>Breakdown by asset type</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {Object.entries(assetsByType).map(([type, count]) => (
-                      <div key={type} className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
-                          {assetTypeIcons[type] || <Server className="h-4 w-4" />}
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-sm font-medium capitalize">{type}</span>
-                            <span className="text-sm text-muted-foreground">{count}</span>
+                  {Object.keys(assetsByType).length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-8 text-center">
+                      <Package className="h-10 w-10 text-muted-foreground/50 mb-3" />
+                      <p className="text-sm text-muted-foreground">No assets in this group yet</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {Object.entries(assetsByType).map(([type, count]) => (
+                        <div key={type} className="flex items-center gap-3">
+                          <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
+                            {assetTypeIcons[type] || <Server className="h-4 w-4" />}
                           </div>
-                          <Progress
-                            value={(count / group.assetCount) * 100}
-                            className="h-2"
-                          />
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-sm font-medium capitalize">{type}</span>
+                              <span className="text-sm text-muted-foreground">{count}</span>
+                            </div>
+                            <Progress
+                              value={(count / group.assetCount) * 100}
+                              className="h-2"
+                            />
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
@@ -483,15 +779,14 @@ export default function AssetGroupDetailPage({ params }: PageProps) {
                     <div className="flex-1">
                       <Progress
                         value={group.riskScore}
-                        className={`h-3 ${
-                          group.riskScore >= 80
-                            ? "[&>div]:bg-red-500"
-                            : group.riskScore >= 60
+                        className={`h-3 ${group.riskScore >= 80
+                          ? "[&>div]:bg-red-500"
+                          : group.riskScore >= 60
                             ? "[&>div]:bg-orange-500"
                             : group.riskScore >= 40
-                            ? "[&>div]:bg-yellow-500"
-                            : "[&>div]:bg-green-500"
-                        }`}
+                              ? "[&>div]:bg-yellow-500"
+                              : "[&>div]:bg-green-500"
+                          }`}
                       />
                       <div className="flex justify-between mt-1 text-xs text-muted-foreground">
                         <span>Low</span>
@@ -540,9 +835,70 @@ export default function AssetGroupDetailPage({ params }: PageProps) {
                         {group.criticality}
                       </Badge>
                     </div>
+                    {group.businessUnit && (
+                      <>
+                        <Separator />
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground flex items-center gap-1">
+                            <Building2 className="h-3 w-3" />
+                            Business Unit
+                          </span>
+                          <span>{group.businessUnit}</span>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Owner Info */}
+              {(group.owner || group.ownerEmail) && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      Owner
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+                        <User className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="font-medium">{group.owner || "Not assigned"}</p>
+                        {group.ownerEmail && (
+                          <p className="text-sm text-muted-foreground flex items-center gap-1">
+                            <Mail className="h-3 w-3" />
+                            {group.ownerEmail}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Tags */}
+              {group.tags && group.tags.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Tags className="h-4 w-4" />
+                      Tags
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2">
+                      {group.tags.map((tag) => (
+                        <Badge key={tag} variant="secondary">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </TabsContent>
 
@@ -573,7 +929,7 @@ export default function AssetGroupDetailPage({ params }: PageProps) {
                         </Button>
                       </>
                     )}
-                    <Button size="sm">
+                    <Button size="sm" onClick={() => setAddAssetsDialogOpen(true)}>
                       <Plus className="mr-2 h-4 w-4" />
                       Add Assets
                     </Button>
@@ -587,95 +943,149 @@ export default function AssetGroupDetailPage({ params }: PageProps) {
                   <Input
                     placeholder="Search assets..."
                     value={assetSearch}
-                    onChange={(e) => setAssetSearch(e.target.value)}
+                    onChange={(e) => handleAssetSearchChange(e.target.value)}
                     className="pl-9"
                   />
                 </div>
 
-                {/* Table */}
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-12">
-                          <Checkbox
-                            checked={
-                              filteredAssets.length > 0 &&
-                              selectedAssets.length === filteredAssets.length
-                            }
-                            onCheckedChange={toggleAllAssets}
-                          />
-                        </TableHead>
-                        <TableHead>Asset</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Risk Score</TableHead>
-                        <TableHead>Findings</TableHead>
-                        <TableHead>Last Seen</TableHead>
-                        <TableHead className="w-12"></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredAssets.map((asset) => (
-                        <TableRow key={asset.id}>
-                          <TableCell>
-                            <Checkbox
-                              checked={selectedAssets.includes(asset.id)}
-                              onCheckedChange={() => toggleAssetSelection(asset.id)}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <div className="h-8 w-8 rounded bg-muted flex items-center justify-center">
-                                {assetTypeIcons[asset.type]}
-                              </div>
-                              <span className="font-medium">{asset.name}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="capitalize">
-                              {asset.type}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant="outline"
-                              className={
-                                asset.status === "active"
-                                  ? "text-green-500 border-green-500/30 bg-green-500/10"
-                                  : asset.status === "monitoring"
-                                  ? "text-blue-500 border-blue-500/30 bg-blue-500/10"
-                                  : "text-gray-500 border-gray-500/30 bg-gray-500/10"
-                              }
-                            >
-                              {asset.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <RiskScoreBadge score={asset.riskScore} size="sm" />
-                          </TableCell>
-                          <TableCell>
-                            <span
-                              className={
-                                asset.findingCount > 0 ? "text-orange-500 font-medium" : ""
-                              }
-                            >
-                              {asset.findingCount}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {new Date(asset.lastSeen).toLocaleDateString()}
-                          </TableCell>
-                          <TableCell>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <ExternalLink className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                {/* Table or Empty State */}
+                {filteredAssets.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <div className="flex h-20 w-20 items-center justify-center rounded-full bg-muted mb-4">
+                      <Package className="h-10 w-10 text-muted-foreground" />
+                    </div>
+                    <h3 className="text-lg font-semibold mb-2">
+                      {assetSearch ? "No assets found" : "No assets in this group"}
+                    </h3>
+                    <p className="text-muted-foreground mb-4 max-w-sm">
+                      {assetSearch
+                        ? `No assets matching "${assetSearch}". Try a different search term.`
+                        : "Add assets to this group to start tracking and managing them together."}
+                    </p>
+                    {assetSearch ? (
+                      <Button variant="outline" onClick={() => setAssetSearch("")}>
+                        <X className="mr-2 h-4 w-4" />
+                        Clear Search
+                      </Button>
+                    ) : (
+                      <Button size="sm" onClick={() => setAddAssetsDialogOpen(true)}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add Assets
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="rounded-md border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-12">
+                              <Checkbox
+                                checked={
+                                  paginatedAssets.length > 0 &&
+                                  paginatedAssets.every((a) => selectedAssets.includes(a.id))
+                                }
+                                onCheckedChange={() => {
+                                  const currentPageIds = paginatedAssets.map((a) => a.id);
+                                  const allSelected = currentPageIds.every((id) => selectedAssets.includes(id));
+                                  if (allSelected) {
+                                    setSelectedAssets((prev) => prev.filter((id) => !currentPageIds.includes(id)));
+                                  } else {
+                                    setSelectedAssets((prev) => [...new Set([...prev, ...currentPageIds])]);
+                                  }
+                                }}
+                              />
+                            </TableHead>
+                            <TableHead>Asset</TableHead>
+                            <TableHead>Type</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Risk Score</TableHead>
+                            <TableHead>Findings</TableHead>
+                            <TableHead>Last Seen</TableHead>
+                            <TableHead className="w-12"></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {paginatedAssets.map((asset) => (
+                            <TableRow key={asset.id}>
+                              <TableCell>
+                                <Checkbox
+                                  checked={selectedAssets.includes(asset.id)}
+                                  onCheckedChange={() => toggleAssetSelection(asset.id)}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <div className="h-8 w-8 rounded bg-muted flex items-center justify-center">
+                                    {assetTypeIcons[asset.type]}
+                                  </div>
+                                  <span className="font-medium">{asset.name}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className="capitalize">
+                                  {asset.type}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant="outline"
+                                  className={
+                                    asset.status === "active"
+                                      ? "text-green-500 border-green-500/30 bg-green-500/10"
+                                      : asset.status === "monitoring"
+                                        ? "text-blue-500 border-blue-500/30 bg-blue-500/10"
+                                        : "text-gray-500 border-gray-500/30 bg-gray-500/10"
+                                  }
+                                >
+                                  {asset.status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <RiskScoreBadge score={asset.riskScore} size="sm" />
+                              </TableCell>
+                              <TableCell>
+                                <span
+                                  className={
+                                    asset.findingCount > 0 ? "text-orange-500 font-medium" : ""
+                                  }
+                                >
+                                  {asset.findingCount}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-muted-foreground">
+                                {new Date(asset.lastSeen).toLocaleDateString()}
+                              </TableCell>
+                              <TableCell>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => router.push(getAssetDetailUrl(asset.type, asset.id))}
+                                  title="View asset details"
+                                >
+                                  <ExternalLink className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    {/* Pagination */}
+                    {filteredAssets.length > assetsPageSize && (
+                      <Pagination
+                        currentPage={assetsPage}
+                        totalPages={totalAssetsPages}
+                        pageSize={assetsPageSize}
+                        totalItems={filteredAssets.length}
+                        onPageChange={handleAssetsPageChange}
+                        onPageSizeChange={handleAssetsPageSizeChange}
+                      />
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -690,62 +1100,116 @@ export default function AssetGroupDetailPage({ params }: PageProps) {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Finding</TableHead>
-                        <TableHead>Severity</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Asset</TableHead>
-                        <TableHead>Discovered</TableHead>
-                        <TableHead className="w-12"></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {findings.map((finding) => (
-                        <TableRow key={finding.id}>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <AlertTriangle className="h-4 w-4 text-orange-500" />
-                              <span className="font-medium">{finding.title}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className={severityColors[finding.severity]}>
-                              {finding.severity}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant="outline"
-                              className={
-                                finding.status === "resolved"
-                                  ? "text-green-500 border-green-500/30 bg-green-500/10"
-                                  : finding.status === "in_progress"
-                                  ? "text-blue-500 border-blue-500/30 bg-blue-500/10"
-                                  : "text-orange-500 border-orange-500/30 bg-orange-500/10"
-                              }
-                            >
-                              {finding.status.replace("_", " ")}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {finding.assetName}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {new Date(finding.discoveredAt).toLocaleDateString()}
-                          </TableCell>
-                          <TableCell>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                {safeFindings.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-center">
+                    {group.findingCount > 0 ? (
+                      <>
+                        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-orange-500/10 mb-4">
+                          <AlertTriangle className="h-10 w-10 text-orange-500" />
+                        </div>
+                        <h3 className="text-lg font-semibold mb-2">Loading Findings...</h3>
+                        <p className="text-muted-foreground mb-4 max-w-sm">
+                          {group.findingCount} findings are associated with this group but could not be loaded.
+                          Please try refreshing the page.
+                        </p>
+                        <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+                          <RefreshCw className="mr-2 h-4 w-4" />
+                          Refresh Page
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-green-500/10 mb-4">
+                          <FileSearch className="h-10 w-10 text-green-500" />
+                        </div>
+                        <h3 className="text-lg font-semibold mb-2">No Findings</h3>
+                        <p className="text-muted-foreground mb-4 max-w-sm">
+                          Great news! No security findings have been discovered for assets in this group.
+                        </p>
+                        <Button variant="outline" size="sm">
+                          <RefreshCw className="mr-2 h-4 w-4" />
+                          Run Security Scan
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="rounded-md border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Finding</TableHead>
+                            <TableHead>Severity</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Asset</TableHead>
+                            <TableHead>Discovered</TableHead>
+                            <TableHead className="w-12"></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {paginatedFindings.map((finding) => (
+                            <TableRow key={finding.id}>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <AlertTriangle className="h-4 w-4 text-orange-500" />
+                                  <span className="font-medium">{finding.title}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className={severityColors[finding.severity]}>
+                                  {finding.severity}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant="outline"
+                                  className={
+                                    finding.status === "resolved"
+                                      ? "text-green-500 border-green-500/30 bg-green-500/10"
+                                      : finding.status === "in_progress"
+                                        ? "text-blue-500 border-blue-500/30 bg-blue-500/10"
+                                        : "text-orange-500 border-orange-500/30 bg-orange-500/10"
+                                  }
+                                >
+                                  {finding.status.replace("_", " ")}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-muted-foreground">
+                                {finding.assetName}
+                              </TableCell>
+                              <TableCell className="text-muted-foreground">
+                                {new Date(finding.discoveredAt).toLocaleDateString()}
+                              </TableCell>
+                              <TableCell>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => router.push(`/findings/${finding.id}`)}
+                                  title="View finding details"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    {/* Pagination */}
+                    {safeFindings.length > findingsPageSize && (
+                      <Pagination
+                        currentPage={findingsPage}
+                        totalPages={totalFindingsPages}
+                        pageSize={findingsPageSize}
+                        totalItems={safeFindings.length}
+                        onPageChange={handleFindingsPageChange}
+                        onPageSizeChange={handleFindingsPageSizeChange}
+                      />
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -754,7 +1218,7 @@ export default function AssetGroupDetailPage({ params }: PageProps) {
 
       {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Asset Group</DialogTitle>
             <DialogDescription>Update the group details</DialogDescription>
@@ -816,13 +1280,81 @@ export default function AssetGroupDetailPage({ params }: PageProps) {
                 </Select>
               </div>
             </div>
+
+            <Separator />
+
+            {/* Business Context */}
+            <div className="space-y-4">
+              <h4 className="text-sm font-medium flex items-center gap-2">
+                <Building2 className="h-4 w-4" />
+                Business Context
+              </h4>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-businessUnit">Business Unit</Label>
+                <Input
+                  id="edit-businessUnit"
+                  placeholder="e.g., Technology & Engineering"
+                  value={formData.businessUnit}
+                  onChange={(e) => setFormData({ ...formData, businessUnit: e.target.value })}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-owner">Owner</Label>
+                  <Input
+                    id="edit-owner"
+                    placeholder="e.g., Nguyen Van A"
+                    value={formData.owner}
+                    onChange={(e) => setFormData({ ...formData, owner: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-ownerEmail">Owner Email</Label>
+                  <Input
+                    id="edit-ownerEmail"
+                    type="email"
+                    placeholder="e.g., a.nguyen@company.vn"
+                    value={formData.ownerEmail}
+                    onChange={(e) => setFormData({ ...formData, ownerEmail: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Tags</Label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {formData.tags.map((tag) => (
+                    <Badge key={tag} variant="secondary" className="gap-1">
+                      {tag}
+                      <X
+                        className="h-3 w-3 cursor-pointer hover:text-destructive"
+                        onClick={() => handleRemoveTag(tag)}
+                      />
+                    </Badge>
+                  ))}
+                </div>
+                <Input
+                  placeholder="Type a tag and press Enter"
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === ",") {
+                      e.preventDefault();
+                      handleAddTag(tagInput);
+                    }
+                  }}
+                />
+              </div>
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)} disabled={isUpdating}>
               Cancel
             </Button>
-            <Button onClick={handleSaveEdit} disabled={!formData.name}>
-              Save Changes
+            <Button onClick={handleSaveEdit} disabled={!formData.name || isUpdating}>
+              {isUpdating ? "Saving..." : "Save Changes"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -839,12 +1371,13 @@ export default function AssetGroupDetailPage({ params }: PageProps) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-red-500 hover:bg-red-600"
               onClick={handleDelete}
+              disabled={isDeleting}
             >
-              Delete
+              {isDeleting ? "Deleting..." : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -861,13 +1394,170 @@ export default function AssetGroupDetailPage({ params }: PageProps) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleRemoveAssets}>
-              Remove Assets
+            <AlertDialogCancel disabled={isRemovingAssets}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleRemoveAssets} disabled={isRemovingAssets}>
+              {isRemovingAssets ? "Removing..." : "Remove Assets"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Add Assets Dialog */}
+      <Dialog
+        open={addAssetsDialogOpen}
+        onOpenChange={(open) => {
+          setAddAssetsDialogOpen(open);
+          if (!open) {
+            setAddAssetsSearch("");
+            setAssetsToAdd([]);
+            setAddAssetsPage(1);
+          }
+        }}
+      >
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Add Assets to Group</DialogTitle>
+            <DialogDescription>
+              Select assets to add to &quot;{group.name}&quot;
+              {allAssetsTotal > 0 && (
+                <span className="ml-1">({allAssetsTotal} total assets)</span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-hidden space-y-4 py-4">
+            {/* Search */}
+            <div className="relative">
+              <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search assets by name or type..."
+                value={addAssetsSearch}
+                onChange={(e) => handleAddAssetsSearchChange(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+
+            {/* Selected count */}
+            {assetsToAdd.length > 0 && (
+              <div className="flex items-center justify-between px-1">
+                <span className="text-sm text-muted-foreground">
+                  {assetsToAdd.length} assets selected
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setAssetsToAdd([])}
+                  className="h-auto py-1 px-2 text-xs"
+                >
+                  Clear all
+                </Button>
+              </div>
+            )}
+
+            {/* Asset List */}
+            <ScrollArea className="h-[350px] rounded-md border">
+              {allAssetsLoading ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="flex flex-col items-center gap-2">
+                    <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Loading assets...</span>
+                  </div>
+                </div>
+              ) : availableAssetsToAdd.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full py-8">
+                  <Package className="h-10 w-10 text-muted-foreground/50 mb-3" />
+                  <p className="text-sm font-medium">
+                    {addAssetsSearch ? "No assets found" : "No available assets"}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {addAssetsSearch
+                      ? "Try a different search term"
+                      : "All assets are already in this group or no assets exist"}
+                  </p>
+                </div>
+              ) : (
+                <div className="p-2 space-y-1">
+                  {availableAssetsToAdd.map((asset) => (
+                    <button
+                      key={asset.id}
+                      onClick={() => toggleAssetToAdd(asset.id)}
+                      className={`flex items-center gap-3 w-full p-3 rounded-lg border text-left transition-colors ${
+                        assetsToAdd.includes(asset.id)
+                          ? "border-primary bg-primary/5"
+                          : "border-transparent hover:bg-accent/50"
+                      }`}
+                    >
+                      <Checkbox
+                        checked={assetsToAdd.includes(asset.id)}
+                        onCheckedChange={() => toggleAssetToAdd(asset.id)}
+                      />
+                      <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                        {assetTypeIcons[asset.type] || <Server className="h-4 w-4" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{asset.name}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <Badge variant="outline" className="text-xs capitalize">
+                            {asset.type}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            Risk: {asset.riskScore}
+                          </span>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
+
+            {/* Pagination */}
+            {allAssetsTotalPages > 1 && (
+              <div className="flex items-center justify-between pt-2 border-t">
+                <span className="text-sm text-muted-foreground">
+                  Page {addAssetsPage} of {allAssetsTotalPages}
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setAddAssetsPage((p) => Math.max(1, p - 1))}
+                    disabled={addAssetsPage <= 1 || allAssetsLoading}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setAddAssetsPage((p) => Math.min(allAssetsTotalPages, p + 1))}
+                    disabled={addAssetsPage >= allAssetsTotalPages || allAssetsLoading}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setAddAssetsDialogOpen(false)}
+              disabled={isAddingAssets}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAddAssets}
+              disabled={assetsToAdd.length === 0 || isAddingAssets}
+            >
+              {isAddingAssets
+                ? "Adding..."
+                : `Add ${assetsToAdd.length} Asset${assetsToAdd.length !== 1 ? "s" : ""}`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

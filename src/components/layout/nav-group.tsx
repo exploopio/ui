@@ -35,10 +35,12 @@ import {
 	type NavLink,
 	type NavGroup as NavGroupProps,
 } from "@/components/types";
+import { useDynamicBadges, getBadgeValue, type DynamicBadges } from "@/hooks/use-dynamic-badges";
 
 export function NavGroup({ title, items }: NavGroupProps) {
 	const { state, isMobile } = useSidebar();
 	const pathname = usePathname(); // ✅ thay cho useLocation
+	const dynamicBadges = useDynamicBadges();
 
 	return (
 		<SidebarGroup>
@@ -48,15 +50,15 @@ export function NavGroup({ title, items }: NavGroupProps) {
 					const key = "items" in item ? item.title : `${item.title}-${String(item.url)}`;
 
 					if (!("items" in item))
-						return <SidebarMenuLink key={key} item={item} pathname={pathname} />;
+						return <SidebarMenuLink key={key} item={item} pathname={pathname} dynamicBadges={dynamicBadges} />;
 
 					if (state === "collapsed" && !isMobile)
 						return (
-							<SidebarMenuCollapsedDropdown key={key} item={item} pathname={pathname} />
+							<SidebarMenuCollapsedDropdown key={key} item={item} pathname={pathname} dynamicBadges={dynamicBadges} />
 						);
 
 					return (
-						<SidebarMenuCollapsible key={key} item={item} pathname={pathname} />
+						<SidebarMenuCollapsible key={key} item={item} pathname={pathname} dynamicBadges={dynamicBadges} />
 					);
 				})}
 			</SidebarMenu>
@@ -79,8 +81,9 @@ function NavBadge({ children }: { children: ReactNode }) {
 	return <Badge className="rounded-full px-1 py-0 text-xs">{children}</Badge>;
 }
 
-function SidebarMenuLink({ item, pathname }: { item: NavLink; pathname: string }) {
+function SidebarMenuLink({ item, pathname, dynamicBadges }: { item: NavLink; pathname: string; dynamicBadges: DynamicBadges }) {
 	const { setOpenMobile } = useSidebar();
+	const badge = getBadgeValue(dynamicBadges, item.url as string, item.badge);
 	return (
 		<SidebarMenuItem>
 			<SidebarMenuButton
@@ -91,7 +94,7 @@ function SidebarMenuLink({ item, pathname }: { item: NavLink; pathname: string }
 				<Link href={item.url} onClick={() => setOpenMobile(false)}>
 					{item.icon && <item.icon />}
 					<span>{item.title}</span>
-					{item.badge && <NavBadge>{item.badge}</NavBadge>}
+					{badge && <NavBadge>{badge}</NavBadge>}
 				</Link>
 			</SidebarMenuButton>
 		</SidebarMenuItem>
@@ -101,9 +104,11 @@ function SidebarMenuLink({ item, pathname }: { item: NavLink; pathname: string }
 function SidebarMenuCollapsible({
 	item,
 	pathname,
+	dynamicBadges: _dynamicBadges,
 }: {
 	item: NavCollapsible;
 	pathname: string;
+	dynamicBadges: DynamicBadges;
 }) {
 	const { setOpenMobile } = useSidebar();
 	return (
@@ -147,9 +152,11 @@ function SidebarMenuCollapsible({
 function SidebarMenuCollapsedDropdown({
 	item,
 	pathname,
+	dynamicBadges: _dynamicBadges,
 }: {
 	item: NavCollapsible;
 	pathname: string;
+	dynamicBadges: DynamicBadges;
 }) {
 	return (
 		<SidebarMenuItem>

@@ -28,6 +28,12 @@ export interface CreateGroupFormData {
   environment: Environment;
   criticality: Criticality;
 
+  // Business Context (CTEM Scoping)
+  businessUnit: string;
+  owner: string;
+  ownerEmail: string;
+  tags: string[];
+
   // Assets
   selectedAssetIds: string[]; // Existing ungrouped assets to add
   newAssets: NewAssetFormData[]; // New assets to create
@@ -41,6 +47,10 @@ export const DEFAULT_CREATE_GROUP_FORM: CreateGroupFormData = {
   description: "",
   environment: "production",
   criticality: "medium",
+  businessUnit: "",
+  owner: "",
+  ownerEmail: "",
+  tags: [],
   selectedAssetIds: [],
   newAssets: [],
 };

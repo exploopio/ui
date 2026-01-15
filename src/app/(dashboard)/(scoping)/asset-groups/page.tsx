@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ColumnDef } from "@tanstack/react-table";
 import { Header, Main } from "@/components/layout";
@@ -30,6 +30,7 @@ import {
   X,
   SlidersHorizontal,
   Tags,
+  Search as SearchIcon,
 } from "lucide-react";
 import {
   Card,
@@ -56,6 +57,7 @@ import {
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetTitle,
 } from "@/components/ui/sheet";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
@@ -86,12 +88,18 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import {
-  mockAssetGroups,
-  getAssetGroupStats,
   CreateGroupDialog,
+  useAssetGroups,
+  useAssetGroupStats,
+  useCreateAssetGroup,
+  useUpdateAssetGroup,
+  useAddAssetsToGroup,
+  useGroupAssets,
+  useBulkAssetGroupOperations,
 } from "@/features/asset-groups";
-import { getUngroupedAssets } from "@/features/assets";
+import { useAssets } from "@/features/assets";
 import type { AssetGroup, CreateAssetGroupInput } from "@/features/asset-groups/types";
+import type { AssetGroupApiFilters } from "@/features/asset-groups/api";
 
 type Environment = "production" | "staging" | "development" | "testing";
 type Criticality = "critical" | "high" | "medium" | "low";
@@ -118,6 +126,76 @@ interface Filters {
   hasFindings: boolean | null;
 }
 
+// QuickViewAssets component for Sheet
+function QuickViewAssets({ groupId }: { groupId: string }) {
+  const { data: assets, isLoading } = useGroupAssets(groupId);
+  const router = useRouter();
+
+  if (isLoading) {
+    return (
+      <div className="rounded-xl border bg-card">
+        <div className="flex items-center justify-between p-4 border-b">
+          <span className="text-sm font-medium">Recent Assets</span>
+        </div>
+        <div className="divide-y">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="flex items-center gap-3 p-3">
+              <div className="h-8 w-8 rounded-lg bg-muted animate-pulse" />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 w-32 bg-muted animate-pulse rounded" />
+                <div className="h-3 w-20 bg-muted animate-pulse rounded" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const displayAssets = (assets || []).slice(0, 5);
+
+  return (
+    <div className="rounded-xl border bg-card">
+      <div className="flex items-center justify-between p-4 border-b">
+        <span className="text-sm font-medium">Recent Assets</span>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 text-xs"
+          onClick={() => router.push(`/asset-groups/${groupId}?tab=assets`)}
+        >
+          View All
+          <ExternalLink className="ml-1 h-3 w-3" />
+        </Button>
+      </div>
+      {displayAssets.length === 0 ? (
+        <div className="p-4 text-center text-sm text-muted-foreground">
+          No assets in this group
+        </div>
+      ) : (
+        <div className="divide-y">
+          {displayAssets.map((asset: { id: string; name: string; type: string; status?: string }) => (
+            <div key={asset.id} className="flex items-center justify-between p-3 hover:bg-muted/50">
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <FolderKanban className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium">{asset.name}</p>
+                  <p className="text-xs text-muted-foreground">{asset.type}</p>
+                </div>
+              </div>
+              <Badge variant="outline" className="text-green-500 border-green-500/30 bg-green-500/10">
+                {asset.status || "active"}
+              </Badge>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 const defaultFilters: Filters = {
   environments: [],
   criticalities: [],
@@ -125,11 +203,178 @@ const defaultFilters: Filters = {
   hasFindings: null,
 };
 
+// Add Assets Dialog Component
+interface AddAssetsDialogProps {
+  group: AssetGroup;
+  allAssets: Array<{ id: string; name: string; type: string; riskScore: number }>;
+  selectedAssetIds: string[];
+  setSelectedAssetIds: React.Dispatch<React.SetStateAction<string[]>>;
+  searchTerm: string;
+  setSearchTerm: React.Dispatch<React.SetStateAction<string>>;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+function AddAssetsDialog({
+  group,
+  allAssets,
+  selectedAssetIds,
+  setSelectedAssetIds,
+  searchTerm,
+  setSearchTerm,
+  onClose,
+  onSuccess,
+}: AddAssetsDialogProps) {
+  const { trigger: addAssets, isMutating } = useAddAssetsToGroup(group.id);
+  const { data: groupAssets } = useGroupAssets(group.id);
+  const [displayLimit, setDisplayLimit] = useState(20);
+  const PAGE_SIZE = 20;
+
+  // Get IDs of assets already in the group
+  const existingAssetIds = useMemo(() => {
+    return groupAssets?.map((a: { id: string }) => a.id) || [];
+  }, [groupAssets]);
+
+  // Filter assets and separate existing ones
+  const filteredAssets = useMemo(() => {
+    return allAssets.filter((asset) =>
+      asset.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [allAssets, searchTerm]);
+
+  // Count available (not already added) assets
+  const availableCount = filteredAssets.filter(
+    (a) => !existingAssetIds.includes(a.id)
+  ).length;
+
+  // Reset display limit when search changes
+  useEffect(() => {
+    setDisplayLimit(PAGE_SIZE);
+  }, [searchTerm]);
+
+  const displayedAssets = filteredAssets.slice(0, displayLimit);
+  const hasMore = displayLimit < filteredAssets.length;
+
+  const handleToggle = (assetId: string) => {
+    setSelectedAssetIds((prev) =>
+      prev.includes(assetId)
+        ? prev.filter((id) => id !== assetId)
+        : [...prev, assetId]
+    );
+  };
+
+  const handleLoadMore = () => {
+    setDisplayLimit((prev) => prev + PAGE_SIZE);
+  };
+
+  const handleSubmit = async () => {
+    try {
+      await addAssets(selectedAssetIds);
+      onSuccess();
+    } catch {
+      // Error handled by hook
+    }
+  };
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-lg max-h-[80vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle>Add Assets to &quot;{group.name}&quot;</DialogTitle>
+          <DialogDescription>
+            {availableCount} assets available to add.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="flex-1 overflow-hidden flex flex-col gap-4 py-4">
+          {/* Search */}
+          <div className="relative">
+            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search assets..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+
+          {/* Asset List */}
+          <div className="flex-1 overflow-y-auto border rounded-lg max-h-64">
+            {displayedAssets.length === 0 ? (
+              <div className="p-4 text-center text-muted-foreground">
+                No assets found
+              </div>
+            ) : (
+              <div className="divide-y">
+                {displayedAssets.map((asset) => {
+                  const isAlreadyAdded = existingAssetIds.includes(asset.id);
+                  return (
+                    <label
+                      key={asset.id}
+                      className={`flex items-center gap-3 p-3 ${isAlreadyAdded ? 'opacity-50 cursor-not-allowed bg-muted/30' : 'hover:bg-muted/50 cursor-pointer'}`}
+                    >
+                      <Checkbox
+                        checked={isAlreadyAdded || selectedAssetIds.includes(asset.id)}
+                        onCheckedChange={() => !isAlreadyAdded && handleToggle(asset.id)}
+                        disabled={isAlreadyAdded}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{asset.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {asset.type}
+                          {isAlreadyAdded && <span className="ml-2 text-xs">(Already in group)</span>}
+                        </p>
+                      </div>
+                      <RiskScoreBadge score={asset.riskScore} size="sm" />
+                    </label>
+                  );
+                })}
+                {/* Load More Button */}
+                {hasMore && (
+                  <div className="p-3 text-center">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleLoadMore}
+                      className="w-full"
+                    >
+                      Load more ({filteredAssets.length - displayLimit} remaining)
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {selectedAssetIds.length > 0 && (
+            <p className="text-sm text-muted-foreground">
+              {selectedAssetIds.length} asset(s) selected
+            </p>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={isMutating}>
+            Cancel
+          </Button>
+          <Button onClick={handleSubmit} disabled={selectedAssetIds.length === 0 || isMutating}>
+            {isMutating ? "Adding..." : `Add ${selectedAssetIds.length || ""} Asset${selectedAssetIds.length !== 1 ? "s" : ""}`}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function AssetGroupsPage() {
   const router = useRouter();
-  const stats = getAssetGroupStats();
+
+  // Data fetching hooks
+  const { data: stats } = useAssetGroupStats();
+  const createAssetGroup = useCreateAssetGroup();
+  const bulkOperations = useBulkAssetGroupOperations();
+
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [quickFilter, setQuickFilter] = useState("all");
 
   // Filter states
@@ -140,6 +385,7 @@ export default function AssetGroupsPage() {
   const [viewGroup, setViewGroup] = useState<AssetGroup | null>(null);
   const [editGroup, setEditGroup] = useState<AssetGroup | null>(null);
   const [deleteGroup, setDeleteGroup] = useState<AssetGroup | null>(null);
+  const [addAssetsGroup, setAddAssetsGroup] = useState<AssetGroup | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [_bulkActionType, setBulkActionType] = useState<string | null>(null);
 
@@ -149,7 +395,16 @@ export default function AssetGroupsPage() {
     description: "",
     environment: "production" as Environment,
     criticality: "medium" as Criticality,
+    businessUnit: "",
+    owner: "",
+    ownerEmail: "",
+    tags: [] as string[],
   });
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
+
+  // Add Assets state
+  const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([]);
+  const [assetSearchTerm, setAssetSearchTerm] = useState("");
 
   // Count active filters
   const activeFilterCount = useMemo(() => {
@@ -161,11 +416,37 @@ export default function AssetGroupsPage() {
     return count;
   }, [filters]);
 
-  // Filter data
-  const filteredData = useMemo(() => {
-    let data = [...mockAssetGroups];
+  // Build API filters from UI filters
+  const apiFilters = useMemo(() => {
+    const result: AssetGroupApiFilters = {}
 
-    // Quick filter
+    if (filters.environments.length > 0) {
+      result.environments = filters.environments
+    }
+    if (filters.criticalities.length > 0) {
+      result.criticalities = filters.criticalities
+    }
+    if (filters.riskScoreRange[0] > 0) {
+      result.min_risk_score = filters.riskScoreRange[0]
+    }
+    if (filters.riskScoreRange[1] < 100) {
+      result.max_risk_score = filters.riskScoreRange[1]
+    }
+    if (filters.hasFindings !== null) {
+      result.has_findings = filters.hasFindings
+    }
+
+    return result
+  }, [filters])
+
+  // Fetch data using hook
+  const { data: allGroups, isLoading, mutate: refreshData } = useAssetGroups({ filters: apiFilters })
+
+  // Apply quick filter on top of API filters
+  const filteredData = useMemo(() => {
+    let data = [...allGroups];
+
+    // Quick filter (applied client-side for responsiveness)
     if (quickFilter === "critical") {
       data = data.filter((g) => g.criticality === "critical");
     } else if (quickFilter === "high-risk") {
@@ -176,33 +457,12 @@ export default function AssetGroupsPage() {
       data = data.filter((g) => g.findingCount > 0);
     }
 
-    // Advanced filters
-    if (filters.environments.length > 0) {
-      data = data.filter((g) => filters.environments.includes(g.environment as Environment));
-    }
-    if (filters.criticalities.length > 0) {
-      data = data.filter((g) => filters.criticalities.includes(g.criticality as Criticality));
-    }
-    if (filters.riskScoreRange[0] > 0 || filters.riskScoreRange[1] < 100) {
-      data = data.filter(
-        (g) => g.riskScore >= filters.riskScoreRange[0] && g.riskScore <= filters.riskScoreRange[1]
-      );
-    }
-    if (filters.hasFindings === true) {
-      data = data.filter((g) => g.findingCount > 0);
-    } else if (filters.hasFindings === false) {
-      data = data.filter((g) => g.findingCount === 0);
-    }
-
     return data;
-  }, [quickFilter, filters]);
+  }, [allGroups, quickFilter]);
 
   const handleRefresh = () => {
-    setIsRefreshing(true);
-    setTimeout(() => {
-      setIsRefreshing(false);
-      toast.success("Asset groups refreshed");
-    }, 1000);
+    refreshData();
+    toast.success("Asset groups refreshed");
   };
 
   const handleExport = (format: string) => {
@@ -211,23 +471,41 @@ export default function AssetGroupsPage() {
     });
   };
 
-  // Get ungrouped assets for the create dialog
-  const ungroupedAssets = useMemo(() => getUngroupedAssets(), []);
+  // Get all assets for the create dialog (Backend doesn't have ungrouped filter yet)
+  const { assets: allAssets } = useAssets({ pageSize: 100 });
 
   const handleCreate = async (input: CreateAssetGroupInput) => {
-    // In real app, this would call an API
-    const totalAssets = (input.existingAssetIds?.length || 0) + (input.newAssets?.length || 0);
-    toast.success("Asset group created", {
-      description: `${input.name}${totalAssets > 0 ? ` with ${totalAssets} assets` : ""}`,
-    });
+    await createAssetGroup.trigger(input);
+    refreshData();
   };
 
-  const handleEdit = () => {
-    toast.success("Asset group updated", {
-      description: editGroup?.name,
-    });
-    setEditGroup(null);
-    resetForm();
+  // Get update mutation for current edit group
+  const updateAssetGroup = useUpdateAssetGroup(editGroup?.id || "");
+
+  const handleEdit = async () => {
+    if (!editGroup) return;
+
+    setIsEditSubmitting(true);
+    try {
+      await updateAssetGroup.trigger({
+        name: formData.name,
+        description: formData.description || undefined,
+        environment: formData.environment,
+        criticality: formData.criticality,
+        businessUnit: formData.businessUnit || undefined,
+        owner: formData.owner || undefined,
+        ownerEmail: formData.ownerEmail || undefined,
+        tags: formData.tags.length > 0 ? formData.tags : undefined,
+      });
+      refreshData();
+      setEditGroup(null);
+      resetForm();
+    } catch (error) {
+      // Error toast is handled by hook
+      console.error("Failed to update asset group:", error);
+    } finally {
+      setIsEditSubmitting(false);
+    }
   };
 
   const handleDelete = () => {
@@ -237,20 +515,23 @@ export default function AssetGroupsPage() {
     setDeleteGroup(null);
   };
 
-  const handleBulkDelete = () => {
-    toast.success(`Deleted ${selectedIds.length} groups`);
+  const handleBulkDelete = async () => {
+    await bulkOperations.bulkDelete(selectedIds);
     setSelectedIds([]);
+    refreshData();
   };
 
-  const handleBulkAction = (action: string, value?: string) => {
+  const handleBulkAction = async (action: string, value?: string) => {
     if (action === "delete") {
-      handleBulkDelete();
+      await handleBulkDelete();
     } else if (action === "change-criticality" && value) {
-      toast.success(`Changed criticality to ${value} for ${selectedIds.length} groups`);
+      await bulkOperations.bulkUpdate(selectedIds, { criticality: value });
       setSelectedIds([]);
+      refreshData();
     } else if (action === "change-environment" && value) {
-      toast.success(`Changed environment to ${value} for ${selectedIds.length} groups`);
+      await bulkOperations.bulkUpdate(selectedIds, { environment: value });
       setSelectedIds([]);
+      refreshData();
     }
     setBulkActionType(null);
   };
@@ -271,6 +552,10 @@ export default function AssetGroupsPage() {
       description: "",
       environment: "production",
       criticality: "medium",
+      businessUnit: "",
+      owner: "",
+      ownerEmail: "",
+      tags: [],
     });
   };
 
@@ -280,6 +565,10 @@ export default function AssetGroupsPage() {
       description: group.description || "",
       environment: group.environment as Environment,
       criticality: group.criticality as Criticality,
+      businessUnit: group.businessUnit || "",
+      owner: group.owner || "",
+      ownerEmail: group.ownerEmail || "",
+      tags: group.tags || [],
     });
     setEditGroup(group);
   };
@@ -319,142 +608,150 @@ export default function AssetGroupsPage() {
 
   // React Compiler handles memoization automatically
   const columns: ColumnDef<AssetGroup>[] = [
-      {
-        id: "select",
-        header: ({ table }) => (
-          <Checkbox
-            checked={table.getIsAllPageRowsSelected()}
-            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-            aria-label="Select all"
-          />
-        ),
-        cell: ({ row }) => (
-          <Checkbox
-            checked={row.getIsSelected()}
-            onCheckedChange={(value) => row.toggleSelected(!!value)}
-            aria-label="Select row"
-          />
-        ),
-        enableSorting: false,
-        enableHiding: false,
-      },
-      {
-        accessorKey: "name",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Name" />,
-        cell: ({ row }) => {
-          const group = row.original;
-          return (
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
-                <FolderKanban className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="font-medium">{group.name}</p>
-                {group.description && (
-                  <p className="text-xs text-muted-foreground line-clamp-1">
-                    {group.description}
-                  </p>
-                )}
-              </div>
+    {
+      id: "select",
+      header: ({ table }) => (
+        <Checkbox
+          checked={table.getIsAllPageRowsSelected()}
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+          aria-label="Select all"
+        />
+      ),
+      cell: ({ row }) => (
+        <Checkbox
+          checked={row.getIsSelected()}
+          onCheckedChange={(value) => row.toggleSelected(!!value)}
+          aria-label="Select row"
+        />
+      ),
+      enableSorting: false,
+      enableHiding: false,
+    },
+    {
+      accessorKey: "name",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Name" />,
+      cell: ({ row }) => {
+        const group = row.original;
+        return (
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+              <FolderKanban className="h-5 w-5 text-primary" />
             </div>
-          );
-        },
+            <div>
+              <p className="font-medium">{group.name}</p>
+              {group.description && (
+                <p className="text-xs text-muted-foreground line-clamp-1">
+                  {group.description}
+                </p>
+              )}
+            </div>
+          </div>
+        );
       },
-      {
-        accessorKey: "environment",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Environment" />,
-        cell: ({ row }) => (
-          <Badge variant="outline" className={environmentColors[row.original.environment]}>
-            {row.original.environment}
-          </Badge>
-        ),
-        filterFn: (row, id, value) => {
-          return value.includes(row.getValue(id));
-        },
+    },
+    {
+      accessorKey: "environment",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Environment" />,
+      cell: ({ row }) => (
+        <Badge variant="outline" className={environmentColors[row.original.environment]}>
+          {row.original.environment}
+        </Badge>
+      ),
+      filterFn: (row, id, value) => {
+        return value.includes(row.getValue(id));
       },
-      {
-        accessorKey: "criticality",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Criticality" />,
-        cell: ({ row }) => (
-          <Badge className={criticalityColors[row.original.criticality]}>
-            {row.original.criticality}
-          </Badge>
-        ),
-        filterFn: (row, id, value) => {
-          return value.includes(row.getValue(id));
-        },
+    },
+    {
+      accessorKey: "criticality",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Criticality" />,
+      cell: ({ row }) => (
+        <Badge className={criticalityColors[row.original.criticality]}>
+          {row.original.criticality}
+        </Badge>
+      ),
+      filterFn: (row, id, value) => {
+        return value.includes(row.getValue(id));
       },
-      {
-        accessorKey: "assetCount",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Assets" />,
-        cell: ({ row }) => (
-          <span className="font-medium">{row.original.assetCount}</span>
-        ),
+    },
+    {
+      accessorKey: "assetCount",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Assets" />,
+      cell: ({ row }) => (
+        <span className="font-medium">{row.original.assetCount}</span>
+      ),
+    },
+    {
+      accessorKey: "findingCount",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Findings" />,
+      cell: ({ row }) => {
+        const count = row.original.findingCount;
+        return (
+          <span className={count > 0 ? "font-medium text-orange-500" : "text-muted-foreground"}>
+            {count}
+          </span>
+        );
       },
-      {
-        accessorKey: "findingCount",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Findings" />,
-        cell: ({ row }) => {
-          const count = row.original.findingCount;
-          return (
-            <span className={count > 0 ? "font-medium text-orange-500" : "text-muted-foreground"}>
-              {count}
-            </span>
-          );
-        },
+    },
+    {
+      accessorKey: "riskScore",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Risk Score" />,
+      cell: ({ row }) => <RiskScoreBadge score={row.original.riskScore} size="sm" />,
+    },
+    {
+      id: "actions",
+      cell: ({ row }) => {
+        const group = row.original;
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setViewGroup(group)}>
+                <Eye className="mr-2 h-4 w-4" />
+                Quick View
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push(`/asset-groups/${group.id}`)}>
+                <ExternalLink className="mr-2 h-4 w-4" />
+                Open Full Page
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => openEditDialog(group)}>
+                <Pencil className="mr-2 h-4 w-4" />
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => {
+                setSelectedAssetIds([]);
+                setAssetSearchTerm("");
+                setAddAssetsGroup(group);
+              }}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Assets
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => handleCopyId(group.id)}>
+                <Copy className="mr-2 h-4 w-4" />
+                Copy ID
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleCopyLink(group.id)}>
+                <Link className="mr-2 h-4 w-4" />
+                Copy Link
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-red-400"
+                onClick={() => setDeleteGroup(group)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
       },
-      {
-        accessorKey: "riskScore",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Risk Score" />,
-        cell: ({ row }) => <RiskScoreBadge score={row.original.riskScore} size="sm" />,
-      },
-      {
-        id: "actions",
-        cell: ({ row }) => {
-          const group = row.original;
-          return (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setViewGroup(group)}>
-                  <Eye className="mr-2 h-4 w-4" />
-                  Quick View
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => router.push(`/asset-groups/${group.id}`)}>
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  Open Full Page
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => openEditDialog(group)}>
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Edit
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => handleCopyId(group.id)}>
-                  <Copy className="mr-2 h-4 w-4" />
-                  Copy ID
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleCopyLink(group.id)}>
-                  <Link className="mr-2 h-4 w-4" />
-                  Copy Link
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="text-red-400"
-                  onClick={() => setDeleteGroup(group)}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          );
-        },
-      },
-    ];
+    },
+  ];
 
   return (
     <>
@@ -469,11 +766,11 @@ export default function AssetGroupsPage() {
       <Main>
         <PageHeader
           title="Asset Groups"
-          description={`${filteredData.length} of ${mockAssetGroups.length} groups`}
+          description={`${filteredData.length} of ${allGroups.length} groups`}
         >
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
-              <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
+            <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isLoading}>
+              <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
               Refresh
             </Button>
             <DropdownMenu>
@@ -531,9 +828,8 @@ export default function AssetGroupsPage() {
                           <Badge
                             key={env}
                             variant={filters.environments.includes(env) ? "default" : "outline"}
-                            className={`cursor-pointer ${
-                              filters.environments.includes(env) ? "" : "hover:bg-muted"
-                            }`}
+                            className={`cursor-pointer ${filters.environments.includes(env) ? "" : "hover:bg-muted"
+                              }`}
                             onClick={() => toggleEnvironmentFilter(env)}
                           >
                             {env}
@@ -551,11 +847,10 @@ export default function AssetGroupsPage() {
                         <Badge
                           key={crit}
                           variant={filters.criticalities.includes(crit) ? "default" : "outline"}
-                          className={`cursor-pointer ${
-                            filters.criticalities.includes(crit)
-                              ? criticalityColors[crit]
-                              : "hover:bg-muted"
-                          }`}
+                          className={`cursor-pointer ${filters.criticalities.includes(crit)
+                            ? criticalityColors[crit]
+                            : "hover:bg-muted"
+                            }`}
                           onClick={() => toggleCriticalityFilter(crit)}
                         >
                           {crit}
@@ -764,9 +1059,8 @@ export default function AssetGroupsPage() {
         {/* Stats Cards - Clickable */}
         <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
           <Card
-            className={`cursor-pointer transition-colors hover:border-primary ${
-              quickFilter === "all" ? "border-primary" : ""
-            }`}
+            className={`cursor-pointer transition-colors hover:border-primary ${quickFilter === "all" ? "border-primary" : ""
+              }`}
             onClick={() => handleStatsCardClick("all")}
           >
             <CardHeader className="pb-2">
@@ -775,15 +1069,14 @@ export default function AssetGroupsPage() {
             </CardHeader>
           </Card>
           <Card
-            className={`cursor-pointer transition-colors hover:border-red-500 ${
-              quickFilter === "critical" ? "border-red-500" : ""
-            }`}
+            className={`cursor-pointer transition-colors hover:border-red-500 ${quickFilter === "critical" ? "border-red-500" : ""
+              }`}
             onClick={() => handleStatsCardClick("critical")}
           >
             <CardHeader className="pb-2">
               <CardDescription>Critical Groups</CardDescription>
               <CardTitle className="text-3xl text-red-500">
-                {stats.byCriticality.critical}
+                {stats.byCriticality?.critical ?? 0}
               </CardTitle>
             </CardHeader>
           </Card>
@@ -843,30 +1136,28 @@ export default function AssetGroupsPage() {
         <SheetContent className="sm:max-w-xl p-0 overflow-y-auto">
           <VisuallyHidden>
             <SheetTitle>Asset Group Details</SheetTitle>
+            <SheetDescription>View details of the selected asset group</SheetDescription>
           </VisuallyHidden>
           {viewGroup && (
             <>
               {/* Header with gradient background */}
-              <div className={`relative p-6 ${
-                viewGroup.criticality === "critical" ? "bg-gradient-to-br from-red-500/20 to-red-600/5" :
+              <div className={`relative p-6 ${viewGroup.criticality === "critical" ? "bg-gradient-to-br from-red-500/20 to-red-600/5" :
                 viewGroup.criticality === "high" ? "bg-gradient-to-br from-orange-500/20 to-orange-600/5" :
-                viewGroup.criticality === "medium" ? "bg-gradient-to-br from-yellow-500/20 to-yellow-600/5" :
-                "bg-gradient-to-br from-blue-500/20 to-blue-600/5"
-              }`}>
+                  viewGroup.criticality === "medium" ? "bg-gradient-to-br from-yellow-500/20 to-yellow-600/5" :
+                    "bg-gradient-to-br from-blue-500/20 to-blue-600/5"
+                }`}>
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-4">
-                    <div className={`flex h-14 w-14 items-center justify-center rounded-xl ${
-                      viewGroup.criticality === "critical" ? "bg-red-500/20" :
+                    <div className={`flex h-14 w-14 items-center justify-center rounded-xl ${viewGroup.criticality === "critical" ? "bg-red-500/20" :
                       viewGroup.criticality === "high" ? "bg-orange-500/20" :
-                      viewGroup.criticality === "medium" ? "bg-yellow-500/20" :
-                      "bg-blue-500/20"
-                    }`}>
-                      <FolderKanban className={`h-7 w-7 ${
-                        viewGroup.criticality === "critical" ? "text-red-500" :
+                        viewGroup.criticality === "medium" ? "bg-yellow-500/20" :
+                          "bg-blue-500/20"
+                      }`}>
+                      <FolderKanban className={`h-7 w-7 ${viewGroup.criticality === "critical" ? "text-red-500" :
                         viewGroup.criticality === "high" ? "text-orange-500" :
-                        viewGroup.criticality === "medium" ? "text-yellow-500" :
-                        "text-blue-500"
-                      }`} />
+                          viewGroup.criticality === "medium" ? "text-yellow-500" :
+                            "text-blue-500"
+                        }`} />
                     </div>
                     <div>
                       <h2 className="text-xl font-semibold">{viewGroup.name}</h2>
@@ -887,34 +1178,25 @@ export default function AssetGroupsPage() {
                   </Badge>
                 </div>
 
-                {/* Quick Actions */}
-                <div className="absolute top-4 right-4 flex items-center gap-1">
+                {/* Quick Actions - moved to avoid Sheet close button */}
+                <div className="flex items-center gap-1 mt-4">
                   <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
+                    variant="outline"
+                    size="sm"
+                    className="h-8"
                     onClick={() => handleCopyId(viewGroup.id)}
                   >
-                    <Copy className="h-4 w-4" />
+                    <Copy className="h-3.5 w-3.5 mr-1" />
+                    Copy ID
                   </Button>
                   <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
+                    variant="outline"
+                    size="sm"
+                    className="h-8"
                     onClick={() => handleCopyLink(viewGroup.id)}
                   >
-                    <Link className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => {
-                      setViewGroup(null);
-                      openEditDialog(viewGroup);
-                    }}
-                  >
-                    <Pencil className="h-4 w-4" />
+                    <Link className="h-3.5 w-3.5 mr-1" />
+                    Copy Link
                   </Button>
                 </div>
               </div>
@@ -952,21 +1234,19 @@ export default function AssetGroupsPage() {
                 <div className="rounded-xl border bg-card p-4">
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-sm font-medium">Risk Score Distribution</span>
-                    <span className={`text-sm font-bold ${
-                      viewGroup.riskScore >= 80 ? "text-red-500" :
+                    <span className={`text-sm font-bold ${viewGroup.riskScore >= 80 ? "text-red-500" :
                       viewGroup.riskScore >= 60 ? "text-orange-500" :
-                      viewGroup.riskScore >= 40 ? "text-yellow-500" :
-                      "text-green-500"
-                    }`}>{viewGroup.riskScore}/100</span>
+                        viewGroup.riskScore >= 40 ? "text-yellow-500" :
+                          "text-green-500"
+                      }`}>{viewGroup.riskScore}/100</span>
                   </div>
                   <div className="h-2 rounded-full bg-muted overflow-hidden">
                     <div
-                      className={`h-full rounded-full transition-all ${
-                        viewGroup.riskScore >= 80 ? "bg-red-500" :
+                      className={`h-full rounded-full transition-all ${viewGroup.riskScore >= 80 ? "bg-red-500" :
                         viewGroup.riskScore >= 60 ? "bg-orange-500" :
-                        viewGroup.riskScore >= 40 ? "bg-yellow-500" :
-                        "bg-green-500"
-                      }`}
+                          viewGroup.riskScore >= 40 ? "bg-yellow-500" :
+                            "bg-green-500"
+                        }`}
                       style={{ width: `${viewGroup.riskScore}%` }}
                     />
                   </div>
@@ -979,37 +1259,7 @@ export default function AssetGroupsPage() {
                 </div>
 
                 {/* Assets Preview */}
-                <div className="rounded-xl border bg-card">
-                  <div className="flex items-center justify-between p-4 border-b">
-                    <span className="text-sm font-medium">Recent Assets</span>
-                    <Button variant="ghost" size="sm" className="h-7 text-xs">
-                      View All
-                      <ExternalLink className="ml-1 h-3 w-3" />
-                    </Button>
-                  </div>
-                  <div className="divide-y">
-                    {[
-                      { name: "api.example.vn", type: "Domain", status: "active" },
-                      { name: "web.example.vn", type: "Website", status: "active" },
-                      { name: "192.168.1.100:443", type: "Service", status: "active" },
-                    ].map((asset, i) => (
-                      <div key={i} className="flex items-center justify-between p-3 hover:bg-muted/50">
-                        <div className="flex items-center gap-3">
-                          <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                            <FolderKanban className="h-4 w-4 text-primary" />
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium">{asset.name}</p>
-                            <p className="text-xs text-muted-foreground">{asset.type}</p>
-                          </div>
-                        </div>
-                        <Badge variant="outline" className="text-green-500 border-green-500/30 bg-green-500/10">
-                          {asset.status}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                <QuickViewAssets groupId={viewGroup.id} />
 
                 {/* Metadata */}
                 <div className="rounded-xl border bg-card p-4 space-y-3">
@@ -1029,7 +1279,7 @@ export default function AssetGroupsPage() {
                     </div>
                     <div>
                       <p className="text-muted-foreground text-xs">Owner</p>
-                      <p className="mt-0.5">Security Team</p>
+                      <p className="mt-0.5">{viewGroup.owner || "Not assigned"}</p>
                     </div>
                   </div>
                 </div>
@@ -1085,26 +1335,27 @@ export default function AssetGroupsPage() {
       <CreateGroupDialog
         open={isCreateOpen}
         onOpenChange={setIsCreateOpen}
-        ungroupedAssets={ungroupedAssets}
+        ungroupedAssets={allAssets}
         onSubmit={handleCreate}
       />
 
       {/* Edit Dialog */}
       <Dialog open={!!editGroup} onOpenChange={() => setEditGroup(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Edit Asset Group</DialogTitle>
             <DialogDescription>
               Update the group details
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
             <div className="space-y-2">
-              <Label htmlFor="edit-name">Name</Label>
+              <Label htmlFor="edit-name">Name *</Label>
               <Input
                 id="edit-name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                disabled={isEditSubmitting}
               />
             </div>
             <div className="space-y-2">
@@ -1113,6 +1364,7 @@ export default function AssetGroupsPage() {
                 id="edit-description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                disabled={isEditSubmitting}
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -1121,6 +1373,7 @@ export default function AssetGroupsPage() {
                 <Select
                   value={formData.environment}
                   onValueChange={(value: Environment) => setFormData({ ...formData, environment: value })}
+                  disabled={isEditSubmitting}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -1138,6 +1391,7 @@ export default function AssetGroupsPage() {
                 <Select
                   value={formData.criticality}
                   onValueChange={(value: Criticality) => setFormData({ ...formData, criticality: value })}
+                  disabled={isEditSubmitting}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -1151,13 +1405,54 @@ export default function AssetGroupsPage() {
                 </Select>
               </div>
             </div>
+            <Separator />
+            <div className="space-y-2">
+              <Label htmlFor="edit-businessUnit">Business Unit</Label>
+              <Input
+                id="edit-businessUnit"
+                value={formData.businessUnit}
+                onChange={(e) => setFormData({ ...formData, businessUnit: e.target.value })}
+                placeholder="e.g., Technology & Engineering"
+                disabled={isEditSubmitting}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-owner">Owner</Label>
+                <Input
+                  id="edit-owner"
+                  value={formData.owner}
+                  onChange={(e) => setFormData({ ...formData, owner: e.target.value })}
+                  placeholder="e.g., Nguyen Van A"
+                  disabled={isEditSubmitting}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-ownerEmail">Owner Email</Label>
+                <Input
+                  id="edit-ownerEmail"
+                  type="email"
+                  value={formData.ownerEmail}
+                  onChange={(e) => setFormData({ ...formData, ownerEmail: e.target.value })}
+                  placeholder="e.g., a.nguyen@company.vn"
+                  disabled={isEditSubmitting}
+                />
+              </div>
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditGroup(null)}>
+            <Button variant="outline" onClick={() => setEditGroup(null)} disabled={isEditSubmitting}>
               Cancel
             </Button>
-            <Button onClick={handleEdit} disabled={!formData.name}>
-              Save Changes
+            <Button onClick={handleEdit} disabled={!formData.name || isEditSubmitting}>
+              {isEditSubmitting ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Changes"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1184,6 +1479,29 @@ export default function AssetGroupsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Add Assets Dialog */}
+      {addAssetsGroup && (
+        <AddAssetsDialog
+          group={addAssetsGroup}
+          allAssets={allAssets || []}
+          selectedAssetIds={selectedAssetIds}
+          setSelectedAssetIds={setSelectedAssetIds}
+          searchTerm={assetSearchTerm}
+          setSearchTerm={setAssetSearchTerm}
+          onClose={() => {
+            setAddAssetsGroup(null);
+            setSelectedAssetIds([]);
+            setAssetSearchTerm("");
+          }}
+          onSuccess={() => {
+            refreshData();
+            setAddAssetsGroup(null);
+            setSelectedAssetIds([]);
+            setAssetSearchTerm("");
+          }}
+        />
+      )}
     </>
   );
 }

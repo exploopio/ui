@@ -13,6 +13,9 @@ import {
   Plus,
   CheckCircle2,
   AlertCircle,
+  Building2,
+  User,
+  Tags,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -141,7 +144,7 @@ export function ReviewStep({ data, ungroupedAssets }: ReviewStepProps) {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
                 <p className="text-xs text-muted-foreground mb-1">Environment</p>
                 <Badge variant="outline">
@@ -155,6 +158,40 @@ export function ReviewStep({ data, ungroupedAssets }: ReviewStepProps) {
                 </Badge>
               </div>
             </div>
+
+            {/* Business Context */}
+            {(data.businessUnit || data.owner || data.tags.length > 0) && (
+              <div className="border-t pt-3 mt-3 space-y-2">
+                {data.businessUnit && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="text-muted-foreground">Business Unit:</span>
+                    <span className="font-medium">{data.businessUnit}</span>
+                  </div>
+                )}
+                {data.owner && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <User className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="text-muted-foreground">Owner:</span>
+                    <span className="font-medium">{data.owner}</span>
+                    {data.ownerEmail && (
+                      <span className="text-muted-foreground">({data.ownerEmail})</span>
+                    )}
+                  </div>
+                )}
+                {data.tags.length > 0 && (
+                  <div className="flex items-center gap-2 text-sm flex-wrap">
+                    <Tags className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="text-muted-foreground">Tags:</span>
+                    {data.tags.map((tag) => (
+                      <Badge key={tag} variant="secondary" className="text-xs">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <Separator />

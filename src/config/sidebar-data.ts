@@ -113,7 +113,6 @@ export const sidebarData: SidebarData = {
           title: "Asset Groups",
           url: "/asset-groups",
           icon: FolderKanban,
-          badge: "9",
           permission: Permission.AssetsRead,
         },
         {

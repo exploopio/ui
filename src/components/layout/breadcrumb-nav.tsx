@@ -61,14 +61,29 @@ const routeLabels: Record<string, string> = {
   tenant: "Tenant",
 };
 
+// UUID regex pattern to detect dynamic route segments
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Check if a segment looks like an ID (UUID or other ID formats)
+function isIdSegment(segment: string): boolean {
+  // Check for UUID format
+  if (UUID_PATTERN.test(segment)) return true;
+  // Check for other common ID patterns (hex strings, numeric IDs)
+  if (/^[0-9a-f]{24}$/i.test(segment)) return true; // MongoDB ObjectId
+  if (/^[0-9]+$/.test(segment) && segment.length > 5) return true; // Long numeric IDs
+  return false;
+}
+
 interface BreadcrumbNavProps {
   /** Override the auto-generated page title */
   pageTitle?: string;
   /** Custom className for the breadcrumb container */
   className?: string;
+  /** Hide the last segment if it's an ID (useful for detail pages with back button) */
+  hideIdSegment?: boolean;
 }
 
-export function BreadcrumbNav({ pageTitle, className }: BreadcrumbNavProps) {
+export function BreadcrumbNav({ pageTitle, className, hideIdSegment = true }: BreadcrumbNavProps) {
   const pathname = usePathname();
 
   // Split pathname and filter empty strings
@@ -80,10 +95,24 @@ export function BreadcrumbNav({ pageTitle, className }: BreadcrumbNavProps) {
   }
 
   // Build breadcrumb items with accumulated paths
-  const breadcrumbItems = segments.map((segment, index) => {
-    const path = "/" + segments.slice(0, index + 1).join("/");
+  // Filter out ID segments from the end if hideIdSegment is true
+  const filteredSegments = [...segments];
+  if (hideIdSegment) {
+    // Remove trailing ID segments (e.g., /asset-groups/[uuid] -> /asset-groups)
+    while (filteredSegments.length > 0 && isIdSegment(filteredSegments[filteredSegments.length - 1])) {
+      filteredSegments.pop();
+    }
+  }
+
+  // If all segments were IDs, show at least home
+  if (filteredSegments.length === 0) {
+    return null;
+  }
+
+  const breadcrumbItems = filteredSegments.map((segment, index) => {
+    const path = "/" + filteredSegments.slice(0, index + 1).join("/");
     const label = routeLabels[segment] || segment.replace(/-/g, " ");
-    const isLast = index === segments.length - 1;
+    const isLast = index === filteredSegments.length - 1;
 
     return {
       path,
