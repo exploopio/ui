@@ -72,6 +72,15 @@ async function proxyRequest(
         : undefined,
     })
 
+    // Handle 204 No Content - must return response without body
+    if (response.status === 204) {
+      console.log('[Proxy] Backend response: 204 No Content')
+      return new NextResponse(null, {
+        status: 204,
+        statusText: 'No Content',
+      })
+    }
+
     // Get response body
     const responseText = await response.text()
     console.log('[Proxy] Backend response:', response.status, response.statusText, 'Body length:', responseText.length)

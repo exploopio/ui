@@ -77,12 +77,13 @@ export interface SCMConnection {
   provider: import("@/features/assets/types/asset.types").SCMProvider;
   baseUrl: string;
   apiUrl?: string;
-  authType: "oauth" | "pat" | "app";
+  authType: "token" | "oauth" | "app";
   scmOrganization?: string;
   status: SCMConnectionStatus;
   lastValidatedAt?: string;
   errorMessage?: string;
   permissions: SCMPermission[];
+  repositoryCount: number;
   createdAt: string;
   updatedAt: string;
   createdBy: string;
@@ -92,7 +93,7 @@ export interface CreateSCMConnectionInput {
   name: string;
   provider: import("@/features/assets/types/asset.types").SCMProvider;
   baseUrl?: string;
-  authType: "oauth" | "pat" | "app";
+  authType: "token" | "oauth" | "app";
   accessToken?: string;
   scmOrganization?: string;
 }

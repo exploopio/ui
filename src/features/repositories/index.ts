@@ -11,5 +11,11 @@ export * from "./types";
 // Hooks
 export * from "./hooks";
 
+// Schemas
+export * from "./schemas";
+
+// Components
+export * from "./components";
+
 // Lib (mock data, utilities)
 export * from "./lib";

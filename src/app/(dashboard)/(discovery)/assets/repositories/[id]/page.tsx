@@ -639,7 +639,7 @@ function transformToRepositoryView(asset: ApiAssetResponse): RepositoryView {
       defaultBranch: repo.default_branch,
       visibility: (repo.visibility || "private") as "public" | "private" | "internal",
       language: repo.primary_language,
-      languages: repo.languages ? repo.languages.reduce((acc, lang) => ({ ...acc, [lang]: 1 }), {} as Record<string, number>) : undefined,
+      languages: repo.languages as Record<string, number> | undefined,
       topics: repo.topics,
       // Required stats with defaults
       stars: 0,
