@@ -61,6 +61,12 @@ const DEFAULT_TIMEOUT = 30000
 let refreshPromise: Promise<boolean> | null = null
 
 /**
+ * Redirect lock to prevent multiple redirects to login
+ * Once we decide to redirect, block all further auth attempts
+ */
+let isRedirectingToLogin = false
+
+/**
  * Try to refresh the access token
  * Uses a mutex to prevent multiple concurrent refresh attempts
  * Returns true if refresh succeeded, false otherwise
@@ -68,6 +74,12 @@ let refreshPromise: Promise<boolean> | null = null
 async function tryRefreshToken(): Promise<boolean> {
   // Only attempt refresh in browser
   if (typeof window === 'undefined') {
+    return false
+  }
+
+  // If already redirecting to login, don't attempt refresh
+  if (isRedirectingToLogin) {
+    console.log('[API Client] Already redirecting to login, skipping refresh')
     return false
   }
 
@@ -109,6 +121,34 @@ async function tryRefreshToken(): Promise<boolean> {
   })()
 
   return refreshPromise
+}
+
+/**
+ * Redirect to login page and lock to prevent multiple redirects
+ */
+function redirectToLoginOnce(): void {
+  if (isRedirectingToLogin) {
+    console.log('[API Client] Already redirecting to login, skipping')
+    return
+  }
+
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  // Don't redirect if already on login page
+  if (window.location.pathname.startsWith('/login')) {
+    return
+  }
+
+  isRedirectingToLogin = true
+  console.log('[API Client] Auth failed permanently, redirecting to login')
+
+  // Clear auth state
+  useAuthStore.getState().clearAuth()
+
+  // Use hard redirect to ensure clean state
+  window.location.href = '/login'
 }
 
 // ============================================
@@ -191,19 +231,21 @@ export async function apiClient<T = unknown>(
     if (!response.ok) {
       // Handle 401 Unauthorized - try to refresh token
       if (response.status === 401 && !_skipRefreshRetry && !skipAuth) {
+        // If already redirecting, don't attempt anything
+        if (isRedirectingToLogin) {
+          console.log('[API Client] Already redirecting, skipping 401 handling')
+          const error = await parseErrorResponse(response)
+          throw new ApiClientError(error.message, error.code, error.statusCode, error.details)
+        }
+
         const refreshed = await tryRefreshToken()
         if (refreshed) {
           // Retry the original request with new token
           return apiClient<T>(endpoint, { ...options, _skipRefreshRetry: true })
         }
-        // Refresh failed - clear auth
-        useAuthStore.getState().clearAuth()
 
-        // Redirect to login if in browser and not already there
-        if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
-          console.log('[API Client] Auth failed, redirecting to login')
-          window.location.href = '/login'
-        }
+        // Refresh failed - redirect to login (this sets the lock and clears auth)
+        redirectToLoginOnce()
       }
 
       const error = await parseErrorResponse(response)

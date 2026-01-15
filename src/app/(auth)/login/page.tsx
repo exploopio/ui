@@ -25,13 +25,19 @@ export default async function SignIn({ searchParams }: LoginPageProps) {
   const hasRefreshToken = cookieStore.get(env.auth.refreshCookieName)?.value
 
   if (hasAuthToken || hasRefreshToken) {
-    // User is authenticated - check if they have a tenant
+    // User is authenticated - determine where to redirect
     const hasTenant = cookieStore.get('rediver_tenant')?.value
+    const hasPendingTenants = cookieStore.get('rediver_pending_tenants')?.value
+
     if (hasTenant) {
-      // Has tenant - redirect to dashboard
+      // User has selected a team - redirect to dashboard
       redirect('/')
+    } else if (hasPendingTenants) {
+      // User has multiple teams but hasn't selected one - redirect to select-tenant
+      redirect('/select-tenant')
     } else {
-      // No tenant - redirect to onboarding
+      // User has no teams - redirect to onboarding to create first team
+      // This preserves the original behavior for new users
       redirect('/onboarding/create-team')
     }
   }

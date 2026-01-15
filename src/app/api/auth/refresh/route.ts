@@ -89,7 +89,9 @@ export async function POST(_request: NextRequest): Promise<NextResponse> {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: 'Refresh failed' }))
       console.error('[Refresh] Backend returned error:', response.status, errorData)
-      return NextResponse.json(
+
+      // Create error response
+      const errorResponse = NextResponse.json(
         {
           success: false,
           error: {
@@ -99,6 +101,46 @@ export async function POST(_request: NextRequest): Promise<NextResponse> {
         },
         { status: response.status }
       )
+
+      // CRITICAL: Clear auth token cookies when refresh fails with 401
+      // This prevents infinite retry loop where client keeps trying to refresh with invalid token
+      // NOTE: We do NOT clear the tenant cookie - this preserves user's team selection
+      // so when they log in again, they'll automatically be in the same team
+      if (response.status === 401) {
+        console.log('[Refresh] Clearing auth token cookies due to invalid refresh token')
+
+        // Clear access token cookie
+        errorResponse.cookies.set(ACCESS_TOKEN_COOKIE, '', {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: 0,
+          path: '/',
+        })
+
+        // Clear refresh token cookie
+        errorResponse.cookies.set(REFRESH_TOKEN_COOKIE, '', {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: 0,
+          path: '/',
+        })
+
+        // Also clear the legacy refresh_token cookie name
+        errorResponse.cookies.set('rediver_refresh_token', '', {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: 0,
+          path: '/',
+        })
+
+        // DO NOT clear tenant cookie - preserve user's team selection
+        // When user logs in again, they'll be redirected to their previous team
+      }
+
+      return errorResponse
     }
 
     const data: BackendRefreshResponse = await response.json()

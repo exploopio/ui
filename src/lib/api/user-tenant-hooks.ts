@@ -6,6 +6,7 @@
 
 'use client'
 
+import * as React from 'react'
 import useSWR, { type SWRConfiguration } from 'swr'
 import { get } from './client'
 import { handleApiError } from './error-handler'
@@ -62,8 +63,18 @@ const userTenantEndpoints = {
 /**
  * Fetch current user's tenants with their roles
  *
- * NOTE: Only fetches when user has a tenant cookie (meaning they have access token).
- * New users without tenants won't have this cookie, so we skip the API call.
+ * IMPORTANT: This hook ALWAYS makes an API call to:
+ * 1. Validate the user's auth token (returns 401 if invalid)
+ * 2. Fetch the user's tenants (returns empty array if new user)
+ *
+ * The API call is essential for auth validation, even if user has no tenant cookie.
+ * TenantGate relies on this to properly redirect:
+ * - 401 error → redirect to /login
+ * - Empty tenants → redirect to /onboarding
+ * - Has tenants → show dashboard
+ *
+ * NOTE: We cannot check for refresh_token cookies because they are HttpOnly.
+ * We must always make the API call and let the server validate auth.
  *
  * @example
  * ```typescript
@@ -86,21 +97,27 @@ const userTenantEndpoints = {
  * ```
  */
 export function useMyTenants(config?: SWRConfiguration) {
-  // Check if user has tenant cookie - if not, skip API call
-  // This prevents 401 errors for new users who just logged in but have no tenants
-  const hasTenantCookie = typeof window !== 'undefined'
-    ? document.cookie.includes('rediver_tenant=')
-    : false
+  // Track if component has mounted on client
+  // This prevents SSR/hydration issues with SWR
+  const [isMounted, setIsMounted] = React.useState(false)
 
-  return useSWR<TenantMembership[]>(
-    // Only fetch if user has tenant cookie (has access token)
-    hasTenantCookie ? userTenantEndpoints.myTenants() : null,
+  React.useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  // ALWAYS make the API call to validate auth
+  // We cannot check HttpOnly cookies from client-side JavaScript
+  // The API will return 401 if user is not authenticated
+  const swrKey = isMounted ? userTenantEndpoints.myTenants() : null
+
+  const result = useSWR<TenantMembership[]>(
+    swrKey,
     async (url: string) => {
       console.log('[useMyTenants] Fetching tenants from:', url)
       try {
-        const result = await get<TenantMembership[]>(url)
-        console.log('[useMyTenants] Got tenants:', result)
-        return result
+        const response = await get<TenantMembership[]>(url)
+        console.log('[useMyTenants] Got tenants:', response)
+        return response
       } catch (error) {
         console.error('[useMyTenants] Error fetching tenants:', error)
         throw error
@@ -108,6 +125,13 @@ export function useMyTenants(config?: SWRConfiguration) {
     },
     { ...defaultConfig, ...config }
   )
+
+  // Return with custom isLoading that includes mount check
+  return {
+    ...result,
+    // Show loading if not mounted yet OR if SWR is loading
+    isLoading: !isMounted || result.isLoading,
+  }
 }
 
 /**

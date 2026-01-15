@@ -4,17 +4,18 @@
  * Tenant Gate Component
  *
  * Guards the dashboard layout based on tenant status:
- * - If user has no tenant cookie: Redirect to onboarding page
+ * - If auth is invalid: Redirect to login page (clear cookies first)
+ * - If user has no tenants: Redirect to onboarding page
  * - If user has tenant: Show normal dashboard layout with sidebar
  *
- * NOTE: Authentication is handled by proxy.ts (server-side)
- * TenantGate only handles tenant check for authenticated users
+ * IMPORTANT: We MUST wait for API response before deciding where to redirect.
+ * The proxy only checks if cookie exists, not if it's valid.
+ * So we need to let the tenant API call happen first to validate auth.
  */
 
-import { useEffect, useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useRef } from "react";
 import { useTenant } from "@/context/tenant-provider";
-import { getCookie } from "@/lib/cookies";
+import { getCookie, removeCookie } from "@/lib/cookies";
 import { Loader2 } from "lucide-react";
 
 interface TenantGateProps {
@@ -33,66 +34,114 @@ function LoadingScreen({ message = "Loading..." }: { message?: string }) {
   );
 }
 
+/**
+ * Check if error is an authentication error
+ */
+function isAuthError(error: Error): boolean {
+  const statusCode = (error as { statusCode?: number }).statusCode;
+  const code = (error as { code?: string }).code;
+  const message = error.message?.toLowerCase() || "";
+
+  return (
+    statusCode === 401 ||
+    statusCode === 403 ||
+    code === "UNAUTHORIZED" ||
+    code === "UNAUTHENTICATED" ||
+    message.includes("unauthorized") ||
+    message.includes("unauthenticated") ||
+    message.includes("invalid token") ||
+    message.includes("expired token") ||
+    message.includes("invalid refresh token") ||
+    message.includes("session expired") ||
+    message.includes("not authenticated") ||
+    message.includes("authentication failed")
+  );
+}
+
+/**
+ * Clear auth cookies and redirect to login
+ *
+ * NOTE: We only clear auth tokens, NOT the tenant cookie.
+ * This preserves the user's team selection so when they log in again,
+ * they'll automatically be in the same team.
+ *
+ * We also cannot clear HttpOnly cookies from client-side JavaScript.
+ * The server will handle clearing those via the refresh route or login page.
+ */
+function clearAuthAndRedirectToLogin() {
+  console.log("[TenantGate] Auth error detected, redirecting to login");
+
+  // Clear non-HttpOnly auth cookies (if any)
+  // Note: HttpOnly cookies (access_token, refresh_token) cannot be cleared from JS
+  // The server will handle clearing those when the user tries to use them
+  removeCookie("rediver_auth_token");
+
+  // DO NOT clear rediver_tenant - preserve user's team selection
+  // This way when they log back in, they'll be in the same team
+
+  // Use hard redirect to ensure clean state
+  window.location.href = "/login";
+}
+
 export function TenantGate({ children }: TenantGateProps) {
-  const router = useRouter();
   const { tenants, isLoading, currentTenant, error } = useTenant();
-  const [hasCheckedTenant, setHasCheckedTenant] = useState(false);
   const hasRedirected = useRef(false);
 
-  // Check for tenant cookie on mount
-  // NOTE: Authentication is handled by proxy.ts (server-side)
-  // TenantGate only handles tenant selection for authenticated users
+  // Handle authentication errors - HIGHEST PRIORITY
+  // When token is invalid, API will return 401 - redirect to login
   useEffect(() => {
-    const tenantCookie = getCookie("rediver_tenant");
-    if (!tenantCookie) {
-      console.log("[TenantGate] No tenant cookie found - redirecting to onboarding");
+    if (error && !hasRedirected.current) {
+      if (isAuthError(error)) {
+        hasRedirected.current = true;
+        clearAuthAndRedirectToLogin();
+      }
+    }
+  }, [error]);
+
+  // Handle tenant check AFTER API response
+  // Only redirect to onboarding if:
+  // 1. API call completed (not loading)
+  // 2. No auth error (error is null or not auth error)
+  // 3. User has no tenants
+  useEffect(() => {
+    // Wait for API to complete
+    if (isLoading) return;
+
+    // If there's an auth error, let the auth error handler deal with it
+    if (error && isAuthError(error)) return;
+
+    // Already redirected
+    if (hasRedirected.current) return;
+
+    // Check if user has no tenants - redirect to onboarding
+    // This means auth is valid but user hasn't created a team yet
+    if (tenants.length === 0 && !currentTenant) {
+      hasRedirected.current = true;
+      console.log("[TenantGate] No tenants found - redirecting to onboarding");
       window.location.href = "/onboarding/create-team";
       return;
     }
-    setHasCheckedTenant(true);
-  }, []);
 
-  // Handle authentication errors
-  useEffect(() => {
-    if (error) {
-      const isAuthError =
-        (error as { statusCode?: number }).statusCode === 401 ||
-        (error as { code?: string }).code === "UNAUTHORIZED" ||
-        error.message?.toLowerCase().includes("unauthorized");
-
-      if (isAuthError) {
-        const hasTenantCookie = getCookie("rediver_tenant");
-        if (hasTenantCookie) {
-          // User had a tenant but token expired - redirect to login
-          console.log("[TenantGate] Auth error with tenant cookie - redirecting to login");
-          router.push("/login");
-        } else {
-          // User logged in but has no tenant - redirect to onboarding
-          console.log("[TenantGate] Auth error, no tenant cookie - redirecting to onboarding");
-          window.location.href = "/onboarding/create-team";
-        }
+    // Check if user has tenants but no tenant cookie selected
+    // This can happen if cookie was cleared but auth is still valid
+    if (tenants.length > 0 && !currentTenant) {
+      const tenantCookie = getCookie("rediver_tenant");
+      if (!tenantCookie) {
+        // Auto-select the first tenant
+        console.log("[TenantGate] No tenant selected, but has tenants - selecting first one");
+        // This will be handled by the first tenant selection flow
       }
     }
-  }, [error, router]);
+  }, [isLoading, error, tenants.length, currentTenant]);
 
-  // Edge case: API returned empty tenants but user has token
-  // Handle redirect in effect to avoid React Compiler error
-  useEffect(() => {
-    if (!isLoading && hasCheckedTenant && tenants.length === 0 && !currentTenant && !hasRedirected.current) {
-      hasRedirected.current = true;
-      console.log("[TenantGate] Empty tenants - redirecting to onboarding");
-      window.location.href = "/onboarding/create-team";
-    }
-  }, [isLoading, hasCheckedTenant, tenants.length, currentTenant]);
-
-  // Wait for initial tenant check
-  if (!hasCheckedTenant) {
-    return <LoadingScreen />;
+  // Show loading while API is fetching (validating auth)
+  if (isLoading) {
+    return <LoadingScreen message="Verifying..." />;
   }
 
-  // Show loading while fetching tenants
-  if (isLoading) {
-    return <LoadingScreen />;
+  // Show loading if auth error (will redirect to login)
+  if (error && isAuthError(error)) {
+    return <LoadingScreen message="Session expired..." />;
   }
 
   // Show loading while redirecting for empty tenants

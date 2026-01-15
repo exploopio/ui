@@ -10,7 +10,7 @@
 
 import { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useForm } from 'react-hook-form'
+import { useForm, type UseFormReturn } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Building2, Link2, FileText, Loader2, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -52,7 +52,112 @@ interface CreateTeamFormProps {
   suggestedName?: string
 }
 
+// Wrapper component that handles both first team and additional team flows
 export function CreateTeamForm({ showCancel = true, isFirstTeam = false, suggestedName = '' }: CreateTeamFormProps) {
+  // For first team creation, we don't need TenantProvider context
+  // Use the simpler form that only uses server action
+  if (isFirstTeam) {
+    return (
+      <CreateFirstTeamFormInner
+        showCancel={showCancel}
+        suggestedName={suggestedName}
+      />
+    )
+  }
+
+  // For additional teams, we need TenantProvider context
+  return (
+    <CreateAdditionalTeamFormInner
+      showCancel={showCancel}
+      suggestedName={suggestedName}
+    />
+  )
+}
+
+// ============================================
+// FIRST TEAM FORM (no TenantProvider needed)
+// ============================================
+
+function CreateFirstTeamFormInner({ showCancel, suggestedName }: { showCancel: boolean; suggestedName: string }) {
+  const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const form = useForm<CreateTenantInput>({
+    resolver: zodResolver(createTenantSchema),
+    defaultValues: {
+      name: suggestedName ? `${suggestedName}'s Team` : '',
+      slug: suggestedName ? generateSlug(suggestedName) : '',
+      description: '',
+    },
+    mode: 'onChange',
+  })
+
+  const watchName = form.watch('name')
+
+  // Auto-generate slug from name if not manually edited
+  useEffect(() => {
+    if (!isSlugManuallyEdited && watchName) {
+      const generatedSlug = generateSlug(watchName)
+      form.setValue('slug', generatedSlug, { shouldValidate: true })
+    }
+  }, [watchName, isSlugManuallyEdited, form])
+
+  const handleSlugChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setIsSlugManuallyEdited(true)
+    const value = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')
+    form.setValue('slug', value, { shouldValidate: true })
+  }, [form])
+
+  const onSubmit = async (data: CreateTenantInput) => {
+    setIsSubmitting(true)
+
+    try {
+      console.log('[CreateTeamForm] Creating first team via server action')
+      const result = await createFirstTeamAction({
+        teamName: data.name,
+        teamSlug: data.slug,
+      })
+
+      if (result.success && result.tenant) {
+        toast.success('Team created successfully', {
+          description: `Welcome to ${result.tenant.name}!`,
+        })
+
+        // Force full page reload to pick up new cookies
+        window.location.href = '/'
+      } else {
+        throw new Error(result.error || 'Failed to create team')
+      }
+    } catch (error) {
+      console.error('Failed to create team:', error)
+      handleFormError(error, form)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const slugValue = form.watch('slug')
+  const isFormValid = form.formState.isValid
+
+  return (
+    <CreateTeamFormUI
+      form={form}
+      onSubmit={onSubmit}
+      handleSlugChange={handleSlugChange}
+      slugValue={slugValue}
+      isFormValid={isFormValid}
+      isSubmitting={isSubmitting}
+      isMutating={false}
+      showCancel={showCancel}
+    />
+  )
+}
+
+// ============================================
+// ADDITIONAL TEAM FORM (requires TenantProvider)
+// ============================================
+
+function CreateAdditionalTeamFormInner({ showCancel, suggestedName }: { showCancel: boolean; suggestedName: string }) {
   const router = useRouter()
   const { refreshTenants, switchTeam } = useTenant()
   const { trigger, isMutating } = useCreateTenant()
@@ -89,72 +194,33 @@ export function CreateTeamForm({ showCancel = true, isFirstTeam = false, suggest
     setIsSubmitting(true)
 
     try {
-      if (isFirstTeam) {
-        // Use server action for first team (uses refresh token)
-        console.log('[CreateTeamForm] Creating first team via server action')
-        const result = await createFirstTeamAction({
-          teamName: data.name,
-          teamSlug: data.slug,
+      console.log('[CreateTeamForm] Creating additional team via API')
+      const result = await trigger({
+        name: data.name,
+        slug: data.slug,
+        description: data.description || undefined,
+      })
+
+      if (result) {
+        toast.success('Team created successfully', {
+          description: `Welcome to ${result.name}!`,
         })
 
-        if (result.success && result.tenant) {
-          toast.success('Team created successfully', {
-            description: `Welcome to ${result.tenant.name}!`,
-          })
+        // Refresh tenants list
+        await refreshTenants()
 
-          // Force full page reload to pick up new cookies
-          // router.push() doesn't work here because TenantGate state needs to be reset
-          window.location.href = '/'
-        } else {
-          throw new Error(result.error || 'Failed to create team')
-        }
-      } else {
-        // Use mutation hook for additional teams (uses access token)
-        console.log('[CreateTeamForm] Creating additional team via API')
-        const result = await trigger({
-          name: data.name,
-          slug: data.slug,
-          description: data.description || undefined,
-        })
-
-        if (result) {
-          toast.success('Team created successfully', {
-            description: `Welcome to ${result.name}!`,
-          })
-
-          // Refresh tenants list
-          await refreshTenants()
-
-          // Switch to the new team
-          try {
-            await switchTeam(result.id)
-            router.push('/')
-          } catch {
-            // If switch fails, just redirect to dashboard
-            router.push('/')
-          }
+        // Switch to the new team
+        try {
+          await switchTeam(result.id)
+          router.push('/')
+        } catch {
+          // If switch fails, just redirect to dashboard
+          router.push('/')
         }
       }
     } catch (error) {
       console.error('Failed to create team:', error)
-
-      // Handle specific error cases
-      if (error instanceof Error) {
-        if (error.message.includes('slug') || error.message.includes('already exists') || error.message.includes('already taken')) {
-          form.setError('slug', {
-            type: 'manual',
-            message: 'This URL is already taken. Please choose another one.',
-          })
-        } else {
-          toast.error('Failed to create team', {
-            description: error.message,
-          })
-        }
-      } else {
-        toast.error('Failed to create team', {
-          description: 'An unexpected error occurred. Please try again.',
-        })
-      }
+      handleFormError(error, form)
     } finally {
       setIsSubmitting(false)
     }
@@ -163,6 +229,48 @@ export function CreateTeamForm({ showCancel = true, isFirstTeam = false, suggest
   const slugValue = form.watch('slug')
   const isFormValid = form.formState.isValid
 
+  return (
+    <CreateTeamFormUI
+      form={form}
+      onSubmit={onSubmit}
+      handleSlugChange={handleSlugChange}
+      slugValue={slugValue}
+      isFormValid={isFormValid}
+      isSubmitting={isSubmitting}
+      isMutating={isMutating}
+      showCancel={showCancel}
+      onCancel={() => router.back()}
+    />
+  )
+}
+
+// ============================================
+// SHARED UI COMPONENT
+// ============================================
+
+interface CreateTeamFormUIProps {
+  form: UseFormReturn<CreateTenantInput>
+  onSubmit: (data: CreateTenantInput) => Promise<void>
+  handleSlugChange: (e: React.ChangeEvent<HTMLInputElement>) => void
+  slugValue: string
+  isFormValid: boolean
+  isSubmitting: boolean
+  isMutating: boolean
+  showCancel: boolean
+  onCancel?: () => void
+}
+
+function CreateTeamFormUI({
+  form,
+  onSubmit,
+  handleSlugChange,
+  slugValue,
+  isFormValid,
+  isSubmitting,
+  isMutating,
+  showCancel,
+  onCancel,
+}: CreateTeamFormUIProps) {
   return (
     <Card className="w-full max-w-lg">
       <CardHeader>
@@ -192,7 +300,7 @@ export function CreateTeamForm({ showCancel = true, isFirstTeam = false, suggest
                     <Input
                       placeholder="Acme Corporation"
                       autoFocus
-                      disabled={isMutating}
+                      disabled={isMutating || isSubmitting}
                       {...field}
                     />
                   </FormControl>
@@ -222,7 +330,7 @@ export function CreateTeamForm({ showCancel = true, isFirstTeam = false, suggest
                       <Input
                         placeholder="acme-corp"
                         className="rounded-l-none"
-                        disabled={isMutating}
+                        disabled={isMutating || isSubmitting}
                         {...field}
                         onChange={handleSlugChange}
                       />
@@ -261,7 +369,7 @@ export function CreateTeamForm({ showCancel = true, isFirstTeam = false, suggest
                     <Textarea
                       placeholder="A brief description of your team..."
                       rows={3}
-                      disabled={isMutating}
+                      disabled={isMutating || isSubmitting}
                       {...field}
                     />
                   </FormControl>
@@ -274,12 +382,12 @@ export function CreateTeamForm({ showCancel = true, isFirstTeam = false, suggest
             />
           </CardContent>
 
-          <CardFooter className={`flex border-t pt-6 ${showCancel ? 'justify-between' : 'justify-end'}`}>
-            {showCancel && (
+          <CardFooter className={`flex border-t pt-6 ${showCancel && onCancel ? 'justify-between' : 'justify-end'}`}>
+            {showCancel && onCancel && (
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => router.back()}
+                onClick={onCancel}
                 disabled={isMutating || isSubmitting}
               >
                 Cancel
@@ -303,4 +411,27 @@ export function CreateTeamForm({ showCancel = true, isFirstTeam = false, suggest
       </Form>
     </Card>
   )
+}
+
+// ============================================
+// HELPERS
+// ============================================
+
+function handleFormError(error: unknown, form: UseFormReturn<CreateTenantInput>) {
+  if (error instanceof Error) {
+    if (error.message.includes('slug') || error.message.includes('already exists') || error.message.includes('already taken')) {
+      form.setError('slug', {
+        type: 'manual',
+        message: 'This URL is already taken. Please choose another one.',
+      })
+    } else {
+      toast.error('Failed to create team', {
+        description: error.message,
+      })
+    }
+  } else {
+    toast.error('Failed to create team', {
+      description: 'An unexpected error occurred. Please try again.',
+    })
+  }
 }

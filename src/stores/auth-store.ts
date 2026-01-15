@@ -92,6 +92,9 @@ export const useAuthStore = create<AuthState>()(
           const expiresIn = getTimeUntilExpiry(accessToken)
           const expiresAt = Date.now() + expiresIn * 1000
 
+          // Reset auth failure flag on successful login
+          authPermanentlyFailed = false
+
           set({
             status: 'authenticated',
             user,
@@ -259,6 +262,9 @@ let authRefreshTimeout: ReturnType<typeof setTimeout> | null = null
 // Token refresh mutex - shared with API client via module-level state
 let isRefreshingToken = false
 
+// Flag to completely stop auto-refresh when auth has permanently failed
+let authPermanentlyFailed = false
+
 /**
  * Setup automatic token refresh before expiry
  * Automatically refreshes the access token 5 minutes before expiry.
@@ -272,6 +278,12 @@ function setupTokenRefresh(expiresIn: number): void {
     authRefreshTimeout = null
   }
 
+  // Don't setup refresh if auth has permanently failed
+  if (authPermanentlyFailed) {
+    console.log('[Auth] Auth permanently failed, not setting up auto-refresh')
+    return
+  }
+
   // Only setup refresh if token has reasonable expiry
   if (expiresIn < 60 || expiresIn > 86400) return // 1 min to 24 hours
 
@@ -280,6 +292,12 @@ function setupTokenRefresh(expiresIn: number): void {
 
   if (typeof window !== 'undefined') {
     authRefreshTimeout = setTimeout(async () => {
+      // Skip if auth has permanently failed
+      if (authPermanentlyFailed) {
+        console.log('[Auth] Auth permanently failed, skipping scheduled refresh')
+        return
+      }
+
       // Skip if already refreshing (prevents race with API client refresh)
       if (isRefreshingToken) {
         console.log('[Auth] Token refresh already in progress, skipping scheduled refresh')
@@ -301,14 +319,15 @@ function setupTokenRefresh(expiresIn: number): void {
           console.log('[Auth] Token refreshed successfully')
           useAuthStore.getState().updateToken(data.data.access_token)
         } else {
-          // Refresh failed - clear auth and redirect to login
-          console.warn('[Auth] Token refresh failed:', data.error?.message || 'Unknown error')
+          // Refresh failed permanently - set flag and redirect
+          console.warn('[Auth] Token refresh failed permanently:', data.error?.message || 'Unknown error')
+          authPermanentlyFailed = true
           useAuthStore.getState().clearAuth()
           redirectToLogin()
         }
       } catch (error) {
         console.error('[Auth] Token refresh error:', error)
-        // Network error or other failure - clear auth
+        // Network error - don't set permanently failed, just clear auth
         useAuthStore.getState().clearAuth()
         redirectToLogin()
       } finally {
@@ -319,6 +338,13 @@ function setupTokenRefresh(expiresIn: number): void {
       }
     }, refreshIn)
   }
+}
+
+/**
+ * Reset auth failure flag (call on successful login)
+ */
+export function resetAuthFailureFlag(): void {
+  authPermanentlyFailed = false
 }
 
 // ============================================
