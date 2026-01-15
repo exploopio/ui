@@ -16,6 +16,14 @@ export interface AssetGroup {
   description?: string;
   environment: Environment;
   criticality: Criticality;
+
+  // Business Context (CTEM Scoping)
+  businessUnit?: string;
+  owner?: string;
+  ownerEmail?: string;
+  tags?: string[];
+
+  // Asset counts
   assetCount: number;
   domainCount: number;
   websiteCount: number;
@@ -25,8 +33,12 @@ export interface AssetGroup {
   projectCount: number;
   cloudCount: number;
   credentialCount: number;
+
+  // Risk metrics
   riskScore: number;
   findingCount: number;
+
+  // Timestamps
   createdAt: string;
   updatedAt: string;
 }
@@ -56,6 +68,12 @@ export interface CreateAssetGroupInput {
   environment: Environment;
   criticality: Criticality;
 
+  // Business Context (CTEM Scoping)
+  businessUnit?: string;
+  owner?: string;
+  ownerEmail?: string;
+  tags?: string[];
+
   /**
    * New assets to create and add to this group
    * These assets will be created along with the group
@@ -76,6 +94,12 @@ export interface UpdateAssetGroupInput {
   description?: string;
   environment?: Environment;
   criticality?: Criticality;
+
+  // Business Context (CTEM Scoping)
+  businessUnit?: string;
+  owner?: string;
+  ownerEmail?: string;
+  tags?: string[];
 }
 
 /**

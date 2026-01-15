@@ -26,6 +26,12 @@ export const createAssetGroupSchema = z.object({
   description: z.string().max(500, "Description must be less than 500 characters").optional(),
   environment: environmentSchema,
   criticality: criticalitySchema,
+  // Business Context (CTEM Scoping)
+  businessUnit: z.string().max(100, "Business unit must be less than 100 characters").optional(),
+  owner: z.string().max(100, "Owner name must be less than 100 characters").optional(),
+  ownerEmail: z.string().email("Invalid email format").optional().or(z.literal("")),
+  tags: z.array(z.string().max(50)).max(20, "Maximum 20 tags allowed").optional(),
+  // Assets
   existingAssetIds: z.array(z.string()).optional(),
   newAssets: z
     .array(
@@ -49,6 +55,11 @@ export const updateAssetGroupSchema = z.object({
   description: z.string().max(500, "Description must be less than 500 characters").optional(),
   environment: environmentSchema.optional(),
   criticality: criticalitySchema.optional(),
+  // Business Context (CTEM Scoping)
+  businessUnit: z.string().max(100, "Business unit must be less than 100 characters").optional(),
+  owner: z.string().max(100, "Owner name must be less than 100 characters").optional(),
+  ownerEmail: z.string().email("Invalid email format").optional().or(z.literal("")),
+  tags: z.array(z.string().max(50)).max(20, "Maximum 20 tags allowed").optional(),
 });
 
 // Add Assets to Group Schema

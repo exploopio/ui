@@ -8,6 +8,9 @@
 // Types
 export * from "./types";
 
+// API Types and Hooks
+export * from "./api";
+
 // Utilities
 export * from "./lib/scope-matcher";
 

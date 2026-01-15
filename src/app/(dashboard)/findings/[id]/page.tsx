@@ -7,8 +7,12 @@ import { ThemeSwitch } from "@/components/theme-switch";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft } from "lucide-react";
-import { getFindingById } from "@/features/findings";
+import { useFindingApi } from "@/features/findings/api/use-findings-api";
+import type { ApiFinding } from "@/features/findings/api/finding-api.types";
+import type { FindingDetail, FindingStatus, Activity } from "@/features/findings/types";
+import type { Severity } from "@/features/shared/types";
 import {
   FindingHeader,
   OverviewTab,
@@ -18,14 +22,202 @@ import {
   ActivityPanel,
 } from "@/features/findings/components/detail";
 
+/**
+ * Transform API response to FindingDetail format for UI components
+ */
+function transformApiToFindingDetail(api: ApiFinding): FindingDetail {
+  // Map API status to internal status
+  const statusMap: Record<string, FindingStatus> = {
+    open: "new",
+    confirmed: "confirmed",
+    in_progress: "in_progress",
+    resolved: "resolved",
+    false_positive: "false_positive",
+    accepted: "closed",
+    wont_fix: "closed",
+  };
+
+  // Create initial activity from creation
+  const activities: Activity[] = [
+    {
+      id: `act-created-${api.id}`,
+      type: "created",
+      actor: "system",
+      content: `Discovered by ${api.tool_name}`,
+      metadata: {
+        source: api.source,
+        scanId: api.scan_id,
+      },
+      createdAt: api.created_at,
+    },
+  ];
+
+  // Add status change activity if resolved
+  if (api.resolved_at) {
+    activities.unshift({
+      id: `act-resolved-${api.id}`,
+      type: "status_changed",
+      actor: api.resolved_by
+        ? { id: "resolver", name: api.resolved_by, email: "", role: "analyst" }
+        : "system",
+      previousValue: "in_progress",
+      newValue: "resolved",
+      content: api.resolution || "Finding resolved",
+      createdAt: api.resolved_at,
+    });
+  }
+
+  return {
+    id: api.id,
+    title: api.message,
+    description: api.snippet || api.message,
+    severity: api.severity as Severity,
+    status: statusMap[api.status] || "new",
+
+    // Technical details from metadata
+    cvss: (api.metadata?.cvss as number) || undefined,
+    cvssVector: (api.metadata?.cvss_vector as string) || undefined,
+    cve: (api.metadata?.cve as string) || undefined,
+    cwe: (api.metadata?.cwe as string) || undefined,
+    owasp: (api.metadata?.owasp as string) || undefined,
+    tags: (api.metadata?.tags as string[]) || [],
+
+    // Asset - create from asset_id
+    assets: [
+      {
+        id: api.asset_id,
+        type: "repository",
+        name: api.location || api.file_path || api.asset_id,
+        url: api.file_path,
+      },
+    ],
+
+    // Evidence - empty for now (can be fetched separately)
+    evidence: api.snippet
+      ? [
+          {
+            id: `ev-snippet-${api.id}`,
+            type: "code",
+            title: "Code Snippet",
+            content: api.snippet,
+            mimeType: "text/plain",
+            createdAt: api.created_at,
+            createdBy: {
+              id: "system",
+              name: api.tool_name,
+              email: "scanner@rediver.io",
+              role: "admin",
+            },
+          },
+        ]
+      : [],
+
+    // Remediation - basic structure
+    remediation: {
+      description: api.resolution || "Review and fix the identified issue.",
+      steps: [],
+      references: (api.metadata?.references as string[]) || [],
+      progress: api.status === "resolved" ? 100 : 0,
+    },
+
+    // Source info
+    source: api.source === "sast" ? "manual" : "nuclei",
+    scanner: api.tool_name,
+    scanId: api.scan_id,
+
+    // Relations - empty for now
+    relatedFindings: [],
+
+    // Timestamps
+    discoveredAt: api.created_at,
+    resolvedAt: api.resolved_at,
+    createdAt: api.created_at,
+    updatedAt: api.updated_at,
+
+    // Activities
+    activities,
+  };
+}
+
+function LoadingSkeleton() {
+  return (
+    <div className="flex h-full gap-4 lg:gap-6">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <Card className="mb-4 flex-shrink-0">
+          <CardContent className="pt-6">
+            <Skeleton className="h-8 w-3/4 mb-4" />
+            <div className="flex gap-2 mb-4">
+              <Skeleton className="h-6 w-20" />
+              <Skeleton className="h-6 w-24" />
+            </div>
+            <Skeleton className="h-4 w-1/2" />
+          </CardContent>
+        </Card>
+        <Card className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <CardHeader className="flex-shrink-0 pb-0">
+            <div className="flex gap-2">
+              <Skeleton className="h-10 w-24" />
+              <Skeleton className="h-10 w-24" />
+              <Skeleton className="h-10 w-28" />
+              <Skeleton className="h-10 w-20" />
+            </div>
+          </CardHeader>
+          <CardContent className="flex-1 overflow-auto p-6 pt-4">
+            <div className="space-y-4">
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-32 w-full" />
+              <Skeleton className="h-20 w-full" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      <Card className="hidden w-[320px] flex-shrink-0 overflow-hidden xl:w-[380px] lg:flex lg:flex-col">
+        <CardHeader className="flex-shrink-0 pb-2">
+          <Skeleton className="h-6 w-20" />
+        </CardHeader>
+        <div className="flex-1 overflow-hidden p-4">
+          <div className="space-y-4">
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-16 w-full" />
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
 export default function FindingDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
 
-  const finding = getFindingById(id);
+  const { data: apiFinding, error, isLoading } = useFindingApi(id);
 
-  if (!finding) {
+  // Transform API data to FindingDetail format
+  const finding = apiFinding ? transformApiToFindingDetail(apiFinding) : null;
+
+  if (isLoading) {
+    return (
+      <>
+        <Header fixed>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => router.push("/findings")}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Findings
+          </Button>
+        </Header>
+        <Main fixed>
+          <LoadingSkeleton />
+        </Main>
+      </>
+    );
+  }
+
+  if (error || !finding) {
     return (
       <>
         <Header fixed>
