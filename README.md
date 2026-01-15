@@ -47,6 +47,21 @@ Rediver is an enterprise-grade Attack Surface Management (ASM) and Vulnerability
 
 ---
 
+## 📚 Documentation
+
+| Guide | Description |
+|-------|-------------|
+| [Getting Started](https://docs.rediver.io/docs/getting-started) | Quick start guide |
+| [Development Setup](https://docs.rediver.io/docs/development-setup) | IDE, debugging, testing |
+| [Authentication](https://docs.rediver.io/docs/guides/authentication) | JWT & OIDC auth flow |
+| [Multi-tenancy](https://docs.rediver.io/docs/guides/multi-tenancy) | Teams & tenant switching |
+| [Permissions](https://docs.rediver.io/docs/guides/permissions) | Role-based access control |
+| [API Reference](https://docs.rediver.io/docs/api/reference) | Complete API endpoints |
+| [Configuration](https://docs.rediver.io/docs/operations/configuration) | Environment variables |
+| [Troubleshooting](https://docs.rediver.io/docs/operations/troubleshooting) | Common issues |
+
+---
+
 ## 🛠️ Tech Stack
 
 **Framework & Runtime:**
