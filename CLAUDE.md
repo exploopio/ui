@@ -390,6 +390,31 @@ selectedItem?.property
 {selectedItem.tags && selectedItem.tags.map(...)}
 ```
 
+## 🔄 CI/CD Workflows
+
+### PR to main/develop
+```
+├── quality (type-check + lint + prettier)  ─┐
+└── test                                     ─┴── Done (no build)
+```
+
+### Push to main/develop
+```
+├── quality ─┐
+└── test    ─┴── build ── Done
+```
+
+### Tag Release (v*)
+```
+prepare ── build (amd64) ─┐
+         ── build (arm64) ─┴── merge ── Push to Docker Hub
+```
+
+**Notes:**
+- PRs skip build to save time (quality + test is enough for review)
+- Docker builds run in parallel for amd64/arm64
+- All builds use GitHub Actions cache for faster subsequent runs
+
 ## 🚀 Claude Code Usage
 
 | Task | Prompt | Result |
