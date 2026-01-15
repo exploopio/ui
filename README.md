@@ -1,8 +1,11 @@
 # Rediver CTEM Platform
 
-Continuous Threat Exposure Management (CTEM) platform built with Next.js 16, featuring the complete 5-stage CTEM process: Scoping, Discovery, Prioritization, Validation, and Mobilization.
+[![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=next.js)](https://nextjs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript)](https://www.typescriptlang.org)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Docker](https://img.shields.io/badge/Docker-Hub-2496ED?logo=docker)](https://hub.docker.com/r/rediverio/rediver-ui)
 
-![Rediver Dashboard](docs/images/dashboard.png)
+Continuous Threat Exposure Management (CTEM) platform built with Next.js 16, featuring the complete 5-stage CTEM process: Scoping, Discovery, Prioritization, Validation, and Mobilization.
 
 ## Overview
 
