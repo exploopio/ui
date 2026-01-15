@@ -25,7 +25,7 @@ export interface ApiFinding {
   id: string
   tenant_id: string
   vulnerability_id?: string
-  project_id: string
+  asset_id: string
   component_id?: string
   source: FindingSource
   tool_name: string
@@ -128,7 +128,7 @@ export interface ApiVulnerabilityListResponse {
 // ============================================
 
 export interface CreateFindingInput {
-  project_id: string
+  asset_id: string
   vulnerability_id?: string
   component_id?: string
   source: FindingSource
@@ -157,7 +157,7 @@ export interface UpdateFindingStatusInput {
 // ============================================
 
 export interface FindingApiFilters {
-  project_id?: string
+  asset_id?: string
   component_id?: string
   vulnerability_id?: string
   severities?: Severity[]

@@ -54,7 +54,7 @@ function buildFindingsEndpoint(filters?: FindingApiFilters): string {
 
   const params = new URLSearchParams()
 
-  if (filters.project_id) params.set('project_id', filters.project_id)
+  if (filters.asset_id) params.set('asset_id', filters.asset_id)
   if (filters.component_id) params.set('component_id', filters.component_id)
   if (filters.vulnerability_id) params.set('vulnerability_id', filters.vulnerability_id)
   if (filters.tool_name) params.set('tool_name', filters.tool_name)
@@ -76,13 +76,13 @@ function buildFindingEndpoint(findingId: string): string {
   return `/api/v1/findings/${findingId}`
 }
 
-function buildProjectFindingsEndpoint(
-  projectId: string,
+function buildAssetFindingsEndpoint(
+  assetId: string,
   sort?: string,
   page?: number,
   perPage?: number
 ): string {
-  const baseUrl = `/api/v1/projects/${projectId}/findings`
+  const baseUrl = `/api/v1/assets/${assetId}/findings`
   const params = new URLSearchParams()
 
   if (sort) params.set('sort', sort)
@@ -195,10 +195,10 @@ export function useFindingApi(findingId: string | null, config?: SWRConfiguratio
 }
 
 /**
- * Fetch findings for a specific project
+ * Fetch findings for a specific asset
  */
-export function useProjectFindingsApi(
-  projectId: string | null,
+export function useAssetFindingsApi(
+  assetId: string | null,
   sort?: string,
   page?: number,
   perPage?: number,
@@ -207,8 +207,8 @@ export function useProjectFindingsApi(
   const { currentTenant } = useTenant()
 
   // Ensure user has a tenant before making requests
-  const key = currentTenant && projectId
-    ? buildProjectFindingsEndpoint(projectId, sort, page, perPage)
+  const key = currentTenant && assetId
+    ? buildAssetFindingsEndpoint(assetId, sort, page, perPage)
     : null
 
   return useSWR<ApiFindingListResponse>(

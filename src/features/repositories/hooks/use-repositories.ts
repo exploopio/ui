@@ -52,12 +52,12 @@ const defaultConfig: SWRConfiguration = {
 // ============================================
 
 function buildRepositoriesEndpoint(filters?: RepositoryFilters): string {
-  // Use assets endpoint with type=repository filter
+  // Use assets endpoint with types=repository filter
   const baseUrl = "/api/v1/assets";
   const params = new URLSearchParams();
 
-  // Always filter by repository type
-  params.set("type", "repository");
+  // Always filter by repository type (API uses 'types' plural)
+  params.set("types", "repository");
 
   if (filters) {
     // Text search

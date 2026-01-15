@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Header, Main } from "@/components/layout";
 import { ProfileDropdown } from "@/components/profile-dropdown";
@@ -48,6 +48,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -88,9 +89,11 @@ import {
   History,
   Layers,
   Timer,
+  Loader2,
 } from "lucide-react";
 import {
-  mockRepositories,
+  useRepository,
+  useRepositoryBranches,
   type RepositoryView,
   type SCMProvider,
   type Severity,
@@ -427,6 +430,235 @@ const getOverdueFindingsCount = (findings: FindingDetail[]) =>
 
 const getSLAWarningsCount = (findings: FindingDetail[]) =>
   findings.filter(f => f.sla_status === "warning").length;
+
+// ============================================
+// API Response Types & Transformation
+// ============================================
+
+interface ApiAssetResponse {
+  id: string;
+  tenant_id?: string;
+  name: string;
+  type: string;
+  criticality: string;
+  status: string;
+  scope: string;
+  exposure: string;
+  risk_score: number;
+  finding_count: number;
+  description?: string;
+  tags?: string[];
+  metadata?: Record<string, unknown>;
+  first_seen: string;
+  last_seen: string;
+  created_at: string;
+  updated_at: string;
+  repository?: {
+    asset_id: string;
+    repo_id?: string;
+    full_name: string;
+    scm_connection_id?: string;
+    scm_provider: string;
+    scm_organization?: string;
+    visibility?: string;
+    default_branch?: string;
+    primary_language?: string;
+    languages?: string[];
+    topics?: string[];
+    description?: string;
+    web_url?: string;
+    clone_url?: string;
+    created_at_source?: string;
+    updated_at_source?: string;
+    pushed_at_source?: string;
+    branch_count?: number;
+    commit_count?: number;
+    contributor_count?: number;
+    open_pr_count?: number;
+    size_kb?: number;
+    is_fork?: boolean;
+    is_archived?: boolean;
+    is_disabled?: boolean;
+    is_template?: boolean;
+    has_issues?: boolean;
+    has_wiki?: boolean;
+    security_features?: {
+      advanced_security?: boolean;
+      secret_scanning?: boolean;
+      secret_scanning_push_protection?: boolean;
+      dependabot_alerts?: boolean;
+      dependabot_updates?: boolean;
+      code_scanning?: boolean;
+    };
+    scan_settings?: {
+      enabled_scanners: string[];
+      auto_scan: boolean;
+      scan_on_push: boolean;
+      scan_on_pr: boolean;
+      schedule?: string;
+      branch_patterns?: string[];
+    };
+    sync_status?: string;
+    last_synced_at?: string;
+    last_scanned_at?: string;
+    findings_summary?: {
+      total: number;
+      by_severity: {
+        critical: number;
+        high: number;
+        medium: number;
+        low: number;
+        info: number;
+      };
+      by_status?: {
+        open: number;
+        in_progress: number;
+        resolved: number;
+        false_positive: number;
+        accepted_risk: number;
+      };
+    };
+    components_summary?: {
+      total: number;
+      vulnerable: number;
+      outdated: number;
+    };
+    quality_gate_status?: string;
+    compliance_status?: string;
+    created_at?: string;
+    updated_at?: string;
+  };
+}
+
+function transformToRepositoryView(asset: ApiAssetResponse): RepositoryView {
+  const repo = asset.repository;
+
+  // Map API scope to AssetScope type
+  const scopeMap: Record<string, string> = {
+    "in_scope": "internal",
+    "out_of_scope": "external",
+    "pending_review": "unknown",
+    "internal": "internal",
+    "external": "external",
+    "cloud": "cloud",
+    "partner": "partner",
+    "vendor": "vendor",
+    "shadow": "shadow",
+  };
+
+  // Map API exposure to ExposureLevel type
+  const exposureMap: Record<string, string> = {
+    "external": "public",
+    "internal": "private",
+    "unknown": "unknown",
+    "public": "public",
+    "restricted": "restricted",
+    "private": "private",
+    "isolated": "isolated",
+  };
+
+  // Build findings summary with all required fields
+  const baseFindingsSummary = repo?.findings_summary || {
+    total: asset.finding_count,
+    by_severity: { critical: 0, high: 0, medium: 0, low: 0, info: 0 },
+  };
+
+  // Ensure by_status has all required fields including 'confirmed'
+  const apiByStatus = baseFindingsSummary.by_status || {};
+  const findingsSummary = {
+    total: baseFindingsSummary.total,
+    by_severity: baseFindingsSummary.by_severity,
+    by_status: {
+      open: (apiByStatus as Record<string, number>).open || 0,
+      confirmed: (apiByStatus as Record<string, number>).confirmed || 0,
+      in_progress: (apiByStatus as Record<string, number>).in_progress || 0,
+      resolved: (apiByStatus as Record<string, number>).resolved || 0,
+      false_positive: (apiByStatus as Record<string, number>).false_positive || 0,
+      accepted_risk: (apiByStatus as Record<string, number>).accepted_risk || 0,
+    },
+    by_type: {
+      sast: 0,
+      sca: 0,
+      secret: 0,
+      iac: 0,
+      container: 0,
+      dast: 0,
+    },
+  };
+
+  // Build scan settings with typed enabled_scanners
+  const scanSettings = {
+    enabled_scanners: (repo?.scan_settings?.enabled_scanners || []) as ScannerType[],
+    auto_scan: repo?.scan_settings?.auto_scan ?? false,
+    scan_on_push: repo?.scan_settings?.scan_on_push ?? false,
+    scan_on_pr: repo?.scan_settings?.scan_on_pr,
+    branch_patterns: repo?.scan_settings?.branch_patterns,
+  };
+
+  return {
+    // Base Asset fields
+    id: asset.id,
+    type: "repository",
+    name: asset.name,
+    description: asset.description || repo?.description || "",
+    criticality: asset.criticality as "critical" | "high" | "medium" | "low",
+    status: asset.status as "active" | "inactive" | "archived" | "pending",
+    scope: (scopeMap[asset.scope] || "internal") as "internal" | "external" | "cloud" | "partner" | "vendor" | "shadow",
+    exposure: (exposureMap[asset.exposure] || "unknown") as "public" | "restricted" | "private" | "isolated" | "unknown",
+    riskScore: asset.risk_score,
+    findingCount: asset.finding_count,
+    tags: asset.tags || [],
+    firstSeen: asset.first_seen,
+    lastSeen: asset.last_seen,
+    createdAt: asset.created_at,
+    updatedAt: asset.updated_at,
+    metadata: asset.metadata || {},
+    // UI-friendly snake_case fields
+    scm_provider: (repo?.scm_provider || "github") as SCMProvider,
+    scm_organization: repo?.scm_organization,
+    default_branch: repo?.default_branch || "main",
+    visibility: (repo?.visibility || "private") as "public" | "private" | "internal",
+    primary_language: repo?.primary_language,
+    risk_score: asset.risk_score,
+    sync_status: (repo?.sync_status || "synced") as "synced" | "syncing" | "pending" | "error",
+    compliance_status: (repo?.compliance_status || "not_assessed") as "compliant" | "non_compliant" | "partial" | "not_assessed",
+    quality_gate_status: (repo?.quality_gate_status || "not_computed") as "passed" | "failed" | "warning" | "not_computed",
+    findings_summary: findingsSummary,
+    components_summary: repo?.components_summary,
+    scan_settings: scanSettings,
+    security_features: repo?.security_features,
+    last_scanned_at: repo?.last_scanned_at,
+    // Repository extension for UI (all required fields with defaults)
+    repository: repo ? {
+      assetId: asset.id,
+      repoId: repo.repo_id,
+      fullName: repo.full_name,
+      scmOrganization: repo.scm_organization,
+      cloneUrl: repo.clone_url,
+      webUrl: repo.web_url,
+      defaultBranch: repo.default_branch,
+      visibility: (repo.visibility || "private") as "public" | "private" | "internal",
+      language: repo.primary_language,
+      languages: repo.languages ? repo.languages.reduce((acc, lang) => ({ ...acc, [lang]: 1 }), {} as Record<string, number>) : undefined,
+      topics: repo.topics,
+      // Required stats with defaults
+      stars: 0,
+      forks: 0,
+      watchers: 0,
+      openIssues: 0,
+      contributorsCount: repo.contributor_count || 0,
+      sizeKb: repo.size_kb || 0,
+      branchCount: repo.branch_count || 0,
+      protectedBranchCount: 0,
+      componentCount: 0,
+      vulnerableComponentCount: 0,
+      findingCount: asset.finding_count,
+      scanEnabled: scanSettings.auto_scan,
+      lastScannedAt: repo.last_scanned_at,
+    } : undefined,
+  };
+}
+
 import { cn } from "@/lib/utils";
 
 // ============================================
@@ -1497,6 +1729,86 @@ function SettingsTab({ repository }: { repository: Repository }) {
 }
 
 // ============================================
+// Loading Skeleton Component
+// ============================================
+
+function DetailPageSkeleton() {
+  return (
+    <>
+      <Header fixed>
+        <div className="ms-auto flex items-center gap-2 sm:gap-4">
+          <Search />
+          <ThemeSwitch />
+          <ProfileDropdown />
+        </div>
+      </Header>
+
+      <Main>
+        <div className="mb-6">
+          <Skeleton className="h-9 w-40 mb-4" />
+          <div className="flex items-start gap-4">
+            <Skeleton className="h-14 w-14 rounded-xl" />
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <Skeleton className="h-8 w-64" />
+                <Skeleton className="h-5 w-16" />
+                <Skeleton className="h-5 w-16" />
+              </div>
+              <Skeleton className="h-4 w-96 mb-2" />
+              <div className="flex gap-4">
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-4 w-32" />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Skeleton className="h-9 w-24" />
+              <Skeleton className="h-9 w-20" />
+              <Skeleton className="h-9 w-24" />
+            </div>
+          </div>
+        </div>
+
+        <Skeleton className="h-10 w-[500px] mb-6" />
+
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-5 mb-6">
+          {[...Array(5)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="pb-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-9 w-16 mt-2" />
+              </CardHeader>
+              <CardContent className="pt-0">
+                <Skeleton className="h-3 w-20" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-5 w-32" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-32 w-full" />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-5 w-32" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-32 w-full" />
+            </CardContent>
+          </Card>
+        </div>
+      </Main>
+    </>
+  );
+}
+
+// ============================================
 // Main Page Component
 // ============================================
 
@@ -1506,13 +1818,133 @@ export default function RepositoryDetailPage() {
   const repositoryId = params.id as string;
 
   const [activeTab, setActiveTab] = useState<DetailTab>('overview');
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  // Get repository data
-  const repository = mockRepositories.find(r => r.id === repositoryId);
+  // Fetch repository data from API
+  const {
+    data: repositoryData,
+    error: repoError,
+    isLoading: repoLoading,
+    mutate: mutateRepo
+  } = useRepository(repositoryId);
+
+  // Fetch branches from API (if available)
+  const {
+    data: _branchesData,
+    isLoading: _branchesLoading
+  } = useRepositoryBranches(repositoryId);
+
+  // Transform API response to RepositoryView
+  const repository = useMemo(() => {
+    if (!repositoryData) return null;
+    return transformToRepositoryView(repositoryData as unknown as ApiAssetResponse);
+  }, [repositoryData]);
+
+  // TODO: Replace with real API when available
+  // Currently using mock data for branches, findings, and activities
   const branches = mockBranchDetails;
   const findings = mockFindings;
   const activities = mockActivities;
 
+  // Action handlers
+  const handleSync = useCallback(async () => {
+    if (!repository) return;
+    setIsSyncing(true);
+    try {
+      const response = await fetch(`/api/v1/assets/${repository.id}/sync`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!response.ok) {
+        throw new Error("Failed to sync repository");
+      }
+      toast.success("Repository sync initiated");
+      mutateRepo();
+    } catch (error) {
+      toast.error("Failed to sync repository");
+      console.error("Sync error:", error);
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [repository, mutateRepo]);
+
+  const handleScan = useCallback(async () => {
+    if (!repository) return;
+    setIsScanning(true);
+    try {
+      const response = await fetch(`/api/v1/assets/${repository.id}/scan`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scanMode: "full" }),
+      });
+      if (!response.ok) {
+        throw new Error("Failed to trigger scan");
+      }
+      toast.success("Scan initiated successfully");
+      mutateRepo();
+    } catch (error) {
+      toast.error("Failed to trigger scan");
+      console.error("Scan error:", error);
+    } finally {
+      setIsScanning(false);
+    }
+  }, [repository, mutateRepo]);
+
+  const handleDelete = useCallback(async () => {
+    if (!repository) return;
+    if (!confirm(`Are you sure you want to delete "${repository.name}"? This action cannot be undone.`)) {
+      return;
+    }
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/v1/assets/${repository.id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to delete repository");
+      }
+      toast.success("Repository deleted successfully");
+      router.push("/assets/repositories");
+    } catch (error) {
+      toast.error("Failed to delete repository");
+      console.error("Delete error:", error);
+      setIsDeleting(false);
+    }
+  }, [repository, router]);
+
+  // Loading state
+  if (repoLoading) {
+    return <DetailPageSkeleton />;
+  }
+
+  // Error state
+  if (repoError) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-center">
+          <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-red-500" />
+          <h2 className="text-xl font-semibold mb-2">Error Loading Repository</h2>
+          <p className="text-muted-foreground mb-4">
+            {repoError.message || "Failed to load repository data. Please try again."}
+          </p>
+          <div className="flex gap-2 justify-center">
+            <Button variant="outline" onClick={() => mutateRepo()}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Retry
+            </Button>
+            <Button onClick={() => router.push('/assets/repositories')}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Repositories
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Not found state
   if (!repository) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -1589,18 +2021,30 @@ export default function RepositoryDetailPage() {
                 <ExternalLink className="mr-2 h-4 w-4" />
                 Open in {SCM_PROVIDER_LABELS[repository.scm_provider]}
               </Button>
-              <Button variant="outline" size="sm" onClick={() => toast.info('Syncing repository...')}>
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Sync
+              <Button variant="outline" size="sm" onClick={handleSync} disabled={isSyncing}>
+                {isSyncing ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                )}
+                {isSyncing ? "Syncing..." : "Sync"}
               </Button>
-              <Button size="sm" onClick={() => toast.info('Triggering scan...')}>
-                <Play className="mr-2 h-4 w-4" />
-                Scan Now
+              <Button size="sm" onClick={handleScan} disabled={isScanning}>
+                {isScanning ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Play className="mr-2 h-4 w-4" />
+                )}
+                {isScanning ? "Scanning..." : "Scan Now"}
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm">
-                    <MoreHorizontal className="h-4 w-4" />
+                  <Button variant="ghost" size="sm" disabled={isDeleting}>
+                    {isDeleting ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <MoreHorizontal className="h-4 w-4" />
+                    )}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
@@ -1612,7 +2056,7 @@ export default function RepositoryDetailPage() {
                     Copy URL
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-red-500">
+                  <DropdownMenuItem className="text-red-500" onClick={handleDelete}>
                     <Trash2 className="mr-2 h-4 w-4" />
                     Delete Repository
                   </DropdownMenuItem>

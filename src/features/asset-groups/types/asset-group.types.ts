@@ -20,9 +20,9 @@ export interface AssetGroup {
   domainCount: number;
   websiteCount: number;
   serviceCount: number;
-  projectCount: number;
-  /** @deprecated Use projectCount instead */
   repositoryCount: number;
+  /** @deprecated Use repositoryCount instead */
+  projectCount: number;
   cloudCount: number;
   credentialCount: number;
   riskScore: number;

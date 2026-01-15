@@ -49,7 +49,7 @@ export type ApiComponentStatus = 'active' | 'deprecated' | 'vulnerable' | 'outda
 export interface ApiComponent {
   id: string
   tenant_id: string
-  project_id: string
+  asset_id: string
   name: string
   version: string
   ecosystem: ApiComponentEcosystem
@@ -92,7 +92,7 @@ export interface ApiComponentListResponse {
 // ============================================
 
 export interface CreateComponentInput {
-  project_id: string
+  asset_id: string
   name: string
   version: string
   ecosystem: ApiComponentEcosystem
@@ -121,7 +121,7 @@ export interface UpdateComponentInput {
 // ============================================
 
 export interface ComponentApiFilters {
-  project_id?: string
+  asset_id?: string
   name?: string
   ecosystems?: ApiComponentEcosystem[]
   statuses?: ApiComponentStatus[]

@@ -234,12 +234,12 @@ export default function Dashboard() {
                 icon={ShieldAlert}
               />
               <StatsCard
-                title="Projects"
-                value={stats.projects.total}
-                change={stats.projects.withFindings > 0
-                  ? `${stats.projects.withFindings} with findings`
+                title="Repositories"
+                value={stats.repositories.total}
+                change={stats.repositories.withFindings > 0
+                  ? `${stats.repositories.withFindings} with findings`
                   : "None with findings"}
-                changeType={stats.projects.withFindings > 0 ? "negative" : "neutral"}
+                changeType={stats.repositories.withFindings > 0 ? "negative" : "neutral"}
                 icon={ListChecks}
               />
             </section>
@@ -433,9 +433,9 @@ export default function Dashboard() {
                       subtext="Require immediate attention"
                     />
                     <QuickStat
-                      label="Projects with Issues"
-                      value={stats.projects.withFindings}
-                      subtext={`${stats.projects.total} total projects`}
+                      label="Repositories with Issues"
+                      value={stats.repositories.withFindings}
+                      subtext={`${stats.repositories.total} total repositories`}
                     />
                   </div>
                 </CardContent>

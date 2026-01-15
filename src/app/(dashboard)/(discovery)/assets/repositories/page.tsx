@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   ColumnDef,
@@ -82,6 +82,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import {
   Plus,
@@ -120,26 +121,200 @@ import {
   Minus,
   Settings,
   Play,
+  Loader2,
 } from "lucide-react";
 import {
-  mockRepositories,
-  mockSCMConnections,
-  getRepositoryStats,
+  useRepositories,
+  invalidateRepositoriesCache,
   type RepositoryView,
   type SCMProvider,
   type SyncStatus,
   type ComplianceStatus,
   type QualityGateStatus,
   type Criticality,
+  type RepositoryFilters,
   SCM_PROVIDER_LABELS,
   SYNC_STATUS_LABELS,
 } from "@/features/repositories";
+import type { AssetWithRepository } from "@/features/assets/types/asset.types";
 import type { Status } from "@/features/shared/types";
 
 // Alias for compatibility
 type Repository = RepositoryView;
 type RepositoryStatus = Status;
 import { cn } from "@/lib/utils";
+
+// ============================================
+// API Response Types (snake_case from backend)
+// ============================================
+
+interface ApiAssetResponse {
+  id: string;
+  tenant_id?: string;
+  name: string;
+  type: string;
+  criticality: string;
+  status: string;
+  scope: string;
+  exposure: string;
+  risk_score: number;
+  finding_count: number;
+  description?: string;
+  tags?: string[];
+  metadata?: Record<string, unknown>;
+  first_seen: string;
+  last_seen: string;
+  created_at: string;
+  updated_at: string;
+  // Repository extension (when available from /full endpoint)
+  repository?: {
+    asset_id: string;
+    repo_id?: string;
+    full_name: string;
+    scm_organization?: string;
+    clone_url?: string;
+    web_url?: string;
+    ssh_url?: string;
+    default_branch?: string;
+    visibility: string;
+    language?: string;
+    languages?: Record<string, number>;
+    topics?: string[];
+    stars: number;
+    forks: number;
+    watchers: number;
+    open_issues: number;
+    contributors_count: number;
+    size_kb: number;
+    branch_count: number;
+    protected_branch_count: number;
+    component_count: number;
+    vulnerable_component_count: number;
+    finding_count: number;
+    scan_enabled: boolean;
+    scan_schedule?: string;
+    last_scanned_at?: string;
+    repo_created_at?: string;
+    repo_updated_at?: string;
+    repo_pushed_at?: string;
+  };
+}
+
+// ============================================
+// Transform API response to UI format
+// ============================================
+
+function transformToRepositoryView(asset: ApiAssetResponse): RepositoryView {
+  const repo = asset.repository;
+
+  // Detect SCM provider from full_name or metadata
+  let scmProvider: SCMProvider = "github";
+  if (repo?.full_name) {
+    if (repo.full_name.includes("gitlab")) scmProvider = "gitlab";
+    else if (repo.full_name.includes("bitbucket")) scmProvider = "bitbucket";
+  }
+
+  return {
+    // Base asset fields (API uses snake_case, we need to map to our camelCase types)
+    id: asset.id,
+    type: asset.type as AssetWithRepository["type"],
+    name: asset.name,
+    description: asset.description,
+    criticality: asset.criticality as Criticality,
+    status: asset.status as RepositoryStatus,
+    scope: asset.scope as AssetWithRepository["scope"],
+    exposure: asset.exposure as AssetWithRepository["exposure"],
+    riskScore: asset.risk_score,
+    findingCount: asset.finding_count,
+    tags: asset.tags,
+    metadata: asset.metadata || {},
+    firstSeen: asset.first_seen,
+    lastSeen: asset.last_seen,
+    createdAt: asset.created_at,
+    updatedAt: asset.updated_at,
+    // Repository extension (map to camelCase if available)
+    repository: repo ? {
+      assetId: repo.asset_id,
+      repoId: repo.repo_id,
+      fullName: repo.full_name,
+      scmOrganization: repo.scm_organization,
+      cloneUrl: repo.clone_url,
+      webUrl: repo.web_url,
+      sshUrl: repo.ssh_url,
+      defaultBranch: repo.default_branch,
+      visibility: repo.visibility as "public" | "private" | "internal",
+      language: repo.language,
+      languages: repo.languages,
+      topics: repo.topics,
+      stars: repo.stars,
+      forks: repo.forks,
+      watchers: repo.watchers,
+      openIssues: repo.open_issues,
+      contributorsCount: repo.contributors_count,
+      sizeKb: repo.size_kb,
+      branchCount: repo.branch_count,
+      protectedBranchCount: repo.protected_branch_count,
+      componentCount: repo.component_count,
+      vulnerableComponentCount: repo.vulnerable_component_count,
+      findingCount: repo.finding_count,
+      scanEnabled: repo.scan_enabled,
+      scanSchedule: repo.scan_schedule,
+      lastScannedAt: repo.last_scanned_at,
+      repoCreatedAt: repo.repo_created_at,
+      repoUpdatedAt: repo.repo_updated_at,
+      repoPushedAt: repo.repo_pushed_at,
+    } : undefined,
+    // UI-specific snake_case fields for legacy compatibility
+    scm_provider: scmProvider,
+    scm_organization: repo?.scm_organization,
+    default_branch: repo?.default_branch || "main",
+    visibility: (repo?.visibility || "private") as RepositoryView["visibility"],
+    primary_language: repo?.language,
+    risk_score: asset.risk_score,
+    sync_status: "synced" as SyncStatus,
+    compliance_status: "not_assessed" as ComplianceStatus,
+    quality_gate_status: "not_computed" as QualityGateStatus,
+    findings_summary: {
+      total: asset.finding_count || 0,
+      by_severity: {
+        critical: 0,
+        high: 0,
+        medium: 0,
+        low: 0,
+        info: 0,
+      },
+      by_status: {
+        open: 0,
+        confirmed: 0,
+        in_progress: 0,
+        resolved: 0,
+        false_positive: 0,
+        accepted_risk: 0,
+      },
+      by_type: {
+        sast: 0,
+        sca: 0,
+        secret: 0,
+        iac: 0,
+        container: 0,
+        dast: 0,
+      },
+      trend: "stable",
+    },
+    components_summary: repo ? {
+      total: repo.component_count || 0,
+      vulnerable: repo.vulnerable_component_count || 0,
+    } : { total: 0, vulnerable: 0 },
+    scan_settings: {
+      enabled_scanners: ["sast", "sca", "secret"],
+      auto_scan: repo?.scan_enabled || false,
+      scan_on_push: true,
+      scan_on_pr: true,
+    },
+    security_features: undefined,
+    last_scanned_at: repo?.last_scanned_at,
+  };
+}
 
 // ============================================
 // Filter Types
@@ -287,11 +462,7 @@ function RepositoryStatusBadge({ status }: { status: RepositoryStatus }) {
 export default function RepositoriesPage() {
   const router = useRouter();
 
-  // Use mock data (will be replaced with API hooks)
-  const repositories = mockRepositories;
-  const scmConnections = mockSCMConnections;
-  const stats = useMemo(() => getRepositoryStats(repositories), [repositories]);
-
+  // State for filters
   const [selectedRepository, setSelectedRepository] = useState<Repository | null>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
@@ -304,6 +475,65 @@ export default function RepositoriesPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [repositoryToDelete, setRepositoryToDelete] = useState<Repository | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+
+  // Build API filters from UI state
+  const apiFilters = useMemo((): RepositoryFilters => {
+    const filters: RepositoryFilters = {
+      perPage: 100,
+    };
+    if (globalFilter) filters.search = globalFilter;
+    if (statusFilter !== "all") filters.statuses = [statusFilter];
+    if (providerFilter !== "all") filters.scmProviders = [providerFilter];
+    return filters;
+  }, [globalFilter, statusFilter, providerFilter]);
+
+  // Fetch data using real API hooks
+  const { data: repositoriesResponse, error: reposError, isLoading: reposLoading, mutate: mutateRepos } = useRepositories(apiFilters);
+  // Note: SCM connections API not yet available, using empty array
+  // const { data: scmConnectionsData, error: scmError, isLoading: scmLoading } = useSCMConnections();
+
+  // Transform API response to UI format
+  const repositories = useMemo(() => {
+    if (!repositoriesResponse?.data) return [];
+    // API returns snake_case, cast to ApiAssetResponse for transformation
+    return (repositoriesResponse.data as unknown as ApiAssetResponse[]).map(transformToRepositoryView);
+  }, [repositoriesResponse]);
+
+  // SCM connections - will be populated when API is available
+  const scmConnections: Array<{ id: string; name: string; provider: SCMProvider; scmOrganization?: string; status: string; baseUrl?: string }> = [];
+
+  // Calculate stats from repositories data
+  const stats = useMemo(() => {
+    return {
+      total: repositories.length,
+      with_critical_findings: repositories.filter(r => r.findings_summary.by_severity.critical > 0).length,
+      total_findings: repositories.reduce((acc, r) => acc + r.findings_summary.total, 0),
+      by_quality_gate: {
+        passed: repositories.filter(r => r.quality_gate_status === "passed").length,
+        failed: repositories.filter(r => r.quality_gate_status === "failed").length,
+        warning: repositories.filter(r => r.quality_gate_status === "warning").length,
+        not_computed: repositories.filter(r => r.quality_gate_status === "not_computed").length,
+      },
+      total_components: repositories.reduce((acc, r) => acc + (r.components_summary?.total || 0), 0),
+      vulnerable_components: repositories.reduce((acc, r) => acc + (r.components_summary?.vulnerable || 0), 0),
+      avg_risk_score: Math.round(repositories.reduce((acc, r) => acc + r.risk_score, 0) / Math.max(repositories.length, 1)),
+      scanned_last_24h: repositories.filter(r => {
+        if (!r.last_scanned_at) return false;
+        const lastScanned = new Date(r.last_scanned_at);
+        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        return lastScanned > oneDayAgo;
+      }).length,
+      by_status: {
+        active: repositories.filter(r => r.status === "active").length,
+        inactive: repositories.filter(r => r.status === "inactive").length,
+        archived: repositories.filter(r => r.status === "archived").length,
+      },
+    };
+  }, [repositories]);
+
+  // Loading state
+  const isLoading = reposLoading;
+  const hasError = reposError;
 
   // Filter data
   const filteredData = useMemo(() => {
@@ -486,12 +716,26 @@ export default function RepositoriesPage() {
                 <Eye className="mr-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => toast.info("Triggering scan...")}>
-                <Play className="mr-2 h-4 w-4" />
+              <DropdownMenuItem
+                onClick={() => handleTriggerScan(repository)}
+                disabled={actionInProgress === repository.id}
+              >
+                {actionInProgress === repository.id ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Play className="mr-2 h-4 w-4" />
+                )}
                 Trigger Scan
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => toast.info("Syncing repository...")}>
-                <RefreshCw className="mr-2 h-4 w-4" />
+              <DropdownMenuItem
+                onClick={() => handleSyncRepository(repository)}
+                disabled={actionInProgress === repository.id}
+              >
+                {actionInProgress === repository.id ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                )}
                 Sync Now
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleCopyUrl(repository)}>
@@ -538,6 +782,9 @@ export default function RepositoriesPage() {
     getPaginationRowModel: getPaginationRowModel(),
   });
 
+  // Mutation state for actions
+  const [actionInProgress, setActionInProgress] = useState<string | null>(null);
+
   // Handlers
   const handleCopyUrl = (repo: Repository) => {
     const webUrl = repo.repository?.webUrl;
@@ -554,21 +801,92 @@ export default function RepositoriesPage() {
     }
   };
 
-  const handleDelete = async () => {
-    if (!repositoryToDelete) return;
-    toast.success(`Repository "${repositoryToDelete.name}" deleted`);
-    setDeleteDialogOpen(false);
-    setRepositoryToDelete(null);
-  };
+  const handleTriggerScan = useCallback(async (repo: Repository) => {
+    setActionInProgress(repo.id);
+    try {
+      const response = await fetch(`/api/v1/assets/${repo.id}/scan`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scanMode: "full" }),
+      });
+      if (!response.ok) throw new Error("Failed to trigger scan");
+      toast.success(`Scan triggered for "${repo.name}"`);
+      await mutateRepos();
+    } catch (error) {
+      toast.error(`Failed to trigger scan: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setActionInProgress(null);
+    }
+  }, [mutateRepos]);
 
-  const handleBulkDelete = async () => {
+  const handleSyncRepository = useCallback(async (repo: Repository) => {
+    setActionInProgress(repo.id);
+    try {
+      const response = await fetch(`/api/v1/assets/${repo.id}/sync`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!response.ok) throw new Error("Failed to sync repository");
+      toast.success(`Repository "${repo.name}" synced`);
+      await mutateRepos();
+    } catch (error) {
+      toast.error(`Failed to sync: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setActionInProgress(null);
+    }
+  }, [mutateRepos]);
+
+  const handleDelete = useCallback(async () => {
+    if (!repositoryToDelete) return;
+    setActionInProgress(repositoryToDelete.id);
+    try {
+      const response = await fetch(`/api/v1/assets/${repositoryToDelete.id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) throw new Error("Failed to delete repository");
+      toast.success(`Repository "${repositoryToDelete.name}" deleted`);
+      await mutateRepos();
+      await invalidateRepositoriesCache();
+    } catch (error) {
+      toast.error(`Failed to delete: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setDeleteDialogOpen(false);
+      setRepositoryToDelete(null);
+      setActionInProgress(null);
+    }
+  }, [repositoryToDelete, mutateRepos]);
+
+  const handleBulkDelete = useCallback(async () => {
     const selectedIds = table.getSelectedRowModel().rows.map((r) => r.original.id);
     if (selectedIds.length === 0) return;
-    toast.success(`Deleted ${selectedIds.length} repositories`);
-    setRowSelection({});
-  };
 
-  const handleExport = () => {
+    setActionInProgress("bulk-delete");
+    try {
+      // Delete repositories one by one
+      const results = await Promise.allSettled(
+        selectedIds.map((id) =>
+          fetch(`/api/v1/assets/${id}`, { method: "DELETE" })
+        )
+      );
+      const successCount = results.filter((r) => r.status === "fulfilled").length;
+      const failedCount = results.filter((r) => r.status === "rejected").length;
+
+      if (failedCount > 0) {
+        toast.warning(`Deleted ${successCount} repositories, ${failedCount} failed`);
+      } else {
+        toast.success(`Deleted ${successCount} repositories`);
+      }
+      await mutateRepos();
+      await invalidateRepositoriesCache();
+    } catch (error) {
+      toast.error(`Failed to delete repositories: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setRowSelection({});
+      setActionInProgress(null);
+    }
+  }, [mutateRepos, table]);
+
+  const handleExport = useCallback(() => {
     const csv = [
       ["Name", "Provider", "Visibility", "Language", "Risk Score", "Findings", "Quality Gate", "Status"].join(","),
       ...repositories.map((p) =>
@@ -592,7 +910,35 @@ export default function RepositoriesPage() {
     a.download = "repositories.csv";
     a.click();
     toast.success("Repositories exported");
-  };
+  }, [repositories]);
+
+  // Error state component
+  if (hasError) {
+    return (
+      <>
+        <Header fixed>
+          <div className="ms-auto flex items-center gap-2 sm:gap-4">
+            <Search />
+            <ThemeSwitch />
+            <ProfileDropdown />
+          </div>
+        </Header>
+        <Main>
+          <div className="flex flex-col items-center justify-center py-20">
+            <AlertCircle className="h-12 w-12 text-destructive mb-4" />
+            <h2 className="text-lg font-semibold mb-2">Failed to load repositories</h2>
+            <p className="text-muted-foreground mb-4">
+              {reposError?.message || "An unexpected error occurred"}
+            </p>
+            <Button onClick={() => mutateRepos()}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Retry
+            </Button>
+          </div>
+        </Main>
+      </>
+    );
+  }
 
   return (
     <>
@@ -607,7 +953,11 @@ export default function RepositoriesPage() {
       <Main>
         <PageHeader
           title="Git Repositories"
-          description={`${repositories.length} repositories from ${scmConnections.filter((c) => c.status === "connected").length} SCM connections`}
+          description={
+            isLoading
+              ? "Loading repositories..."
+              : `${repositories.length} repositories from ${scmConnections.filter((c) => c.status === "connected").length} SCM connections`
+          }
         >
           <div className="flex gap-2">
             <Button variant="outline" onClick={handleExport}>
@@ -627,81 +977,105 @@ export default function RepositoriesPage() {
 
         {/* Stats Cards */}
         <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-5">
-          <Card className="cursor-pointer hover:border-primary transition-colors" onClick={() => setStatusFilter("all")}>
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <GitBranch className="h-4 w-4 shrink-0" />
-                Total Repositories
-              </CardDescription>
-              <CardTitle className="text-3xl">{stats.total}</CardTitle>
-            </CardHeader>
-          </Card>
+          {isLoading ? (
+            <>
+              {[...Array(5)].map((_, i) => (
+                <Card key={i}>
+                  <CardHeader className="pb-2">
+                    <Skeleton className="h-4 w-24 mb-2" />
+                    <Skeleton className="h-8 w-16" />
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <Skeleton className="h-3 w-20" />
+                  </CardContent>
+                </Card>
+              ))}
+            </>
+          ) : (
+            <>
+              <Card className="cursor-pointer hover:border-primary transition-colors" onClick={() => setStatusFilter("all")}>
+                <CardHeader className="pb-2">
+                  <CardDescription className="flex items-center gap-2">
+                    <GitBranch className="h-4 w-4 shrink-0" />
+                    Total Repositories
+                  </CardDescription>
+                  <CardTitle className="text-3xl">{stats.total}</CardTitle>
+                </CardHeader>
+              </Card>
 
-          <Card className="cursor-pointer hover:border-red-500 transition-colors">
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />
-                Critical Findings
-              </CardDescription>
-              <CardTitle className="text-3xl text-red-500">{stats.with_critical_findings}</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <p className="text-xs text-muted-foreground">
-                {stats.total_findings} total findings
-              </p>
-            </CardContent>
-          </Card>
+              <Card className="cursor-pointer hover:border-red-500 transition-colors">
+                <CardHeader className="pb-2">
+                  <CardDescription className="flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />
+                    Critical Findings
+                  </CardDescription>
+                  <CardTitle className="text-3xl text-red-500">{stats.with_critical_findings}</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <p className="text-xs text-muted-foreground">
+                    {stats.total_findings} total findings
+                  </p>
+                </CardContent>
+              </Card>
 
-          <Card className="cursor-pointer hover:border-green-500 transition-colors">
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
-                Quality Gate Passed
-              </CardDescription>
-              <CardTitle className="text-3xl text-green-500">{stats.by_quality_gate.passed}</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <Progress
-                value={(stats.by_quality_gate.passed / stats.total) * 100}
-                className="h-1"
-              />
-            </CardContent>
-          </Card>
+              <Card className="cursor-pointer hover:border-green-500 transition-colors">
+                <CardHeader className="pb-2">
+                  <CardDescription className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
+                    Quality Gate Passed
+                  </CardDescription>
+                  <CardTitle className="text-3xl text-green-500">{stats.by_quality_gate.passed}</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <Progress
+                    value={stats.total > 0 ? (stats.by_quality_gate.passed / stats.total) * 100 : 0}
+                    className="h-1"
+                  />
+                </CardContent>
+              </Card>
 
-          <Card className="cursor-pointer hover:border-blue-500 transition-colors">
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <Package className="h-4 w-4 text-blue-500 shrink-0" />
-                Components
-              </CardDescription>
-              <CardTitle className="text-3xl text-blue-500">{stats.total_components}</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <p className="text-xs text-muted-foreground">
-                {stats.vulnerable_components} vulnerable
-              </p>
-            </CardContent>
-          </Card>
+              <Card className="cursor-pointer hover:border-blue-500 transition-colors">
+                <CardHeader className="pb-2">
+                  <CardDescription className="flex items-center gap-2">
+                    <Package className="h-4 w-4 text-blue-500 shrink-0" />
+                    Components
+                  </CardDescription>
+                  <CardTitle className="text-3xl text-blue-500">{stats.total_components}</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <p className="text-xs text-muted-foreground">
+                    {stats.vulnerable_components} vulnerable
+                  </p>
+                </CardContent>
+              </Card>
 
-          <Card className="cursor-pointer hover:border-purple-500 transition-colors">
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <Activity className="h-4 w-4 text-purple-500 shrink-0" />
-                Avg Risk Score
-              </CardDescription>
-              <CardTitle className="text-3xl text-purple-500">{stats.avg_risk_score}</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <p className="text-xs text-muted-foreground">
-                {stats.scanned_last_24h} scanned today
-              </p>
-            </CardContent>
-          </Card>
+              <Card className="cursor-pointer hover:border-purple-500 transition-colors">
+                <CardHeader className="pb-2">
+                  <CardDescription className="flex items-center gap-2">
+                    <Activity className="h-4 w-4 text-purple-500 shrink-0" />
+                    Avg Risk Score
+                  </CardDescription>
+                  <CardTitle className="text-3xl text-purple-500">{stats.avg_risk_score}</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <p className="text-xs text-muted-foreground">
+                    {stats.scanned_last_24h} scanned today
+                  </p>
+                </CardContent>
+              </Card>
+            </>
+          )}
         </div>
 
         {/* SCM Connections Overview */}
         <div className="mt-4 flex flex-wrap gap-2">
-          {scmConnections.map((conn) => (
+          {isLoading ? (
+            <>
+              {[...Array(3)].map((_, i) => (
+                <Skeleton key={i} className="h-8 w-32 rounded-full" />
+              ))}
+            </>
+          ) : scmConnections.map((conn) => (
             <Badge
               key={conn.id}
               variant={scmConnectionFilter === conn.id ? "default" : "outline"}
@@ -821,7 +1195,32 @@ export default function RepositoriesPage() {
                   ))}
                 </TableHeader>
                 <TableBody>
-                  {table.getRowModel().rows?.length ? (
+                  {isLoading ? (
+                    // Loading skeleton rows
+                    [...Array(5)].map((_, i) => (
+                      <TableRow key={i}>
+                        <TableCell><Skeleton className="h-4 w-4" /></TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Skeleton className="h-4 w-4 rounded" />
+                            <div className="space-y-1">
+                              <Skeleton className="h-4 w-32" />
+                              <Skeleton className="h-3 w-24" />
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                        <TableCell><Skeleton className="h-6 w-12 rounded-full" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                        <TableCell><Skeleton className="h-6 w-12 rounded-full" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                        <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
+                        <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
+                        <TableCell><Skeleton className="h-8 w-8 rounded" /></TableCell>
+                      </TableRow>
+                    ))
+                  ) : table.getRowModel().rows?.length ? (
                     table.getRowModel().rows.map((row) => (
                       <TableRow
                         key={row.id}

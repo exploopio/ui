@@ -28,8 +28,8 @@ export type ScopeTargetType =
   | "host"
   | "network"
   // Code & CI/CD
-  | "project"
-  | "repository" // @deprecated - Use project instead
+  | "repository"
+  | "project" // @deprecated - Use repository instead
   // Generic
   | "path"
   | "email_domain";
@@ -184,8 +184,8 @@ export const SCOPE_TO_ASSET_TYPE_MAP: Record<ScopeTargetType, string[]> = {
   container: ["container", "container_image"],
   host: ["host"],
   network: ["network"],
-  project: ["project"],
-  repository: ["project", "repository"], // @deprecated - maps to project
+  repository: ["repository"],
+  project: ["repository", "project"], // @deprecated - maps to repository
   path: ["api_endpoint"],
   email_domain: ["domain"],
 };
@@ -351,27 +351,27 @@ export const SCOPE_TYPE_CONFIGS: ScopeTypeConfig[] = [
     supportsCIDR: false,
   },
   {
-    type: "project",
-    label: "Project",
+    type: "repository",
+    label: "Repository",
     icon: "GitBranch",
     placeholder: "github.com/org/repo",
-    helpText: "Git project - supports github.com, gitlab.com, bitbucket.com",
+    helpText: "Git repository - supports github.com, gitlab.com, bitbucket.com",
     validation: {
       pattern: /^(github|gitlab|bitbucket)\.com\/[\w-]+\/(\*|[\w-]+)$/,
-      message: "Invalid project format",
+      message: "Invalid repository format",
     },
     supportsWildcard: true,
     supportsCIDR: false,
   },
   {
-    type: "repository",
-    label: "Repository (deprecated)",
+    type: "project",
+    label: "Project (deprecated)",
     icon: "GitBranch",
     placeholder: "github.com/org/repo",
-    helpText: "Deprecated - use Project instead",
+    helpText: "Deprecated - use Repository instead",
     validation: {
       pattern: /^(github|gitlab|bitbucket)\.com\/[\w-]+\/(\*|[\w-]+)$/,
-      message: "Invalid repository format",
+      message: "Invalid project format",
     },
     supportsWildcard: true,
     supportsCIDR: false,
