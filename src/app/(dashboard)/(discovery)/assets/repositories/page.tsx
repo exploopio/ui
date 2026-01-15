@@ -125,7 +125,7 @@ import {
   mockRepositories,
   mockSCMConnections,
   getRepositoryStats,
-  type AssetWithRepository,
+  type RepositoryView,
   type SCMProvider,
   type SyncStatus,
   type ComplianceStatus,
@@ -137,7 +137,7 @@ import {
 import type { Status } from "@/features/shared/types";
 
 // Alias for compatibility
-type Repository = AssetWithRepository;
+type Repository = RepositoryView;
 type RepositoryStatus = Status;
 import { cn } from "@/lib/utils";
 
@@ -156,10 +156,13 @@ const statusFilters: { value: StatusFilter; label: string }[] = [
   { value: "archived", label: "Archived" },
 ];
 
-const REPOSITORY_STATUS_LABELS: Record<Status, string> = {
+const REPOSITORY_STATUS_LABELS: Record<string, string> = {
   active: "Active",
   inactive: "Inactive",
   archived: "Archived",
+  pending: "Pending",
+  completed: "Completed",
+  failed: "Failed",
 };
 
 const SCM_PROVIDER_COLORS: Record<SCMProvider, string> = {
@@ -261,15 +264,18 @@ function FindingsTrendIcon({ trend }: { trend?: "increasing" | "decreasing" | "s
 }
 
 function RepositoryStatusBadge({ status }: { status: RepositoryStatus }) {
-  const config: Record<RepositoryStatus, { variant: "default" | "secondary" | "destructive" | "outline"; color?: string }> = {
+  const config: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; color?: string }> = {
     active: { variant: "default" },
     inactive: { variant: "secondary" },
     archived: { variant: "outline", color: "text-muted-foreground" },
+    pending: { variant: "outline", color: "text-yellow-500" },
+    completed: { variant: "default", color: "text-green-500" },
+    failed: { variant: "destructive" },
   };
-  const { variant, color } = config[status];
+  const statusConfig = config[status] || { variant: "secondary" };
   return (
-    <Badge variant={variant} className={color}>
-      {REPOSITORY_STATUS_LABELS[status]}
+    <Badge variant={statusConfig.variant} className={statusConfig.color}>
+      {REPOSITORY_STATUS_LABELS[status] || status}
     </Badge>
   );
 }
@@ -309,7 +315,8 @@ export default function RepositoriesPage() {
       data = data.filter((p) => p.scm_provider === providerFilter);
     }
     if (scmConnectionFilter !== "all") {
-      data = data.filter((p) => p.scm_connection_id === scmConnectionFilter);
+      // Filter by SCM organization since connection_id is not available in RepositoryView
+      data = data.filter((p) => p.scm_organization === scmConnectionFilter);
     }
     return data;
   }, [repositories, statusFilter, providerFilter, scmConnectionFilter]);
@@ -360,7 +367,7 @@ export default function RepositoriesPage() {
       id: "scm_connection",
       header: "Source",
       cell: ({ row }) => {
-        const connection = scmConnections.find((c) => c.id === row.original.scm_connection_id);
+        const connection = scmConnections.find((c) => c.scmOrganization === row.original.scm_organization);
         return (
           <TooltipProvider>
             <Tooltip>
@@ -373,7 +380,7 @@ export default function RepositoriesPage() {
               </TooltipTrigger>
               <TooltipContent>
                 <p className="font-medium">{connection?.name || "Manual"}</p>
-                {connection && <p className="text-xs text-muted-foreground">{connection.base_url}</p>}
+                {connection && <p className="text-xs text-muted-foreground">{connection.baseUrl}</p>}
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -532,16 +539,18 @@ export default function RepositoriesPage() {
   });
 
   // Handlers
-  const handleCopyUrl = (project: Repository) => {
-    if (project.web_url) {
-      navigator.clipboard.writeText(project.web_url);
+  const handleCopyUrl = (repo: Repository) => {
+    const webUrl = repo.repository?.webUrl;
+    if (webUrl) {
+      navigator.clipboard.writeText(webUrl);
       toast.success("URL copied to clipboard");
     }
   };
 
-  const handleOpenExternal = (project: Repository) => {
-    if (project.web_url) {
-      window.open(project.web_url, "_blank");
+  const handleOpenExternal = (repo: Repository) => {
+    const webUrl = repo.repository?.webUrl;
+    if (webUrl) {
+      window.open(webUrl, "_blank");
     }
   };
 
@@ -707,7 +716,7 @@ export default function RepositoriesPage() {
               {conn.name}
               {conn.status === "error" && <AlertCircle className="h-3 w-3 text-red-500" />}
               <span className="text-muted-foreground">
-                ({repositories.filter((p) => p.scm_connection_id === conn.id).length})
+                ({repositories.filter((p) => p.scm_organization === conn.scmOrganization).length})
               </span>
             </Badge>
           ))}
@@ -736,7 +745,7 @@ export default function RepositoriesPage() {
                     <Badge variant="secondary" className="h-5 px-1.5 text-xs">
                       {filter.value === "all"
                         ? stats.total
-                        : stats.by_status[filter.value as RepositoryStatus] || 0}
+                        : (stats.by_status as Record<string, number>)[filter.value] || 0}
                     </Badge>
                   </TabsTrigger>
                 ))}
@@ -1051,7 +1060,7 @@ export default function RepositoriesPage() {
                     </div>
                     <div className="p-4">
                       <div className="grid grid-cols-2 gap-3">
-                        {Object.entries(selectedRepository.security_features).map(([key, enabled]) => (
+                        {selectedRepository.security_features && Object.entries(selectedRepository.security_features).map(([key, enabled]) => (
                           <div key={key} className={cn(
                             "flex items-center gap-2.5 p-2.5 rounded-lg border text-sm",
                             enabled ? "bg-green-500/5 border-green-500/20" : "bg-muted/30"
@@ -1066,6 +1075,9 @@ export default function RepositoriesPage() {
                             </span>
                           </div>
                         ))}
+                        {!selectedRepository.security_features && (
+                          <p className="text-sm text-muted-foreground col-span-2">No security features configured</p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1120,7 +1132,7 @@ export default function RepositoriesPage() {
                   </div>
 
                   {/* Tags */}
-                  {selectedRepository.tags.length > 0 && (
+                  {selectedRepository.tags && selectedRepository.tags.length > 0 && (
                     <div className="rounded-xl border bg-card">
                       <div className="px-4 py-3 border-b">
                         <h4 className="font-semibold flex items-center gap-2 text-sm">
@@ -1147,15 +1159,15 @@ export default function RepositoriesPage() {
                         Last scanned: {new Date(selectedRepository.last_scanned_at).toLocaleString()}
                       </p>
                     )}
-                    {selectedRepository.last_synced_at && (
+                    {selectedRepository.lastSeen && (
                       <p className="flex items-center gap-2">
                         <RefreshCw className="h-3.5 w-3.5" />
-                        Last synced: {new Date(selectedRepository.last_synced_at).toLocaleString()}
+                        Last seen: {new Date(selectedRepository.lastSeen).toLocaleString()}
                       </p>
                     )}
                     <p className="flex items-center gap-2">
                       <Clock className="h-3.5 w-3.5" />
-                      Created: {new Date(selectedRepository.created_at).toLocaleString()}
+                      Created: {new Date(selectedRepository.createdAt).toLocaleString()}
                     </p>
                   </div>
                 </div>

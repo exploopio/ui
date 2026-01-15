@@ -91,12 +91,12 @@ import {
 } from "lucide-react";
 import {
   mockRepositories,
-  mockSCMConnections,
   type RepositoryView,
   type SCMProvider,
   type Severity,
   type BranchStatus,
   type SLAStatus,
+  type ScannerType,
   SCM_PROVIDER_LABELS,
   SEVERITY_LABELS,
   SEVERITY_COLORS,
@@ -111,14 +111,38 @@ import {
 type Repository = RepositoryView;
 type FindingStatus = "open" | "confirmed" | "in_progress" | "resolved" | "false_positive" | "accepted_risk";
 type TriageStatus = "needs_triage" | "triaged" | "escalated";
-type ActivityAction = "scan_started" | "scan_completed" | "finding_created" | "finding_resolved" | "branch_added" | "config_updated";
+type ActivityAction =
+  | "scan_started"
+  | "scan_completed"
+  | "scan_failed"
+  | "finding_created"
+  | "finding_resolved"
+  | "finding_regressed"
+  | "finding_status_changed"
+  | "finding_assigned"
+  | "finding_triaged"
+  | "finding_commented"
+  | "branch_created"
+  | "branch_added"
+  | "branch_deleted"
+  | "pr_opened"
+  | "pr_merged"
+  | "pr_closed"
+  | "repository_synced"
+  | "settings_changed"
+  | "config_updated"
+  | "notification_sent"
+  | "issue_created";
 type DetailTab = "overview" | "branches" | "findings" | "components" | "activity" | "settings";
 
 // Labels
-const STATUS_LABELS = {
+const STATUS_LABELS: Record<string, string> = {
   active: "Active",
   inactive: "Inactive",
   archived: "Archived",
+  pending: "Pending",
+  completed: "Completed",
+  failed: "Failed",
 };
 
 const FINDING_STATUS_LABELS: Record<FindingStatus, string> = {
@@ -154,10 +178,25 @@ const TRIAGE_STATUS_COLORS: Record<TriageStatus, { bg: string; text: string }> =
 const ACTIVITY_ACTION_LABELS: Record<ActivityAction, string> = {
   scan_started: "Scan Started",
   scan_completed: "Scan Completed",
+  scan_failed: "Scan Failed",
   finding_created: "Finding Created",
   finding_resolved: "Finding Resolved",
+  finding_regressed: "Finding Regressed",
+  finding_status_changed: "Finding Status Changed",
+  finding_assigned: "Finding Assigned",
+  finding_triaged: "Finding Triaged",
+  finding_commented: "Comment Added",
+  branch_created: "Branch Created",
   branch_added: "Branch Added",
+  branch_deleted: "Branch Deleted",
+  pr_opened: "Pull Request Opened",
+  pr_merged: "Pull Request Merged",
+  pr_closed: "Pull Request Closed",
+  repository_synced: "Repository Synced",
+  settings_changed: "Settings Changed",
   config_updated: "Config Updated",
+  notification_sent: "Notification Sent",
+  issue_created: "Issue Created",
 };
 
 const SCM_PROVIDER_COLORS: Record<SCMProvider, string> = {
@@ -208,7 +247,7 @@ interface FindingDetail {
   severity: Severity;
   status: FindingStatus;
   triage_status: TriageStatus;
-  scanner_type: string;
+  scanner_type: ScannerType;
   file_path?: string;
   line_start?: number;
   branches: string[];

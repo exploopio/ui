@@ -16,7 +16,6 @@ import type {
   CreateRepositoryAssetInput,
   UpdateRepositoryExtensionInput,
   RepoVisibility,
-  SCMProvider,
 } from '../types'
 
 /**

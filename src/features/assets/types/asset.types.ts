@@ -867,6 +867,13 @@ export interface CreateRepositoryAssetInput {
   watchers?: number;
   openIssues?: number;
   sizeKb?: number;
+  // Scan settings
+  scanEnabled?: boolean;
+  scanSchedule?: string;
+  // Timestamps
+  repoCreatedAt?: string;
+  repoUpdatedAt?: string;
+  repoPushedAt?: string;
 }
 
 /**
@@ -893,6 +900,13 @@ export interface UpdateRepositoryExtensionInput {
   branchCount?: number;
   protectedBranchCount?: number;
   componentCount?: number;
+  // Scan settings
+  scanEnabled?: boolean;
+  scanSchedule?: string;
+  // Timestamps
+  repoCreatedAt?: string;
+  repoUpdatedAt?: string;
+  repoPushedAt?: string;
 }
 
 // ============================================

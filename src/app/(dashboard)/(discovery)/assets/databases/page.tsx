@@ -162,7 +162,7 @@ const emptyDatabaseForm = {
 
 export default function DatabasesPage() {
   // Fetch databases from API
-  const { assets: databases, isLoading, isError, error: fetchError, mutate } = useAssets({
+  const { assets: databases, isLoading: _isLoading, isError: _isError, error: _fetchError, mutate } = useAssets({
     types: ['database'],
   });
 
@@ -172,7 +172,7 @@ export default function DatabasesPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [engineFilter, setEngineFilter] = useState<EngineFilter>("all");
   const [rowSelection, setRowSelection] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [_isSubmitting, setIsSubmitting] = useState(false);
 
   // Dialog states
   const [addDialogOpen, setAddDialogOpen] = useState(false);

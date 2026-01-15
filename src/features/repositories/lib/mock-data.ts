@@ -2,8 +2,8 @@
  * Mock data for repositories feature (development/demo purposes)
  */
 
-import type { AssetWithRepository, SCMProvider, Criticality, RepoVisibility, ExposureLevel, AssetScope } from "../types/repository.types";
-import type { SCMConnection, SyncStatus, ComplianceStatus, QualityGateStatus, FindingsSummary, Severity, FindingStatus, ScannerType } from "../types/repository.types";
+import type { AssetWithRepository, SCMProvider, Criticality, RepoVisibility } from "../types/repository.types";
+import type { SCMConnection, SyncStatus, ComplianceStatus, QualityGateStatus, Severity, ScannerType, FindingStatus } from "../types/repository.types";
 
 // UI expects snake_case field names for findings summary
 interface FindingsSummaryUI {
@@ -38,7 +38,10 @@ export interface RepositoryView extends AssetWithRepository {
     enabled_scanners: ScannerType[];
     auto_scan: boolean;
     scan_on_push: boolean;
+    scan_on_pr?: boolean;
+    branch_patterns?: string[];
   };
+  security_features?: Record<string, boolean>;
   last_scanned_at?: string;
 }
 
@@ -324,7 +327,6 @@ export function getRepositoryStats(repositories: RepositoryView[] | AssetWithRep
   }
 
   const total = repositories.length;
-  const withFindings = repositories.filter((r) => r.findingCount > 0).length;
   const withCriticalFindings = repositories.filter(
     (r) => r.riskScore >= 80
   ).length;

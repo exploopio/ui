@@ -203,7 +203,7 @@ const emptyCloudForm = {
 
 export default function CloudPage() {
   // Fetch cloud assets from API (compute, storage, serverless types)
-  const { assets: cloudAssets, isLoading, isError, error: fetchError, mutate } = useAssets({
+  const { assets: cloudAssets, isLoading: _isLoading, isError: _isError, error: _fetchError, mutate } = useAssets({
     types: ['compute', 'storage', 'serverless'],
   });
 
@@ -213,7 +213,7 @@ export default function CloudPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [providerFilter, setProviderFilter] = useState<ProviderFilter>("all");
   const [rowSelection, setRowSelection] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [_isSubmitting, setIsSubmitting] = useState(false);
 
   // Dialog states
   const [addDialogOpen, setAddDialogOpen] = useState(false);
