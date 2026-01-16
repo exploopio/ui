@@ -9,8 +9,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft } from "lucide-react";
-import { useFindingApi } from "@/features/findings/api/use-findings-api";
-import type { ApiFinding } from "@/features/findings/api/finding-api.types";
+import { useFindingApi, useAddFindingCommentApi, useFindingCommentsApi, invalidateFindingsCache } from "@/features/findings/api/use-findings-api";
+import type { ApiFinding, ApiFindingComment } from "@/features/findings/api/finding-api.types";
+import { toast } from "sonner";
 import type { FindingDetail, FindingStatus, Activity } from "@/features/findings/types";
 import type { Severity } from "@/features/shared/types";
 import {
@@ -67,32 +68,41 @@ function transformApiToFindingDetail(api: ApiFinding): FindingDetail {
     });
   }
 
+  // Build location string with branch/commit context
+  let locationDisplay = api.file_path || api.asset_id;
+  if (api.first_detected_branch) {
+    locationDisplay = `${api.first_detected_branch}:${locationDisplay}`;
+  }
+  if (api.start_line) {
+    locationDisplay = `${locationDisplay}:${api.start_line}`;
+  }
+
   return {
     id: api.id,
-    title: api.message,
-    description: api.snippet || api.message,
+    title: api.title || api.rule_name || api.message,
+    description: api.description || api.snippet || api.message,
     severity: api.severity as Severity,
     status: statusMap[api.status] || "new",
 
-    // Technical details from metadata
-    cvss: (api.metadata?.cvss as number) || undefined,
-    cvssVector: (api.metadata?.cvss_vector as string) || undefined,
-    cve: (api.metadata?.cve as string) || undefined,
-    cwe: (api.metadata?.cwe as string) || undefined,
-    owasp: (api.metadata?.owasp as string) || undefined,
-    tags: (api.metadata?.tags as string[]) || [],
+    // Technical details - use direct API fields first, then metadata fallback
+    cvss: api.cvss_score ?? (api.metadata?.cvss as number) ?? undefined,
+    cvssVector: api.cvss_vector || (api.metadata?.cvss_vector as string) || undefined,
+    cve: api.cve_id || (api.metadata?.cve as string) || undefined,
+    cwe: api.cwe_ids?.[0] || (api.metadata?.cwe as string) || undefined,
+    owasp: api.owasp_ids?.[0] || (api.metadata?.owasp as string) || undefined,
+    tags: api.tags || (api.metadata?.tags as string[]) || [],
 
-    // Asset - create from asset_id
+    // Asset - create from asset_id with branch/location context
     assets: [
       {
         id: api.asset_id,
         type: "repository",
-        name: api.location || api.file_path || api.asset_id,
+        name: locationDisplay,
         url: api.file_path,
       },
     ],
 
-    // Evidence - empty for now (can be fetched separately)
+    // Evidence - include snippet if available
     evidence: api.snippet
       ? [
           {
@@ -112,16 +122,16 @@ function transformApiToFindingDetail(api: ApiFinding): FindingDetail {
         ]
       : [],
 
-    // Remediation - basic structure
+    // Remediation - use recommendation from scanner, then resolution, then fallback
     remediation: {
-      description: api.resolution || "Review and fix the identified issue.",
+      description: api.recommendation || api.resolution || "No recommendation provided by scanner.",
       steps: [],
       references: (api.metadata?.references as string[]) || [],
       progress: api.status === "resolved" ? 100 : 0,
     },
 
-    // Source info
-    source: api.source === "sast" ? "manual" : "nuclei",
+    // Source info - pass through actual source type from API
+    source: api.source as FindingDetail["source"],
     scanner: api.tool_name,
     scanId: api.scan_id,
 
@@ -129,7 +139,7 @@ function transformApiToFindingDetail(api: ApiFinding): FindingDetail {
     relatedFindings: [],
 
     // Timestamps
-    discoveredAt: api.created_at,
+    discoveredAt: api.first_detected_at || api.created_at,
     resolvedAt: api.resolved_at,
     createdAt: api.created_at,
     updatedAt: api.updated_at,
@@ -187,15 +197,58 @@ function LoadingSkeleton() {
   );
 }
 
+// Transform API comments to Activity format
+function transformCommentsToActivities(comments: ApiFindingComment[]): Activity[] {
+  return comments.map((comment): Activity => ({
+    id: comment.id,
+    type: comment.is_status_change ? "status_changed" : "comment",
+    actor: {
+      id: comment.author_id,
+      name: comment.author_name || "Unknown User",
+      email: comment.author_email || "",
+      role: "analyst",
+    },
+    content: comment.content,
+    previousValue: comment.old_status,
+    newValue: comment.new_status,
+    createdAt: comment.created_at,
+    editedAt: comment.updated_at,
+  }));
+}
+
 export default function FindingDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
 
   const { data: apiFinding, error, isLoading } = useFindingApi(id);
+  const { data: commentsData, mutate: mutateComments } = useFindingCommentsApi(id);
+  const { trigger: addComment } = useAddFindingCommentApi(id);
 
   // Transform API data to FindingDetail format
   const finding = apiFinding ? transformApiToFindingDetail(apiFinding) : null;
+
+  // Merge API comments with finding activities
+  const apiComments = commentsData?.data || [];
+  const commentActivities = transformCommentsToActivities(apiComments);
+  const allActivities = finding
+    ? [...finding.activities, ...commentActivities]
+    : [];
+
+  // Handler for adding new comments
+  const handleAddComment = async (content: string, _isInternal: boolean) => {
+    if (!content.trim()) return;
+
+    try {
+      await addComment({ content });
+      await mutateComments();
+      await invalidateFindingsCache();
+      toast.success("Comment added");
+    } catch (error) {
+      toast.error("Failed to add comment");
+      console.error("Add comment error:", error);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -322,7 +375,10 @@ export default function FindingDetailPage() {
               <CardTitle className="text-base">Activity</CardTitle>
             </CardHeader>
             <div className="flex-1 overflow-hidden">
-              <ActivityPanel activities={finding.activities} />
+              <ActivityPanel
+                activities={allActivities}
+                onAddComment={handleAddComment}
+              />
             </div>
           </Card>
         </div>

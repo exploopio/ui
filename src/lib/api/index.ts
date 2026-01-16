@@ -342,3 +342,47 @@ export {
   useCreateIntegration,
   useTestIntegration,
 } from './security-hooks'
+
+// ============================================
+// FINDING HOOKS (with typed responses)
+// ============================================
+
+export {
+  // Finding list/detail hooks
+  useFindings as useFindingsTyped,
+  useAssetFindings,
+  useFinding as useFindingTyped,
+  useFindingComments,
+
+  // Finding mutation hooks
+  useCreateFinding as useCreateFindingTyped,
+  useUpdateFindingStatus as useUpdateFindingStatusTyped,
+  useDeleteFinding as useDeleteFindingTyped,
+  useAddFindingComment,
+  useDeleteFindingComment,
+
+  // Cache utilities
+  findingKeys,
+  invalidateFindingsCache,
+  invalidateAssetFindingsCache,
+} from './finding-hooks'
+
+export type {
+  Finding as FindingTyped,
+  FindingSeverity,
+  FindingStatus,
+  FindingSource,
+  FindingListFilters,
+  FindingListResponse,
+  CreateFindingRequest,
+  UpdateFindingStatusRequest,
+  FindingComment,
+  AddCommentRequest,
+  FindingStats,
+} from './finding-types'
+
+export {
+  SEVERITY_CONFIG,
+  STATUS_CONFIG,
+  SOURCE_CONFIG,
+} from './finding-types'

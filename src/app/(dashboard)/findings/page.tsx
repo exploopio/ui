@@ -31,6 +31,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Download,
   RefreshCw,
@@ -45,48 +46,188 @@ import {
   Plus,
   X,
   Filter,
+  AlertCircle,
+  Loader2,
 } from "lucide-react";
 import {
-  mockFindings,
   FindingStatusBadge,
   FindingDetailDrawer,
   FINDING_STATUS_CONFIG,
   SEVERITY_CONFIG,
 } from "@/features/findings";
+import {
+  useFindingsApi,
+  invalidateFindingsCache,
+} from "@/features/findings/api/use-findings-api";
+import type {
+  ApiFinding,
+  FindingApiFilters,
+  Severity as ApiSeverity,
+  FindingStatus as ApiFindingStatus,
+} from "@/features/findings/api/finding-api.types";
 import type { Finding, FindingStatus, FindingUser } from "@/features/findings";
 import type { Severity } from "@/features/shared/types";
 import { toast } from "sonner";
+
+// ============================================
+// Transform API Finding to UI Finding
+// ============================================
+
+function transformApiToUiFinding(api: ApiFinding): Finding {
+  // Map API status to UI status
+  const statusMap: Record<ApiFindingStatus, FindingStatus> = {
+    open: "new",
+    confirmed: "confirmed",
+    in_progress: "in_progress",
+    resolved: "resolved",
+    false_positive: "false_positive",
+    accepted: "closed",
+    wont_fix: "closed",
+  };
+
+  // Build location string with branch/commit context
+  let locationName = api.file_path || api.asset_id;
+  if (api.first_detected_branch) {
+    locationName = `${api.first_detected_branch}:${locationName}`;
+  }
+  if (api.start_line) {
+    locationName = `${locationName}:${api.start_line}`;
+  }
+
+  return {
+    id: api.id,
+    title: api.title || api.rule_name || api.message,
+    description: api.description || api.snippet || api.message,
+    severity: api.severity as Severity,
+    status: statusMap[api.status] || "new",
+    cvss: api.cvss_score,
+    cvssVector: api.cvss_vector,
+    cve: api.cve_id,
+    cwe: api.cwe_ids?.[0],
+    owasp: api.owasp_ids?.[0],
+    tags: api.tags || [],
+    assets: [
+      {
+        id: api.asset_id,
+        type: "repository",
+        name: locationName,
+        url: api.location,
+      },
+    ],
+    evidence: api.snippet
+      ? [
+          {
+            id: "snippet-1",
+            type: "code" as const,
+            title: "Code Snippet",
+            content: api.snippet,
+            createdAt: api.created_at,
+            createdBy: { id: "system", name: "System", email: "", role: "admin" as const },
+          },
+        ]
+      : [],
+    remediation: {
+      description: api.recommendation || api.resolution || "",
+      steps: [],
+      references: (api.metadata?.references as string[]) || [],
+      progress: api.status === "resolved" ? 100 : 0,
+    },
+    assignee: api.assigned_to
+      ? { id: api.assigned_to, name: api.assigned_to, email: "", role: "analyst" }
+      : undefined,
+    team: undefined,
+    source: api.source as Finding["source"],
+    scanner: api.tool_name,
+    scanId: api.scan_id,
+    duplicateOf: undefined,
+    relatedFindings: [],
+    remediationTaskId: undefined,
+    discoveredAt: api.first_detected_at || api.created_at,
+    triagedAt: undefined,
+    resolvedAt: api.resolved_at,
+    verifiedAt: undefined,
+    createdAt: api.created_at,
+    updatedAt: api.updated_at,
+  };
+}
+
+// ============================================
+// Loading Skeleton
+// ============================================
+
+function FindingsLoadingSkeleton() {
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-5">
+        {[...Array(5)].map((_, i) => (
+          <Card key={i}>
+            <CardHeader className="pb-2">
+              <Skeleton className="h-4 w-16 mb-2" />
+              <Skeleton className="h-8 w-12" />
+            </CardHeader>
+          </Card>
+        ))}
+      </div>
+      <Card className="mt-6">
+        <CardContent className="pt-6">
+          <div className="space-y-3">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="flex items-center gap-4">
+                <Skeleton className="h-4 w-4" />
+                <Skeleton className="h-4 flex-1" />
+                <Skeleton className="h-6 w-16" />
+                <Skeleton className="h-4 w-12" />
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-6 w-20" />
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
 
 export default function FindingsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const assetIdFilter = searchParams.get("assetId");
+  const sourceIdFilter = searchParams.get("source");
 
   const [selectedFinding, setSelectedFinding] = useState<Finding | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [severityTab, setSeverityTab] = useState<string>("all");
 
-  // Filter findings by assetId if present
-  const baseFindings = useMemo(() => {
-    if (!assetIdFilter) return mockFindings;
-    return mockFindings.filter((f) =>
-      f.assets.some((asset) => asset.id === assetIdFilter)
-    );
-  }, [assetIdFilter]);
+  // Build API filters
+  const apiFilters = useMemo((): FindingApiFilters => {
+    const filters: FindingApiFilters = {
+      per_page: 100,
+    };
+    if (assetIdFilter) filters.asset_id = assetIdFilter;
+    if (sourceIdFilter) filters.source_id = sourceIdFilter;
+    if (severityTab !== "all") {
+      filters.severities = [severityTab as ApiSeverity];
+    }
+    return filters;
+  }, [assetIdFilter, sourceIdFilter, severityTab]);
 
-  // Get the asset name for display
-  const filteredAssetName = useMemo(() => {
-    if (!assetIdFilter) return null;
-    const finding = mockFindings.find((f) =>
-      f.assets.some((asset) => asset.id === assetIdFilter)
-    );
-    return finding?.assets.find((a) => a.id === assetIdFilter)?.name || assetIdFilter;
-  }, [assetIdFilter]);
+  // Fetch findings from API
+  const {
+    data: findingsResponse,
+    error,
+    isLoading,
+    mutate,
+  } = useFindingsApi(apiFilters);
 
-  // Recalculate stats based on filtered findings
+  // Transform API data to UI format
+  const findings = useMemo(() => {
+    if (!findingsResponse?.data) return [];
+    return findingsResponse.data.map(transformApiToUiFinding);
+  }, [findingsResponse]);
+
+  // Calculate stats from findings
   const stats = useMemo(() => {
-    const findings = baseFindings;
     const bySeverity: Record<Severity, number> = {
       critical: 0,
       high: 0,
@@ -94,30 +235,38 @@ export default function FindingsPage() {
       low: 0,
       info: 0,
     };
-    findings.forEach((f) => {
-      bySeverity[f.severity]++;
+
+    // Use all findings for stats (need to fetch without severity filter)
+    const allFindings = findingsResponse?.data || [];
+    allFindings.forEach((f) => {
+      bySeverity[f.severity as Severity]++;
     });
-    const cvssSum = findings.reduce((sum, f) => sum + (f.cvss || 0), 0);
+
+    const total = findingsResponse?.total || allFindings.length;
+    const overdueCount = allFindings.filter(
+      (f) => f.status === "open" || f.status === "confirmed"
+    ).length;
+
     return {
-      total: findings.length,
+      total,
       bySeverity,
-      averageCvss: findings.length > 0 ? (cvssSum / findings.length).toFixed(1) : "0",
-      overdueCount: findings.filter((f) => f.status === "new" || f.status === "triaged").length,
+      averageCvss: "N/A",
+      overdueCount,
     };
-  }, [baseFindings]);
+  }, [findingsResponse]);
 
-  const selectedCount = Object.keys(rowSelection).filter((k) => rowSelection[k]).length;
+  const selectedCount = Object.keys(rowSelection).filter(
+    (k) => rowSelection[k]
+  ).length;
 
-  const clearAssetFilter = () => {
+  const clearFilters = () => {
     router.push("/findings");
   };
 
-  const handleRefresh = () => {
-    setIsRefreshing(true);
-    setTimeout(() => {
-      setIsRefreshing(false);
-      toast.success("Findings refreshed");
-    }, 1000);
+  const handleRefresh = async () => {
+    await mutate();
+    await invalidateFindingsCache();
+    toast.success("Findings refreshed");
   };
 
   const handleExport = (format: string) => {
@@ -136,11 +285,6 @@ export default function FindingsPage() {
     setRowSelection({});
   };
 
-  const filterBySeverity = (severity?: Severity) => {
-    if (!severity) return baseFindings;
-    return baseFindings.filter((f) => f.severity === severity);
-  };
-
   const handleRowClick = useCallback((finding: Finding) => {
     setSelectedFinding(finding);
     setDrawerOpen(true);
@@ -151,6 +295,7 @@ export default function FindingsPage() {
     toast.success(`Status updated to "${statusConfig.label}"`, {
       description: `Finding ${findingId}`,
     });
+    mutate();
   };
 
   const handleSeverityChange = (findingId: string, severity: Severity) => {
@@ -158,9 +303,13 @@ export default function FindingsPage() {
     toast.success(`Severity updated to "${severityConfig.label}"`, {
       description: `Finding ${findingId}`,
     });
+    mutate();
   };
 
-  const handleAssigneeChange = (findingId: string, assignee: FindingUser | null) => {
+  const handleAssigneeChange = (
+    findingId: string,
+    assignee: FindingUser | null
+  ) => {
     if (assignee) {
       toast.success(`Assigned to ${assignee.name}`, {
         description: `Finding ${findingId}`,
@@ -170,6 +319,7 @@ export default function FindingsPage() {
         description: `Finding ${findingId}`,
       });
     }
+    mutate();
   };
 
   const handleAddComment = (findingId: string, comment: string) => {
@@ -178,23 +328,28 @@ export default function FindingsPage() {
     });
   };
 
-  const handleRowAction = useCallback((action: string, finding: Finding) => {
-    switch (action) {
-      case "view":
-        handleRowClick(finding);
-        break;
-      case "copy_id":
-        navigator.clipboard.writeText(finding.id);
-        toast.success("Finding ID copied to clipboard");
-        break;
-      case "copy_link":
-        navigator.clipboard.writeText(`${window.location.origin}/findings/${finding.id}`);
-        toast.success("Link copied to clipboard");
-        break;
-      default:
-        toast.info(`Action: ${action}`, { description: finding.title });
-    }
-  }, [handleRowClick]);
+  const handleRowAction = useCallback(
+    (action: string, finding: Finding) => {
+      switch (action) {
+        case "view":
+          handleRowClick(finding);
+          break;
+        case "copy_id":
+          navigator.clipboard.writeText(finding.id);
+          toast.success("Finding ID copied to clipboard");
+          break;
+        case "copy_link":
+          navigator.clipboard.writeText(
+            `${window.location.origin}/findings/${finding.id}`
+          );
+          toast.success("Link copied to clipboard");
+          break;
+        default:
+          toast.info(`Action: ${action}`, { description: finding.title });
+      }
+    },
+    [handleRowClick]
+  );
 
   // Define columns for DataTable
   const columns: ColumnDef<Finding>[] = useMemo(
@@ -229,12 +384,14 @@ export default function FindingsPage() {
         ),
         cell: ({ row }) => (
           <div
-            className="cursor-pointer"
+            className="cursor-pointer max-w-md"
             onClick={() => handleRowClick(row.original)}
           >
-            <p className="font-medium">{row.getValue("title")}</p>
-            {row.original.cve && (
-              <p className="text-muted-foreground text-xs">{row.original.cve}</p>
+            <p className="font-medium truncate">{row.getValue("title")}</p>
+            {row.original.scanner && (
+              <p className="text-muted-foreground text-xs">
+                {row.original.scanner}
+              </p>
             )}
           </div>
         ),
@@ -250,22 +407,27 @@ export default function FindingsPage() {
         },
       },
       {
-        accessorKey: "cvss",
+        id: "source",
+        accessorFn: (row) => row.source || "-",
         header: ({ column }) => (
-          <DataTableColumnHeader column={column} title="CVSS" />
+          <DataTableColumnHeader column={column} title="Source" />
         ),
         cell: ({ row }) => (
-          <span className="font-mono">{row.getValue("cvss")}</span>
+          <Badge variant="outline" className="text-xs uppercase">
+            {row.getValue("source")}
+          </Badge>
         ),
       },
       {
         id: "asset",
         accessorFn: (row) => row.assets[0]?.name || "-",
         header: ({ column }) => (
-          <DataTableColumnHeader column={column} title="Asset" />
+          <DataTableColumnHeader column={column} title="Location" />
         ),
         cell: ({ row }) => (
-          <span className="text-sm">{row.getValue("asset")}</span>
+          <span className="text-sm font-mono text-muted-foreground truncate max-w-[200px] block">
+            {row.getValue("asset")}
+          </span>
         ),
       },
       {
@@ -273,20 +435,12 @@ export default function FindingsPage() {
         header: ({ column }) => (
           <DataTableColumnHeader column={column} title="Status" />
         ),
-        cell: ({ row }) => <FindingStatusBadge status={row.getValue("status")} />,
+        cell: ({ row }) => (
+          <FindingStatusBadge status={row.getValue("status")} />
+        ),
         filterFn: (row, id, value) => {
           return value.includes(row.getValue(id));
         },
-      },
-      {
-        id: "assignee",
-        accessorFn: (row) => row.assignee?.name || "-",
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} title="Assignee" />
-        ),
-        cell: ({ row }) => (
-          <span className="text-sm">{row.getValue("assignee")}</span>
-        ),
       },
       {
         accessorKey: "createdAt",
@@ -312,24 +466,34 @@ export default function FindingsPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleRowAction("view", finding)}>
+                <DropdownMenuItem
+                  onClick={() => handleRowAction("view", finding)}
+                >
                   <ExternalLink className="mr-2 h-4 w-4" />
                   View Details
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleRowAction("assign", finding)}>
+                <DropdownMenuItem
+                  onClick={() => handleRowAction("assign", finding)}
+                >
                   <UserPlus className="mr-2 h-4 w-4" />
                   Assign
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleRowAction("status", finding)}>
+                <DropdownMenuItem
+                  onClick={() => handleRowAction("status", finding)}
+                >
                   <CheckCircle className="mr-2 h-4 w-4" />
                   Change Status
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => handleRowAction("copy_id", finding)}>
+                <DropdownMenuItem
+                  onClick={() => handleRowAction("copy_id", finding)}
+                >
                   <Copy className="mr-2 h-4 w-4" />
                   Copy ID
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleRowAction("copy_link", finding)}>
+                <DropdownMenuItem
+                  onClick={() => handleRowAction("copy_link", finding)}
+                >
                   <Link2 className="mr-2 h-4 w-4" />
                   Copy Link
                 </DropdownMenuItem>
@@ -350,6 +514,36 @@ export default function FindingsPage() {
     [handleRowAction, handleRowClick]
   );
 
+  // Error state
+  if (error) {
+    return (
+      <>
+        <Header fixed>
+          <div className="ms-auto flex items-center gap-2 sm:gap-4">
+            <Search />
+            <ThemeSwitch />
+            <ProfileDropdown />
+          </div>
+        </Header>
+        <Main>
+          <div className="flex flex-col items-center justify-center py-20">
+            <AlertCircle className="h-12 w-12 text-destructive mb-4" />
+            <h2 className="text-lg font-semibold mb-2">
+              Failed to load findings
+            </h2>
+            <p className="text-muted-foreground mb-4">
+              {error?.message || "An unexpected error occurred"}
+            </p>
+            <Button onClick={() => mutate()}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Retry
+            </Button>
+          </div>
+        </Main>
+      </>
+    );
+  }
+
   return (
     <>
       <Header fixed>
@@ -363,11 +557,24 @@ export default function FindingsPage() {
       <Main>
         <PageHeader
           title="Security Findings"
-          description={`${stats.total} total findings${assetIdFilter ? ` for "${filteredAssetName}"` : ""} - ${stats.overdueCount} overdue`}
+          description={
+            isLoading
+              ? "Loading findings..."
+              : `${stats.total} total findings - ${stats.overdueCount} open`
+          }
         >
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
-              <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="mr-2 h-4 w-4" />
+              )}
               Refresh
             </Button>
             <DropdownMenu>
@@ -396,20 +603,33 @@ export default function FindingsPage() {
           </div>
         </PageHeader>
 
-        {/* Active Filter Indicator */}
-        {assetIdFilter && (
-          <div className="mt-4 flex items-center gap-2">
+        {/* Active Filter Indicators */}
+        {(assetIdFilter || sourceIdFilter) && (
+          <div className="mt-4 flex items-center gap-2 flex-wrap">
             <Filter className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm text-muted-foreground">Filtered by:</span>
-            <Badge variant="secondary" className="gap-1.5">
-              {filteredAssetName}
-              <button
-                onClick={clearAssetFilter}
-                className="ml-0.5 rounded-full hover:bg-muted-foreground/20"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </Badge>
+            {assetIdFilter && (
+              <Badge variant="secondary" className="gap-1.5">
+                Asset: {assetIdFilter.slice(0, 8)}...
+                <button
+                  onClick={clearFilters}
+                  className="ml-0.5 rounded-full hover:bg-muted-foreground/20"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            )}
+            {sourceIdFilter && (
+              <Badge variant="secondary" className="gap-1.5">
+                Source: {sourceIdFilter.slice(0, 8)}...
+                <button
+                  onClick={clearFilters}
+                  className="ml-0.5 rounded-full hover:bg-muted-foreground/20"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            )}
           </div>
         )}
 
@@ -433,21 +653,33 @@ export default function FindingsPage() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
-                    <DropdownMenuItem onClick={() => handleBulkStatusChange("open")}>
+                    <DropdownMenuItem
+                      onClick={() => handleBulkStatusChange("open")}
+                    >
                       Open
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleBulkStatusChange("in_progress")}>
+                    <DropdownMenuItem
+                      onClick={() => handleBulkStatusChange("in_progress")}
+                    >
                       In Progress
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleBulkStatusChange("resolved")}>
+                    <DropdownMenuItem
+                      onClick={() => handleBulkStatusChange("resolved")}
+                    >
                       Resolved
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleBulkStatusChange("false_positive")}>
+                    <DropdownMenuItem
+                      onClick={() => handleBulkStatusChange("false_positive")}
+                    >
                       False Positive
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-                <Button variant="outline" size="sm" onClick={() => setRowSelection({})}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setRowSelection({})}
+                >
                   Clear Selection
                 </Button>
               </div>
@@ -455,128 +687,98 @@ export default function FindingsPage() {
           </Card>
         )}
 
-        {/* Stats Cards */}
-        <div className="mt-6 grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-5">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Critical</CardDescription>
-              <CardTitle className="text-3xl text-red-500">
-                {stats.bySeverity.critical}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>High</CardDescription>
-              <CardTitle className="text-3xl text-orange-500">
-                {stats.bySeverity.high}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Medium</CardDescription>
-              <CardTitle className="text-3xl text-yellow-500">
-                {stats.bySeverity.medium}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Low</CardDescription>
-              <CardTitle className="text-3xl text-blue-500">
-                {stats.bySeverity.low}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Avg CVSS</CardDescription>
-              <CardTitle className="text-3xl">{stats.averageCvss}</CardTitle>
-            </CardHeader>
-          </Card>
-        </div>
+        {isLoading ? (
+          <div className="mt-6">
+            <FindingsLoadingSkeleton />
+          </div>
+        ) : (
+          <>
+            {/* Stats Cards */}
+            <div className="mt-6 grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-5">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription>Critical</CardDescription>
+                  <CardTitle className="text-3xl text-red-500">
+                    {stats.bySeverity.critical}
+                  </CardTitle>
+                </CardHeader>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription>High</CardDescription>
+                  <CardTitle className="text-3xl text-orange-500">
+                    {stats.bySeverity.high}
+                  </CardTitle>
+                </CardHeader>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription>Medium</CardDescription>
+                  <CardTitle className="text-3xl text-yellow-500">
+                    {stats.bySeverity.medium}
+                  </CardTitle>
+                </CardHeader>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription>Low</CardDescription>
+                  <CardTitle className="text-3xl text-blue-500">
+                    {stats.bySeverity.low}
+                  </CardTitle>
+                </CardHeader>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription>Info</CardDescription>
+                  <CardTitle className="text-3xl text-gray-500">
+                    {stats.bySeverity.info}
+                  </CardTitle>
+                </CardHeader>
+              </Card>
+            </div>
 
-        {/* Tabs with DataTable */}
-        <Tabs defaultValue="all" className="mt-6">
-          <TabsList>
-            <TabsTrigger value="all">All ({stats.total})</TabsTrigger>
-            <TabsTrigger value="critical">
-              Critical ({stats.bySeverity.critical})
-            </TabsTrigger>
-            <TabsTrigger value="high">High ({stats.bySeverity.high})</TabsTrigger>
-            <TabsTrigger value="medium">
-              Medium ({stats.bySeverity.medium})
-            </TabsTrigger>
-            <TabsTrigger value="low">Low ({stats.bySeverity.low})</TabsTrigger>
-          </TabsList>
+            {/* Tabs with DataTable */}
+            <Tabs
+              value={severityTab}
+              onValueChange={setSeverityTab}
+              className="mt-6"
+            >
+              <TabsList>
+                <TabsTrigger value="all">All ({stats.total})</TabsTrigger>
+                <TabsTrigger value="critical">
+                  Critical ({stats.bySeverity.critical})
+                </TabsTrigger>
+                <TabsTrigger value="high">
+                  High ({stats.bySeverity.high})
+                </TabsTrigger>
+                <TabsTrigger value="medium">
+                  Medium ({stats.bySeverity.medium})
+                </TabsTrigger>
+                <TabsTrigger value="low">
+                  Low ({stats.bySeverity.low})
+                </TabsTrigger>
+              </TabsList>
 
-          <TabsContent value="all">
-            <Card className="mt-4">
-              <CardContent className="pt-6">
-                <DataTable
-                  columns={columns}
-                  data={filterBySeverity()}
-                  searchPlaceholder="Search findings..."
-                  emptyMessage="No findings found"
-                  emptyDescription="No security findings match your search criteria"
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
-          <TabsContent value="critical">
-            <Card className="mt-4">
-              <CardContent className="pt-6">
-                <DataTable
-                  columns={columns}
-                  data={filterBySeverity("critical")}
-                  searchPlaceholder="Search critical findings..."
-                  emptyMessage="No critical findings"
-                  emptyDescription="Great! No critical security findings found"
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
-          <TabsContent value="high">
-            <Card className="mt-4">
-              <CardContent className="pt-6">
-                <DataTable
-                  columns={columns}
-                  data={filterBySeverity("high")}
-                  searchPlaceholder="Search high severity findings..."
-                  emptyMessage="No high severity findings"
-                  emptyDescription="No high severity findings match your criteria"
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
-          <TabsContent value="medium">
-            <Card className="mt-4">
-              <CardContent className="pt-6">
-                <DataTable
-                  columns={columns}
-                  data={filterBySeverity("medium")}
-                  searchPlaceholder="Search medium severity findings..."
-                  emptyMessage="No medium severity findings"
-                  emptyDescription="No medium severity findings match your criteria"
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
-          <TabsContent value="low">
-            <Card className="mt-4">
-              <CardContent className="pt-6">
-                <DataTable
-                  columns={columns}
-                  data={filterBySeverity("low")}
-                  searchPlaceholder="Search low severity findings..."
-                  emptyMessage="No low severity findings"
-                  emptyDescription="No low severity findings match your criteria"
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+              <TabsContent value={severityTab}>
+                <Card className="mt-4">
+                  <CardContent className="pt-6">
+                    <DataTable
+                      columns={columns}
+                      data={findings}
+                      searchPlaceholder="Search findings..."
+                      emptyMessage="No findings found"
+                      emptyDescription={
+                        findings.length === 0 && !isLoading
+                          ? "No security findings match your search criteria"
+                          : undefined
+                      }
+                    />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </>
+        )}
       </Main>
 
       {/* Finding Quick View Drawer */}

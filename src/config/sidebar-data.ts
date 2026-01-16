@@ -50,6 +50,7 @@ import {
   RotateCcw,
   BookTemplate,
   History,
+  Bot,
   // New icons for CTEM architecture
   ShieldAlert,
   Package,
@@ -114,6 +115,12 @@ export const sidebarData: SidebarData = {
           url: "/asset-groups",
           icon: FolderKanban,
           permission: Permission.AssetsRead,
+        },
+        {
+          title: "Workers",
+          url: "/workers",
+          icon: Bot,
+          permission: Permission.ScansRead,
         },
         {
           title: "Scope Config",

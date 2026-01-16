@@ -111,11 +111,12 @@ function transformFindingStats(backend: BackendFindingStats): FindingStats {
 
 /**
  * Hook to fetch paginated findings list
+ * Note: Tenant is extracted from JWT token, not URL path
  */
 export function useFindings(tenantId: string | null, filters?: SearchFilters) {
   const { data, error, isLoading, mutate } = useSWR<PaginatedResponse<BackendFinding>>(
     tenantId ? ['findings', tenantId, filters] : null,
-    () => get<PaginatedResponse<BackendFinding>>(endpoints.findings.list(tenantId!, filters)),
+    () => get<PaginatedResponse<BackendFinding>>(endpoints.findings.list(filters)),
     {
       revalidateOnFocus: false,
       dedupingInterval: 10000,
@@ -135,11 +136,12 @@ export function useFindings(tenantId: string | null, filters?: SearchFilters) {
 
 /**
  * Hook to fetch a single finding by ID
+ * Note: Tenant is extracted from JWT token, not URL path
  */
 export function useFinding(tenantId: string | null, findingId: string | null) {
   const { data, error, isLoading, mutate } = useSWR<BackendFinding>(
     tenantId && findingId ? ['finding', tenantId, findingId] : null,
-    () => get<BackendFinding>(endpoints.findings.get(tenantId!, findingId!)),
+    () => get<BackendFinding>(endpoints.findings.get(findingId!)),
     {
       revalidateOnFocus: false,
     }
@@ -154,12 +156,13 @@ export function useFinding(tenantId: string | null, findingId: string | null) {
 }
 
 /**
- * Hook to fetch findings by project
+ * Hook to fetch findings by asset
+ * Note: Projects are now assets with type="repository", use asset_id filter
  */
 export function useFindingsByProject(tenantId: string | null, projectId: string | null, filters?: SearchFilters) {
   const { data, error, isLoading, mutate } = useSWR<PaginatedResponse<BackendFinding>>(
     tenantId && projectId ? ['findings-by-project', tenantId, projectId, filters] : null,
-    () => get<PaginatedResponse<BackendFinding>>(endpoints.findings.listByProject(tenantId!, projectId!, filters)),
+    () => get<PaginatedResponse<BackendFinding>>(endpoints.findings.listByAsset(projectId!, filters)),
     {
       revalidateOnFocus: false,
       dedupingInterval: 10000,
@@ -195,9 +198,10 @@ export interface CreateFindingInput {
 
 /**
  * Create a new finding
+ * Note: Tenant is extracted from JWT token, not URL path
  */
-export async function createFinding(tenantId: string, input: CreateFindingInput): Promise<Finding> {
-  const response = await post<BackendFinding>(endpoints.findings.create(tenantId), {
+export async function createFinding(_tenantId: string, input: CreateFindingInput): Promise<Finding> {
+  const response = await post<BackendFinding>(endpoints.findings.create(), {
     title: input.title,
     description: input.description,
     severity: input.severity,
@@ -216,13 +220,14 @@ export async function createFinding(tenantId: string, input: CreateFindingInput)
 
 /**
  * Update finding status
+ * Note: Tenant is extracted from JWT token, not URL path
  */
 export async function updateFindingStatus(
-  tenantId: string,
+  _tenantId: string,
   findingId: string,
   status: FindingStatus
 ): Promise<Finding> {
-  const response = await patch<BackendFinding>(endpoints.findings.updateStatus(tenantId, findingId), {
+  const response = await patch<BackendFinding>(endpoints.findings.updateStatus(findingId), {
     status,
   })
   return transformFinding(response)
@@ -230,9 +235,10 @@ export async function updateFindingStatus(
 
 /**
  * Delete a finding
+ * Note: Tenant is extracted from JWT token, not URL path
  */
-export async function deleteFinding(tenantId: string, findingId: string): Promise<void> {
-  await del(endpoints.findings.delete(tenantId, findingId))
+export async function deleteFinding(_tenantId: string, findingId: string): Promise<void> {
+  await del(endpoints.findings.delete(findingId))
 }
 
 /**

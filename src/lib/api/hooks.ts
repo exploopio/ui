@@ -240,7 +240,7 @@ export function useVulnerabilityByCVE(cveId: string | null, config?: SWRConfigur
 // ============================================
 
 /**
- * Fetch findings for a tenant
+ * Fetch findings (tenant extracted from JWT, not URL path)
  */
 export function useFindings(
   tenantIdOrSlug: string | null,
@@ -248,14 +248,14 @@ export function useFindings(
   config?: SWRConfiguration
 ) {
   return useSWR(
-    tenantIdOrSlug ? endpoints.findings.list(tenantIdOrSlug, filters) : null,
+    tenantIdOrSlug ? endpoints.findings.list(filters) : null,
     get,
     { ...defaultSwrConfig, ...config }
   )
 }
 
 /**
- * Fetch finding by ID
+ * Fetch finding by ID (tenant extracted from JWT, not URL path)
  */
 export function useFinding(
   tenantIdOrSlug: string | null,
@@ -263,14 +263,14 @@ export function useFinding(
   config?: SWRConfiguration
 ) {
   return useSWR(
-    tenantIdOrSlug && findingId ? endpoints.findings.get(tenantIdOrSlug, findingId) : null,
+    tenantIdOrSlug && findingId ? endpoints.findings.get(findingId) : null,
     get,
     { ...defaultSwrConfig, ...config }
   )
 }
 
 /**
- * Fetch findings by project
+ * Fetch findings by asset (tenant extracted from JWT, not URL path)
  */
 export function useFindingsByProject(
   tenantIdOrSlug: string | null,
@@ -280,7 +280,7 @@ export function useFindingsByProject(
 ) {
   return useSWR(
     tenantIdOrSlug && projectId
-      ? endpoints.findings.listByProject(tenantIdOrSlug, projectId, filters)
+      ? endpoints.findings.listByAsset(projectId, filters)
       : null,
     get,
     { ...defaultSwrConfig, ...config }

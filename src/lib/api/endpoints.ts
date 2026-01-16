@@ -24,6 +24,7 @@ export const API_BASE = {
   VULNERABILITIES: '/api/v1/vulnerabilities',
   DASHBOARD: '/api/v1/dashboard',
   AUDIT_LOGS: '/api/v1/audit-logs',
+  WORKERS: '/api/v1/workers',
 } as const
 
 // ============================================
@@ -564,51 +565,72 @@ export const vulnerabilityEndpoints = {
 } as const
 
 // ============================================
-// FINDING ENDPOINTS (Tenant-scoped)
+// FINDING ENDPOINTS (Tenant from JWT token)
 // ============================================
 
+import type { FindingListFilters } from './finding-types'
+
 /**
- * Finding endpoints (tenant-scoped vulnerability instances)
+ * Finding endpoints (tenant extracted from JWT, not URL path)
  */
 export const findingEndpoints = {
   /**
-   * List findings in tenant
+   * List findings (tenant from JWT)
    */
-  list: (tenantIdOrSlug: string, filters?: SearchFilters) => {
+  list: (filters?: FindingListFilters) => {
     const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
-    return `${API_BASE.TENANTS}/${tenantIdOrSlug}/findings${queryString}`
+    return `/api/v1/findings${queryString}`
   },
 
   /**
    * Get finding by ID
    */
-  get: (tenantIdOrSlug: string, findingId: string) =>
-    `${API_BASE.TENANTS}/${tenantIdOrSlug}/findings/${findingId}`,
+  get: (findingId: string) => `/api/v1/findings/${findingId}`,
 
   /**
-   * Create finding (member+ role)
+   * Create finding
    */
-  create: (tenantIdOrSlug: string) => `${API_BASE.TENANTS}/${tenantIdOrSlug}/findings`,
+  create: () => '/api/v1/findings',
 
   /**
-   * Update finding status (member+ role)
+   * Update finding status
    */
-  updateStatus: (tenantIdOrSlug: string, findingId: string) =>
-    `${API_BASE.TENANTS}/${tenantIdOrSlug}/findings/${findingId}/status`,
+  updateStatus: (findingId: string) => `/api/v1/findings/${findingId}/status`,
 
   /**
-   * Delete finding (admin+ role)
+   * Delete finding
    */
-  delete: (tenantIdOrSlug: string, findingId: string) =>
-    `${API_BASE.TENANTS}/${tenantIdOrSlug}/findings/${findingId}`,
+  delete: (findingId: string) => `/api/v1/findings/${findingId}`,
 
   /**
-   * List findings by project
+   * List findings for an asset
    */
-  listByProject: (tenantIdOrSlug: string, projectId: string, filters?: SearchFilters) => {
+  listByAsset: (assetId: string, filters?: FindingListFilters) => {
     const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
-    return `${API_BASE.TENANTS}/${tenantIdOrSlug}/projects/${projectId}/findings${queryString}`
+    return `/api/v1/assets/${assetId}/findings${queryString}`
   },
+
+  /**
+   * List comments for a finding
+   */
+  comments: (findingId: string) => `/api/v1/findings/${findingId}/comments`,
+
+  /**
+   * Add comment to a finding
+   */
+  addComment: (findingId: string) => `/api/v1/findings/${findingId}/comments`,
+
+  /**
+   * Update comment
+   */
+  updateComment: (findingId: string, commentId: string) =>
+    `/api/v1/findings/${findingId}/comments/${commentId}`,
+
+  /**
+   * Delete comment
+   */
+  deleteComment: (findingId: string, commentId: string) =>
+    `/api/v1/findings/${findingId}/comments/${commentId}`,
 } as const
 
 // ============================================
@@ -707,6 +729,55 @@ export const auditLogEndpoints = {
 } as const
 
 // ============================================
+// WORKER ENDPOINTS
+// ============================================
+
+import type { WorkerListFilters } from './worker-types'
+
+/**
+ * Worker endpoints for managing workers (agents, scanners, collectors)
+ */
+export const workerEndpoints = {
+  /**
+   * List workers with optional filters
+   */
+  list: (filters?: WorkerListFilters) => {
+    const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
+    return `${API_BASE.WORKERS}${queryString}`
+  },
+
+  /**
+   * Get worker by ID
+   */
+  get: (workerId: string) => `${API_BASE.WORKERS}/${workerId}`,
+
+  /**
+   * Create a new worker
+   */
+  create: () => API_BASE.WORKERS,
+
+  /**
+   * Update worker
+   */
+  update: (workerId: string) => `${API_BASE.WORKERS}/${workerId}`,
+
+  /**
+   * Delete worker
+   */
+  delete: (workerId: string) => `${API_BASE.WORKERS}/${workerId}`,
+
+  /**
+   * Regenerate worker API key
+   */
+  regenerateKey: (workerId: string) => `${API_BASE.WORKERS}/${workerId}/regenerate-key`,
+
+  /**
+   * Get worker statistics
+   */
+  stats: (workerId: string) => `${API_BASE.WORKERS}/${workerId}/stats`,
+} as const
+
+// ============================================
 // ENDPOINT COLLECTIONS
 // ============================================
 
@@ -725,6 +796,7 @@ export const endpoints = {
   findings: findingEndpoints,
   dashboard: dashboardEndpoints,
   auditLogs: auditLogEndpoints,
+  workers: workerEndpoints,
 } as const
 
 /**
@@ -742,4 +814,5 @@ export {
   findingEndpoints as findings,
   dashboardEndpoints as dashboard,
   auditLogEndpoints as auditLogs,
+  workerEndpoints as workers,
 }

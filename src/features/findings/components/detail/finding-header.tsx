@@ -17,14 +17,34 @@ import {
   Calendar,
   Tag,
   Shield,
+  Loader2,
 } from "lucide-react";
+import { toast } from "sonner";
+import {
+  useUpdateFindingStatusApi,
+  useUpdateFindingSeverityApi,
+  invalidateFindingsCache,
+} from "../../api/use-findings-api";
+import type { FindingStatus as ApiFindingStatus } from "../../api/finding-api.types";
 import {
   FINDING_STATUS_CONFIG,
   SEVERITY_CONFIG,
   STATUS_TRANSITIONS,
 } from "../../types";
-import type { FindingDetail, FindingStatus } from "../../types";
+import type { FindingDetail, FindingStatus, FindingSource } from "../../types";
 import type { Severity } from "@/features/shared/types";
+
+// Human-readable source labels
+const SOURCE_LABELS: Record<FindingSource, string> = {
+  sast: "SAST",
+  dast: "DAST",
+  sca: "SCA",
+  secret: "Secret Scan",
+  iac: "IaC Scan",
+  container: "Container Scan",
+  manual: "Manual",
+  external: "External",
+};
 
 interface FindingHeaderProps {
   finding: FindingDetail;
@@ -32,6 +52,19 @@ interface FindingHeaderProps {
   onSeverityChange?: (severity: Severity) => void;
   onAssigneeChange?: (assigneeId: string | null) => void;
 }
+
+// Map internal UI status to API status
+const UI_TO_API_STATUS: Record<FindingStatus, ApiFindingStatus> = {
+  new: "open",
+  triaged: "open",
+  confirmed: "confirmed",
+  in_progress: "in_progress",
+  resolved: "resolved",
+  verified: "resolved",
+  closed: "accepted",
+  duplicate: "false_positive",
+  false_positive: "false_positive",
+};
 
 export function FindingHeader({
   finding,
@@ -41,18 +74,52 @@ export function FindingHeader({
   const [status, setStatus] = useState<FindingStatus>(finding.status);
   const [severity, setSeverity] = useState<Severity>(finding.severity);
 
+  // API mutation hooks
+  const { trigger: updateStatus, isMutating: isUpdatingStatus } = useUpdateFindingStatusApi(finding.id);
+  const { trigger: updateSeverity, isMutating: isUpdatingSeverity } = useUpdateFindingSeverityApi(finding.id);
+
   const statusConfig = FINDING_STATUS_CONFIG[status];
   const severityConfig = SEVERITY_CONFIG[severity];
   const availableTransitions = STATUS_TRANSITIONS[status];
 
-  const handleStatusChange = (newStatus: FindingStatus) => {
+  const handleStatusChange = async (newStatus: FindingStatus) => {
+    const previousStatus = status;
+    // Optimistic update
     setStatus(newStatus);
-    onStatusChange?.(newStatus);
+
+    try {
+      const apiStatus = UI_TO_API_STATUS[newStatus];
+      await updateStatus({
+        status: apiStatus,
+        resolution: newStatus === "resolved" ? "Resolved via UI" : undefined,
+      });
+      onStatusChange?.(newStatus);
+      await invalidateFindingsCache();
+      toast.success(`Status updated to ${FINDING_STATUS_CONFIG[newStatus].label}`);
+    } catch (error) {
+      // Revert on error
+      setStatus(previousStatus);
+      toast.error("Failed to update status");
+      console.error("Status update error:", error);
+    }
   };
 
-  const handleSeverityChange = (newSeverity: Severity) => {
+  const handleSeverityChange = async (newSeverity: Severity) => {
+    const previousSeverity = severity;
+    // Optimistic update
     setSeverity(newSeverity);
-    onSeverityChange?.(newSeverity);
+
+    try {
+      await updateSeverity({ severity: newSeverity });
+      onSeverityChange?.(newSeverity);
+      await invalidateFindingsCache();
+      toast.success(`Severity updated to ${SEVERITY_CONFIG[newSeverity].label}`);
+    } catch (error) {
+      // Revert on error
+      setSeverity(previousSeverity);
+      toast.error("Failed to update severity");
+      console.error("Severity update error:", error);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -101,7 +168,11 @@ export function FindingHeader({
               variant="outline"
               size="sm"
               className={`${statusConfig.bgColor} ${statusConfig.textColor} border-0`}
+              disabled={isUpdatingStatus}
             >
+              {isUpdatingStatus ? (
+                <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+              ) : null}
               {statusConfig.label}
               <ChevronDown className="ml-2 h-3 w-3" />
             </Button>
@@ -114,6 +185,7 @@ export function FindingHeader({
                   key={s}
                   onClick={() => handleStatusChange(s)}
                   className="flex items-center gap-2"
+                  disabled={isUpdatingStatus}
                 >
                   <div
                     className={`h-2 w-2 rounded-full ${config.bgColor.replace("/20", "")}`}
@@ -132,8 +204,13 @@ export function FindingHeader({
               variant="outline"
               size="sm"
               className={`${severityConfig.bgColor} ${severityConfig.textColor} border-0`}
+              disabled={isUpdatingSeverity}
             >
-              <Shield className="mr-1 h-3 w-3" />
+              {isUpdatingSeverity ? (
+                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+              ) : (
+                <Shield className="mr-1 h-3 w-3" />
+              )}
               {severityConfig.label}
               {finding.cvss !== undefined && (
                 <span className="ml-1 font-mono text-xs">({finding.cvss})</span>
@@ -151,6 +228,7 @@ export function FindingHeader({
                   key={s}
                   onClick={() => handleSeverityChange(s)}
                   className="flex items-center gap-2"
+                  disabled={isUpdatingSeverity}
                 >
                   <div
                     className={`h-2 w-2 rounded-full ${config.bgColor.replace("/20", "")}`}
@@ -203,7 +281,7 @@ export function FindingHeader({
         {/* Source */}
         <div className="flex items-center gap-1">
           <ExternalLink className="h-4 w-4" />
-          <span className="capitalize">{finding.source}</span>
+          <span>{SOURCE_LABELS[finding.source] || finding.source}</span>
           {finding.scanner && <span className="text-xs">({finding.scanner})</span>}
         </div>
       </div>

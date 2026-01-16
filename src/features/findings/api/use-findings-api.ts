@@ -10,18 +10,27 @@
 
 import useSWR, { type SWRConfiguration } from 'swr'
 import useSWRMutation from 'swr/mutation'
-import { get, post, patch, del } from '@/lib/api/client'
+import { get, post, patch, put, del } from '@/lib/api/client'
 import { handleApiError } from '@/lib/api/error-handler'
 import { useTenant } from '@/context/tenant-provider'
 import type {
   ApiFinding,
   ApiFindingListResponse,
+  ApiFindingComment,
+  ApiFindingCommentListResponse,
   ApiVulnerability,
   ApiVulnerabilityListResponse,
   FindingApiFilters,
   VulnerabilityApiFilters,
   CreateFindingInput,
   UpdateFindingStatusInput,
+  UpdateFindingSeverityInput,
+  AssignFindingInput,
+  TriageFindingInput,
+  ClassifyFindingInput,
+  SetFindingTagsInput,
+  AddCommentInput,
+  UpdateCommentInput,
 } from './finding-api.types'
 
 // ============================================
@@ -57,10 +66,12 @@ function buildFindingsEndpoint(filters?: FindingApiFilters): string {
   if (filters.asset_id) params.set('asset_id', filters.asset_id)
   if (filters.component_id) params.set('component_id', filters.component_id)
   if (filters.vulnerability_id) params.set('vulnerability_id', filters.vulnerability_id)
+  if (filters.source_id) params.set('source_id', filters.source_id)
   if (filters.tool_name) params.set('tool_name', filters.tool_name)
   if (filters.rule_id) params.set('rule_id', filters.rule_id)
   if (filters.scan_id) params.set('scan_id', filters.scan_id)
   if (filters.file_path) params.set('file_path', filters.file_path)
+  if (filters.search) params.set('search', filters.search)
   if (filters.page) params.set('page', String(filters.page))
   if (filters.per_page) params.set('per_page', String(filters.per_page))
 
@@ -304,6 +315,175 @@ export function useDeleteFindingApi(findingId: string) {
   // Ensure user has a tenant before making requests
   return useSWRMutation(
     currentTenant && findingId ? buildFindingEndpoint(findingId) : null,
+    async (url: string) => {
+      return del<void>(url)
+    }
+  )
+}
+
+/**
+ * Update finding severity
+ */
+export function useUpdateFindingSeverityApi(findingId: string) {
+  const { currentTenant } = useTenant()
+
+  return useSWRMutation(
+    currentTenant && findingId ? `${buildFindingEndpoint(findingId)}/severity` : null,
+    async (url: string, { arg }: { arg: UpdateFindingSeverityInput }) => {
+      return patch<ApiFinding>(url, arg)
+    }
+  )
+}
+
+/**
+ * Assign finding to a user
+ */
+export function useAssignFindingApi(findingId: string) {
+  const { currentTenant } = useTenant()
+
+  return useSWRMutation(
+    currentTenant && findingId ? `${buildFindingEndpoint(findingId)}/assign` : null,
+    async (url: string, { arg }: { arg: AssignFindingInput }) => {
+      return post<ApiFinding>(url, arg)
+    }
+  )
+}
+
+/**
+ * Unassign finding from current assignee
+ */
+export function useUnassignFindingApi(findingId: string) {
+  const { currentTenant } = useTenant()
+
+  return useSWRMutation(
+    currentTenant && findingId ? `${buildFindingEndpoint(findingId)}/unassign` : null,
+    async (url: string) => {
+      return post<ApiFinding>(url, {})
+    }
+  )
+}
+
+/**
+ * Triage finding (accept, reject, defer)
+ */
+export function useTriageFindingApi(findingId: string) {
+  const { currentTenant } = useTenant()
+
+  return useSWRMutation(
+    currentTenant && findingId ? `${buildFindingEndpoint(findingId)}/triage` : null,
+    async (url: string, { arg }: { arg: TriageFindingInput }) => {
+      return patch<ApiFinding>(url, arg)
+    }
+  )
+}
+
+/**
+ * Classify finding (CVE, CWE, OWASP)
+ */
+export function useClassifyFindingApi(findingId: string) {
+  const { currentTenant } = useTenant()
+
+  return useSWRMutation(
+    currentTenant && findingId ? `${buildFindingEndpoint(findingId)}/classify` : null,
+    async (url: string, { arg }: { arg: ClassifyFindingInput }) => {
+      return patch<ApiFinding>(url, arg)
+    }
+  )
+}
+
+/**
+ * Verify finding resolution
+ */
+export function useVerifyFindingApi(findingId: string) {
+  const { currentTenant } = useTenant()
+
+  return useSWRMutation(
+    currentTenant && findingId ? `${buildFindingEndpoint(findingId)}/verify` : null,
+    async (url: string) => {
+      return post<ApiFinding>(url, {})
+    }
+  )
+}
+
+/**
+ * Set finding tags
+ */
+export function useSetFindingTagsApi(findingId: string) {
+  const { currentTenant } = useTenant()
+
+  return useSWRMutation(
+    currentTenant && findingId ? `${buildFindingEndpoint(findingId)}/tags` : null,
+    async (url: string, { arg }: { arg: SetFindingTagsInput }) => {
+      return put<ApiFinding>(url, arg)
+    }
+  )
+}
+
+// ============================================
+// COMMENT HOOKS
+// ============================================
+
+async function fetchComments(url: string): Promise<ApiFindingCommentListResponse> {
+  return get<ApiFindingCommentListResponse>(url)
+}
+
+/**
+ * Fetch comments for a finding
+ */
+export function useFindingCommentsApi(findingId: string | null, config?: SWRConfiguration) {
+  const { currentTenant } = useTenant()
+
+  const key = currentTenant && findingId
+    ? `${buildFindingEndpoint(findingId)}/comments`
+    : null
+
+  return useSWR<ApiFindingCommentListResponse>(
+    key,
+    fetchComments,
+    { ...defaultConfig, ...config }
+  )
+}
+
+/**
+ * Add comment to a finding
+ */
+export function useAddFindingCommentApi(findingId: string) {
+  const { currentTenant } = useTenant()
+
+  return useSWRMutation(
+    currentTenant && findingId ? `${buildFindingEndpoint(findingId)}/comments` : null,
+    async (url: string, { arg }: { arg: AddCommentInput }) => {
+      return post<ApiFindingComment>(url, arg)
+    }
+  )
+}
+
+/**
+ * Update a comment
+ */
+export function useUpdateFindingCommentApi(findingId: string, commentId: string) {
+  const { currentTenant } = useTenant()
+
+  return useSWRMutation(
+    currentTenant && findingId && commentId
+      ? `${buildFindingEndpoint(findingId)}/comments/${commentId}`
+      : null,
+    async (url: string, { arg }: { arg: UpdateCommentInput }) => {
+      return patch<ApiFindingComment>(url, arg)
+    }
+  )
+}
+
+/**
+ * Delete a comment
+ */
+export function useDeleteFindingCommentApi(findingId: string, commentId: string) {
+  const { currentTenant } = useTenant()
+
+  return useSWRMutation(
+    currentTenant && findingId && commentId
+      ? `${buildFindingEndpoint(findingId)}/comments/${commentId}`
+      : null,
     async (url: string) => {
       return del<void>(url)
     }

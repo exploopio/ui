@@ -431,12 +431,14 @@ export interface RelatedFinding {
 // ============================================
 
 export type FindingSource =
-  | "manual"
-  | "nuclei"
-  | "nessus"
-  | "burp"
-  | "zap"
-  | "custom";
+  | "sast"      // Static Application Security Testing (Semgrep, CodeQL, etc.)
+  | "dast"      // Dynamic Application Security Testing (ZAP, Burp, Nuclei)
+  | "sca"       // Software Composition Analysis (Trivy, Snyk, Grype)
+  | "secret"    // Secret detection (Gitleaks, Trufflehog)
+  | "iac"       // Infrastructure as Code (Checkov, Tfsec)
+  | "container" // Container scanning
+  | "manual"    // Manual findings
+  | "external"; // External sources
 
 export interface Finding {
   id: string;
