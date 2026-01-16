@@ -165,7 +165,12 @@ export function handleAuth(req: NextRequest): NextResponse | null {
     const safeReturnUrl = validateRedirectUrl(returnUrl)
     loginUrl.searchParams.set('redirect', safeReturnUrl)
 
-    return NextResponse.redirect(loginUrl)
+    const response = NextResponse.redirect(loginUrl)
+
+    // Clear cookies that might cause issues (e.g. tenant selection loop)
+    response.cookies.delete('rediver_tenant')
+
+    return response
   }
 
   return null
