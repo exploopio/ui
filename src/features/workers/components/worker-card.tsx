@@ -13,7 +13,6 @@ import {
   Clock,
   Loader2,
   Activity,
-  Search,
   AlertTriangle,
   FileCode,
 } from "lucide-react";
