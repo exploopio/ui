@@ -298,10 +298,10 @@ export default function ScopeConfigPage() {
   const { trigger: updateScheduleApi, isMutating: isUpdatingSchedule } = useUpdateScanScheduleApi(editSchedule?.id || "");
   const { trigger: removeSchedule, isMutating: isRemovingSchedule } = useDeleteScanScheduleApi(deleteSchedule?.id || "");
 
-  // Extracted data
-  const targets = targetsData?.data || [];
-  const exclusions = exclusionsData?.data || [];
-  const schedules = schedulesData?.data || [];
+  // Extracted data - memoized for stable references
+  const targets = useMemo(() => targetsData?.data || [], [targetsData?.data]);
+  const exclusions = useMemo(() => exclusionsData?.data || [], [exclusionsData?.data]);
+  const schedules = useMemo(() => schedulesData?.data || [], [schedulesData?.data]);
 
   // Stats (with fallback to 0 for undefined values)
   const stats = useMemo(() => {

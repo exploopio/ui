@@ -145,6 +145,8 @@ interface ApiAssetResponse {
   tenant_id?: string;
   name: string;
   type: string;
+  provider?: string;
+  external_id?: string;
   criticality: string;
   status: string;
   scope: string;
@@ -199,11 +201,22 @@ interface ApiAssetResponse {
 function transformToRepositoryView(asset: ApiAssetResponse): RepositoryView {
   const repo = asset.repository;
 
-  // Detect SCM provider from full_name or metadata
+  // Use provider from API response, fallback to detection from full_name if not available
   let scmProvider: SCMProvider = "github";
-  if (repo?.full_name) {
-    if (repo.full_name.includes("gitlab")) scmProvider = "gitlab";
-    else if (repo.full_name.includes("bitbucket")) scmProvider = "bitbucket";
+  if (asset.provider && asset.provider !== "other" && asset.provider !== "") {
+    // Use the provider from the API response
+    scmProvider = asset.provider as SCMProvider;
+  } else if (repo?.full_name) {
+    // Fallback: detect from full_name or web_url for backward compatibility
+    const fullNameLower = repo.full_name.toLowerCase();
+    const webUrlLower = (repo.web_url || "").toLowerCase();
+    if (fullNameLower.includes("gitlab") || webUrlLower.includes("gitlab")) {
+      scmProvider = "gitlab";
+    } else if (fullNameLower.includes("bitbucket") || webUrlLower.includes("bitbucket")) {
+      scmProvider = "bitbucket";
+    } else if (fullNameLower.includes("dev.azure") || webUrlLower.includes("dev.azure")) {
+      scmProvider = "azure_devops";
+    }
   }
 
   return {
@@ -468,7 +481,19 @@ export default function RepositoriesPage() {
   const [repositoryToDelete, setRepositoryToDelete] = useState<Repository | null>(null);
   const [addRepositoryDialogOpen, setAddRepositoryDialogOpen] = useState(false);
 
-  // Build API filters from UI state
+  // Fetch ALL repositories for stats (no status/provider filters)
+  const { data: allReposResponse, isLoading: allReposLoading, mutate: mutateAllRepos } = useRepositories(
+    { perPage: 100 },
+    { revalidateOnFocus: false }
+  );
+
+  // Transform all repos for stats calculation
+  const allRepositories = useMemo(() => {
+    if (!allReposResponse?.data) return [];
+    return (allReposResponse.data as unknown as ApiAssetResponse[]).map(transformToRepositoryView);
+  }, [allReposResponse]);
+
+  // Build API filters from UI state (for filtered table view)
   const apiFilters = useMemo((): RepositoryFilters => {
     const filters: RepositoryFilters = {
       perPage: 100,
@@ -479,52 +504,64 @@ export default function RepositoriesPage() {
     return filters;
   }, [globalFilter, statusFilter, providerFilter]);
 
-  // Fetch data using real API hooks
-  const { data: repositoriesResponse, error: reposError, isLoading: reposLoading, mutate: mutateRepos } = useRepositories(apiFilters);
-  // Note: SCM connections API not yet available, using empty array
-  // const { data: scmConnectionsData, error: scmError, isLoading: scmLoading } = useSCMConnections();
+  // Check if we need a separate filtered call (only when filters are active)
+  const needsFilteredCall = statusFilter !== "all" || providerFilter !== "all" || globalFilter !== "";
+
+  // Fetch filtered data using real API hooks (only when filters are active)
+  const { data: filteredReposResponse, error: reposError, isLoading: filteredReposLoading, mutate: mutateFilteredRepos } = useRepositories(
+    needsFilteredCall ? apiFilters : { perPage: 100 },
+    { revalidateOnFocus: false }
+  );
 
   // Transform API response to UI format
   const repositories = useMemo(() => {
-    if (!repositoriesResponse?.data) return [];
-    // API returns snake_case, cast to ApiAssetResponse for transformation
-    return (repositoriesResponse.data as unknown as ApiAssetResponse[]).map(transformToRepositoryView);
-  }, [repositoriesResponse]);
+    // Use allRepositories when no filters are active, otherwise use filtered response
+    if (!needsFilteredCall) {
+      return allRepositories;
+    }
+    if (!filteredReposResponse?.data) return [];
+    return (filteredReposResponse.data as unknown as ApiAssetResponse[]).map(transformToRepositoryView);
+  }, [needsFilteredCall, allRepositories, filteredReposResponse]);
+
+  // Combined mutate function
+  const mutateRepos = useCallback(async () => {
+    await Promise.all([mutateAllRepos(), mutateFilteredRepos()]);
+  }, [mutateAllRepos, mutateFilteredRepos]);
 
   // SCM connections - will be populated when API is available
   const scmConnections: Array<{ id: string; name: string; provider: SCMProvider; scmOrganization?: string; status: string; baseUrl?: string }> = [];
 
-  // Calculate stats from repositories data
+  // Calculate stats from ALL repositories (not filtered)
   const stats = useMemo(() => {
     return {
-      total: repositories.length,
-      with_critical_findings: repositories.filter(r => r.findings_summary.by_severity.critical > 0).length,
-      total_findings: repositories.reduce((acc, r) => acc + r.findings_summary.total, 0),
+      total: allRepositories.length,
+      with_critical_findings: allRepositories.filter(r => r.findings_summary.by_severity.critical > 0).length,
+      total_findings: allRepositories.reduce((acc, r) => acc + r.findings_summary.total, 0),
       by_quality_gate: {
-        passed: repositories.filter(r => r.quality_gate_status === "passed").length,
-        failed: repositories.filter(r => r.quality_gate_status === "failed").length,
-        warning: repositories.filter(r => r.quality_gate_status === "warning").length,
-        not_computed: repositories.filter(r => r.quality_gate_status === "not_computed").length,
+        passed: allRepositories.filter(r => r.quality_gate_status === "passed").length,
+        failed: allRepositories.filter(r => r.quality_gate_status === "failed").length,
+        warning: allRepositories.filter(r => r.quality_gate_status === "warning").length,
+        not_computed: allRepositories.filter(r => r.quality_gate_status === "not_computed").length,
       },
-      total_components: repositories.reduce((acc, r) => acc + (r.components_summary?.total || 0), 0),
-      vulnerable_components: repositories.reduce((acc, r) => acc + (r.components_summary?.vulnerable || 0), 0),
-      avg_risk_score: Math.round(repositories.reduce((acc, r) => acc + r.risk_score, 0) / Math.max(repositories.length, 1)),
-      scanned_last_24h: repositories.filter(r => {
+      total_components: allRepositories.reduce((acc, r) => acc + (r.components_summary?.total || 0), 0),
+      vulnerable_components: allRepositories.reduce((acc, r) => acc + (r.components_summary?.vulnerable || 0), 0),
+      avg_risk_score: Math.round(allRepositories.reduce((acc, r) => acc + r.risk_score, 0) / Math.max(allRepositories.length, 1)),
+      scanned_last_24h: allRepositories.filter(r => {
         if (!r.last_scanned_at) return false;
         const lastScanned = new Date(r.last_scanned_at);
         const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
         return lastScanned > oneDayAgo;
       }).length,
       by_status: {
-        active: repositories.filter(r => r.status === "active").length,
-        inactive: repositories.filter(r => r.status === "inactive").length,
-        archived: repositories.filter(r => r.status === "archived").length,
+        active: allRepositories.filter(r => r.status === "active").length,
+        inactive: allRepositories.filter(r => r.status === "inactive").length,
+        archived: allRepositories.filter(r => r.status === "archived").length,
       },
     };
-  }, [repositories]);
+  }, [allRepositories]);
 
   // Loading state
-  const isLoading = reposLoading;
+  const isLoading = allReposLoading || (needsFilteredCall && filteredReposLoading);
   const hasError = reposError;
 
   // Filter data
