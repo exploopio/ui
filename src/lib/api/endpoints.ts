@@ -25,6 +25,11 @@ export const API_BASE = {
   DASHBOARD: '/api/v1/dashboard',
   AUDIT_LOGS: '/api/v1/audit-logs',
   WORKERS: '/api/v1/workers',
+  SCAN_PROFILES: '/api/v1/scan-profiles',
+  TOOLS: '/api/v1/tools',
+  TENANT_TOOLS: '/api/v1/tenant-tools',
+  TOOL_STATS: '/api/v1/tool-stats',
+  SCANS: '/api/v1/scans',
 } as const
 
 // ============================================
@@ -775,6 +780,296 @@ export const workerEndpoints = {
    * Get worker statistics
    */
   stats: (workerId: string) => `${API_BASE.WORKERS}/${workerId}/stats`,
+
+  /**
+   * Activate worker (set status to active)
+   */
+  activate: (workerId: string) => `${API_BASE.WORKERS}/${workerId}/activate`,
+
+  /**
+   * Deactivate worker (set status to inactive)
+   */
+  deactivate: (workerId: string) => `${API_BASE.WORKERS}/${workerId}/deactivate`,
+} as const
+
+// ============================================
+// SCAN PROFILE ENDPOINTS
+// ============================================
+
+import type { ScanProfileListFilters } from './scan-profile-types'
+
+/**
+ * Scan profile endpoints for managing reusable scan configurations
+ */
+export const scanProfileEndpoints = {
+  /**
+   * List scan profiles with optional filters
+   */
+  list: (filters?: ScanProfileListFilters) => {
+    const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
+    return `${API_BASE.SCAN_PROFILES}${queryString}`
+  },
+
+  /**
+   * Get scan profile by ID
+   */
+  get: (profileId: string) => `${API_BASE.SCAN_PROFILES}/${profileId}`,
+
+  /**
+   * Get default scan profile for tenant
+   */
+  getDefault: () => `${API_BASE.SCAN_PROFILES}/default`,
+
+  /**
+   * Create a new scan profile
+   */
+  create: () => API_BASE.SCAN_PROFILES,
+
+  /**
+   * Update scan profile
+   */
+  update: (profileId: string) => `${API_BASE.SCAN_PROFILES}/${profileId}`,
+
+  /**
+   * Delete scan profile
+   */
+  delete: (profileId: string) => `${API_BASE.SCAN_PROFILES}/${profileId}`,
+
+  /**
+   * Set scan profile as default
+   */
+  setDefault: (profileId: string) => `${API_BASE.SCAN_PROFILES}/${profileId}/set-default`,
+
+  /**
+   * Clone a scan profile
+   */
+  clone: (profileId: string) => `${API_BASE.SCAN_PROFILES}/${profileId}/clone`,
+} as const
+
+// ============================================
+// TOOL ENDPOINTS
+// ============================================
+
+import type {
+  ToolListFilters,
+  TenantToolConfigListFilters,
+  ToolExecutionListFilters,
+} from './tool-types'
+
+/**
+ * Tool endpoints for managing system-wide tool definitions
+ */
+export const toolEndpoints = {
+  /**
+   * List tools with optional filters
+   */
+  list: (filters?: ToolListFilters) => {
+    const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
+    return `${API_BASE.TOOLS}${queryString}`
+  },
+
+  /**
+   * Get tool by ID
+   */
+  get: (toolId: string) => `${API_BASE.TOOLS}/${toolId}`,
+
+  /**
+   * Get tool by name
+   */
+  getByName: (name: string) => `${API_BASE.TOOLS}/name/${name}`,
+
+  /**
+   * Create a new tool
+   */
+  create: () => API_BASE.TOOLS,
+
+  /**
+   * Update tool
+   */
+  update: (toolId: string) => `${API_BASE.TOOLS}/${toolId}`,
+
+  /**
+   * Delete tool
+   */
+  delete: (toolId: string) => `${API_BASE.TOOLS}/${toolId}`,
+
+  /**
+   * Activate tool
+   */
+  activate: (toolId: string) => `${API_BASE.TOOLS}/${toolId}/activate`,
+
+  /**
+   * Deactivate tool
+   */
+  deactivate: (toolId: string) => `${API_BASE.TOOLS}/${toolId}/deactivate`,
+
+  /**
+   * Check tool version
+   */
+  checkVersion: (toolId: string) => `${API_BASE.TOOLS}/${toolId}/check-version`,
+} as const
+
+/**
+ * Tenant tool config endpoints for tenant-specific tool configurations
+ */
+export const tenantToolEndpoints = {
+  /**
+   * List tenant tool configs
+   */
+  list: (filters?: TenantToolConfigListFilters) => {
+    const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
+    return `${API_BASE.TENANT_TOOLS}${queryString}`
+  },
+
+  /**
+   * Get tenant tool config by tool ID
+   */
+  get: (toolId: string) => `${API_BASE.TENANT_TOOLS}/${toolId}`,
+
+  /**
+   * Get tool with effective config (combines system tool + tenant config)
+   */
+  getWithConfig: (toolId: string) => `${API_BASE.TENANT_TOOLS}/${toolId}/with-config`,
+
+  /**
+   * Update tenant tool config
+   */
+  update: (toolId: string) => `${API_BASE.TENANT_TOOLS}/${toolId}`,
+
+  /**
+   * Delete tenant tool config (reset to defaults)
+   */
+  delete: (toolId: string) => `${API_BASE.TENANT_TOOLS}/${toolId}`,
+
+  /**
+   * Bulk enable tools for tenant
+   */
+  bulkEnable: () => `${API_BASE.TENANT_TOOLS}/bulk-enable`,
+
+  /**
+   * Bulk disable tools for tenant
+   */
+  bulkDisable: () => `${API_BASE.TENANT_TOOLS}/bulk-disable`,
+} as const
+
+/**
+ * Tool stats and execution endpoints
+ */
+export const toolStatsEndpoints = {
+  /**
+   * Get stats for a specific tool
+   */
+  toolStats: (toolId: string) => `${API_BASE.TOOL_STATS}/${toolId}`,
+
+  /**
+   * Get tenant tool stats summary
+   */
+  tenantStats: () => `${API_BASE.TOOL_STATS}/tenant`,
+
+  /**
+   * List tool executions
+   */
+  executions: (filters?: ToolExecutionListFilters) => {
+    const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
+    return `${API_BASE.TOOL_STATS}/executions${queryString}`
+  },
+
+  /**
+   * Get tool execution by ID
+   */
+  execution: (executionId: string) => `${API_BASE.TOOL_STATS}/executions/${executionId}`,
+} as const
+
+// ============================================
+// SCAN ENDPOINTS
+// ============================================
+
+import type { ScanConfigListFilters } from './scan-types'
+
+/**
+ * Scan endpoints for managing scans
+ * Scans bind asset groups with scanners/workflows and schedules.
+ */
+export const scanEndpoints = {
+  /**
+   * List scans with optional filters
+   */
+  list: (filters?: ScanConfigListFilters) => {
+    const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
+    return `${API_BASE.SCANS}${queryString}`
+  },
+
+  /**
+   * Get scan by ID
+   */
+  get: (scanId: string) => `${API_BASE.SCANS}/${scanId}`,
+
+  /**
+   * Get scan stats
+   */
+  stats: () => `${API_BASE.SCANS}/stats`,
+
+  /**
+   * Create a new scan
+   */
+  create: () => API_BASE.SCANS,
+
+  /**
+   * Update scan
+   */
+  update: (scanId: string) => `${API_BASE.SCANS}/${scanId}`,
+
+  /**
+   * Delete scan
+   */
+  delete: (scanId: string) => `${API_BASE.SCANS}/${scanId}`,
+
+  /**
+   * Activate scan
+   */
+  activate: (scanId: string) => `${API_BASE.SCANS}/${scanId}/activate`,
+
+  /**
+   * Pause scan
+   */
+  pause: (scanId: string) => `${API_BASE.SCANS}/${scanId}/pause`,
+
+  /**
+   * Disable scan
+   */
+  disable: (scanId: string) => `${API_BASE.SCANS}/${scanId}/disable`,
+
+  /**
+   * Trigger scan execution
+   */
+  trigger: (scanId: string) => `${API_BASE.SCANS}/${scanId}/trigger`,
+
+  /**
+   * Clone scan
+   */
+  clone: (scanId: string) => `${API_BASE.SCANS}/${scanId}/clone`,
+
+  /**
+   * List runs for a scan
+   */
+  listRuns: (scanId: string, page?: number, perPage?: number) => {
+    let url = `${API_BASE.SCANS}/${scanId}/runs`
+    const params: string[] = []
+    if (page) params.push(`page=${page}`)
+    if (perPage) params.push(`per_page=${perPage}`)
+    if (params.length > 0) url += `?${params.join('&')}`
+    return url
+  },
+
+  /**
+   * Get latest run for a scan
+   */
+  latestRun: (scanId: string) => `${API_BASE.SCANS}/${scanId}/runs/latest`,
+
+  /**
+   * Get specific run for a scan
+   */
+  getRun: (scanId: string, runId: string) => `${API_BASE.SCANS}/${scanId}/runs/${runId}`,
 } as const
 
 // ============================================
@@ -797,6 +1092,11 @@ export const endpoints = {
   dashboard: dashboardEndpoints,
   auditLogs: auditLogEndpoints,
   workers: workerEndpoints,
+  scanProfiles: scanProfileEndpoints,
+  tools: toolEndpoints,
+  tenantTools: tenantToolEndpoints,
+  toolStats: toolStatsEndpoints,
+  scans: scanEndpoints,
 } as const
 
 /**
@@ -815,4 +1115,9 @@ export {
   dashboardEndpoints as dashboard,
   auditLogEndpoints as auditLogs,
   workerEndpoints as workers,
+  scanProfileEndpoints as scanProfiles,
+  toolEndpoints as tools,
+  tenantToolEndpoints as tenantTools,
+  toolStatsEndpoints as toolStats,
+  scanEndpoints as scans,
 }

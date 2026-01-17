@@ -26,8 +26,8 @@ export default async function SignIn({ searchParams }: LoginPageProps) {
 
   if (hasAuthToken || hasRefreshToken) {
     // User is authenticated - determine where to redirect
-    const hasTenant = cookieStore.get('rediver_tenant')?.value
-    const hasPendingTenants = cookieStore.get('rediver_pending_tenants')?.value
+    const hasTenant = cookieStore.get(env.cookies.tenant)?.value
+    const hasPendingTenants = cookieStore.get(env.cookies.pendingTenants)?.value
 
     if (hasTenant) {
       // User has selected a team - redirect to dashboard

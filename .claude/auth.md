@@ -27,7 +27,7 @@ Rediver uses a **multi-tenant authentication system** with:
 │               AUTHENTICATED - NO TENANT                     │
 │                                                             │
 │  Has: refresh_token cookie                                  │
-│  Missing: rediver_tenant cookie, rediver_auth_token         │
+│  Missing: app_tenant cookie, auth_token         │
 │  Redirect to: /onboarding/create-team                       │
 └─────────────────────────────────────────────────────────────┘
                               │
@@ -37,7 +37,7 @@ Rediver uses a **multi-tenant authentication system** with:
 ┌─────────────────────────────────────────────────────────────┐
 │               AUTHENTICATED - HAS TENANT                    │
 │                                                             │
-│  Has: refresh_token, rediver_auth_token, rediver_tenant     │
+│  Has: refresh_token, auth_token, app_tenant     │
 │  Full access to dashboard and all features                  │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -46,11 +46,11 @@ Rediver uses a **multi-tenant authentication system** with:
 
 | Cookie | HttpOnly | Purpose | Set By |
 |--------|----------|---------|--------|
-| `rediver_auth_token` | Yes | Access token (JWT, 15min) | Server Action |
+| `auth_token` | Yes | Access token (JWT, 15min) | Server Action |
 | `refresh_token` | Yes | Refresh token (7 days) | Server Action |
-| `rediver_tenant` | No | Current tenant info | Server Action |
-| `rediver_user_info` | No | User info for onboarding | Server Action |
-| `rediver_pending_tenants` | No | Multi-tenant selection | Server Action |
+| `app_tenant` | No | Current tenant info | Server Action |
+| `app_user_info` | No | User info for onboarding | Server Action |
+| `app_pending_tenants` | No | Multi-tenant selection | Server Action |
 
 ## Route Protection
 
@@ -130,7 +130,7 @@ export default async function LoginPage() {
                   cookieStore.get(env.auth.refreshCookieName)?.value
 
   if (hasAuth) {
-    const hasTenant = cookieStore.get('rediver_tenant')?.value
+    const hasTenant = cookieStore.get('app_tenant')?.value
     redirect(hasTenant ? '/' : '/onboarding/create-team')
   }
 
@@ -146,7 +146,7 @@ Guards dashboard routes, ensuring user has selected a tenant:
 // src/components/layout/tenant-gate.tsx
 export function TenantGate({ children }) {
   useEffect(() => {
-    const tenantCookie = getCookie("rediver_tenant")
+    const tenantCookie = getCookie("app_tenant")
     if (!tenantCookie) {
       window.location.href = "/onboarding/create-team"
       return
@@ -280,7 +280,7 @@ export default async function ProtectedPage() {
 
 ### User stuck on "Create Team" page
 
-1. Check if `rediver_tenant` cookie exists
+1. Check if `app_tenant` cookie exists
 2. Check if `createFirstTeamAction` completed successfully
 3. Look for errors in browser console
 

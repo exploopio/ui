@@ -16,6 +16,7 @@
 import { useEffect, useRef } from "react";
 import { useTenant } from "@/context/tenant-provider";
 import { getCookie, removeCookie } from "@/lib/cookies";
+import { env } from "@/lib/env";
 import { Loader2 } from "lucide-react";
 
 interface TenantGateProps {
@@ -74,9 +75,9 @@ function clearAuthAndRedirectToLogin() {
   // Clear non-HttpOnly auth cookies (if any)
   // Note: HttpOnly cookies (access_token, refresh_token) cannot be cleared from JS
   // The server will handle clearing those when the user tries to use them
-  removeCookie("rediver_auth_token");
+  removeCookie(env.auth.cookieName);
 
-  // DO NOT clear rediver_tenant - preserve user's team selection
+  // DO NOT clear tenant cookie - preserve user's team selection
   // This way when they log back in, they'll be in the same team
 
   // Use hard redirect to ensure clean state
@@ -125,7 +126,7 @@ export function TenantGate({ children }: TenantGateProps) {
     // Check if user has tenants but no tenant cookie selected
     // This can happen if cookie was cleared but auth is still valid
     if (tenants.length > 0 && !currentTenant) {
-      const tenantCookie = getCookie("rediver_tenant");
+      const tenantCookie = getCookie(env.cookies.tenant);
       if (!tenantCookie) {
         // Auto-select the first tenant
         console.log("[TenantGate] No tenant selected, but has tenants - selecting first one");

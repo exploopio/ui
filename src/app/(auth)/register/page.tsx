@@ -22,7 +22,7 @@ export default async function SignUp() {
 
   if (hasAuthToken || hasRefreshToken) {
     // User is authenticated - check if they have a tenant
-    const hasTenant = cookieStore.get('rediver_tenant')?.value
+    const hasTenant = cookieStore.get(env.cookies.tenant)?.value
     if (hasTenant) {
       redirect('/')
     } else {

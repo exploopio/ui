@@ -244,7 +244,7 @@ export async function loginAction(
       console.log('[Login] No tenants found for user - user needs to create or join a team')
 
       // Store user info for the Create Team page to use as suggested name
-      await setServerCookie('rediver_user_info', JSON.stringify({
+      await setServerCookie(env.cookies.userInfo, JSON.stringify({
         id: user.id,
         email: user.email,
         name: user.name,
@@ -270,7 +270,7 @@ export async function loginAction(
       console.log('[Login] Multiple tenants found:', loginData.tenants.length, '- requiring selection')
 
       // Store tenants temporarily in cookie for selection page
-      await setServerCookie('rediver_pending_tenants', JSON.stringify(loginData.tenants), {
+      await setServerCookie(env.cookies.pendingTenants, JSON.stringify(loginData.tenants), {
         httpOnly: false, // Client needs to read this
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
@@ -328,7 +328,7 @@ export async function loginAction(
       }
 
       // Store current tenant info in a separate cookie for reference
-      await setServerCookie('rediver_tenant', JSON.stringify({
+      await setServerCookie(env.cookies.tenant, JSON.stringify({
         id: tokenData.tenant_id,
         slug: tokenData.tenant_slug,
         name: firstTenant.name,
@@ -380,7 +380,7 @@ export async function selectTenantAction(
     }
 
     // Get pending tenants to find the selected one
-    const pendingTenantsStr = cookieStore.get('rediver_pending_tenants')?.value
+    const pendingTenantsStr = cookieStore.get(env.cookies.pendingTenants)?.value
     let selectedTenant: LoginTenant | undefined
 
     if (pendingTenantsStr) {
@@ -427,7 +427,7 @@ export async function selectTenantAction(
     }
 
     // Store current tenant info
-    await setServerCookie('rediver_tenant', JSON.stringify({
+    await setServerCookie(env.cookies.tenant, JSON.stringify({
       id: tokenData.tenant_id,
       slug: tokenData.tenant_slug,
       name: selectedTenant?.name || tokenData.tenant_slug,
@@ -441,7 +441,7 @@ export async function selectTenantAction(
     })
 
     // Clear pending tenants cookie
-    await removeServerCookie('rediver_pending_tenants')
+    await removeServerCookie(env.cookies.pendingTenants)
 
     return {
       success: true,
@@ -531,11 +531,11 @@ export async function refreshLocalTokenAction(): Promise<RefreshTokenResult> {
  * Logout user and clean up session
  *
  * IMPORTANT: This clears ALL auth-related cookies including:
- * - access_token (rediver_auth_token)
+ * - access_token (auth_token)
  * - refresh_token (set by both backend and frontend)
- * - rediver_tenant (current tenant info)
- * - rediver_user_info (user info for Create Team page)
- * - rediver_pending_tenants (for tenant selection)
+ * - tenant cookie (current tenant info)
+ * - user_info cookie (user info for Create Team page)
+ * - pending_tenants cookie (for tenant selection)
  */
 export async function localLogoutAction(
   redirectTo?: string
@@ -567,9 +567,9 @@ export async function localLogoutAction(
     // Using env.auth.refreshCookieName which should be 'refresh_token' to match backend
     await removeServerCookie(env.auth.cookieName)        // Access token
     await removeServerCookie(env.auth.refreshCookieName) // Refresh token (matches backend)
-    await removeServerCookie('rediver_tenant')           // Current tenant info
-    await removeServerCookie('rediver_user_info')        // User info for Create Team
-    await removeServerCookie('rediver_pending_tenants')  // Pending tenant selection
+    await removeServerCookie(env.cookies.tenant)           // Current tenant info
+    await removeServerCookie(env.cookies.userInfo)        // User info for Create Team
+    await removeServerCookie(env.cookies.pendingTenants)  // Pending tenant selection
 
     console.log('[Logout] All cookies cleared, redirecting to:', redirectTo || '/login')
 
@@ -795,7 +795,7 @@ export async function createFirstTeamAction(
     })
 
     // Store tenant info cookie
-    await setServerCookie('rediver_tenant', JSON.stringify({
+    await setServerCookie(env.cookies.tenant, JSON.stringify({
       id: data.tenant_id,
       slug: data.tenant_slug,
       name: data.tenant_name,
@@ -809,7 +809,7 @@ export async function createFirstTeamAction(
     })
 
     // Clear user info cookie (no longer needed after team created)
-    await removeServerCookie('rediver_user_info')
+    await removeServerCookie(env.cookies.userInfo)
 
     console.log('[CreateFirstTeam] All cookies set, team creation complete')
 

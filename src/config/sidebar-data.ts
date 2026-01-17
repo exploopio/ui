@@ -51,6 +51,8 @@ import {
   BookTemplate,
   History,
   Bot,
+  FileSliders,
+  Wrench,
   // New icons for CTEM architecture
   ShieldAlert,
   Package,
@@ -117,12 +119,6 @@ export const sidebarData: SidebarData = {
           permission: Permission.AssetsRead,
         },
         {
-          title: "Workers",
-          url: "/workers",
-          icon: Bot,
-          permission: Permission.ScansRead,
-        },
-        {
           title: "Scope Config",
           url: "/scope-config",
           icon: Settings2,
@@ -140,15 +136,9 @@ export const sidebarData: SidebarData = {
       title: "Discovery",
       items: [
         {
-          title: "Scan Management",
+          title: "Scans",
           url: "/scans",
           icon: Radar,
-          permission: Permission.ScansRead,
-        },
-        {
-          title: "Runners",
-          url: "/runners",
-          icon: Play,
           permission: Permission.ScansRead,
         },
         // ----------------------------------------
@@ -399,6 +389,31 @@ export const sidebarData: SidebarData = {
     {
       title: "Settings",
       items: [
+        {
+          title: "Scanning",
+          icon: Radar,
+          permission: Permission.ScansRead,
+          items: [
+            {
+              title: "Workers",
+              url: "/workers",
+              icon: Bot,
+              permission: Permission.ScansRead,
+            },
+            {
+              title: "Scan Profiles",
+              url: "/scan-profiles",
+              icon: FileSliders,
+              permission: Permission.ScanProfilesRead,
+            },
+            {
+              title: "Tool Registry",
+              url: "/tools",
+              icon: Wrench,
+              permission: Permission.ToolsRead,
+            },
+          ],
+        },
         {
           title: "Organization",
           icon: Building,

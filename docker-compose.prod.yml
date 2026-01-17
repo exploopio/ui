@@ -43,7 +43,7 @@ services:
   # ---------------------------------------------------------------------------
   nginx:
     image: nginx:1.27-alpine
-    container_name: rediver-nginx
+    container_name: nginx
     ports:
       - "80:80"
       - "443:443"
@@ -95,8 +95,8 @@ services:
         NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://localhost}
         # Auth configuration (visible to browser for UI decisions)
         NEXT_PUBLIC_AUTH_PROVIDER: ${NEXT_PUBLIC_AUTH_PROVIDER:-local}
-        NEXT_PUBLIC_AUTH_COOKIE_NAME: ${NEXT_PUBLIC_AUTH_COOKIE_NAME:-rediver_auth_token}
-        NEXT_PUBLIC_REFRESH_COOKIE_NAME: ${NEXT_PUBLIC_REFRESH_COOKIE_NAME:-rediver_refresh_token}
+        NEXT_PUBLIC_AUTH_COOKIE_NAME: ${NEXT_PUBLIC_AUTH_COOKIE_NAME:-auth_token}
+        NEXT_PUBLIC_REFRESH_COOKIE_NAME: ${NEXT_PUBLIC_REFRESH_COOKIE_NAME:-refresh_token}
         NEXT_PUBLIC_OAUTH_CALLBACK_URL: ${NEXT_PUBLIC_OAUTH_CALLBACK_URL:-}
         # Keycloak (only if using OIDC auth)
         NEXT_PUBLIC_KEYCLOAK_URL: ${NEXT_PUBLIC_KEYCLOAK_URL:-}
@@ -106,7 +106,7 @@ services:
         # Monitoring (DSN is safe to expose - not a secret)
         NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN:-}
 
-    container_name: rediver-ui
+    container_name: ui
 
     # =========================================================================
     # Runtime environment variables (server-side only, NOT in browser)

@@ -200,8 +200,8 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 NEXT_PUBLIC_AUTH_PROVIDER=local
 
 # Cookie names (browser needs to know these)
-NEXT_PUBLIC_AUTH_COOKIE_NAME=rediver_auth_token
-NEXT_PUBLIC_REFRESH_COOKIE_NAME=rediver_refresh_token
+NEXT_PUBLIC_AUTH_COOKIE_NAME=auth_token
+NEXT_PUBLIC_REFRESH_COOKIE_NAME=refresh_token
 
 
 # -----------------------------------------------------------------------------

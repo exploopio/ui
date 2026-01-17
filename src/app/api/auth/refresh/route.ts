@@ -5,8 +5,8 @@
  * and sending to backend refresh endpoint.
  *
  * Flow:
- * 1. Read refresh token from `refresh_token` cookie
- * 2. Read tenant info from `rediver_tenant` cookie
+ * 1. Read refresh token from cookie
+ * 2. Read tenant info from tenant cookie
  * 3. Send to backend `/api/v1/auth/refresh` with tenant_id
  * 4. Update cookies with new tokens
  * 5. Return new access token to client
@@ -15,11 +15,13 @@
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 
+import { env } from '@/lib/env'
+
 const BACKEND_URL = process.env.BACKEND_API_URL || 'http://localhost:8080'
-// Frontend cookie names
-const ACCESS_TOKEN_COOKIE = process.env.NEXT_PUBLIC_AUTH_COOKIE_NAME || 'rediver_auth_token'
-const REFRESH_TOKEN_COOKIE = process.env.NEXT_PUBLIC_REFRESH_COOKIE_NAME || 'refresh_token'
-const TENANT_COOKIE = 'rediver_tenant'
+// Frontend cookie names (from env config)
+const ACCESS_TOKEN_COOKIE = env.auth.cookieName
+const REFRESH_TOKEN_COOKIE = env.auth.refreshCookieName
+const TENANT_COOKIE = env.cookies.tenant
 
 interface BackendRefreshResponse {
   access_token: string
@@ -127,8 +129,8 @@ export async function POST(_request: NextRequest): Promise<NextResponse> {
           path: '/',
         })
 
-        // Also clear the legacy refresh_token cookie name
-        errorResponse.cookies.set('rediver_refresh_token', '', {
+        // Also clear the refresh token cookie
+        errorResponse.cookies.set(REFRESH_TOKEN_COOKIE, '', {
           httpOnly: true,
           secure: process.env.NODE_ENV === 'production',
           sameSite: 'lax',

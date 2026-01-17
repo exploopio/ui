@@ -28,7 +28,7 @@ services:
       context: .
       dockerfile: Dockerfile
       target: development
-    container_name: rediver-ui-dev
+    container_name: ui-dev
     # Mount source code for hot reload
     volumes:
       # Mount source code (enables hot reload)

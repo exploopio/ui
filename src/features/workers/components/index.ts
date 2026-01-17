@@ -5,3 +5,8 @@ export * from "./add-worker-dialog";
 export * from "./edit-worker-dialog";
 export * from "./regenerate-key-dialog";
 export * from "./worker-config-dialog";
+export * from "./worker-stats-cards";
+export * from "./worker-table";
+export * from "./worker-detail-sheet";
+export * from "./unified-workers-section";
+export * from "./unified-worker-table";

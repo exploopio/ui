@@ -15,6 +15,7 @@ import { useSWRConfig } from 'swr'
 import { useMyTenants, invalidateMyTenantsCache } from '@/lib/api/user-tenant-hooks'
 import type { TenantMembership, TenantRole } from '@/lib/api/user-tenant-types'
 import { getCookie, setCookie } from '@/lib/cookies'
+import { env } from '@/lib/env'
 
 // ============================================
 // TYPES
@@ -54,8 +55,8 @@ interface TenantContextValue {
 
 const TenantContext = React.createContext<TenantContextValue | undefined>(undefined)
 
-// Cookie name for storing current tenant
-const TENANT_COOKIE = 'rediver_tenant'
+// Cookie name for storing current tenant (from env config)
+const TENANT_COOKIE = env.cookies.tenant
 
 // ============================================
 // PROVIDER
@@ -88,10 +89,19 @@ export function TenantProvider({ children }: TenantProviderProps) {
   }, [])
 
   // Update current tenant with additional info from tenants list
+  // Use ref to prevent unnecessary updates
+  const lastUpdatedTenantId = React.useRef<string | null>(null)
+
   React.useEffect(() => {
     if (currentTenant && tenants.length > 0) {
+      // Skip if we already updated this tenant
+      if (lastUpdatedTenantId.current === currentTenant.id && currentTenant.name) {
+        return
+      }
+
       const fullTenant = tenants.find(t => t.id === currentTenant.id)
       if (fullTenant && (!currentTenant.name || currentTenant.name !== fullTenant.name)) {
+        lastUpdatedTenantId.current = currentTenant.id
         setCurrentTenant({
           ...currentTenant,
           name: fullTenant.name,

@@ -89,9 +89,16 @@ export const env = {
 
   // Token Storage Configuration
   auth: {
-    cookieName: getEnvVar('NEXT_PUBLIC_AUTH_COOKIE_NAME', 'rediver_auth_token'),
+    cookieName: getEnvVar('NEXT_PUBLIC_AUTH_COOKIE_NAME', 'auth_token'),
     // Must match backend RefreshTokenCookieName in cookie.go
     refreshCookieName: getEnvVar('NEXT_PUBLIC_REFRESH_COOKIE_NAME', 'refresh_token'),
+  },
+
+  // Cookie Names (configurable to avoid hardcoded prefixes)
+  cookies: {
+    tenant: getEnvVar('NEXT_PUBLIC_TENANT_COOKIE_NAME', 'app_tenant'),
+    userInfo: getEnvVar('NEXT_PUBLIC_USER_INFO_COOKIE_NAME', 'app_user_info'),
+    pendingTenants: getEnvVar('NEXT_PUBLIC_PENDING_TENANTS_COOKIE_NAME', 'app_pending_tenants'),
   },
 
   // OAuth Configuration (for social login)

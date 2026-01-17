@@ -14,10 +14,12 @@
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 
+import { env } from '@/lib/env'
+
 const BACKEND_URL = process.env.BACKEND_API_URL || 'http://localhost:8080'
-const ACCESS_TOKEN_COOKIE = process.env.NEXT_PUBLIC_AUTH_COOKIE_NAME || 'rediver_auth_token'
-const REFRESH_TOKEN_COOKIE = process.env.NEXT_PUBLIC_REFRESH_COOKIE_NAME || 'refresh_token'
-const TENANT_COOKIE = 'rediver_tenant'
+const ACCESS_TOKEN_COOKIE = env.auth.cookieName
+const REFRESH_TOKEN_COOKIE = env.auth.refreshCookieName
+const TENANT_COOKIE = env.cookies.tenant
 
 interface SwitchTeamRequest {
   tenant_id: string

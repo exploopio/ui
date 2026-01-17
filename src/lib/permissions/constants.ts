@@ -88,9 +88,25 @@ export const Permission = {
   // Dashboard permissions
   DashboardRead: 'dashboard:read',
 
-  // Scan permissions
+  // Scan permissions (binding asset groups + scanners/workflows + schedules)
   ScansRead: 'scans:read',
   ScansWrite: 'scans:write',
+  ScansDelete: 'scans:delete',
+
+  // Scan Profile permissions (reusable scan configurations)
+  ScanProfilesRead: 'scan-profiles:read',
+  ScanProfilesWrite: 'scan-profiles:write',
+  ScanProfilesDelete: 'scan-profiles:delete',
+
+  // Tool Registry permissions (system-wide tool definitions)
+  ToolsRead: 'tools:read',
+  ToolsWrite: 'tools:write',
+  ToolsDelete: 'tools:delete',
+
+  // Tenant Tool Config permissions (tenant-specific tool configurations)
+  TenantToolsRead: 'tenant-tools:read',
+  TenantToolsWrite: 'tenant-tools:write',
+  TenantToolsDelete: 'tenant-tools:delete',
 
   // Credential leak permissions
   CredentialsRead: 'credentials:read',
@@ -235,6 +251,13 @@ export const RolePermissions: Record<RoleString, PermissionString[]> = {
     Permission.AuditRead,
     // Scans
     Permission.ScansRead, Permission.ScansWrite,
+    // Scan Profiles
+    Permission.ScanProfilesRead, Permission.ScanProfilesWrite, Permission.ScanProfilesDelete,
+    // Tool Registry
+    Permission.ToolsRead, Permission.ToolsWrite, Permission.ToolsDelete,
+    Permission.TenantToolsRead, Permission.TenantToolsWrite, Permission.TenantToolsDelete,
+    // Scan Configurations
+    Permission.ScansRead, Permission.ScansWrite, Permission.ScansDelete,
     // Credentials
     Permission.CredentialsRead, Permission.CredentialsWrite,
     // Reports
@@ -266,6 +289,13 @@ export const RolePermissions: Record<RoleString, PermissionString[]> = {
     Permission.AuditRead,
     // Scans
     Permission.ScansRead, Permission.ScansWrite,
+    // Scan Profiles
+    Permission.ScanProfilesRead, Permission.ScanProfilesWrite, Permission.ScanProfilesDelete,
+    // Tool Registry (admin can manage tenant tools)
+    Permission.ToolsRead, Permission.ToolsWrite, Permission.ToolsDelete,
+    Permission.TenantToolsRead, Permission.TenantToolsWrite, Permission.TenantToolsDelete,
+    // Scan Configurations
+    Permission.ScansRead, Permission.ScansWrite, Permission.ScansDelete,
     // Credentials
     Permission.CredentialsRead, Permission.CredentialsWrite,
     // Reports
@@ -295,6 +325,13 @@ export const RolePermissions: Record<RoleString, PermissionString[]> = {
     Permission.DashboardRead,
     // Scans (read + write)
     Permission.ScansRead, Permission.ScansWrite,
+    // Scan Profiles (read + write, no delete)
+    Permission.ScanProfilesRead, Permission.ScanProfilesWrite,
+    // Tool Registry (read + tenant config write)
+    Permission.ToolsRead,
+    Permission.TenantToolsRead, Permission.TenantToolsWrite,
+    // Scan Configurations (read + write, no delete)
+    Permission.ScansRead, Permission.ScansWrite,
     // Credentials (read only)
     Permission.CredentialsRead,
     // Reports (read + write)
@@ -321,6 +358,13 @@ export const RolePermissions: Record<RoleString, PermissionString[]> = {
     Permission.VulnerabilitiesRead,
     Permission.DashboardRead,
     // Scans (read only)
+    Permission.ScansRead,
+    // Scan Profiles (read only)
+    Permission.ScanProfilesRead,
+    // Tool Registry (read only)
+    Permission.ToolsRead,
+    Permission.TenantToolsRead,
+    // Scan Configurations (read only)
     Permission.ScansRead,
     // Credentials (read only)
     Permission.CredentialsRead,

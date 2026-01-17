@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { getCookie } from '@/lib/cookies'
+import { env } from '@/lib/env'
 import { selectTenantAction, localLogoutAction, type LoginTenant } from '@/features/auth/actions/local-auth-actions'
 
 // Parse tenants from cookie - done outside component to avoid re-parsing
@@ -21,7 +22,7 @@ function parsePendingTenants(): { tenants: LoginTenant[]; error: boolean } {
   if (typeof window === 'undefined') {
     return { tenants: [], error: false }
   }
-  const pendingTenantsStr = getCookie('rediver_pending_tenants')
+  const pendingTenantsStr = getCookie(env.cookies.pendingTenants)
   if (!pendingTenantsStr) {
     return { tenants: [], error: true }
   }
@@ -44,7 +45,7 @@ export default function SelectTenantPage() {
 
   // Check if user already has a tenant selected - redirect to dashboard
   useEffect(() => {
-    const tenantCookie = getCookie('rediver_tenant')
+    const tenantCookie = getCookie(env.cookies.tenant)
     if (tenantCookie) {
       window.location.href = '/'
     }

@@ -129,7 +129,7 @@ export function LoginForm({
         // Store user data in localStorage for sidebar display
         if (result.user) {
           try {
-            localStorage.setItem('rediver_user', JSON.stringify({
+            localStorage.setItem('app_user', JSON.stringify({
               id: result.user.id,
               name: result.user.name,
               email: result.user.email,

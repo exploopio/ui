@@ -61,7 +61,7 @@ export function SignOutDialog({
 
     // Clear localStorage user data
     try {
-      localStorage.removeItem('rediver_user')
+      localStorage.removeItem('app_user')
     } catch {
       // Ignore localStorage errors
     }
@@ -121,7 +121,7 @@ export function SignOutButton({
   const handleClick = () => {
     // Clear localStorage user data
     try {
-      localStorage.removeItem('rediver_user')
+      localStorage.removeItem('app_user')
     } catch {
       // Ignore localStorage errors
     }

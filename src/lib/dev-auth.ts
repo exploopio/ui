@@ -16,7 +16,7 @@ export const DEV_USER: AuthUser = {
   emailVerified: true,
   roles: ["admin", "security_analyst"],
   realmRoles: ["admin"],
-  clientRoles: { "rediver-ui": ["admin", "security_analyst"] },
+  clientRoles: { "ui": ["admin", "security_analyst"] },
   // Permissions for admin role
   permissions: [
     "assets:read", "assets:write", "assets:delete",
@@ -65,7 +65,7 @@ export function generateDevToken(): string {
       iat: now,
       exp: exp,
       iss: "dev-issuer",
-      aud: "rediver-ui",
+      aud: "ui",
 
       // Keycloak-specific claims
       email: DEV_USER.email,
@@ -76,7 +76,7 @@ export function generateDevToken(): string {
       // Roles
       realm_access: { roles: DEV_USER.realmRoles },
       resource_access: {
-        "rediver-ui": { roles: DEV_USER.roles },
+        "ui": { roles: DEV_USER.roles },
       },
 
       // Permissions and tenant context

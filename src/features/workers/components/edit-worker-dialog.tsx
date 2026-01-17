@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, Settings } from "lucide-react";
+import { Loader2, Settings, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -34,6 +34,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 import {
@@ -41,9 +43,8 @@ import {
   type UpdateWorkerFormData,
   WORKER_STATUS_OPTIONS,
   EXECUTION_MODE_OPTIONS,
-  CAPABILITY_OPTIONS,
-  TOOL_OPTIONS,
 } from "../schemas/worker-schema";
+import { useWorkerFormOptions } from "../hooks";
 import { useUpdateWorker, invalidateWorkersCache } from "@/lib/api/worker-hooks";
 import type { Worker } from "@/lib/api/worker-types";
 
@@ -60,6 +61,15 @@ export function EditWorkerDialog({
   worker,
   onSuccess,
 }: EditWorkerDialogProps) {
+  // Fetch dynamic tool and capability options from API
+  const {
+    toolOptions,
+    capabilityOptions,
+    isLoading: isLoadingOptions,
+    error: optionsError,
+    getCapabilitiesForTools,
+  } = useWorkerFormOptions();
+
   const { trigger: updateWorker, isMutating } = useUpdateWorker(worker.id);
 
   const form = useForm<UpdateWorkerFormData>({
@@ -73,6 +83,31 @@ export function EditWorkerDialog({
       status: worker.status,
     },
   });
+
+  // Auto-add capabilities when tools are selected
+  const handleToolChange = useCallback(
+    (toolName: string, checked: boolean) => {
+      const currentTools = form.getValues("tools") || [];
+      const currentCapabilities = form.getValues("capabilities") || [];
+
+      let newTools: string[];
+      if (checked) {
+        newTools = [...currentTools, toolName];
+      } else {
+        newTools = currentTools.filter((t) => t !== toolName);
+      }
+
+      form.setValue("tools", newTools);
+
+      // Auto-add capabilities from selected tools
+      if (checked) {
+        const toolCapabilities = getCapabilitiesForTools([toolName]);
+        const newCapabilities = [...new Set([...currentCapabilities, ...toolCapabilities])];
+        form.setValue("capabilities", newCapabilities);
+      }
+    },
+    [form, getCapabilitiesForTools]
+  );
 
   // Reset form when dialog opens or worker changes
   useEffect(() => {
@@ -237,50 +272,72 @@ export function EditWorkerDialog({
                 <FormItem>
                   <FormLabel>Capabilities</FormLabel>
                   <FormDescription className="mb-2">
-                    Select the security scanning capabilities
+                    Select the security scanning capabilities (auto-added when selecting tools)
                   </FormDescription>
-                  <div className="grid grid-cols-2 gap-2">
-                    {CAPABILITY_OPTIONS.map((capability) => (
-                      <FormField
-                        key={capability.value}
-                        control={form.control}
-                        name="capabilities"
-                        render={({ field }) => (
-                          <FormItem
-                            className={cn(
-                              "flex flex-row items-start space-x-2 space-y-0 rounded-md border p-2",
-                              field.value?.includes(capability.value) &&
-                                "border-primary bg-primary/5"
-                            )}
-                          >
-                            <FormControl>
-                              <Checkbox
-                                checked={field.value?.includes(capability.value)}
-                                onCheckedChange={(checked) => {
-                                  const currentValue = field.value || [];
-                                  if (checked) {
-                                    field.onChange([...currentValue, capability.value]);
-                                  } else {
-                                    field.onChange(
-                                      currentValue.filter((v) => v !== capability.value)
-                                    );
-                                  }
-                                }}
-                              />
-                            </FormControl>
-                            <div className="space-y-0.5 leading-none">
-                              <FormLabel className="text-sm font-normal cursor-pointer">
-                                {capability.label}
-                              </FormLabel>
-                              <p className="text-xs text-muted-foreground">
-                                {capability.description}
-                              </p>
-                            </div>
-                          </FormItem>
-                        )}
-                      />
-                    ))}
-                  </div>
+                  {isLoadingOptions ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      {[1, 2, 3, 4].map((i) => (
+                        <Skeleton key={i} className="h-16 w-full" />
+                      ))}
+                    </div>
+                  ) : optionsError ? (
+                    <div className="flex items-center gap-2 text-sm text-destructive p-3 border border-destructive/30 rounded-md">
+                      <AlertCircle className="h-4 w-4" />
+                      Failed to load capabilities
+                    </div>
+                  ) : capabilityOptions.length === 0 ? (
+                    <div className="text-sm text-muted-foreground p-3 border rounded-md">
+                      No capabilities available
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2">
+                      {capabilityOptions.map((capability) => (
+                        <FormField
+                          key={capability.value}
+                          control={form.control}
+                          name="capabilities"
+                          render={({ field }) => (
+                            <FormItem
+                              className={cn(
+                                "flex flex-row items-start space-x-2 space-y-0 rounded-md border p-2",
+                                field.value?.includes(capability.value) &&
+                                  "border-primary bg-primary/5"
+                              )}
+                            >
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value?.includes(capability.value)}
+                                  onCheckedChange={(checked) => {
+                                    const currentValue = field.value || [];
+                                    if (checked) {
+                                      field.onChange([...currentValue, capability.value]);
+                                    } else {
+                                      field.onChange(
+                                        currentValue.filter((v) => v !== capability.value)
+                                      );
+                                    }
+                                  }}
+                                />
+                              </FormControl>
+                              <div className="space-y-0.5 leading-none flex-1">
+                                <div className="flex items-center justify-between">
+                                  <FormLabel className="text-sm font-normal cursor-pointer">
+                                    {capability.label}
+                                  </FormLabel>
+                                  <Badge variant="secondary" className="text-xs h-5">
+                                    {capability.toolCount}
+                                  </Badge>
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                  {capability.description}
+                                </p>
+                              </div>
+                            </FormItem>
+                          )}
+                        />
+                      ))}
+                    </div>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}
@@ -294,50 +351,68 @@ export function EditWorkerDialog({
                 <FormItem>
                   <FormLabel>Tools</FormLabel>
                   <FormDescription className="mb-2">
-                    Select the security tools this worker will use
+                    Select the security tools this worker will use (capabilities will be auto-added)
                   </FormDescription>
-                  <div className="grid grid-cols-2 gap-2">
-                    {TOOL_OPTIONS.map((tool) => (
-                      <FormField
-                        key={tool.value}
-                        control={form.control}
-                        name="tools"
-                        render={({ field }) => (
-                          <FormItem
-                            className={cn(
-                              "flex flex-row items-start space-x-2 space-y-0 rounded-md border p-2",
-                              field.value?.includes(tool.value) &&
-                                "border-primary bg-primary/5"
-                            )}
-                          >
-                            <FormControl>
-                              <Checkbox
-                                checked={field.value?.includes(tool.value)}
-                                onCheckedChange={(checked) => {
-                                  const currentValue = field.value || [];
-                                  if (checked) {
-                                    field.onChange([...currentValue, tool.value]);
-                                  } else {
-                                    field.onChange(
-                                      currentValue.filter((v) => v !== tool.value)
-                                    );
-                                  }
-                                }}
-                              />
-                            </FormControl>
-                            <div className="space-y-0.5 leading-none">
-                              <FormLabel className="text-sm font-normal cursor-pointer">
-                                {tool.label}
-                              </FormLabel>
-                              <p className="text-xs text-muted-foreground">
-                                {tool.description}
-                              </p>
-                            </div>
-                          </FormItem>
-                        )}
-                      />
-                    ))}
-                  </div>
+                  {isLoadingOptions ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      {[1, 2, 3, 4, 5, 6].map((i) => (
+                        <Skeleton key={i} className="h-16 w-full" />
+                      ))}
+                    </div>
+                  ) : optionsError ? (
+                    <div className="flex items-center gap-2 text-sm text-destructive p-3 border border-destructive/30 rounded-md">
+                      <AlertCircle className="h-4 w-4" />
+                      Failed to load tools
+                    </div>
+                  ) : toolOptions.length === 0 ? (
+                    <div className="text-sm text-muted-foreground p-3 border rounded-md">
+                      No tools available. Please add tools in the Tool Registry first.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2 max-h-[300px] overflow-y-auto pr-1">
+                      {toolOptions.map((tool) => (
+                        <FormField
+                          key={tool.value}
+                          control={form.control}
+                          name="tools"
+                          render={({ field }) => (
+                            <FormItem
+                              className={cn(
+                                "flex flex-row items-start space-x-2 space-y-0 rounded-md border p-2",
+                                field.value?.includes(tool.value) &&
+                                  "border-primary bg-primary/5"
+                              )}
+                            >
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value?.includes(tool.value)}
+                                  onCheckedChange={(checked) => {
+                                    handleToolChange(tool.value, !!checked);
+                                  }}
+                                />
+                              </FormControl>
+                              <div className="space-y-0.5 leading-none flex-1 min-w-0">
+                                <div className="flex items-center gap-1.5">
+                                  <FormLabel className="text-sm font-normal cursor-pointer truncate">
+                                    {tool.label}
+                                  </FormLabel>
+                                  <Badge
+                                    variant="outline"
+                                    className="text-[10px] h-4 px-1 shrink-0"
+                                  >
+                                    {tool.category.toUpperCase()}
+                                  </Badge>
+                                </div>
+                                <p className="text-xs text-muted-foreground truncate">
+                                  {tool.description}
+                                </p>
+                              </div>
+                            </FormItem>
+                          )}
+                        />
+                      ))}
+                    </div>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}

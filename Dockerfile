@@ -5,11 +5,11 @@
 #
 # Development (with hot reload):
 #   docker-compose up
-#   OR: docker build --target development -t rediver-ui:dev .
+#   OR: docker build --target development -t ui:dev .
 #
 # Production:
 #   docker-compose -f docker-compose.prod.yml up --build
-#   OR: docker build --target production -t rediver-ui:prod .
+#   OR: docker build --target production -t ui:prod .
 # ==============================================================================
 
 # ==============================================================================
@@ -77,8 +77,8 @@ COPY . .
 # These are baked into the client bundle - NEVER put secrets here!
 ARG NEXT_PUBLIC_APP_URL
 ARG NEXT_PUBLIC_AUTH_PROVIDER=local
-ARG NEXT_PUBLIC_AUTH_COOKIE_NAME=rediver_auth_token
-ARG NEXT_PUBLIC_REFRESH_COOKIE_NAME=rediver_refresh_token
+ARG NEXT_PUBLIC_AUTH_COOKIE_NAME=auth_token
+ARG NEXT_PUBLIC_REFRESH_COOKIE_NAME=refresh_token
 ARG NEXT_PUBLIC_OAUTH_CALLBACK_URL
 ARG NEXT_PUBLIC_SENTRY_DSN
 # Keycloak (only needed for OIDC auth)

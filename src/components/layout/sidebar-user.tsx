@@ -60,7 +60,7 @@ export function SidebarUser({ initialUser }: SidebarUserProps) {
   useEffect(() => {
     if (!user) {
       try {
-        const storedUser = localStorage.getItem("rediver_user");
+        const storedUser = localStorage.getItem("app_user");
         if (storedUser) {
           setUser(JSON.parse(storedUser));
         }

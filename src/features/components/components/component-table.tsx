@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import {
   ColumnDef,
   flexRender,
@@ -65,7 +65,13 @@ export function ComponentTable({ data, onViewDetails }: ComponentTableProps) {
   const [globalFilter, setGlobalFilter] = useState("");
   const [rowSelection, setRowSelection] = useState({});
 
-  const columns: ColumnDef<Component>[] = [
+  // Memoize handler
+  const handleViewDetails = useCallback((component: Component) => {
+    onViewDetails?.(component);
+  }, [onViewDetails]);
+
+  // Memoize columns to prevent infinite re-renders
+  const columns: ColumnDef<Component>[] = useMemo(() => [
     {
       id: "select",
       header: ({ table }) => (
@@ -111,21 +117,19 @@ export function ComponentTable({ data, onViewDetails }: ComponentTableProps) {
                   {component.version}
                 </Badge>
                 {!component.isDirect && (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <GitBranch className="h-3 w-3 text-muted-foreground" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Transitive dependency (depth: {component.depth})</p>
-                        {component.dependencyPath && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {component.dependencyPath.join(" > ")}
-                          </p>
-                        )}
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <GitBranch className="h-3 w-3 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Transitive dependency (depth: {component.depth})</p>
+                      {component.dependencyPath && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {component.dependencyPath.join(" > ")}
+                        </p>
+                      )}
+                    </TooltipContent>
+                  </Tooltip>
                 )}
               </div>
               <p className="text-xs text-muted-foreground truncate max-w-[300px]">
@@ -147,30 +151,28 @@ export function ComponentTable({ data, onViewDetails }: ComponentTableProps) {
       cell: ({ row }) => {
         const count = row.original.sourceCount;
         return (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger>
-                <Badge variant="secondary" className="text-xs">
-                  {count}
-                </Badge>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Found in {count} asset(s)</p>
-                <ul className="text-xs mt-1">
-                  {row.original.sources.slice(0, 3).map((s) => (
-                    <li key={s.id} className="text-muted-foreground">
-                      {s.assetName}
-                    </li>
-                  ))}
-                  {row.original.sources.length > 3 && (
-                    <li className="text-muted-foreground">
-                      +{row.original.sources.length - 3} more
-                    </li>
-                  )}
-                </ul>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger>
+              <Badge variant="secondary" className="text-xs">
+                {count}
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Found in {count} asset(s)</p>
+              <ul className="text-xs mt-1">
+                {row.original.sources.slice(0, 3).map((s) => (
+                  <li key={s.id} className="text-muted-foreground">
+                    {s.assetName}
+                  </li>
+                ))}
+                {row.original.sources.length > 3 && (
+                  <li className="text-muted-foreground">
+                    +{row.original.sources.length - 3} more
+                  </li>
+                )}
+              </ul>
+            </TooltipContent>
+          </Tooltip>
         );
       },
     },
@@ -220,23 +222,21 @@ export function ComponentTable({ data, onViewDetails }: ComponentTableProps) {
           );
         }
         return (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger>
-                <Badge
-                  variant="outline"
-                  className="bg-yellow-500/15 text-yellow-600 border-yellow-500/30 text-xs gap-1"
-                >
-                  <Clock className="h-3 w-3" />
-                  Outdated
-                </Badge>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Current: {component.version}</p>
-                <p>Latest: {component.latestVersion}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger>
+              <Badge
+                variant="outline"
+                className="bg-yellow-500/15 text-yellow-600 border-yellow-500/30 text-xs gap-1"
+              >
+                <Clock className="h-3 w-3" />
+                Outdated
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Current: {component.version}</p>
+              <p>Latest: {component.latestVersion}</p>
+            </TooltipContent>
+          </Tooltip>
         );
       },
     },
@@ -266,12 +266,12 @@ export function ComponentTable({ data, onViewDetails }: ComponentTableProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onViewDetails?.(component)}>
+              <DropdownMenuItem onClick={() => handleViewDetails(component)}>
                 <Eye className="mr-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
               {component.vulnerabilities.length > 0 && (
-                <DropdownMenuItem onClick={() => onViewDetails?.(component)}>
+                <DropdownMenuItem onClick={() => handleViewDetails(component)}>
                   <ShieldAlert className="mr-2 h-4 w-4" />
                   View Vulnerabilities
                 </DropdownMenuItem>
@@ -300,7 +300,7 @@ export function ComponentTable({ data, onViewDetails }: ComponentTableProps) {
         );
       },
     },
-  ];
+  ], [handleViewDetails]);
 
   const table = useReactTable({
     data,
@@ -316,6 +316,7 @@ export function ComponentTable({ data, onViewDetails }: ComponentTableProps) {
   });
 
   return (
+    <TooltipProvider>
     <div className="space-y-4">
       {/* Table */}
       <div className="rounded-md border overflow-x-auto">
@@ -413,5 +414,6 @@ export function ComponentTable({ data, onViewDetails }: ComponentTableProps) {
         </div>
       </div>
     </div>
+    </TooltipProvider>
   );
 }

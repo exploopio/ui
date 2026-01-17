@@ -204,14 +204,14 @@ jobs:
           context: .
           push: false
           load: true
-          tags: rediver-ui:scan
+          tags: ui:scan
           build-args: |
             NEXT_PUBLIC_API_URL=http://localhost:8080
 
       - name: Run Trivy vulnerability scanner on Docker image
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: "rediver-ui:scan"
+          image-ref: "ui:scan"
           format: "sarif"
           output: "trivy-docker-results.sarif"
           severity: "CRITICAL,HIGH"

@@ -13,7 +13,7 @@ import { CreateTeamForm } from '@/features/tenant'
 // Helper to get suggested name from cookie
 async function getSuggestedName(): Promise<string> {
   const cookieStore = await cookies()
-  const userInfoCookie = cookieStore.get('rediver_user_info')
+  const userInfoCookie = cookieStore.get(env.cookies.userInfo)
 
   if (userInfoCookie?.value) {
     try {
@@ -37,7 +37,7 @@ export default async function CreateFirstTeamPage() {
   }
 
   // Check if user already has a team
-  const tenantCookie = cookieStore.get('rediver_tenant')
+  const tenantCookie = cookieStore.get(env.cookies.tenant)
   if (tenantCookie?.value) {
     // Already has team - redirect to dashboard
     redirect('/')

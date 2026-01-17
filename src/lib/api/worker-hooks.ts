@@ -173,6 +173,34 @@ export function useRegenerateWorkerKey(workerId: string) {
   );
 }
 
+/**
+ * Activate a worker (set status to active)
+ */
+export function useActivateWorker(workerId: string) {
+  const { currentTenant } = useTenant();
+
+  return useSWRMutation(
+    currentTenant && workerId ? workerEndpoints.activate(workerId) : null,
+    async (url: string) => {
+      return post<Worker>(url, {});
+    }
+  );
+}
+
+/**
+ * Deactivate a worker (set status to inactive)
+ */
+export function useDeactivateWorker(workerId: string) {
+  const { currentTenant } = useTenant();
+
+  return useSWRMutation(
+    currentTenant && workerId ? workerEndpoints.deactivate(workerId) : null,
+    async (url: string) => {
+      return post<Worker>(url, {});
+    }
+  );
+}
+
 // ============================================
 // CACHE UTILITIES
 // ============================================

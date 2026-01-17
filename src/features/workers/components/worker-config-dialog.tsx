@@ -46,8 +46,8 @@ export function WorkerConfigDialog({
     : `  - name: semgrep\n    enabled: true`;
 
   // YAML config template
-  const yamlConfig = `# Rediver Agent Configuration for ${worker.name}
-# Generated from Rediver UI
+  const yamlConfig = `# Agent Configuration for ${worker.name}
+# Generated from UI
 
 agent:
   name: ${worker.name}
@@ -55,7 +55,7 @@ agent:
   command_poll_interval: 30s
   heartbeat_interval: 1m
 
-rediver:
+server:
   base_url: ${baseUrl}
   api_key: ${apiKey || "<YOUR_API_KEY>"}
   worker_id: ${worker.id}
@@ -72,9 +72,9 @@ ${scannerConfigs}
   // Environment variables
   const envConfig = `# Environment Variables for ${worker.name}
 
-export REDIVER_API_URL=${baseUrl}
-export REDIVER_API_KEY=${apiKey || "<YOUR_API_KEY>"}
-export REDIVER_WORKER_ID=${worker.id}
+export API_URL=${baseUrl}
+export API_KEY=${apiKey || "<YOUR_API_KEY>"}
+export WORKER_ID=${worker.id}
 `;
 
   // Docker run command
@@ -83,10 +83,10 @@ export REDIVER_WORKER_ID=${worker.id}
 docker run -d \\
   --name ${worker.name.toLowerCase().replace(/\s+/g, "-")} \\
   -v /path/to/scan:/code:ro \\
-  -e REDIVER_API_URL=${baseUrl} \\
-  -e REDIVER_API_KEY=${apiKey || "<YOUR_API_KEY>"} \\
-  -e REDIVER_WORKER_ID=${worker.id} \\
-  rediver/agent:latest \\
+  -e API_URL=${baseUrl} \\
+  -e API_KEY=${apiKey || "<YOUR_API_KEY>"} \\
+  -e WORKER_ID=${worker.id} \\
+  rediverio/agent:latest \\
   -daemon -config /app/agent.yaml
 `;
 
@@ -94,18 +94,18 @@ docker run -d \\
   const cliConfig = `# CLI Commands for ${worker.name}
 
 # One-shot scan (run once and exit)
-./rediver-agent \\
+./agent \\
   -tool ${worker.tools[0] === "trivy" ? "trivy-fs" : worker.tools[0] || "semgrep"} \\
   -target /path/to/project \\
   -push
 
 # Daemon mode (continuous)
-./rediver-agent -daemon -config agent.yaml
+./agent -daemon -config agent.yaml
 
 # With environment variables
-export REDIVER_API_URL=${baseUrl}
-export REDIVER_API_KEY=${apiKey || "<YOUR_API_KEY>"}
-./rediver-agent -tool ${worker.tools[0] === "trivy" ? "trivy-fs" : worker.tools[0] || "semgrep"} -target . -push
+export API_URL=${baseUrl}
+export API_KEY=${apiKey || "<YOUR_API_KEY>"}
+./agent -tool ${worker.tools[0] === "trivy" ? "trivy-fs" : worker.tools[0] || "semgrep"} -target . -push
 `;
 
   const handleCopy = async (text: string, label: string) => {

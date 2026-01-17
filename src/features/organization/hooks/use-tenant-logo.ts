@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 
-const LOGO_CACHE_PREFIX = 'rediver_tenant_logo_'
+const LOGO_CACHE_PREFIX = 'app_tenant_logo_'
 const LOGO_CACHE_VERSION = 'v1'
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000 // 7 days
 

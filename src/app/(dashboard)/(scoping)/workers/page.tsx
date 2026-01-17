@@ -4,7 +4,7 @@ import { Header, Main } from "@/components/layout";
 import { ProfileDropdown } from "@/components/profile-dropdown";
 import { Search } from "@/components/search";
 import { ThemeSwitch } from "@/components/theme-switch";
-import { WorkersSection } from "@/features/workers";
+import { UnifiedWorkersSection } from "@/features/workers";
 
 export default function WorkersPage() {
   return (
@@ -18,7 +18,7 @@ export default function WorkersPage() {
       </Header>
 
       <Main>
-        <WorkersSection />
+        <UnifiedWorkersSection />
       </Main>
     </>
   );

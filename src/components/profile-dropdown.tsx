@@ -31,7 +31,7 @@ export function ProfileDropdown() {
   // Get user from localStorage on mount
   useEffect(() => {
     try {
-      const storedUser = localStorage.getItem('rediver_user')
+      const storedUser = localStorage.getItem('app_user')
       if (storedUser) {
         setUser(JSON.parse(storedUser))
       }
