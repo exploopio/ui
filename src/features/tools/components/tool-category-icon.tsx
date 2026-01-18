@@ -9,17 +9,19 @@ import {
   Container,
   Search,
   Eye,
+  Folder,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ToolCategory } from '@/lib/api/tool-types';
 
 interface ToolCategoryIconProps {
-  category: ToolCategory;
+  category: string; // Accept any string to support custom categories
   className?: string;
 }
 
-const categoryIcons: Record<ToolCategory, LucideIcon> = {
+// Icons for builtin categories
+const categoryIcons: Record<string, LucideIcon> = {
   sast: Code,
   sca: Package,
   dast: Globe,
@@ -30,7 +32,8 @@ const categoryIcons: Record<ToolCategory, LucideIcon> = {
   osint: Eye,
 };
 
-const categoryColors: Record<ToolCategory, string> = {
+// Colors for builtin categories
+const categoryColors: Record<string, string> = {
   sast: 'text-blue-500',
   sca: 'text-purple-500',
   dast: 'text-orange-500',
@@ -70,12 +73,12 @@ export function ToolCategoryIcon({ category, className }: ToolCategoryIconProps)
   return <Icon className={cn(colorClass, className)} />;
 }
 
-export function getCategoryColor(category: ToolCategory): string {
+export function getCategoryColor(category: string): string {
   return categoryColors[category] || 'text-muted-foreground';
 }
 
-export function getCategoryBadgeColor(category: ToolCategory): string {
-  const colors: Record<ToolCategory, string> = {
+export function getCategoryBadgeColor(category: string): string {
+  const colors: Record<string, string> = {
     sast: 'bg-blue-500/10 text-blue-500 border-blue-500/30',
     sca: 'bg-purple-500/10 text-purple-500 border-purple-500/30',
     dast: 'bg-orange-500/10 text-orange-500 border-orange-500/30',

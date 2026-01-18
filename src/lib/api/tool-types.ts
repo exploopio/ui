@@ -44,11 +44,12 @@ export type ExecutionStatus = (typeof EXECUTION_STATUSES)[number];
  */
 export interface Tool {
   id: string;
+  tenant_id?: string; // null for platform tools, UUID for custom tools
   name: string;
   display_name: string;
   description?: string;
   logo_url?: string;
-  category: ToolCategory;
+  category_id?: string; // Foreign key to tool_categories table
   install_method: InstallMethod;
   install_cmd?: string;
   update_cmd?: string;
@@ -67,8 +68,10 @@ export interface Tool {
   github_url?: string;
   is_active: boolean;
   is_builtin: boolean;
+  is_platform_tool: boolean; // true for platform tools, false for custom tools
   tags: string[];
   metadata?: Record<string, unknown>;
+  created_by?: string; // User ID who created the tool (for custom tools)
   created_at: string;
   updated_at: string;
 }
@@ -80,7 +83,7 @@ export interface CreateToolRequest {
   name: string;
   display_name?: string;
   description?: string;
-  category: ToolCategory;
+  category_id?: string; // UUID reference to tool_categories table
   install_method: InstallMethod;
   install_cmd?: string;
   update_cmd?: string;
@@ -103,6 +106,7 @@ export interface CreateToolRequest {
 export interface UpdateToolRequest {
   display_name?: string;
   description?: string;
+  category_id?: string; // Optional: link to tool_categories table
   install_cmd?: string;
   update_cmd?: string;
   version_cmd?: string;
@@ -211,6 +215,16 @@ export interface ToolWithConfig {
   tenant_config?: TenantToolConfig;
   effective_config: Record<string, unknown>;
   is_enabled: boolean;
+}
+
+/**
+ * Tools with config list response (from /tenant-tools/all-tools)
+ */
+export interface ToolsWithConfigListResponse {
+  items: ToolWithConfig[];
+  total: number;
+  page: number;
+  per_page: number;
 }
 
 /**

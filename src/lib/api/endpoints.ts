@@ -27,8 +27,12 @@ export const API_BASE = {
   WORKERS: '/api/v1/workers',
   SCAN_PROFILES: '/api/v1/scan-profiles',
   TOOLS: '/api/v1/tools',
+  PLATFORM_TOOLS: '/api/v1/tools/platform',
+  CUSTOM_TOOLS: '/api/v1/custom-tools',
   TENANT_TOOLS: '/api/v1/tenant-tools',
   TOOL_STATS: '/api/v1/tool-stats',
+  TOOL_CATEGORIES: '/api/v1/tool-categories',
+  CUSTOM_TOOL_CATEGORIES: '/api/v1/custom-tool-categories',
   SCANS: '/api/v1/scans',
 } as const
 
@@ -910,6 +914,64 @@ export const toolEndpoints = {
 } as const
 
 /**
+ * Platform tools endpoints (system-wide tools available to all tenants)
+ * Platform tools are managed by admins and cannot be enabled/disabled by tenants
+ */
+export const platformToolEndpoints = {
+  /**
+   * List platform tools with optional filters
+   */
+  list: (filters?: ToolListFilters) => {
+    const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
+    return `${API_BASE.PLATFORM_TOOLS}${queryString}`
+  },
+} as const
+
+/**
+ * Custom tools endpoints for tenant-specific custom tool definitions
+ * Custom tools are created and managed by tenants
+ */
+export const customToolEndpoints = {
+  /**
+   * List custom tools with optional filters
+   */
+  list: (filters?: ToolListFilters) => {
+    const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
+    return `${API_BASE.CUSTOM_TOOLS}${queryString}`
+  },
+
+  /**
+   * Get custom tool by ID
+   */
+  get: (toolId: string) => `${API_BASE.CUSTOM_TOOLS}/${toolId}`,
+
+  /**
+   * Create a new custom tool
+   */
+  create: () => API_BASE.CUSTOM_TOOLS,
+
+  /**
+   * Update custom tool
+   */
+  update: (toolId: string) => `${API_BASE.CUSTOM_TOOLS}/${toolId}`,
+
+  /**
+   * Delete custom tool
+   */
+  delete: (toolId: string) => `${API_BASE.CUSTOM_TOOLS}/${toolId}`,
+
+  /**
+   * Activate custom tool
+   */
+  activate: (toolId: string) => `${API_BASE.CUSTOM_TOOLS}/${toolId}/activate`,
+
+  /**
+   * Deactivate custom tool
+   */
+  deactivate: (toolId: string) => `${API_BASE.CUSTOM_TOOLS}/${toolId}/deactivate`,
+} as const
+
+/**
  * Tenant tool config endpoints for tenant-specific tool configurations
  */
 export const tenantToolEndpoints = {
@@ -950,6 +1012,15 @@ export const tenantToolEndpoints = {
    * Bulk disable tools for tenant
    */
   bulkDisable: () => `${API_BASE.TENANT_TOOLS}/bulk-disable`,
+
+  /**
+   * List all tools with tenant-specific enabled status
+   * Returns tools joined with tenant configs, where is_enabled defaults to true if no config exists
+   */
+  allTools: (filters?: ToolListFilters) => {
+    const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
+    return `${API_BASE.TENANT_TOOLS}/all-tools${queryString}`
+  },
 } as const
 
 /**
@@ -978,6 +1049,55 @@ export const toolStatsEndpoints = {
    * Get tool execution by ID
    */
   execution: (executionId: string) => `${API_BASE.TOOL_STATS}/executions/${executionId}`,
+} as const
+
+// ============================================
+// TOOL CATEGORY ENDPOINTS
+// ============================================
+
+import type { ToolCategoryListFilters } from './tool-category-types'
+
+/**
+ * Tool Category endpoints (read-only for platform + tenant custom)
+ */
+export const toolCategoryEndpoints = {
+  /**
+   * List all categories (platform + tenant custom, with pagination)
+   */
+  list: (filters?: ToolCategoryListFilters) => {
+    const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
+    return `${API_BASE.TOOL_CATEGORIES}${queryString}`
+  },
+
+  /**
+   * List all categories for dropdowns (no pagination)
+   */
+  all: () => `${API_BASE.TOOL_CATEGORIES}/all`,
+
+  /**
+   * Get category by ID
+   */
+  get: (categoryId: string) => `${API_BASE.TOOL_CATEGORIES}/${categoryId}`,
+} as const
+
+/**
+ * Custom Tool Category endpoints (tenant custom categories management)
+ */
+export const customToolCategoryEndpoints = {
+  /**
+   * Create a new custom category
+   */
+  create: () => API_BASE.CUSTOM_TOOL_CATEGORIES,
+
+  /**
+   * Update a custom category
+   */
+  update: (categoryId: string) => `${API_BASE.CUSTOM_TOOL_CATEGORIES}/${categoryId}`,
+
+  /**
+   * Delete a custom category
+   */
+  delete: (categoryId: string) => `${API_BASE.CUSTOM_TOOL_CATEGORIES}/${categoryId}`,
 } as const
 
 // ============================================
@@ -1094,6 +1214,8 @@ export const endpoints = {
   workers: workerEndpoints,
   scanProfiles: scanProfileEndpoints,
   tools: toolEndpoints,
+  platformTools: platformToolEndpoints,
+  customTools: customToolEndpoints,
   tenantTools: tenantToolEndpoints,
   toolStats: toolStatsEndpoints,
   scans: scanEndpoints,
@@ -1117,6 +1239,8 @@ export {
   workerEndpoints as workers,
   scanProfileEndpoints as scanProfiles,
   toolEndpoints as tools,
+  platformToolEndpoints as platformTools,
+  customToolEndpoints as customTools,
   tenantToolEndpoints as tenantTools,
   toolStatsEndpoints as toolStats,
   scanEndpoints as scans,

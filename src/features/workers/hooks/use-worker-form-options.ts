@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { useTools } from "@/lib/api/tool-hooks";
+import { useAllToolCategories, getCategoryNameById } from "@/lib/api/tool-category-hooks";
 import type { Tool } from "@/lib/api/tool-types";
 
 // ============================================
@@ -91,20 +92,26 @@ export function useWorkerFormOptions(): UseWorkerFormOptionsReturn {
     }
   );
 
+  // Fetch tool categories
+  const { data: categoriesData } = useAllToolCategories();
+
   // Memoize tools to prevent unnecessary re-renders
   const tools = useMemo(() => data?.items ?? [], [data?.items]);
 
   // Derive tool options from API data
   const toolOptions = useMemo<ToolOption[]>(() => {
-    return tools.map((tool) => ({
-      value: tool.name,
-      label: tool.display_name,
-      description: tool.description || `${tool.category.toUpperCase()} tool`,
-      category: tool.category,
-      capabilities: tool.capabilities || [],
-      logoUrl: tool.logo_url,
-    }));
-  }, [tools]);
+    return tools.map((tool) => {
+      const categoryName = getCategoryNameById(categoriesData?.items, tool.category_id);
+      return {
+        value: tool.name,
+        label: tool.display_name,
+        description: tool.description || `${categoryName.toUpperCase()} tool`,
+        category: categoryName,
+        capabilities: tool.capabilities || [],
+        logoUrl: tool.logo_url,
+      };
+    });
+  }, [tools, categoriesData]);
 
   // Derive unique capabilities from all tools
   const capabilityOptions = useMemo<CapabilityOption[]>(() => {

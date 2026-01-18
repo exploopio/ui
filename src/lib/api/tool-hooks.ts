@@ -11,7 +11,7 @@ import useSWRMutation from "swr/mutation";
 import { get, post, put, del } from "./client";
 import { handleApiError } from "./error-handler";
 import { useTenant } from "@/context/tenant-provider";
-import { toolEndpoints, tenantToolEndpoints, toolStatsEndpoints } from "./endpoints";
+import { toolEndpoints, platformToolEndpoints, customToolEndpoints, tenantToolEndpoints, toolStatsEndpoints } from "./endpoints";
 import type {
   Tool,
   ToolListResponse,
@@ -23,6 +23,7 @@ import type {
   TenantToolConfigListFilters,
   TenantToolConfigRequest,
   ToolWithConfig,
+  ToolsWithConfigListResponse,
   BulkToolIDsRequest,
   ToolStats,
   TenantToolStats,
@@ -72,11 +73,27 @@ export const toolKeys = {
   byName: (name: string) => [...toolKeys.all, "name", name] as const,
 };
 
+export const platformToolKeys = {
+  all: ["platform-tools"] as const,
+  lists: () => [...platformToolKeys.all, "list"] as const,
+  list: (filters?: ToolListFilters) => [...platformToolKeys.lists(), filters] as const,
+};
+
+export const customToolKeys = {
+  all: ["custom-tools"] as const,
+  lists: () => [...customToolKeys.all, "list"] as const,
+  list: (filters?: ToolListFilters) => [...customToolKeys.lists(), filters] as const,
+  details: () => [...customToolKeys.all, "detail"] as const,
+  detail: (id: string) => [...customToolKeys.details(), id] as const,
+};
+
 export const tenantToolKeys = {
   all: ["tenant-tools"] as const,
   lists: () => [...tenantToolKeys.all, "list"] as const,
   list: (filters?: TenantToolConfigListFilters) =>
     [...tenantToolKeys.lists(), filters] as const,
+  allTools: (filters?: ToolListFilters) =>
+    [...tenantToolKeys.all, "all-tools", filters] as const,
   details: () => [...tenantToolKeys.all, "detail"] as const,
   detail: (toolId: string) => [...tenantToolKeys.details(), toolId] as const,
   withConfig: (toolId: string) =>
@@ -117,6 +134,10 @@ async function fetchTenantToolConfig(url: string): Promise<TenantToolConfig> {
 
 async function fetchToolWithConfig(url: string): Promise<ToolWithConfig> {
   return get<ToolWithConfig>(url);
+}
+
+async function fetchToolsWithConfig(url: string): Promise<ToolsWithConfigListResponse> {
+  return get<ToolsWithConfigListResponse>(url);
 }
 
 async function fetchToolStats(url: string): Promise<ToolStats> {
@@ -278,6 +299,133 @@ export function useCheckToolVersion(toolId: string) {
 }
 
 // ============================================
+// PLATFORM TOOLS HOOKS
+// ============================================
+
+/**
+ * Fetch platform tools list (system-wide tools available to all tenants)
+ * Platform tools are managed by admins and cannot be enabled/disabled by tenants.
+ */
+export function usePlatformTools(
+  filters?: ToolListFilters,
+  config?: SWRConfiguration
+) {
+  const { currentTenant } = useTenant();
+
+  const key = currentTenant ? platformToolEndpoints.list(filters) : null;
+
+  return useSWR<ToolListResponse>(key, fetchTools, {
+    ...defaultConfig,
+    ...config,
+  });
+}
+
+// ============================================
+// CUSTOM TOOLS HOOKS
+// ============================================
+
+/**
+ * Fetch custom tools list (tenant-specific tools)
+ */
+export function useCustomTools(
+  filters?: ToolListFilters,
+  config?: SWRConfiguration
+) {
+  const { currentTenant } = useTenant();
+
+  const key = currentTenant ? customToolEndpoints.list(filters) : null;
+
+  return useSWR<ToolListResponse>(key, fetchTools, {
+    ...defaultConfig,
+    ...config,
+  });
+}
+
+/**
+ * Fetch a single custom tool by ID
+ */
+export function useCustomTool(toolId: string | null, config?: SWRConfiguration) {
+  const { currentTenant } = useTenant();
+
+  const key = currentTenant && toolId ? customToolEndpoints.get(toolId) : null;
+
+  return useSWR<Tool>(key, fetchTool, {
+    ...defaultConfig,
+    ...config,
+  });
+}
+
+/**
+ * Create a new custom tool
+ */
+export function useCreateCustomTool() {
+  const { currentTenant } = useTenant();
+
+  return useSWRMutation(
+    currentTenant ? customToolEndpoints.create() : null,
+    async (url: string, { arg }: { arg: CreateToolRequest }) => {
+      return post<Tool>(url, arg);
+    }
+  );
+}
+
+/**
+ * Update a custom tool
+ */
+export function useUpdateCustomTool(toolId: string) {
+  const { currentTenant } = useTenant();
+
+  return useSWRMutation(
+    currentTenant && toolId ? customToolEndpoints.update(toolId) : null,
+    async (url: string, { arg }: { arg: UpdateToolRequest }) => {
+      return put<Tool>(url, arg);
+    }
+  );
+}
+
+/**
+ * Delete a custom tool
+ */
+export function useDeleteCustomTool(toolId: string) {
+  const { currentTenant } = useTenant();
+
+  return useSWRMutation(
+    currentTenant && toolId ? customToolEndpoints.delete(toolId) : null,
+    async (url: string) => {
+      return del<void>(url);
+    }
+  );
+}
+
+/**
+ * Activate a custom tool
+ */
+export function useActivateCustomTool(toolId: string) {
+  const { currentTenant } = useTenant();
+
+  return useSWRMutation(
+    currentTenant && toolId ? customToolEndpoints.activate(toolId) : null,
+    async (url: string) => {
+      return post<Tool>(url, {});
+    }
+  );
+}
+
+/**
+ * Deactivate a custom tool
+ */
+export function useDeactivateCustomTool(toolId: string) {
+  const { currentTenant } = useTenant();
+
+  return useSWRMutation(
+    currentTenant && toolId ? customToolEndpoints.deactivate(toolId) : null,
+    async (url: string) => {
+      return post<Tool>(url, {});
+    }
+  );
+}
+
+// ============================================
 // TENANT TOOL CONFIG HOOKS
 // ============================================
 
@@ -329,6 +477,27 @@ export function useToolWithConfig(
     currentTenant && toolId ? tenantToolEndpoints.getWithConfig(toolId) : null;
 
   return useSWR<ToolWithConfig>(key, fetchToolWithConfig, {
+    ...defaultConfig,
+    ...config,
+  });
+}
+
+/**
+ * List all tools with their tenant-specific enabled status
+ *
+ * @description Returns all tools joined with tenant configs.
+ * If a tenant config doesn't exist for a tool, is_enabled defaults to true.
+ * Use this instead of useTools when you need tenant-specific enabled status.
+ */
+export function useToolsWithConfig(
+  filters?: ToolListFilters,
+  config?: SWRConfiguration
+) {
+  const { currentTenant } = useTenant();
+
+  const key = currentTenant ? tenantToolEndpoints.allTools(filters) : null;
+
+  return useSWR<ToolsWithConfigListResponse>(key, fetchToolsWithConfig, {
     ...defaultConfig,
     ...config,
   });
@@ -390,6 +559,46 @@ export function useBulkDisableTools() {
     currentTenant ? tenantToolEndpoints.bulkDisable() : null,
     async (url: string, { arg }: { arg: BulkToolIDsRequest }) => {
       return post<void>(url, arg);
+    }
+  );
+}
+
+/**
+ * Enable a single tool for the current tenant
+ * Uses the bulk-enable endpoint with a single tool ID
+ *
+ * @description This is TENANT-SPECIFIC - only affects the current tenant's tool config.
+ * Use this instead of useActivateTool which is SYSTEM-WIDE and affects all tenants.
+ *
+ * Usage: const { trigger } = useEnableTool(); await trigger(toolId);
+ */
+export function useEnableTool() {
+  const { currentTenant } = useTenant();
+
+  return useSWRMutation(
+    currentTenant ? tenantToolEndpoints.bulkEnable() : null,
+    async (url: string, { arg: toolId }: { arg: string }) => {
+      return post<void>(url, { tool_ids: [toolId] });
+    }
+  );
+}
+
+/**
+ * Disable a single tool for the current tenant
+ * Uses the bulk-disable endpoint with a single tool ID
+ *
+ * @description This is TENANT-SPECIFIC - only affects the current tenant's tool config.
+ * Use this instead of useDeactivateTool which is SYSTEM-WIDE and affects all tenants.
+ *
+ * Usage: const { trigger } = useDisableTool(); await trigger(toolId);
+ */
+export function useDisableTool() {
+  const { currentTenant } = useTenant();
+
+  return useSWRMutation(
+    currentTenant ? tenantToolEndpoints.bulkDisable() : null,
+    async (url: string, { arg: toolId }: { arg: string }) => {
+      return post<void>(url, { tool_ids: [toolId] });
     }
   );
 }
@@ -481,6 +690,30 @@ export async function invalidateToolsCache() {
 }
 
 /**
+ * Invalidate platform tools cache
+ */
+export async function invalidatePlatformToolsCache() {
+  const { mutate } = await import("swr");
+  await mutate(
+    (key) => typeof key === "string" && key.includes("/api/v1/tools/platform"),
+    undefined,
+    { revalidate: true }
+  );
+}
+
+/**
+ * Invalidate custom tools cache
+ */
+export async function invalidateCustomToolsCache() {
+  const { mutate } = await import("swr");
+  await mutate(
+    (key) => typeof key === "string" && key.includes("/api/v1/custom-tools"),
+    undefined,
+    { revalidate: true }
+  );
+}
+
+/**
  * Invalidate tenant tools cache
  */
 export async function invalidateTenantToolsCache() {
@@ -510,6 +743,8 @@ export async function invalidateToolStatsCache() {
 export async function invalidateAllToolCaches() {
   await Promise.all([
     invalidateToolsCache(),
+    invalidatePlatformToolsCache(),
+    invalidateCustomToolsCache(),
     invalidateTenantToolsCache(),
     invalidateToolStatsCache(),
   ]);

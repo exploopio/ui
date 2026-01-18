@@ -30,15 +30,14 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Tool } from '@/lib/api/tool-types';
-import {
-  ToolCategoryIcon,
-  CATEGORY_LABELS,
-  getCategoryBadgeColor,
-} from './tool-category-icon';
+import type { ToolCategory } from '@/lib/api/tool-category-types';
+import { getCategoryNameById, getCategoryDisplayNameById } from '@/lib/api/tool-category-hooks';
+import { ToolCategoryIcon, getCategoryBadgeColor } from './tool-category-icon';
 import { INSTALL_METHOD_DISPLAY_NAMES } from '@/lib/api/tool-types';
 
 interface ToolCardProps {
   tool: Tool;
+  categories?: ToolCategory[]; // For looking up category name from category_id
   selected?: boolean;
   onSelect?: () => void;
   onView?: (tool: Tool) => void;
@@ -47,10 +46,13 @@ interface ToolCardProps {
   onActivate?: (tool: Tool) => void;
   onDeactivate?: (tool: Tool) => void;
   onCheckUpdate?: (tool: Tool) => void;
+  /** When true, hides edit/delete/activate/deactivate actions (for platform tools) */
+  readOnly?: boolean;
 }
 
 export function ToolCard({
   tool,
+  categories,
   selected,
   onSelect,
   onView,
@@ -59,7 +61,11 @@ export function ToolCard({
   onActivate,
   onDeactivate,
   onCheckUpdate,
+  readOnly = false,
 }: ToolCardProps) {
+  // Look up category name from category_id
+  const categoryName = getCategoryNameById(categories, tool.category_id);
+  const categoryDisplayName = getCategoryDisplayNameById(categories, tool.category_id);
   return (
     <Card
       className={cn(
@@ -71,17 +77,30 @@ export function ToolCard({
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            {tool.logo_url ? (
-              <img
-                src={tool.logo_url}
-                alt={tool.display_name}
-                className="h-10 w-10 rounded-lg object-contain"
-              />
-            ) : (
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
-                <ToolCategoryIcon category={tool.category} className="h-5 w-5" />
-              </div>
-            )}
+            <div className="relative">
+              {tool.logo_url ? (
+                <img
+                  src={tool.logo_url}
+                  alt={tool.display_name}
+                  className="h-10 w-10 rounded-lg object-contain"
+                />
+              ) : (
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
+                  <ToolCategoryIcon category={categoryName} className="h-5 w-5" />
+                </div>
+              )}
+              {/* Status indicator on icon - only for read-only/platform tools */}
+              {readOnly && (
+                <div
+                  className={cn(
+                    'absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full border-2 border-background',
+                    tool.is_active ? 'bg-green-500' : 'bg-zinc-400'
+                  )}
+                >
+                  <Power className="h-2 w-2 text-white" />
+                </div>
+              )}
+            </div>
             <div>
               <CardTitle className="text-base">{tool.display_name}</CardTitle>
               <CardDescription className="text-xs">
@@ -110,8 +129,8 @@ export function ToolCard({
                 <Eye className="mr-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
-              {!tool.is_builtin && (
-                <DropdownMenuItem onClick={() => onEdit?.(tool)}>
+              {!readOnly && !tool.is_builtin && onEdit && (
+                <DropdownMenuItem onClick={() => onEdit(tool)}>
                   <Settings className="mr-2 h-4 w-4" />
                   Edit
                 </DropdownMenuItem>
@@ -146,27 +165,36 @@ export function ToolCard({
                   </a>
                 </DropdownMenuItem>
               )}
-              <DropdownMenuSeparator />
-              {tool.is_active ? (
-                <DropdownMenuItem
-                  onClick={() => onDeactivate?.(tool)}
-                  className="text-amber-500"
-                >
-                  <PowerOff className="mr-2 h-4 w-4" />
-                  Deactivate
-                </DropdownMenuItem>
-              ) : (
-                <DropdownMenuItem
-                  onClick={() => onActivate?.(tool)}
-                  className="text-green-500"
-                >
-                  <Power className="mr-2 h-4 w-4" />
-                  Activate
-                </DropdownMenuItem>
+              {/* Only show activate/deactivate for custom tools (not read-only) */}
+              {!readOnly && (onActivate || onDeactivate) && (
+                <>
+                  <DropdownMenuSeparator />
+                  {tool.is_active ? (
+                    onDeactivate && (
+                      <DropdownMenuItem
+                        onClick={() => onDeactivate(tool)}
+                        className="text-amber-500"
+                      >
+                        <PowerOff className="mr-2 h-4 w-4" />
+                        Deactivate
+                      </DropdownMenuItem>
+                    )
+                  ) : (
+                    onActivate && (
+                      <DropdownMenuItem
+                        onClick={() => onActivate(tool)}
+                        className="text-green-500"
+                      >
+                        <Power className="mr-2 h-4 w-4" />
+                        Activate
+                      </DropdownMenuItem>
+                    )
+                  )}
+                </>
               )}
-              {!tool.is_builtin && (
+              {!readOnly && !tool.is_builtin && onDelete && (
                 <DropdownMenuItem
-                  onClick={() => onDelete?.(tool)}
+                  onClick={() => onDelete(tool)}
                   className="text-red-500"
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
@@ -187,9 +215,9 @@ export function ToolCard({
         <div className="flex flex-wrap gap-1.5">
           <Badge
             variant="outline"
-            className={cn('text-xs', getCategoryBadgeColor(tool.category))}
+            className={cn('text-xs', getCategoryBadgeColor(categoryName))}
           >
-            {CATEGORY_LABELS[tool.category]}
+            {categoryDisplayName}
           </Badge>
           <Badge variant="secondary" className="text-xs">
             {INSTALL_METHOD_DISPLAY_NAMES[tool.install_method]}
@@ -213,18 +241,21 @@ export function ToolCard({
               </Badge>
             )}
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">
-              {tool.is_active ? 'Active' : 'Inactive'}
-            </span>
-            <Switch
-              checked={tool.is_active}
-              onCheckedChange={() =>
-                tool.is_active ? onDeactivate?.(tool) : onActivate?.(tool)
-              }
-              onClick={(e) => e.stopPropagation()}
-            />
-          </div>
+          {/* Show switch for custom tools only - platform tools show status on icon */}
+          {!readOnly && (onActivate || onDeactivate) && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">
+                {tool.is_active ? 'Active' : 'Inactive'}
+              </span>
+              <Switch
+                checked={tool.is_active}
+                onCheckedChange={() =>
+                  tool.is_active ? onDeactivate?.(tool) : onActivate?.(tool)
+                }
+                onClick={(e) => e.stopPropagation()}
+              />
+            </div>
+          )}
         </div>
 
         {tool.capabilities && tool.capabilities.length > 0 && (

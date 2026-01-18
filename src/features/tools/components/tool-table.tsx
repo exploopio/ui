@@ -55,30 +55,32 @@ import {
 import { cn } from '@/lib/utils';
 
 import type { Tool } from '@/lib/api/tool-types';
+import type { ToolCategory } from '@/lib/api/tool-category-types';
 import { INSTALL_METHOD_DISPLAY_NAMES } from '@/lib/api/tool-types';
-import {
-  ToolCategoryIcon,
-  CATEGORY_LABELS,
-  getCategoryBadgeColor,
-} from './tool-category-icon';
+import { getCategoryNameById, getCategoryDisplayNameById } from '@/lib/api/tool-category-hooks';
+import { ToolCategoryIcon, getCategoryBadgeColor } from './tool-category-icon';
 
 interface ToolTableProps {
   tools: Tool[];
+  categories?: ToolCategory[]; // For looking up category name from category_id
   sorting: SortingState;
   onSortingChange: (sorting: SortingState) => void;
   globalFilter: string;
   rowSelection: Record<string, boolean>;
   onRowSelectionChange: (selection: Record<string, boolean>) => void;
   onViewTool: (tool: Tool) => void;
-  onEditTool: (tool: Tool) => void;
-  onDeleteTool: (tool: Tool) => void;
-  onActivateTool: (tool: Tool) => void;
-  onDeactivateTool: (tool: Tool) => void;
+  onEditTool?: (tool: Tool) => void;
+  onDeleteTool?: (tool: Tool) => void;
+  onActivateTool?: (tool: Tool) => void;
+  onDeactivateTool?: (tool: Tool) => void;
   onCheckUpdate?: (tool: Tool) => void;
+  /** When true, hides edit/delete/activate/deactivate actions (for platform tools) */
+  readOnly?: boolean;
 }
 
 export function ToolTable({
   tools,
+  categories,
   sorting,
   onSortingChange,
   globalFilter,
@@ -90,7 +92,11 @@ export function ToolTable({
   onActivateTool,
   onDeactivateTool,
   onCheckUpdate,
+  readOnly = false,
 }: ToolTableProps) {
+  // Helper functions to get category info
+  const getCategoryName = (tool: Tool) => getCategoryNameById(categories, tool.category_id);
+  const getCategoryDisplayName = (tool: Tool) => getCategoryDisplayNameById(categories, tool.category_id);
   const columns: ColumnDef<Tool>[] = useMemo(
     () => [
       {
@@ -138,7 +144,7 @@ export function ToolTable({
                 />
               ) : (
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
-                  <ToolCategoryIcon category={tool.category} className="h-4 w-4" />
+                  <ToolCategoryIcon category={getCategoryName(tool)} className="h-4 w-4" />
                 </div>
               )}
               <div>
@@ -150,20 +156,24 @@ export function ToolTable({
         },
       },
       {
-        accessorKey: 'category',
+        accessorKey: 'category_id',
         header: 'Category',
-        cell: ({ row }) => (
-          <Badge
-            variant="outline"
-            className={cn('text-xs', getCategoryBadgeColor(row.original.category))}
-          >
-            <ToolCategoryIcon
-              category={row.original.category}
-              className="mr-1 h-3 w-3"
-            />
-            {CATEGORY_LABELS[row.original.category]}
-          </Badge>
-        ),
+        cell: ({ row }) => {
+          const categoryName = getCategoryName(row.original);
+          const categoryDisplayName = getCategoryDisplayName(row.original);
+          return (
+            <Badge
+              variant="outline"
+              className={cn('text-xs', getCategoryBadgeColor(categoryName))}
+            >
+              <ToolCategoryIcon
+                category={categoryName}
+                className="mr-1 h-3 w-3"
+              />
+              {categoryDisplayName}
+            </Badge>
+          );
+        },
       },
       {
         accessorKey: 'install_method',
@@ -216,12 +226,34 @@ export function ToolTable({
         header: 'Status',
         cell: ({ row }) => {
           const tool = row.original;
+          // For read-only mode, show styled badge instead of switch
+          if (readOnly || (!onActivateTool && !onDeactivateTool)) {
+            return (
+              <Badge
+                variant="outline"
+                className={cn(
+                  'text-xs font-medium',
+                  tool.is_active
+                    ? 'bg-green-500/15 text-green-600 dark:text-green-400 border-green-500/30'
+                    : 'bg-muted text-muted-foreground'
+                )}
+              >
+                <span
+                  className={cn(
+                    'mr-1.5 h-1.5 w-1.5 rounded-full',
+                    tool.is_active ? 'bg-green-500' : 'bg-zinc-400'
+                  )}
+                />
+                {tool.is_active ? 'Active' : 'Inactive'}
+              </Badge>
+            );
+          }
           return (
             <div className="flex items-center gap-2">
               <Switch
                 checked={tool.is_active}
                 onCheckedChange={() =>
-                  tool.is_active ? onDeactivateTool(tool) : onActivateTool(tool)
+                  tool.is_active ? onDeactivateTool?.(tool) : onActivateTool?.(tool)
                 }
               />
               <span className="text-sm text-muted-foreground">
@@ -247,7 +279,7 @@ export function ToolTable({
                   <Eye className="mr-2 h-4 w-4" />
                   View Details
                 </DropdownMenuItem>
-                {!tool.is_builtin && (
+                {!readOnly && !tool.is_builtin && onEditTool && (
                   <DropdownMenuItem onClick={() => onEditTool(tool)}>
                     <Settings className="mr-2 h-4 w-4" />
                     Edit
@@ -283,25 +315,34 @@ export function ToolTable({
                     </a>
                   </DropdownMenuItem>
                 )}
-                <DropdownMenuSeparator />
-                {tool.is_active ? (
-                  <DropdownMenuItem
-                    onClick={() => onDeactivateTool(tool)}
-                    className="text-amber-500"
-                  >
-                    <PowerOff className="mr-2 h-4 w-4" />
-                    Deactivate
-                  </DropdownMenuItem>
-                ) : (
-                  <DropdownMenuItem
-                    onClick={() => onActivateTool(tool)}
-                    className="text-green-500"
-                  >
-                    <Power className="mr-2 h-4 w-4" />
-                    Activate
-                  </DropdownMenuItem>
+                {/* Only show activate/deactivate for custom tools (not read-only) */}
+                {!readOnly && (onActivateTool || onDeactivateTool) && (
+                  <>
+                    <DropdownMenuSeparator />
+                    {tool.is_active ? (
+                      onDeactivateTool && (
+                        <DropdownMenuItem
+                          onClick={() => onDeactivateTool(tool)}
+                          className="text-amber-500"
+                        >
+                          <PowerOff className="mr-2 h-4 w-4" />
+                          Deactivate
+                        </DropdownMenuItem>
+                      )
+                    ) : (
+                      onActivateTool && (
+                        <DropdownMenuItem
+                          onClick={() => onActivateTool(tool)}
+                          className="text-green-500"
+                        >
+                          <Power className="mr-2 h-4 w-4" />
+                          Activate
+                        </DropdownMenuItem>
+                      )
+                    )}
+                  </>
                 )}
-                {!tool.is_builtin && (
+                {!readOnly && !tool.is_builtin && onDeleteTool && (
                   <DropdownMenuItem
                     className="text-red-500"
                     onClick={() => onDeleteTool(tool)}
@@ -316,7 +357,7 @@ export function ToolTable({
         },
       },
     ],
-    [onViewTool, onEditTool, onDeleteTool, onActivateTool, onDeactivateTool, onCheckUpdate]
+    [onViewTool, onEditTool, onDeleteTool, onActivateTool, onDeactivateTool, onCheckUpdate, readOnly]
   );
 
   const table = useReactTable({

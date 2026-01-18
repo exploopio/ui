@@ -16,21 +16,35 @@ import type { TenantMembership } from './user-tenant-types'
 // SWR CONFIGURATION
 // ============================================
 
+/**
+ * Optimized SWR config for tenant list
+ *
+ * Rationale:
+ * - Team list rarely changes (user joins/leaves teams infrequently)
+ * - Eager loading is required for auth validation and TenantGate
+ * - Long cache duration reduces unnecessary API calls
+ * - keepPreviousData provides instant UI while revalidating
+ */
 const defaultConfig: SWRConfiguration = {
-  revalidateOnFocus: false,
-  revalidateOnReconnect: true,
-  // Don't retry on auth errors (401)
+  // Cache & Revalidation
+  dedupingInterval: 60000, // 60s - team list rarely changes
+  revalidateOnFocus: false, // Don't refetch on window focus
+  revalidateOnReconnect: true, // Refetch when network reconnects
+  revalidateIfStale: true, // Background revalidate if data is stale
+  keepPreviousData: true, // Show stale data while fetching (no loading flash)
+
+  // Error handling
   shouldRetryOnError: (error) => {
     const statusCode = (error as { statusCode?: number }).statusCode
-    // Don't retry on 401, 403
+    // Don't retry on auth errors (401, 403)
     if (statusCode === 401 || statusCode === 403) {
       return false
     }
     return true
   },
-  errorRetryCount: 2, // Reduced retry count to prevent hammering backend
-  errorRetryInterval: 2000, // Increased interval between retries
-  dedupingInterval: 5000, // Increased deduping interval to prevent duplicate requests
+  errorRetryCount: 2,
+  errorRetryInterval: 3000, // 3s between retries
+
   onError: (error) => {
     // Don't show toast for auth errors - TenantGate will handle redirect
     const statusCode = (error as { statusCode?: number }).statusCode
@@ -112,25 +126,15 @@ export function useMyTenants(config?: SWRConfiguration) {
 
   const result = useSWR<TenantMembership[]>(
     swrKey,
-    async (url: string) => {
-      console.log('[useMyTenants] Fetching tenants from:', url)
-      try {
-        const response = await get<TenantMembership[]>(url)
-        console.log('[useMyTenants] Got tenants:', response)
-        return response
-      } catch (error) {
-        console.error('[useMyTenants] Error fetching tenants:', error)
-        throw error
-      }
-    },
+    (url: string) => get<TenantMembership[]>(url),
     { ...defaultConfig, ...config }
   )
 
   // Return with custom isLoading that includes mount check
+  // With keepPreviousData, we only show loading on initial fetch (no data yet)
   return {
     ...result,
-    // Show loading if not mounted yet OR if SWR is loading
-    isLoading: !isMounted || result.isLoading,
+    isLoading: !isMounted || (result.isLoading && !result.data),
   }
 }
 
