@@ -2,17 +2,63 @@
  * Dynamic Sidebar Badges Hook
  *
  * Fetches real counts from API to replace hardcoded badge values in sidebar.
- * Endpoints like asset-groups/stats provide the actual counts.
+ * Uses optimized caching to minimize API calls.
  */
 
 'use client'
 
 import { useMemo } from 'react'
+import useSWR from 'swr'
+import { get } from '@/lib/api/client'
+import { useTenant } from '@/context/tenant-provider'
 import { useAssetGroupStatsApi } from '@/features/asset-groups/api'
+
+// ============================================
+// TYPES
+// ============================================
 
 export interface DynamicBadges {
     /** Map of URL path to badge value */
     [key: string]: string | undefined
+}
+
+interface DashboardStats {
+    findings: {
+        total: number
+        by_severity: Record<string, number>
+        by_status: Record<string, number>
+        overdue: number
+    }
+    assets: {
+        total: number
+    }
+}
+
+// ============================================
+// HOOKS
+// ============================================
+
+/**
+ * Fetch dashboard stats for badge counts
+ * Uses long cache since badge counts don't need real-time accuracy
+ * Note: Tenant is extracted from JWT token by backend, not from URL
+ */
+function useDashboardStatsForBadges() {
+    const { currentTenant } = useTenant()
+
+    // Only fetch when we have a tenant (ensures JWT has tenant context)
+    const key = currentTenant?.id ? '/api/v1/dashboard/stats' : null
+
+    return useSWR<DashboardStats>(
+        key,
+        (url: string) => get<DashboardStats>(url),
+        {
+            revalidateOnFocus: false,
+            revalidateOnReconnect: false,
+            dedupingInterval: 60000, // 60s cache - badges don't need real-time
+            errorRetryCount: 1,
+        }
+    )
 }
 
 /**
@@ -25,11 +71,13 @@ export interface DynamicBadges {
  */
 export function useDynamicBadges(): DynamicBadges {
     // Fetch asset group stats
-    const { data: assetGroupStats } = useAssetGroupStatsApi()
+    const { data: assetGroupStats } = useAssetGroupStatsApi({
+        revalidateOnFocus: false,
+        dedupingInterval: 60000,
+    })
 
-    // We would add more stats hooks here for different sections
-    // const { data: findingsStats } = useFindingsStatsApi()
-    // const { data: remediationStats } = useRemediationStatsApi()
+    // Fetch dashboard stats for findings count
+    const { data: dashboardStats } = useDashboardStatsForBadges()
 
     const badges = useMemo(() => {
         const result: DynamicBadges = {}
@@ -39,13 +87,22 @@ export function useDynamicBadges(): DynamicBadges {
             result['/asset-groups'] = String(assetGroupStats.total)
         }
 
-        // TODO: Add more dynamic badges as needed
-        // result['/findings'] = findingsStats?.open?.toString()
-        // result['/remediation'] = remediationStats?.pending?.toString()
-        // result['/credentials'] = credentialStats?.exposed?.toString()
+        // Findings badge - show open findings count (exclude resolved/closed)
+        if (dashboardStats?.findings) {
+            const { by_status, total } = dashboardStats.findings
+            // Calculate open findings (total - resolved - closed)
+            const resolved = by_status?.resolved || 0
+            const closed = by_status?.closed || 0
+            const verified = by_status?.verified || 0
+            const openCount = total - resolved - closed - verified
+
+            if (openCount > 0) {
+                result['/findings'] = String(openCount)
+            }
+        }
 
         return result
-    }, [assetGroupStats])
+    }, [assetGroupStats, dashboardStats])
 
     return badges
 }

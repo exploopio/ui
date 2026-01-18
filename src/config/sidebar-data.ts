@@ -371,7 +371,7 @@ export const sidebarData: SidebarData = {
           title: "Findings",
           url: "/findings",
           icon: FileWarning,
-          badge: "24",
+          // Badge is dynamically fetched from dashboard stats - see useDynamicBadges hook
           permission: Permission.FindingsRead,
         },
         {
