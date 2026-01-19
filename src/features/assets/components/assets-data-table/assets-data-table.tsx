@@ -199,6 +199,7 @@ export function AssetsDataTable({
   // Selected rows
   const selectedRows = table.getSelectedRowModel().rows
   const selectedCount = selectedRows.length
+  const selectedFindingsCount = selectedRows.reduce((sum, row) => sum + (row.original.findingCount || 0), 0)
 
   // Handlers
   const handleCreate = useCallback(
@@ -589,6 +590,7 @@ export function AssetsDataTable({
         asset={null}
         assetTypeName={assetTypeName}
         bulkCount={selectedCount}
+        bulkFindingsCount={selectedFindingsCount}
         onConfirm={handleBulkDelete}
         isDeleting={isDeleting}
       />

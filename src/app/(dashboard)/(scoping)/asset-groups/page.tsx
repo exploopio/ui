@@ -11,7 +11,6 @@ import { PageHeader, DataTable, DataTableColumnHeader, RiskScoreBadge } from "@/
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import {
@@ -31,6 +30,7 @@ import {
   SlidersHorizontal,
   Tags,
   Search as SearchIcon,
+  Package,
 } from "lucide-react";
 import {
   Card,
@@ -62,13 +62,6 @@ import {
 } from "@/components/ui/sheet";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -89,12 +82,15 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import {
   CreateGroupDialog,
+  EditGroupDialog,
+  type EditGroupFormData,
   useAssetGroups,
   useAssetGroupStats,
   useCreateAssetGroup,
   useUpdateAssetGroup,
   useAddAssetsToGroup,
   useGroupAssets,
+  useRemoveAssetsFromGroup,
   useBulkAssetGroupOperations,
 } from "@/features/asset-groups";
 import { useAssets } from "@/features/assets";
@@ -127,9 +123,25 @@ interface Filters {
 }
 
 // QuickViewAssets component for Sheet
-function QuickViewAssets({ groupId }: { groupId: string }) {
-  const { data: assets, isLoading } = useGroupAssets(groupId);
+function QuickViewAssets({ groupId, onRefresh }: { groupId: string; onRefresh?: () => void }) {
+  const { data: assets, isLoading, mutate: refreshAssets } = useGroupAssets(groupId);
+  const { trigger: removeAssets, isMutating: isRemoving } = useRemoveAssetsFromGroup(groupId);
   const router = useRouter();
+  const [removingId, setRemovingId] = useState<string | null>(null);
+
+  const handleRemoveAsset = async (assetId: string) => {
+    setRemovingId(assetId);
+    try {
+      await removeAssets([assetId]);
+      // Toast is shown by the hook
+      refreshAssets();
+      onRefresh?.();
+    } catch {
+      // Error handled by hook
+    } finally {
+      setRemovingId(null);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -157,14 +169,14 @@ function QuickViewAssets({ groupId }: { groupId: string }) {
   return (
     <div className="rounded-xl border bg-card">
       <div className="flex items-center justify-between p-4 border-b">
-        <span className="text-sm font-medium">Recent Assets</span>
+        <span className="text-sm font-medium">Recent Assets ({assets?.length || 0})</span>
         <Button
           variant="ghost"
           size="sm"
           className="h-7 text-xs"
           onClick={() => router.push(`/asset-groups/${groupId}?tab=assets`)}
         >
-          View All
+          Manage All
           <ExternalLink className="ml-1 h-3 w-3" />
         </Button>
       </div>
@@ -175,7 +187,7 @@ function QuickViewAssets({ groupId }: { groupId: string }) {
       ) : (
         <div className="divide-y">
           {displayAssets.map((asset: { id: string; name: string; type: string; status?: string }) => (
-            <div key={asset.id} className="flex items-center justify-between p-3 hover:bg-muted/50">
+            <div key={asset.id} className="flex items-center justify-between p-3 hover:bg-muted/50 group">
               <div className="flex items-center gap-3">
                 <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
                   <FolderKanban className="h-4 w-4 text-primary" />
@@ -185,9 +197,27 @@ function QuickViewAssets({ groupId }: { groupId: string }) {
                   <p className="text-xs text-muted-foreground">{asset.type}</p>
                 </div>
               </div>
-              <Badge variant="outline" className="text-green-500 border-green-500/30 bg-green-500/10">
-                {asset.status || "active"}
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-green-500 border-green-500/30 bg-green-500/10">
+                  {asset.status || "active"}
+                </Badge>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemoveAsset(asset.id);
+                  }}
+                  disabled={isRemoving}
+                >
+                  {removingId === asset.id ? (
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <X className="h-3.5 w-3.5" />
+                  )}
+                </Button>
+              </div>
             </div>
           ))}
         </div>
@@ -389,17 +419,6 @@ export default function AssetGroupsPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [_bulkActionType, setBulkActionType] = useState<string | null>(null);
 
-  // Form state for create/edit
-  const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-    environment: "production" as Environment,
-    criticality: "medium" as Criticality,
-    businessUnit: "",
-    owner: "",
-    ownerEmail: "",
-    tags: [] as string[],
-  });
   const [isEditSubmitting, setIsEditSubmitting] = useState(false);
 
   // Add Assets state
@@ -482,7 +501,7 @@ export default function AssetGroupsPage() {
   // Get update mutation for current edit group
   const updateAssetGroup = useUpdateAssetGroup(editGroup?.id || "");
 
-  const handleEdit = async () => {
+  const handleEdit = async (formData: EditGroupFormData) => {
     if (!editGroup) return;
 
     setIsEditSubmitting(true);
@@ -499,7 +518,6 @@ export default function AssetGroupsPage() {
       });
       refreshData();
       setEditGroup(null);
-      resetForm();
     } catch (error) {
       // Error toast is handled by hook
       console.error("Failed to update asset group:", error);
@@ -546,30 +564,7 @@ export default function AssetGroupsPage() {
     toast.success("Link copied to clipboard");
   };
 
-  const resetForm = () => {
-    setFormData({
-      name: "",
-      description: "",
-      environment: "production",
-      criticality: "medium",
-      businessUnit: "",
-      owner: "",
-      ownerEmail: "",
-      tags: [],
-    });
-  };
-
   const openEditDialog = (group: AssetGroup) => {
-    setFormData({
-      name: group.name,
-      description: group.description || "",
-      environment: group.environment as Environment,
-      criticality: group.criticality as Criticality,
-      businessUnit: group.businessUnit || "",
-      owner: group.owner || "",
-      ownerEmail: group.ownerEmail || "",
-      tags: group.tags || [],
-    });
     setEditGroup(group);
   };
 
@@ -728,6 +723,10 @@ export default function AssetGroupsPage() {
               }}>
                 <Plus className="mr-2 h-4 w-4" />
                 Add Assets
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push(`/asset-groups/${group.id}?tab=assets`)}>
+                <Package className="mr-2 h-4 w-4" />
+                Manage Assets
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => handleCopyId(group.id)}>
@@ -1259,7 +1258,7 @@ export default function AssetGroupsPage() {
                 </div>
 
                 {/* Assets Preview */}
-                <QuickViewAssets groupId={viewGroup.id} />
+                <QuickViewAssets groupId={viewGroup.id} onRefresh={refreshData} />
 
                 {/* Metadata */}
                 <div className="rounded-xl border bg-card p-4 space-y-3">
@@ -1340,123 +1339,15 @@ export default function AssetGroupsPage() {
       />
 
       {/* Edit Dialog */}
-      <Dialog open={!!editGroup} onOpenChange={() => setEditGroup(null)}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Edit Asset Group</DialogTitle>
-            <DialogDescription>
-              Update the group details
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
-            <div className="space-y-2">
-              <Label htmlFor="edit-name">Name *</Label>
-              <Input
-                id="edit-name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                disabled={isEditSubmitting}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-description">Description</Label>
-              <Textarea
-                id="edit-description"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                disabled={isEditSubmitting}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Environment</Label>
-                <Select
-                  value={formData.environment}
-                  onValueChange={(value: Environment) => setFormData({ ...formData, environment: value })}
-                  disabled={isEditSubmitting}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="production">Production</SelectItem>
-                    <SelectItem value="staging">Staging</SelectItem>
-                    <SelectItem value="development">Development</SelectItem>
-                    <SelectItem value="testing">Testing</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Criticality</Label>
-                <Select
-                  value={formData.criticality}
-                  onValueChange={(value: Criticality) => setFormData({ ...formData, criticality: value })}
-                  disabled={isEditSubmitting}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="critical">Critical</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="low">Low</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <Separator />
-            <div className="space-y-2">
-              <Label htmlFor="edit-businessUnit">Business Unit</Label>
-              <Input
-                id="edit-businessUnit"
-                value={formData.businessUnit}
-                onChange={(e) => setFormData({ ...formData, businessUnit: e.target.value })}
-                placeholder="e.g., Technology & Engineering"
-                disabled={isEditSubmitting}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-owner">Owner</Label>
-                <Input
-                  id="edit-owner"
-                  value={formData.owner}
-                  onChange={(e) => setFormData({ ...formData, owner: e.target.value })}
-                  placeholder="e.g., Nguyen Van A"
-                  disabled={isEditSubmitting}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-ownerEmail">Owner Email</Label>
-                <Input
-                  id="edit-ownerEmail"
-                  type="email"
-                  value={formData.ownerEmail}
-                  onChange={(e) => setFormData({ ...formData, ownerEmail: e.target.value })}
-                  placeholder="e.g., a.nguyen@company.vn"
-                  disabled={isEditSubmitting}
-                />
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditGroup(null)} disabled={isEditSubmitting}>
-              Cancel
-            </Button>
-            <Button onClick={handleEdit} disabled={!formData.name || isEditSubmitting}>
-              {isEditSubmitting ? (
-                <>
-                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                "Save Changes"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {editGroup && (
+        <EditGroupDialog
+          open={!!editGroup}
+          onOpenChange={(open) => !open && setEditGroup(null)}
+          group={editGroup}
+          onSubmit={handleEdit}
+          isSubmitting={isEditSubmitting}
+        />
+      )}
 
       {/* Delete Confirmation */}
       <AlertDialog open={!!deleteGroup} onOpenChange={() => setDeleteGroup(null)}>

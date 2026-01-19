@@ -455,6 +455,22 @@ export interface Finding {
   owasp?: string;
   tags?: string[];
 
+  // Location Info (file path, line numbers)
+  filePath?: string;
+  startLine?: number;
+  endLine?: number;
+  startColumn?: number;
+  endColumn?: number;
+
+  // Scanner/Tool Info
+  ruleId?: string;
+  ruleName?: string;
+  toolName?: string;
+  toolVersion?: string;
+
+  // Code snippet
+  snippet?: string;
+
   // Affected Assets
   assets: AffectedAsset[];
 

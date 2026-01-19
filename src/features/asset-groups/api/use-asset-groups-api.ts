@@ -310,14 +310,15 @@ export function useAddAssetsToGroupApi(groupId: string) {
 
 /**
  * Remove assets from a group
+ * Uses DELETE to /assets endpoint with body
  */
 export function useRemoveAssetsFromGroupApi(groupId: string) {
   const { currentTenant } = useTenant()
 
   return useSWRMutation(
-    currentTenant && groupId ? `${buildAssetGroupEndpoint(groupId)}/assets/remove` : null,
+    currentTenant && groupId ? `${buildAssetGroupEndpoint(groupId)}/assets` : null,
     async (url: string, { arg }: { arg: RemoveAssetsFromGroupApiInput }) => {
-      return post<ApiAssetGroup>(url, arg)
+      return del<ApiAssetGroup>(url, arg)
     }
   )
 }

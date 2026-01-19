@@ -1,5 +1,6 @@
 'use client';
 
+import * as React from 'react';
 import { useState, useMemo, useCallback } from 'react';
 import {
   Plus,
@@ -79,7 +80,10 @@ export function ScanProfilesSection() {
 
   // API data
   const { data: profilesData, error, isLoading, mutate } = useScanProfiles();
-  const profiles: ScanProfile[] = profilesData?.items ?? [];
+  const profiles: ScanProfile[] = React.useMemo(
+    () => profilesData?.items ?? [],
+    [profilesData?.items]
+  );
 
   // Delete mutation
   const { trigger: deleteProfile, isMutating: isDeleting } = useDeleteScanProfile(

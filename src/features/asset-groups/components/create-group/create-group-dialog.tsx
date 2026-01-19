@@ -1,7 +1,10 @@
 /**
  * Create Group Dialog
  *
- * Multi-step wizard dialog for creating new asset groups with assets
+ * 3-step wizard dialog for creating new asset groups:
+ * 1. Basic Info - Name, environment, criticality, business context
+ * 2. Add Assets - Select existing or create new assets (combined)
+ * 3. Review - Summary before creation
  */
 
 "use client";
@@ -16,12 +19,11 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { ChevronLeft, ChevronRight, Loader2, FolderPlus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, FolderPlus, Layers } from "lucide-react";
 
 import { GroupStepper, type GroupWizardStep } from "./group-stepper";
 import { BasicInfoStep } from "./basic-info-step";
-import { SelectAssetsStep } from "./select-assets-step";
-import { NewAssetsStep } from "./new-assets-step";
+import { AddAssetsStep } from "./add-assets-step";
 import { ReviewStep } from "./review-step";
 import {
   DEFAULT_CREATE_GROUP_FORM,
@@ -39,7 +41,7 @@ interface CreateGroupDialogProps {
   onSubmit?: (input: CreateAssetGroupInput) => void | Promise<void>;
 }
 
-const STEPS: GroupWizardStep[] = ["basic", "select-assets", "new-assets", "review"];
+const STEPS: GroupWizardStep[] = ["basic", "add-assets", "review"];
 
 export function CreateGroupDialog({
   open,
@@ -69,10 +71,7 @@ export function CreateGroupDialog({
           return false;
         }
         return true;
-      case "select-assets":
-        // Optional - can skip
-        return true;
-      case "new-assets":
+      case "add-assets":
         // Validate new assets have names
         const invalidAssets = formData.newAssets.filter(
           (asset) => !asset.name.trim()
@@ -181,16 +180,14 @@ export function CreateGroupDialog({
     switch (currentStep) {
       case "basic":
         return <BasicInfoStep data={formData} onChange={handleDataChange} />;
-      case "select-assets":
+      case "add-assets":
         return (
-          <SelectAssetsStep
+          <AddAssetsStep
             data={formData}
             onChange={handleDataChange}
             ungroupedAssets={ungroupedAssets}
           />
         );
-      case "new-assets":
-        return <NewAssetsStep data={formData} onChange={handleDataChange} />;
       case "review":
         return (
           <ReviewStep data={formData} ungroupedAssets={ungroupedAssets} />
@@ -204,11 +201,9 @@ export function CreateGroupDialog({
   const getNextButtonLabel = () => {
     switch (currentStep) {
       case "basic":
-        return "Next: Select Assets";
-      case "select-assets":
-        return "Next: New Assets";
-      case "new-assets":
-        return "Next: Review";
+        return "Add Assets";
+      case "add-assets":
+        return "Review";
       default:
         return "Next";
     }
@@ -216,16 +211,24 @@ export function CreateGroupDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-h-[90vh] overflow-hidden p-0 w-full sm:max-w-[700px]">
-        <DialogHeader className="border-b px-6 py-4">
-          <DialogTitle>Create Asset Group</DialogTitle>
-          <DialogDescription>
-            Create a new group and optionally add assets to it
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="max-h-[90vh] overflow-hidden p-0 w-full sm:max-w-[720px]">
+        {/* Header with gradient */}
+        <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-background border-b">
+          <DialogHeader className="px-6 pt-5 pb-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 ring-1 ring-primary/20">
+                <Layers className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <DialogTitle className="text-lg">Create Asset Group</DialogTitle>
+                <DialogDescription className="text-sm">
+                  Organize assets with business context for CTEM scoping
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
 
-        {/* Stepper */}
-        <div className="border-b">
+          {/* Stepper */}
           <GroupStepper currentStep={currentStep} onStepClick={handleStepClick} />
         </div>
 
@@ -235,25 +238,28 @@ export function CreateGroupDialog({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between border-t px-6 py-4">
+        <div className="flex items-center justify-between border-t bg-muted/30 px-6 py-4">
           <div>
             {!isFirstStep && (
               <Button
                 type="button"
                 variant="ghost"
+                size="sm"
                 onClick={handleBack}
                 disabled={isSubmitting}
+                className="gap-1"
               >
-                <ChevronLeft className="mr-1 h-4 w-4" />
+                <ChevronLeft className="h-4 w-4" />
                 Back
               </Button>
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <Button
               type="button"
-              variant="outline"
+              variant="ghost"
+              size="sm"
               onClick={handleClose}
               disabled={isSubmitting}
             >
@@ -265,6 +271,7 @@ export function CreateGroupDialog({
                 type="button"
                 onClick={handleSubmit}
                 disabled={isSubmitting || !formData.name.trim()}
+                className="min-w-[140px]"
               >
                 {isSubmitting ? (
                   <>
@@ -279,9 +286,9 @@ export function CreateGroupDialog({
                 )}
               </Button>
             ) : (
-              <Button type="button" onClick={handleNext}>
+              <Button type="button" onClick={handleNext} className="gap-1">
                 {getNextButtonLabel()}
-                <ChevronRight className="ml-1 h-4 w-4" />
+                <ChevronRight className="h-4 w-4" />
               </Button>
             )}
           </div>

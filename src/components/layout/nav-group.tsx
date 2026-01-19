@@ -193,15 +193,26 @@ function SidebarMenuCollapsedDropdown({
 }
 
 function checkIsActive(pathname: string, item: NavItem, mainNav = false) {
-	return (
-		("url" in item &&
-			(typeof item.url === "string"
-				? pathname === item.url || pathname.startsWith(`${item.url}/`)
-				: false)) ||
-		("items" in item && item.items.some((i) => pathname === i.url)) ||
-		(mainNav &&
-			"url" in item &&
-			typeof item.url === "string" &&
-			pathname.startsWith(`/${item.url.split("/")[1]}`))
-	);
+	// For collapsible items with sub-items, check if any sub-item is active
+	if ("items" in item) {
+		return item.items.some((i) => pathname === i.url);
+	}
+
+	// For leaf items with a url
+	if ("url" in item && typeof item.url === "string") {
+		// Exact match always counts
+		if (pathname === item.url) {
+			return true;
+		}
+
+		// For mainNav items only (top-level, not sub-items), also use startsWith
+		// This allows top-level items to stay highlighted when on child pages
+		if (mainNav && pathname.startsWith(`/${item.url.split("/")[1]}`)) {
+			return true;
+		}
+
+		return false;
+	}
+
+	return false;
 }

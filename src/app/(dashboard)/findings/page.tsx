@@ -57,8 +57,19 @@ import {
 } from "@/features/findings";
 import {
   useFindingsApi,
+  useFindingStatsApi,
   invalidateFindingsCache,
 } from "@/features/findings/api/use-findings-api";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import type {
   ApiFinding,
   FindingApiFilters,
@@ -198,6 +209,9 @@ export default function FindingsPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
   const [severityTab, setSeverityTab] = useState<string>("all");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [findingToDelete, setFindingToDelete] = useState<Finding | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Build API filters
   const apiFilters = useMemo((): FindingApiFilters => {
@@ -212,13 +226,22 @@ export default function FindingsPage() {
     return filters;
   }, [assetIdFilter, sourceIdFilter, severityTab]);
 
-  // Fetch findings from API
+  // Fetch finding stats (stable, not affected by severity filter)
+  const { data: findingStats, isLoading: statsLoading, mutate: mutateStats } = useFindingStatsApi();
+
+  // Fetch findings from API (filtered by severity tab)
   const {
     data: findingsResponse,
     error,
-    isLoading,
-    mutate,
+    isLoading: findingsLoading,
+    mutate: mutateFindings,
   } = useFindingsApi(apiFilters);
+
+  // Initial loading state (only true when we don't have stats yet)
+  const isInitialLoading = statsLoading && !findingStats;
+
+  // Table loading state (for showing loading indicator in table)
+  const isTableLoading = findingsLoading;
 
   // Transform API data to UI format
   const findings = useMemo(() => {
@@ -226,9 +249,9 @@ export default function FindingsPage() {
     return findingsResponse.data.map(transformApiToUiFinding);
   }, [findingsResponse]);
 
-  // Calculate stats from findings
+  // Use finding stats for stable counts (not affected by tab filter)
   const stats = useMemo(() => {
-    const bySeverity: Record<Severity, number> = {
+    const defaultBySeverity: Record<Severity, number> = {
       critical: 0,
       high: 0,
       medium: 0,
@@ -236,24 +259,30 @@ export default function FindingsPage() {
       info: 0,
     };
 
-    // Use all findings for stats (need to fetch without severity filter)
-    const allFindings = findingsResponse?.data || [];
-    allFindings.forEach((f) => {
-      bySeverity[f.severity as Severity]++;
-    });
+    if (!findingStats) {
+      return {
+        total: 0,
+        bySeverity: defaultBySeverity,
+        averageCvss: "N/A",
+        overdueCount: 0,
+      };
+    }
 
-    const total = findingsResponse?.total || allFindings.length;
-    const overdueCount = allFindings.filter(
-      (f) => f.status === "open" || f.status === "confirmed"
-    ).length;
+    const bySeverity: Record<Severity, number> = {
+      critical: findingStats.by_severity?.critical || 0,
+      high: findingStats.by_severity?.high || 0,
+      medium: findingStats.by_severity?.medium || 0,
+      low: findingStats.by_severity?.low || 0,
+      info: findingStats.by_severity?.none || findingStats.by_severity?.info || 0,
+    };
 
     return {
-      total,
+      total: findingStats.total,
       bySeverity,
       averageCvss: "N/A",
-      overdueCount,
+      overdueCount: findingStats.open_count,
     };
-  }, [findingsResponse]);
+  }, [findingStats]);
 
   const selectedCount = Object.keys(rowSelection).filter(
     (k) => rowSelection[k]
@@ -264,7 +293,7 @@ export default function FindingsPage() {
   };
 
   const handleRefresh = async () => {
-    await mutate();
+    await Promise.all([mutateFindings(), mutateStats()]);
     await invalidateFindingsCache();
     toast.success("Findings refreshed");
   };
@@ -295,7 +324,8 @@ export default function FindingsPage() {
     toast.success(`Status updated to "${statusConfig.label}"`, {
       description: `Finding ${findingId}`,
     });
-    mutate();
+    mutateFindings();
+    mutateStats();
   };
 
   const handleSeverityChange = (findingId: string, severity: Severity) => {
@@ -303,7 +333,8 @@ export default function FindingsPage() {
     toast.success(`Severity updated to "${severityConfig.label}"`, {
       description: `Finding ${findingId}`,
     });
-    mutate();
+    mutateFindings();
+    mutateStats();
   };
 
   const handleAssigneeChange = (
@@ -319,13 +350,48 @@ export default function FindingsPage() {
         description: `Finding ${findingId}`,
       });
     }
-    mutate();
+    mutateFindings();
   };
 
   const handleAddComment = (findingId: string, comment: string) => {
     toast.success("Comment added", {
       description: comment.slice(0, 50) + (comment.length > 50 ? "..." : ""),
     });
+  };
+
+  const handleDeleteClick = (finding: Finding) => {
+    setFindingToDelete(finding);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!findingToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/v1/findings/${findingToDelete.id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete finding');
+      }
+
+      toast.success("Finding deleted", {
+        description: findingToDelete.title,
+      });
+      setDeleteDialogOpen(false);
+      setFindingToDelete(null);
+      mutateFindings();
+      mutateStats();
+    } catch (error) {
+      toast.error("Failed to delete finding", {
+        description: error instanceof Error ? error.message : "Unknown error",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handleRowAction = useCallback(
@@ -343,6 +409,9 @@ export default function FindingsPage() {
             `${window.location.origin}/findings/${finding.id}`
           );
           toast.success("Link copied to clipboard");
+          break;
+        case "delete":
+          handleDeleteClick(finding);
           break;
         default:
           toast.info(`Action: ${action}`, { description: finding.title });
@@ -499,11 +568,18 @@ export default function FindingsPage() {
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  className="text-red-400"
+                  className="text-amber-500"
                   onClick={() => handleRowAction("false_positive", finding)}
                 >
-                  <Trash2 className="mr-2 h-4 w-4" />
+                  <Flag className="mr-2 h-4 w-4" />
                   Mark as False Positive
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="text-red-500"
+                  onClick={() => handleRowAction("delete", finding)}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -534,7 +610,7 @@ export default function FindingsPage() {
             <p className="text-muted-foreground mb-4">
               {error?.message || "An unexpected error occurred"}
             </p>
-            <Button onClick={() => mutate()}>
+            <Button onClick={() => mutateFindings()}>
               <RefreshCw className="mr-2 h-4 w-4" />
               Retry
             </Button>
@@ -558,7 +634,7 @@ export default function FindingsPage() {
         <PageHeader
           title="Security Findings"
           description={
-            isLoading
+            isInitialLoading
               ? "Loading findings..."
               : `${stats.total} total findings - ${stats.overdueCount} open`
           }
@@ -568,9 +644,9 @@ export default function FindingsPage() {
               variant="outline"
               size="sm"
               onClick={handleRefresh}
-              disabled={isLoading}
+              disabled={statsLoading || findingsLoading}
             >
-              {isLoading ? (
+              {statsLoading || findingsLoading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
                 <RefreshCw className="mr-2 h-4 w-4" />
@@ -687,13 +763,13 @@ export default function FindingsPage() {
           </Card>
         )}
 
-        {isLoading ? (
+        {isInitialLoading ? (
           <div className="mt-6">
             <FindingsLoadingSkeleton />
           </div>
         ) : (
           <>
-            {/* Stats Cards */}
+            {/* Stats Cards - Always visible once loaded */}
             <div className="mt-6 grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-5">
               <Card>
                 <CardHeader className="pb-2">
@@ -762,17 +838,32 @@ export default function FindingsPage() {
               <TabsContent value={severityTab}>
                 <Card className="mt-4">
                   <CardContent className="pt-6">
-                    <DataTable
-                      columns={columns}
-                      data={findings}
-                      searchPlaceholder="Search findings..."
-                      emptyMessage="No findings found"
-                      emptyDescription={
-                        findings.length === 0 && !isLoading
-                          ? "No security findings match your search criteria"
-                          : undefined
-                      }
-                    />
+                    {isTableLoading ? (
+                      <div className="space-y-3">
+                        {[...Array(5)].map((_, i) => (
+                          <div key={i} className="flex items-center gap-4">
+                            <Skeleton className="h-4 w-4" />
+                            <Skeleton className="h-4 flex-1" />
+                            <Skeleton className="h-6 w-16" />
+                            <Skeleton className="h-4 w-12" />
+                            <Skeleton className="h-4 w-24" />
+                            <Skeleton className="h-6 w-20" />
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <DataTable
+                        columns={columns}
+                        data={findings}
+                        searchPlaceholder="Search findings..."
+                        emptyMessage="No findings found"
+                        emptyDescription={
+                          findings.length === 0
+                            ? "No security findings match your search criteria"
+                            : undefined
+                        }
+                      />
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -791,6 +882,47 @@ export default function FindingsPage() {
         onAssigneeChange={handleAssigneeChange}
         onAddComment={handleAddComment}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Finding?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete this finding. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {findingToDelete && (
+            <div className="rounded-lg border bg-muted/50 p-3 my-2">
+              <p className="font-medium truncate">{findingToDelete.title}</p>
+              <p className="text-sm text-muted-foreground">
+                {findingToDelete.severity.toUpperCase()} severity
+                {findingToDelete.scanner && ` · ${findingToDelete.scanner}`}
+              </p>
+            </div>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleDeleteConfirm();
+              }}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

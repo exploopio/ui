@@ -9,7 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft } from "lucide-react";
-import { useFindingApi, useAddFindingCommentApi, useFindingCommentsApi, invalidateFindingsCache } from "@/features/findings/api/use-findings-api";
+import { useFindingApi, useAddFindingCommentApi, useFindingCommentsApi } from "@/features/findings/api/use-findings-api";
+import { useAsset } from "@/features/assets/hooks/use-assets";
 import type { ApiFinding, ApiFindingComment } from "@/features/findings/api/finding-api.types";
 import { toast } from "sonner";
 import type { FindingDetail, FindingStatus, Activity } from "@/features/findings/types";
@@ -26,7 +27,7 @@ import {
 /**
  * Transform API response to FindingDetail format for UI components
  */
-function transformApiToFindingDetail(api: ApiFinding): FindingDetail {
+function transformApiToFindingDetail(api: ApiFinding, assetName?: string): FindingDetail {
   // Map API status to internal status
   const statusMap: Record<string, FindingStatus> = {
     open: "new",
@@ -68,19 +69,22 @@ function transformApiToFindingDetail(api: ApiFinding): FindingDetail {
     });
   }
 
-  // Build location string with branch/commit context
-  let locationDisplay = api.file_path || api.asset_id;
-  if (api.first_detected_branch) {
-    locationDisplay = `${api.first_detected_branch}:${locationDisplay}`;
-  }
+  // Build location string for display (file:line:col)
+  let locationDisplay = api.file_path || "";
   if (api.start_line) {
     locationDisplay = `${locationDisplay}:${api.start_line}`;
+    if (api.start_column) {
+      locationDisplay = `${locationDisplay}:${api.start_column}`;
+    }
   }
+
+  // Use asset name if provided, otherwise use a display-friendly version
+  const displayAssetName = assetName || api.asset_id;
 
   return {
     id: api.id,
     title: api.title || api.rule_name || api.message,
-    description: api.description || api.snippet || api.message,
+    description: api.description || api.message,
     severity: api.severity as Severity,
     status: statusMap[api.status] || "new",
 
@@ -92,13 +96,29 @@ function transformApiToFindingDetail(api: ApiFinding): FindingDetail {
     owasp: api.owasp_ids?.[0] || (api.metadata?.owasp as string) || undefined,
     tags: api.tags || (api.metadata?.tags as string[]) || [],
 
-    // Asset - create from asset_id with branch/location context
+    // Location Info
+    filePath: api.file_path,
+    startLine: api.start_line,
+    endLine: api.end_line,
+    startColumn: api.start_column,
+    endColumn: api.end_column,
+
+    // Scanner/Tool Info
+    ruleId: api.rule_id,
+    ruleName: api.rule_name,
+    toolName: api.tool_name,
+    toolVersion: api.tool_version,
+
+    // Code snippet
+    snippet: api.snippet,
+
+    // Asset - use resolved asset name
     assets: [
       {
         id: api.asset_id,
         type: "repository",
-        name: locationDisplay,
-        url: api.file_path,
+        name: displayAssetName,
+        url: api.file_path ? undefined : undefined, // URL will be constructed in component
       },
     ],
 
@@ -108,7 +128,7 @@ function transformApiToFindingDetail(api: ApiFinding): FindingDetail {
           {
             id: `ev-snippet-${api.id}`,
             type: "code",
-            title: "Code Snippet",
+            title: locationDisplay || "Code Snippet",
             content: api.snippet,
             mimeType: "text/plain",
             createdAt: api.created_at,
@@ -225,8 +245,11 @@ export default function FindingDetailPage() {
   const { data: commentsData, mutate: mutateComments } = useFindingCommentsApi(id);
   const { trigger: addComment } = useAddFindingCommentApi(id);
 
-  // Transform API data to FindingDetail format
-  const finding = apiFinding ? transformApiToFindingDetail(apiFinding) : null;
+  // Fetch asset details for name resolution
+  const { asset } = useAsset(apiFinding?.asset_id || null);
+
+  // Transform API data to FindingDetail format, passing asset name if available
+  const finding = apiFinding ? transformApiToFindingDetail(apiFinding, asset?.name) : null;
 
   // Merge API comments with finding activities
   const apiComments = commentsData?.data || [];
@@ -241,8 +264,9 @@ export default function FindingDetailPage() {
 
     try {
       await addComment({ content });
+      // Only revalidate comments, not the entire findings cache
+      // This prevents page flicker when adding comments
       await mutateComments();
-      await invalidateFindingsCache();
       toast.success("Comment added");
     } catch (error) {
       toast.error("Failed to add comment");

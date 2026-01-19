@@ -491,6 +491,32 @@ export function useDeleteFindingCommentApi(findingId: string, commentId: string)
 }
 
 // ============================================
+// FINDING STATS HOOKS
+// ============================================
+
+import type { FindingStatsResponse } from './finding-api.types'
+
+async function fetchFindingStats(url: string): Promise<FindingStatsResponse> {
+  return get<FindingStatsResponse>(url)
+}
+
+/**
+ * Fetch finding stats (total, by severity, by status, by source)
+ * Use this for stable stats that don't change when filtering by severity tab
+ */
+export function useFindingStatsApi(config?: SWRConfiguration) {
+  const { currentTenant } = useTenant()
+
+  const key = currentTenant ? '/api/v1/findings/stats' : null
+
+  return useSWR<FindingStatsResponse>(
+    key,
+    fetchFindingStats,
+    { ...defaultConfig, ...config }
+  )
+}
+
+// ============================================
 // CACHE UTILITIES
 // ============================================
 

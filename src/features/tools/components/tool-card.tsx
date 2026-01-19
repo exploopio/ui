@@ -79,6 +79,7 @@ export function ToolCard({
           <div className="flex items-center gap-3">
             <div className="relative">
               {tool.logo_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={tool.logo_url}
                   alt={tool.display_name}

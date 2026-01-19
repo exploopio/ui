@@ -19,7 +19,6 @@ import {
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -96,7 +95,7 @@ export function ToolsSection({ onToolSelect, selectedToolId }: ToolsSectionProps
   const [mainTab, setMainTab] = useState<MainTab>('platform');
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
   const [statsFilter, setStatsFilter] = useState<string | null>(null);
-  const [filters, setFilters] = useState<ToolListFilters>({});
+  const [filters, _setFilters] = useState<ToolListFilters>({});
   const [searchQuery, setSearchQuery] = useState('');
 
   // Table states
@@ -160,7 +159,7 @@ export function ToolsSection({ onToolSelect, selectedToolId }: ToolsSectionProps
   );
 
   // Activation state tracking
-  const [isActivating, setIsActivating] = useState(false);
+  const [_isActivating, setIsActivating] = useState(false);
 
   // Filter tools based on category and stats filter
   const filteredTools = useMemo(() => {

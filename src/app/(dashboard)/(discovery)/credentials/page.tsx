@@ -24,6 +24,7 @@ import {
   MetadataRow,
   SectionTitle,
   ClassificationBadges,
+  SecretValueField,
 } from "@/features/assets";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -859,10 +860,21 @@ export default function CredentialsPage() {
         overviewContent={
           selectedCredential && (
             <>
+              {/* Secret Value Section */}
+              <SecretValueField
+                value={selectedCredential.metadata.secretValue}
+                label="Leaked Secret"
+                showWarning={selectedCredential.status === "active"}
+              />
+
               <SectionTitle>Leak Details</SectionTitle>
               <MetadataGrid>
                 <MetadataRow label="Source" value={selectedCredential.metadata.source} />
                 <MetadataRow label="Username" value={selectedCredential.metadata.username} />
+                <MetadataRow
+                  label="Credential Type"
+                  value={selectedCredential.metadata.credentialType || "password"}
+                />
                 <MetadataRow
                   label="Leak Date"
                   value={

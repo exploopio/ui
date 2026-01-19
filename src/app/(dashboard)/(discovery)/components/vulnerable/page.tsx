@@ -9,6 +9,7 @@ import { PageHeader } from "@/features/shared";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Card,
   CardContent,
@@ -24,19 +25,29 @@ import {
   Target,
   Search as SearchIcon,
   Download,
+  Loader2,
 } from "lucide-react";
 import {
-  getVulnerableComponents,
   ComponentTable,
   ComponentDetailSheet,
+  transformVulnerableComponents,
 } from "@/features/components";
+import { useVulnerableComponentsApi } from "@/features/components/api/use-components-api";
 import type { Component } from "@/features/components";
 import { toast } from "sonner";
 
 type SeverityFilter = "all" | "critical" | "high" | "medium" | "kev";
 
 export default function VulnerableComponentsPage() {
-  const vulnerableComponents = useMemo(() => getVulnerableComponents(), []);
+  // Fetch vulnerable components from API (no limit to get all)
+  const { data: apiVulnerableComponents, isLoading } = useVulnerableComponentsApi(100);
+
+  // Transform API data to UI Component type
+  const vulnerableComponents = useMemo(() => {
+    if (!apiVulnerableComponents) return [];
+    return transformVulnerableComponents(apiVulnerableComponents);
+  }, [apiVulnerableComponents]);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>("all");
   const [selectedComponent, setSelectedComponent] = useState<Component | null>(null);
@@ -45,13 +56,11 @@ export default function VulnerableComponentsPage() {
   const stats = useMemo(() => {
     let criticalCount = 0;
     let highCount = 0;
-    let exploitableCount = 0;
     let kevCount = 0;
 
     vulnerableComponents.forEach((c) => {
       if (c.vulnerabilityCount.critical > 0) criticalCount++;
       if (c.vulnerabilityCount.high > 0) highCount++;
-      if (c.vulnerabilities.some((v) => v.exploitAvailable)) exploitableCount++;
       if (c.vulnerabilities.some((v) => v.inCisaKev)) kevCount++;
     });
 
@@ -59,7 +68,8 @@ export default function VulnerableComponentsPage() {
       total: vulnerableComponents.length,
       critical: criticalCount,
       high: highCount,
-      exploitable: exploitableCount,
+      // Note: exploitable count requires additional API data we don't have yet
+      exploitable: 0,
       kev: kevCount,
     };
   }, [vulnerableComponents]);
@@ -74,7 +84,8 @@ export default function VulnerableComponentsPage() {
       result = result.filter(
         (c) =>
           c.name.toLowerCase().includes(query) ||
-          c.vulnerabilities.some((v) => v.cveId.toLowerCase().includes(query))
+          c.version.toLowerCase().includes(query) ||
+          c.purl.toLowerCase().includes(query)
       );
     }
 
@@ -113,17 +124,23 @@ export default function VulnerableComponentsPage() {
   );
 
   const handleExport = () => {
+    if (filteredComponents.length === 0) {
+      toast.error("No components to export");
+      return;
+    }
+
     const csv = [
-      ["Name", "Version", "Ecosystem", "CVEs", "Critical", "High", "Medium", "Risk Score", "CISA KEV"].join(","),
+      ["Name", "Version", "Ecosystem", "PURL", "Critical", "High", "Medium", "Low", "Risk Score", "CISA KEV"].join(","),
       ...filteredComponents.map((c) =>
         [
-          c.name,
+          `"${c.name}"`,
           c.version,
           c.ecosystem,
-          c.vulnerabilities.map((v) => v.cveId).join("; "),
+          `"${c.purl}"`,
           c.vulnerabilityCount.critical,
           c.vulnerabilityCount.high,
           c.vulnerabilityCount.medium,
+          c.vulnerabilityCount.low,
           c.riskScore,
           c.vulnerabilities.some((v) => v.inCisaKev) ? "Yes" : "No",
         ].join(",")
@@ -136,6 +153,7 @@ export default function VulnerableComponentsPage() {
     a.href = url;
     a.download = "vulnerable-components.csv";
     a.click();
+    URL.revokeObjectURL(url);
     toast.success("Vulnerable components exported");
   };
 
@@ -152,9 +170,9 @@ export default function VulnerableComponentsPage() {
       <Main>
         <PageHeader
           title="Vulnerable Components"
-          description={`${stats.total} components with known security vulnerabilities`}
+          description={isLoading ? "Loading..." : `${stats.total} components with known security vulnerabilities`}
         >
-          <Button variant="outline" onClick={handleExport}>
+          <Button variant="outline" onClick={handleExport} disabled={isLoading || filteredComponents.length === 0}>
             <Download className="mr-2 h-4 w-4" />
             Export
           </Button>
@@ -173,7 +191,11 @@ export default function VulnerableComponentsPage() {
                 <AlertTriangle className="h-4 w-4 text-red-500" />
                 Total Vulnerable
               </CardDescription>
-              <CardTitle className="text-3xl text-red-500">{stats.total}</CardTitle>
+              {isLoading ? (
+                <Skeleton className="h-9 w-16" />
+              ) : (
+                <CardTitle className="text-3xl text-red-500">{stats.total}</CardTitle>
+              )}
             </CardHeader>
             <CardContent>
               <p className="text-xs text-muted-foreground">
@@ -193,7 +215,11 @@ export default function VulnerableComponentsPage() {
                 <Shield className="h-4 w-4 text-purple-500" />
                 Critical Severity
               </CardDescription>
-              <CardTitle className="text-3xl text-purple-500">{stats.critical}</CardTitle>
+              {isLoading ? (
+                <Skeleton className="h-9 w-16" />
+              ) : (
+                <CardTitle className="text-3xl text-purple-500">{stats.critical}</CardTitle>
+              )}
             </CardHeader>
             <CardContent>
               <p className="text-xs text-muted-foreground">
@@ -211,7 +237,11 @@ export default function VulnerableComponentsPage() {
                 <Zap className="h-4 w-4 text-orange-500" />
                 Exploitable
               </CardDescription>
-              <CardTitle className="text-3xl text-orange-500">{stats.exploitable}</CardTitle>
+              {isLoading ? (
+                <Skeleton className="h-9 w-16" />
+              ) : (
+                <CardTitle className="text-3xl text-orange-500">{stats.exploitable}</CardTitle>
+              )}
             </CardHeader>
             <CardContent>
               <p className="text-xs text-muted-foreground">
@@ -231,7 +261,11 @@ export default function VulnerableComponentsPage() {
                 <Target className="h-4 w-4 text-red-600" />
                 CISA KEV
               </CardDescription>
-              <CardTitle className="text-3xl text-red-600">{stats.kev}</CardTitle>
+              {isLoading ? (
+                <Skeleton className="h-9 w-16" />
+              ) : (
+                <CardTitle className="text-3xl text-red-600">{stats.kev}</CardTitle>
+              )}
             </CardHeader>
             <CardContent>
               <p className="text-xs text-muted-foreground">
@@ -242,7 +276,7 @@ export default function VulnerableComponentsPage() {
         </div>
 
         {/* CISA KEV Alert */}
-        {stats.kev > 0 && severityFilter !== "kev" && (
+        {!isLoading && stats.kev > 0 && severityFilter !== "kev" && (
           <Card className="mt-4 border-red-500/50 bg-red-500/5">
             <CardContent className="flex items-center justify-between py-4">
               <div className="flex items-center gap-3">
@@ -277,7 +311,7 @@ export default function VulnerableComponentsPage() {
                   Vulnerable Components
                 </CardTitle>
                 <CardDescription>
-                  {filteredComponents.length} components requiring remediation
+                  {isLoading ? "Loading..." : `${filteredComponents.length} components requiring remediation`}
                 </CardDescription>
               </div>
             </div>
@@ -293,31 +327,31 @@ export default function VulnerableComponentsPage() {
                 <TabsTrigger value="all" className="gap-1.5">
                   All
                   <Badge variant="secondary" className="h-5 px-1.5 text-xs">
-                    {filterCounts.all}
+                    {isLoading ? "-" : filterCounts.all}
                   </Badge>
                 </TabsTrigger>
                 <TabsTrigger value="critical" className="gap-1.5">
                   Critical
                   <Badge variant="destructive" className="h-5 px-1.5 text-xs">
-                    {filterCounts.critical}
+                    {isLoading ? "-" : filterCounts.critical}
                   </Badge>
                 </TabsTrigger>
                 <TabsTrigger value="high" className="gap-1.5">
                   High
                   <Badge className="h-5 px-1.5 text-xs bg-orange-500/15 text-orange-600">
-                    {filterCounts.high}
+                    {isLoading ? "-" : filterCounts.high}
                   </Badge>
                 </TabsTrigger>
                 <TabsTrigger value="medium" className="gap-1.5">
                   Medium
                   <Badge className="h-5 px-1.5 text-xs bg-yellow-500/15 text-yellow-600">
-                    {filterCounts.medium}
+                    {isLoading ? "-" : filterCounts.medium}
                   </Badge>
                 </TabsTrigger>
                 <TabsTrigger value="kev" className="gap-1.5">
                   CISA KEV
                   <Badge className="h-5 px-1.5 text-xs bg-red-600 text-white">
-                    {filterCounts.kev}
+                    {isLoading ? "-" : filterCounts.kev}
                   </Badge>
                 </TabsTrigger>
               </TabsList>
@@ -328,7 +362,7 @@ export default function VulnerableComponentsPage() {
               <div className="relative flex-1 max-w-sm">
                 <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search by name or CVE..."
+                  placeholder="Search by name, version, or PURL..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-9"
@@ -336,11 +370,17 @@ export default function VulnerableComponentsPage() {
               </div>
             </div>
 
-            {/* Component Table */}
-            <ComponentTable
-              data={filteredComponents}
-              onViewDetails={setSelectedComponent}
-            />
+            {/* Loading State */}
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <ComponentTable
+                data={filteredComponents}
+                onViewDetails={setSelectedComponent}
+              />
+            )}
           </CardContent>
         </Card>
       </Main>

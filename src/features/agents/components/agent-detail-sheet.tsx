@@ -5,11 +5,11 @@ import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
-import { Pencil, Copy, Play, Pause, Trash2, Globe } from 'lucide-react';
+import { Pencil, Copy, Pause, Trash2, Globe } from 'lucide-react';
 import { toast } from 'sonner';
 
 import type { Agent, AgentStatus } from '../types';
-import { AGENT_STATUS_CONFIG, AGENT_DEPLOYMENT_CONFIG } from '../types';
+import { AGENT_STATUS_CONFIG } from '../types';
 import { AgentStatusBadge } from './agent-status-badge';
 import { AgentTypeIcon, AgentTypeBadge } from './agent-type-icon';
 import { AgentMetricsDisplay } from './agent-metrics-display';
@@ -20,7 +20,7 @@ interface AgentDetailSheetProps {
   onOpenChange: (open: boolean) => void;
   onEdit: (agent: Agent) => void;
   onPause: (agent: Agent) => void;
-  onResume: (agent: Agent) => void;
+  onResume?: (agent: Agent) => void;
   onDelete: (agent: Agent) => void;
 }
 
@@ -30,13 +30,13 @@ export function AgentDetailSheet({
   onOpenChange,
   onEdit,
   onPause,
-  onResume,
+  onResume: _onResume,
   onDelete,
 }: AgentDetailSheetProps) {
   if (!agent) return null;
 
   const agentStatus: AgentStatus = agent.status === 'active' ? 'online' : 'offline';
-  const statusConfig = AGENT_STATUS_CONFIG[agentStatus];
+  const _statusConfig = AGENT_STATUS_CONFIG[agentStatus];
 
   const handleCopyToken = () => {
     navigator.clipboard.writeText(`agent-token-${agent.id}-xxxx-xxxx`);

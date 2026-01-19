@@ -28,13 +28,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -109,7 +108,10 @@ export function WorkersSection({
 
   // API data
   const { data: workersData, error, isLoading, mutate } = useWorkers(filters);
-  const workers: Worker[] = workersData?.items ?? [];
+  const workers: Worker[] = useMemo(
+    () => workersData?.items ?? [],
+    [workersData?.items]
+  );
 
   // Delete mutation
   const { trigger: deleteWorker, isMutating: isDeleting } = useDeleteWorker(
@@ -117,10 +119,10 @@ export function WorkersSection({
   );
 
   // Activate/Deactivate mutations
-  const { trigger: activateWorker, isMutating: isActivating } = useActivateWorker(
+  const { trigger: activateWorker, isMutating: _isActivating } = useActivateWorker(
     selectedWorker?.id || ''
   );
-  const { trigger: deactivateWorker, isMutating: isDeactivating } = useDeactivateWorker(
+  const { trigger: deactivateWorker, isMutating: _isDeactivating } = useDeactivateWorker(
     selectedWorker?.id || ''
   );
 

@@ -5,10 +5,18 @@
  */
 
 import * as React from "react";
-import { CheckCircle, Clock, Trash2 } from "lucide-react";
+import { CheckCircle, Clock, Trash2, Eye, EyeOff, Copy, Check, Key, AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import type { AssetType } from "../types/asset.types";
 import { ASSET_TYPE_LABELS } from "../types/asset.types";
 
@@ -287,5 +295,158 @@ interface SectionTitleProps {
 export function SectionTitle({ children, className }: SectionTitleProps) {
   return (
     <h4 className={cn("text-sm font-medium mb-2", className)}>{children}</h4>
+  );
+}
+
+// ============================================
+// Secret Value Field (for credential leaks)
+// ============================================
+
+interface SecretValueFieldProps {
+  /** The secret value to display */
+  value?: string | null;
+  /** Label for the field */
+  label?: string;
+  /** Whether to show a warning about the sensitivity */
+  showWarning?: boolean;
+  /** Custom class name */
+  className?: string;
+}
+
+/**
+ * SecretValueField displays a masked credential value with reveal/hide toggle.
+ * Used for showing leaked passwords, API keys, etc. in credential leak details.
+ */
+export function SecretValueField({
+  value,
+  label = "Secret Value",
+  showWarning = true,
+  className,
+}: SecretValueFieldProps) {
+  const [isRevealed, setIsRevealed] = React.useState(false);
+  const [isCopied, setIsCopied] = React.useState(false);
+
+  if (!value) {
+    return (
+      <div className={cn("rounded-xl border p-4 bg-card", className)}>
+        <div className="flex items-center gap-2 mb-3">
+          <Key className="h-4 w-4 text-muted-foreground" />
+          <h4 className="text-sm font-medium">{label}</h4>
+        </div>
+        <p className="text-sm text-muted-foreground italic">
+          No secret value available
+        </p>
+      </div>
+    );
+  }
+
+  // Mask the value (show first 2 and last 2 chars if long enough)
+  const getMaskedValue = (val: string): string => {
+    if (val.length <= 4) {
+      return "••••••••";
+    }
+    if (val.length <= 8) {
+      return val[0] + "••••••" + val[val.length - 1];
+    }
+    return val.slice(0, 2) + "••••••••" + val.slice(-2);
+  };
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setIsCopied(true);
+      toast.success("Secret copied to clipboard");
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch {
+      toast.error("Failed to copy to clipboard");
+    }
+  };
+
+  const displayValue = isRevealed ? value : getMaskedValue(value);
+
+  return (
+    <div className={cn("rounded-xl border p-4 bg-card", className)}>
+      <div className="flex items-center gap-2 mb-3">
+        <Key className="h-4 w-4 text-amber-500" />
+        <h4 className="text-sm font-medium">{label}</h4>
+      </div>
+
+      {/* Warning banner */}
+      {showWarning && (
+        <div className="flex items-start gap-2 p-2 mb-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+          <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+          <p className="text-xs text-amber-700 dark:text-amber-400">
+            This is sensitive data. Handle with care and rotate if compromised.
+          </p>
+        </div>
+      )}
+
+      {/* Secret value with controls */}
+      <div className="flex items-center gap-2">
+        <div className="flex-1 relative">
+          <Input
+            type="text"
+            value={displayValue}
+            readOnly
+            className={cn(
+              "font-mono text-sm pr-20",
+              !isRevealed && "tracking-wider"
+            )}
+          />
+          <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0"
+                    onClick={() => setIsRevealed(!isRevealed)}
+                  >
+                    {isRevealed ? (
+                      <EyeOff className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {isRevealed ? "Hide secret" : "Reveal secret"}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0"
+                    onClick={handleCopy}
+                  >
+                    {isCopied ? (
+                      <Check className="h-4 w-4 text-green-500" />
+                    ) : (
+                      <Copy className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {isCopied ? "Copied!" : "Copy to clipboard"}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        </div>
+      </div>
+
+      {/* Character count hint */}
+      <p className="text-xs text-muted-foreground mt-2">
+        {value.length} characters
+      </p>
+    </div>
   );
 }

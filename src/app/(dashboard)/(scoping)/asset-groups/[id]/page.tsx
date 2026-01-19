@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState, useMemo, useCallback, useEffect } from "react";
+import { use, useState, useMemo, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Header, Main } from "@/components/layout";
 import { ProfileDropdown } from "@/components/profile-dropdown";
@@ -10,8 +10,6 @@ import { RiskScoreBadge } from "@/features/shared";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Pagination } from "@/components/ui/pagination";
@@ -31,14 +29,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -48,13 +38,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -102,12 +85,11 @@ import {
   useDeleteAssetGroup,
   useRemoveAssetsFromGroup,
   useAddAssetsToGroup,
+  EditGroupDialog,
+  type EditGroupFormData,
+  AddAssetsDialog,
+  type AddAssetsSubmitData,
 } from "@/features/asset-groups";
-import { useAssets } from "@/features/assets/hooks/use-assets";
-import { ScrollArea } from "@/components/ui/scroll-area";
-
-type Environment = "production" | "staging" | "development" | "testing";
-type Criticality = "critical" | "high" | "medium" | "low";
 
 const criticalityColors: Record<string, string> = {
   critical: "bg-red-500 text-white",
@@ -152,7 +134,7 @@ export default function AssetGroupDetailPage({ params }: PageProps) {
 
   // Data fetching with hooks
   const { data: group, isLoading: groupLoading, mutate: refreshGroup } = useAssetGroup(id);
-  const { data: assets, isLoading: _assetsLoading } = useGroupAssets(id);
+  const { data: assets, isLoading: _assetsLoading, mutate: mutateAssets } = useGroupAssets(id);
   const { data: findings, isLoading: _findingsLoading } = useGroupFindings(id);
 
   // Mutations
@@ -163,21 +145,12 @@ export default function AssetGroupDetailPage({ params }: PageProps) {
 
   // URL Search Params for tab sync
   const searchParams = useSearchParams();
-  const tabFromUrl = searchParams.get("tab");
 
-  // UI State - must be called before any early returns
-  const [activeTab, setActiveTab] = useState(tabFromUrl || "overview");
-
-  // Sync tab with URL
-  useEffect(() => {
-    if (tabFromUrl && tabFromUrl !== activeTab) {
-      setActiveTab(tabFromUrl);
-    }
-  }, [tabFromUrl, activeTab]);
+  // Use URL as source of truth for active tab
+  const activeTab = searchParams.get("tab") || "overview";
 
   // Update URL when tab changes
   const handleTabChange = useCallback((tab: string) => {
-    setActiveTab(tab);
     const params = new URLSearchParams(searchParams.toString());
     if (tab === "overview") {
       params.delete("tab");
@@ -195,8 +168,6 @@ export default function AssetGroupDetailPage({ params }: PageProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [removeAssetsDialogOpen, setRemoveAssetsDialogOpen] = useState(false);
   const [addAssetsDialogOpen, setAddAssetsDialogOpen] = useState(false);
-  const [addAssetsSearch, setAddAssetsSearch] = useState("");
-  const [assetsToAdd, setAssetsToAdd] = useState<string[]>([]);
 
   // Pagination State
   const [assetsPage, setAssetsPage] = useState(1);
@@ -204,34 +175,6 @@ export default function AssetGroupDetailPage({ params }: PageProps) {
   const [findingsPage, setFindingsPage] = useState(1);
   const [findingsPageSize, setFindingsPageSize] = useState(10);
 
-  // Add Assets Dialog Pagination
-  const [addAssetsPage, setAddAssetsPage] = useState(1);
-  const [addAssetsPageSize] = useState(20);
-
-  // Fetch assets for Add Assets dialog with server-side pagination
-  const {
-    assets: allAssets,
-    isLoading: allAssetsLoading,
-    total: allAssetsTotal,
-    totalPages: allAssetsTotalPages,
-  } = useAssets({
-    search: addAssetsSearch || undefined,
-    page: addAssetsPage,
-    pageSize: addAssetsPageSize,
-  });
-
-  // Form State
-  const [formData, setFormData] = useState({
-    name: group?.name || "",
-    description: group?.description || "",
-    environment: (group?.environment || "production") as Environment,
-    criticality: (group?.criticality || "medium") as Criticality,
-    businessUnit: group?.businessUnit || "",
-    owner: group?.owner || "",
-    ownerEmail: group?.ownerEmail || "",
-    tags: group?.tags || [] as string[],
-  });
-  const [tagInput, setTagInput] = useState("");
 
   // Derived data from hooks - wrapped in useMemo to prevent unnecessary re-renders
   const safeAssets = useMemo(() => assets || [], [assets]);
@@ -264,13 +207,6 @@ export default function AssetGroupDetailPage({ params }: PageProps) {
   const totalFindingsPages = useMemo(() => {
     return Math.ceil(safeFindings.length / findingsPageSize);
   }, [safeFindings.length, findingsPageSize]);
-
-  // Available assets to add (exclude assets already in group)
-  // Search is handled server-side, only filter out assets already in group
-  const availableAssetsToAdd = useMemo(() => {
-    const groupAssetIds = new Set(safeAssets.map((a) => a.id));
-    return (allAssets || []).filter((a) => !groupAssetIds.has(a.id));
-  }, [allAssets, safeAssets]);
 
   // Helper function to get asset detail URL based on type
   const getAssetDetailUrl = useCallback((type: string, assetId: string) => {
@@ -454,33 +390,10 @@ export default function AssetGroupDetailPage({ params }: PageProps) {
   };
 
   const handleEdit = () => {
-    setFormData({
-      name: group.name,
-      description: group.description || "",
-      environment: group.environment as Environment,
-      criticality: group.criticality as Criticality,
-      businessUnit: group.businessUnit || "",
-      owner: group.owner || "",
-      ownerEmail: group.ownerEmail || "",
-      tags: group.tags || [],
-    });
-    setTagInput("");
     setEditDialogOpen(true);
   };
 
-  const handleAddTag = (tag: string) => {
-    const normalizedTag = tag.trim().toLowerCase();
-    if (normalizedTag && !formData.tags.includes(normalizedTag)) {
-      setFormData({ ...formData, tags: [...formData.tags, normalizedTag] });
-    }
-    setTagInput("");
-  };
-
-  const handleRemoveTag = (tagToRemove: string) => {
-    setFormData({ ...formData, tags: formData.tags.filter((t) => t !== tagToRemove) });
-  };
-
-  const handleSaveEdit = async () => {
+  const handleSaveEdit = async (formData: EditGroupFormData) => {
     try {
       await updateGroup({
         name: formData.name,
@@ -521,30 +434,22 @@ export default function AssetGroupDetailPage({ params }: PageProps) {
     }
   };
 
-  const handleAddAssets = async () => {
+  const handleAddAssets = async (data: AddAssetsSubmitData) => {
     try {
-      await addAssets(assetsToAdd);
-      setAssetsToAdd([]);
-      setAddAssetsSearch("");
+      // Add existing assets
+      if (data.existingAssetIds.length > 0) {
+        await addAssets(data.existingAssetIds);
+      }
+      // TODO: Create new assets via API then add to group
+      // For now, we only support adding existing assets
+      // New assets would need a separate API call to create them first
+
       setAddAssetsDialogOpen(false);
       // Refresh data to get updated counts
       refreshGroup();
     } catch {
       // Error already handled by hook
     }
-  };
-
-  const toggleAssetToAdd = (assetId: string) => {
-    setAssetsToAdd((prev) =>
-      prev.includes(assetId)
-        ? prev.filter((id) => id !== assetId)
-        : [...prev, assetId]
-    );
-  };
-
-  const handleAddAssetsSearchChange = (value: string) => {
-    setAddAssetsSearch(value);
-    setAddAssetsPage(1); // Reset to first page on new search
   };
 
   const handleExport = (format: string) => {
@@ -1217,148 +1122,13 @@ export default function AssetGroupDetailPage({ params }: PageProps) {
       </Main>
 
       {/* Edit Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Asset Group</DialogTitle>
-            <DialogDescription>Update the group details</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-name">Name</Label>
-              <Input
-                id="edit-name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-description">Description</Label>
-              <Textarea
-                id="edit-description"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Environment</Label>
-                <Select
-                  value={formData.environment}
-                  onValueChange={(value: Environment) =>
-                    setFormData({ ...formData, environment: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="production">Production</SelectItem>
-                    <SelectItem value="staging">Staging</SelectItem>
-                    <SelectItem value="development">Development</SelectItem>
-                    <SelectItem value="testing">Testing</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Criticality</Label>
-                <Select
-                  value={formData.criticality}
-                  onValueChange={(value: Criticality) =>
-                    setFormData({ ...formData, criticality: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="critical">Critical</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="low">Low</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Business Context */}
-            <div className="space-y-4">
-              <h4 className="text-sm font-medium flex items-center gap-2">
-                <Building2 className="h-4 w-4" />
-                Business Context
-              </h4>
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-businessUnit">Business Unit</Label>
-                <Input
-                  id="edit-businessUnit"
-                  placeholder="e.g., Technology & Engineering"
-                  value={formData.businessUnit}
-                  onChange={(e) => setFormData({ ...formData, businessUnit: e.target.value })}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-owner">Owner</Label>
-                  <Input
-                    id="edit-owner"
-                    placeholder="e.g., Nguyen Van A"
-                    value={formData.owner}
-                    onChange={(e) => setFormData({ ...formData, owner: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-ownerEmail">Owner Email</Label>
-                  <Input
-                    id="edit-ownerEmail"
-                    type="email"
-                    placeholder="e.g., a.nguyen@company.vn"
-                    value={formData.ownerEmail}
-                    onChange={(e) => setFormData({ ...formData, ownerEmail: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Tags</Label>
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {formData.tags.map((tag) => (
-                    <Badge key={tag} variant="secondary" className="gap-1">
-                      {tag}
-                      <X
-                        className="h-3 w-3 cursor-pointer hover:text-destructive"
-                        onClick={() => handleRemoveTag(tag)}
-                      />
-                    </Badge>
-                  ))}
-                </div>
-                <Input
-                  placeholder="Type a tag and press Enter"
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === ",") {
-                      e.preventDefault();
-                      handleAddTag(tagInput);
-                    }
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditDialogOpen(false)} disabled={isUpdating}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveEdit} disabled={!formData.name || isUpdating}>
-              {isUpdating ? "Saving..." : "Save Changes"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <EditGroupDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        group={group}
+        onSubmit={handleSaveEdit}
+        isSubmitting={isUpdating}
+      />
 
       {/* Delete Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
@@ -1403,161 +1173,20 @@ export default function AssetGroupDetailPage({ params }: PageProps) {
       </AlertDialog>
 
       {/* Add Assets Dialog */}
-      <Dialog
+      <AddAssetsDialog
         open={addAssetsDialogOpen}
-        onOpenChange={(open) => {
-          setAddAssetsDialogOpen(open);
-          if (!open) {
-            setAddAssetsSearch("");
-            setAssetsToAdd([]);
-            setAddAssetsPage(1);
-          }
+        onOpenChange={setAddAssetsDialogOpen}
+        groupName={group.name}
+        groupAssets={safeAssets}
+        onSubmit={handleAddAssets}
+        onRemove={async (assetId) => {
+          await removeAssets([assetId]);
+          mutateAssets();
+          refreshGroup();
         }}
-      >
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle>Add Assets to Group</DialogTitle>
-            <DialogDescription>
-              Select assets to add to &quot;{group.name}&quot;
-              {allAssetsTotal > 0 && (
-                <span className="ml-1">({allAssetsTotal} total assets)</span>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="flex-1 overflow-hidden space-y-4 py-4">
-            {/* Search */}
-            <div className="relative">
-              <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search assets by name or type..."
-                value={addAssetsSearch}
-                onChange={(e) => handleAddAssetsSearchChange(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-
-            {/* Selected count */}
-            {assetsToAdd.length > 0 && (
-              <div className="flex items-center justify-between px-1">
-                <span className="text-sm text-muted-foreground">
-                  {assetsToAdd.length} assets selected
-                </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setAssetsToAdd([])}
-                  className="h-auto py-1 px-2 text-xs"
-                >
-                  Clear all
-                </Button>
-              </div>
-            )}
-
-            {/* Asset List */}
-            <ScrollArea className="h-[350px] rounded-md border">
-              {allAssetsLoading ? (
-                <div className="flex items-center justify-center h-full">
-                  <div className="flex flex-col items-center gap-2">
-                    <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Loading assets...</span>
-                  </div>
-                </div>
-              ) : availableAssetsToAdd.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full py-8">
-                  <Package className="h-10 w-10 text-muted-foreground/50 mb-3" />
-                  <p className="text-sm font-medium">
-                    {addAssetsSearch ? "No assets found" : "No available assets"}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {addAssetsSearch
-                      ? "Try a different search term"
-                      : "All assets are already in this group or no assets exist"}
-                  </p>
-                </div>
-              ) : (
-                <div className="p-2 space-y-1">
-                  {availableAssetsToAdd.map((asset) => (
-                    <button
-                      key={asset.id}
-                      onClick={() => toggleAssetToAdd(asset.id)}
-                      className={`flex items-center gap-3 w-full p-3 rounded-lg border text-left transition-colors ${
-                        assetsToAdd.includes(asset.id)
-                          ? "border-primary bg-primary/5"
-                          : "border-transparent hover:bg-accent/50"
-                      }`}
-                    >
-                      <Checkbox
-                        checked={assetsToAdd.includes(asset.id)}
-                        onCheckedChange={() => toggleAssetToAdd(asset.id)}
-                      />
-                      <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                        {assetTypeIcons[asset.type] || <Server className="h-4 w-4" />}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{asset.name}</p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <Badge variant="outline" className="text-xs capitalize">
-                            {asset.type}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">
-                            Risk: {asset.riskScore}
-                          </span>
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </ScrollArea>
-
-            {/* Pagination */}
-            {allAssetsTotalPages > 1 && (
-              <div className="flex items-center justify-between pt-2 border-t">
-                <span className="text-sm text-muted-foreground">
-                  Page {addAssetsPage} of {allAssetsTotalPages}
-                </span>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setAddAssetsPage((p) => Math.max(1, p - 1))}
-                    disabled={addAssetsPage <= 1 || allAssetsLoading}
-                  >
-                    Previous
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setAddAssetsPage((p) => Math.min(allAssetsTotalPages, p + 1))}
-                    disabled={addAssetsPage >= allAssetsTotalPages || allAssetsLoading}
-                  >
-                    Next
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setAddAssetsDialogOpen(false)}
-              disabled={isAddingAssets}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleAddAssets}
-              disabled={assetsToAdd.length === 0 || isAddingAssets}
-            >
-              {isAddingAssets
-                ? "Adding..."
-                : `Add ${assetsToAdd.length} Asset${assetsToAdd.length !== 1 ? "s" : ""}`}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        isSubmitting={isAddingAssets}
+        isRemoving={isRemovingAssets}
+      />
     </>
   );
 }

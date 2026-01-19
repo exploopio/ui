@@ -40,7 +40,6 @@ import {
   MoreHorizontal,
   Pause,
   Pencil,
-  Play,
   Trash2,
   Zap,
 } from 'lucide-react';
@@ -78,7 +77,7 @@ export function AgentTable({
   onEditAgent,
   onDeleteAgent,
   onPauseAgent,
-  onResumeAgent,
+  onResumeAgent: _onResumeAgent,
   onCopyToken,
 }: AgentTableProps) {
   const columns: ColumnDef<Agent>[] = useMemo(
@@ -257,7 +256,7 @@ export function AgentTable({
         },
       },
     ],
-    [onViewAgent, onEditAgent, onDeleteAgent, onPauseAgent, onResumeAgent, onCopyToken]
+    [onViewAgent, onEditAgent, onDeleteAgent, onPauseAgent, onCopyToken]
   );
 
   const table = useReactTable({

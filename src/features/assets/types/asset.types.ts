@@ -644,6 +644,14 @@ export interface AssetMetadata {
   dependabotEnabled?: boolean;
 
   // ============================================
+  // Credential Leak specific (for credential assets)
+  // ============================================
+  /** The actual leaked secret value (password, API key, etc.) */
+  secretValue?: string;
+  /** Type of credential (password, api_key, aws_key, database_cred, etc.) */
+  credentialType?: string;
+
+  // ============================================
   // Legacy fields (deprecated, for migration)
   // ============================================
   /** @deprecated Use repoProvider instead */

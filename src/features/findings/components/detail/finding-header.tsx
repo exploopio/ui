@@ -20,6 +20,10 @@ import {
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useTenant } from "@/context/tenant-provider";
+import { useCVEEnrichment } from "@/features/threat-intel/hooks";
+import { EPSSScoreBadge } from "@/features/shared/components/epss-score-badge";
+import { KEVIndicatorBadge } from "@/features/shared/components/kev-indicator-badge";
 import {
   useUpdateFindingStatusApi,
   useUpdateFindingSeverityApi,
@@ -73,10 +77,17 @@ export function FindingHeader({
 }: FindingHeaderProps) {
   const [status, setStatus] = useState<FindingStatus>(finding.status);
   const [severity, setSeverity] = useState<Severity>(finding.severity);
+  const { currentTenant } = useTenant();
 
   // API mutation hooks
   const { trigger: updateStatus, isMutating: isUpdatingStatus } = useUpdateFindingStatusApi(finding.id);
   const { trigger: updateSeverity, isMutating: isUpdatingSeverity } = useUpdateFindingSeverityApi(finding.id);
+
+  // Fetch EPSS/KEV data if finding has CVE
+  const { epss, kev } = useCVEEnrichment(
+    currentTenant?.id || null,
+    finding.cve || null
+  );
 
   const statusConfig = FINDING_STATUS_CONFIG[status];
   const severityConfig = SEVERITY_CONFIG[severity];
@@ -143,7 +154,7 @@ export function FindingHeader({
     <div className="space-y-4">
       {/* Title and ID */}
       <div>
-        <div className="text-muted-foreground mb-1 flex items-center gap-2 text-sm">
+        <div className="text-muted-foreground mb-1 flex items-center gap-2 text-sm flex-wrap">
           <span className="font-mono">{finding.id}</span>
           {finding.cve && (
             <Badge variant="outline" className="text-xs">
@@ -155,6 +166,26 @@ export function FindingHeader({
               {finding.cwe}
             </Badge>
           )}
+          {/* EPSS Score Badge */}
+          {epss && (
+            <EPSSScoreBadge
+              score={epss.score}
+              percentile={epss.percentile}
+              showPercentile
+              size="sm"
+            />
+          )}
+          {/* KEV Indicator Badge */}
+          <KEVIndicatorBadge
+            inKEV={!!kev}
+            kevData={kev ? {
+              date_added: kev.date_added,
+              due_date: kev.due_date,
+              ransomware_use: kev.known_ransomware_campaign_use,
+              notes: kev.notes,
+            } : null}
+            size="sm"
+          />
         </div>
         <h1 className="text-2xl font-bold">{finding.title}</h1>
       </div>

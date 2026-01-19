@@ -174,6 +174,7 @@ export function ToolDetailSheet({
               <div className="relative">
                 {tool.logo_url ? (
                   <div className="h-16 w-16 rounded-2xl bg-background border-2 border-border/50 shadow-lg p-2 flex items-center justify-center">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={tool.logo_url}
                       alt={tool.display_name}

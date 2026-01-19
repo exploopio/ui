@@ -30,14 +30,15 @@ const ecosystemColors: Record<ComponentEcosystem, string> = {
 };
 
 interface EcosystemBadgeProps {
-  ecosystem: ComponentEcosystem;
+  ecosystem: ComponentEcosystem | string;
   className?: string;
   size?: "sm" | "default";
 }
 
 export function EcosystemBadge({ ecosystem, className, size = "default" }: EcosystemBadgeProps) {
-  const label = COMPONENT_ECOSYSTEM_LABELS[ecosystem] || ecosystem;
-  const colorClass = ecosystemColors[ecosystem] || "bg-slate-500/15 text-slate-600 border-slate-500/30";
+  const eco = ecosystem as ComponentEcosystem;
+  const label = COMPONENT_ECOSYSTEM_LABELS[eco] || ecosystem;
+  const colorClass = ecosystemColors[eco] || "bg-slate-500/15 text-slate-600 border-slate-500/30";
 
   return (
     <Badge

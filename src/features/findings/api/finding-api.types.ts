@@ -271,11 +271,12 @@ export interface VulnerabilityApiFilters {
 // Stats Types
 // ============================================
 
-export interface FindingStats {
+export interface FindingStatsResponse {
   total: number
-  by_severity: Record<Severity, number>
-  by_status: Record<FindingStatus, number>
-  by_source: Record<FindingSource, number>
+  by_severity: Record<string, number>
+  by_status: Record<string, number>
+  by_source: Record<string, number>
   open_count: number
   resolved_count: number
 }
+

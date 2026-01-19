@@ -57,11 +57,11 @@ export interface ApiComponent {
   namespace?: string
   manifest_file?: string
   manifest_path?: string
-  dependency_type: ApiDependencyType
+  dependency_type?: ApiDependencyType
   license?: string
   purl: string
   vulnerability_count: number
-  status: ApiComponentStatus
+  status?: ApiComponentStatus
   metadata?: Record<string, unknown>
   created_at: string
   updated_at: string
@@ -130,4 +130,67 @@ export interface ComponentApiFilters {
   licenses?: string[]
   page?: number
   per_page?: number
+}
+
+// ============================================
+// Stats Types
+// ============================================
+
+/**
+ * Component stats from API
+ */
+export interface ApiComponentStats {
+  total_components: number
+  direct_dependencies: number
+  transitive_dependencies: number
+  vulnerable_components: number
+
+  // Extended stats
+  total_vulnerabilities: number
+  outdated_components: number
+  cisa_kev_components: number
+  vuln_by_severity: Record<string, number> // { critical: N, high: N, medium: N, low: N }
+  license_risks: Record<string, number> // { critical: N, high: N, medium: N, low: N, unknown: N }
+}
+
+/**
+ * Ecosystem stats from API
+ */
+export interface ApiEcosystemStats {
+  ecosystem: string
+  total: number
+  vulnerable: number
+  outdated: number
+  manifest_file: string
+}
+
+/**
+ * Vulnerable component with details from API
+ */
+export interface ApiVulnerableComponent {
+  id: string
+  name: string
+  version: string
+  ecosystem: string
+  purl: string
+  license?: string
+
+  // Vulnerability breakdown
+  critical_count: number
+  high_count: number
+  medium_count: number
+  low_count: number
+  total_count: number
+  in_cisa_kev: boolean
+}
+
+/**
+ * License stats from API
+ */
+export interface ApiLicenseStats {
+  license_id: string  // SPDX identifier (e.g., MIT, Apache-2.0)
+  name: string        // Human-readable name
+  category: string    // permissive, copyleft, weak-copyleft, proprietary, public-domain, unknown
+  risk: string        // critical, high, medium, low, none, unknown
+  count: number       // Number of components using this license
 }

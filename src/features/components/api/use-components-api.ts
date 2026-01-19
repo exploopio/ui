@@ -16,6 +16,10 @@ import { useTenant } from '@/context/tenant-provider'
 import type {
   ApiComponent,
   ApiComponentListResponse,
+  ApiComponentStats,
+  ApiEcosystemStats,
+  ApiVulnerableComponent,
+  ApiLicenseStats,
   ComponentApiFilters,
   CreateComponentInput,
   UpdateComponentInput,
@@ -174,6 +178,58 @@ export function useAssetComponentsApi(
     key,
     fetchComponents,
     { ...defaultConfig, ...config }
+  )
+}
+
+/**
+ * Fetch component stats for current tenant
+ */
+export function useComponentStatsApi(config?: SWRConfiguration) {
+  const { currentTenant } = useTenant()
+
+  return useSWR<ApiComponentStats>(
+    currentTenant ? `/api/v1/components/stats` : null,
+    (url: string) => get<ApiComponentStats>(url),
+    { ...defaultConfig, ...config }
+  )
+}
+
+/**
+ * Fetch ecosystem stats for current tenant
+ */
+export function useEcosystemStatsApi(config?: SWRConfiguration) {
+  const { currentTenant } = useTenant()
+
+  return useSWR<ApiEcosystemStats[]>(
+    currentTenant ? `/api/v1/components/ecosystems` : null,
+    (url: string) => get<ApiEcosystemStats[]>(url),
+    { ...defaultConfig, dedupingInterval: 30000, ...config }
+  )
+}
+
+/**
+ * Fetch vulnerable components for current tenant
+ */
+export function useVulnerableComponentsApi(limit: number = 10, config?: SWRConfiguration) {
+  const { currentTenant } = useTenant()
+
+  return useSWR<ApiVulnerableComponent[]>(
+    currentTenant ? `/api/v1/components/vulnerable?limit=${limit}` : null,
+    (url: string) => get<ApiVulnerableComponent[]>(url),
+    { ...defaultConfig, ...config }
+  )
+}
+
+/**
+ * Fetch license stats for current tenant
+ */
+export function useLicenseStatsApi(config?: SWRConfiguration) {
+  const { currentTenant } = useTenant()
+
+  return useSWR<ApiLicenseStats[]>(
+    currentTenant ? `/api/v1/components/licenses` : null,
+    (url: string) => get<ApiLicenseStats[]>(url),
+    { ...defaultConfig, dedupingInterval: 30000, ...config }
   )
 }
 

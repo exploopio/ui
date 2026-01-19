@@ -467,14 +467,17 @@ export async function patch<T = unknown>(
 
 /**
  * DELETE request
+ * Supports optional body for DELETE requests that require a request body
  */
 export async function del<T = unknown>(
   endpoint: string,
+  data?: unknown,
   options?: ApiRequestOptions
 ): Promise<T> {
   return apiClient<T>(endpoint, {
     ...options,
     method: 'DELETE',
+    body: data ? JSON.stringify(data) : undefined,
   })
 }
 

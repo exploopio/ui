@@ -1,79 +1,97 @@
 /**
  * Group Wizard Stepper
  *
- * Visual step indicator for the create group wizard
+ * Modern visual step indicator with progress bar for the create group wizard
+ * 3-step flow: Basic Info -> Add Assets -> Review
  */
 
 import { cn } from "@/lib/utils";
-import { Check } from "lucide-react";
+import { Check, FileText, Package, Eye } from "lucide-react";
 
-export type GroupWizardStep = "basic" | "select-assets" | "new-assets" | "review";
+export type GroupWizardStep = "basic" | "add-assets" | "review";
 
 interface GroupStepperProps {
   currentStep: GroupWizardStep;
   onStepClick?: (step: GroupWizardStep) => void;
 }
 
-const STEPS: { id: GroupWizardStep; label: string }[] = [
-  { id: "basic", label: "Basic Info" },
-  { id: "select-assets", label: "Select Assets" },
-  { id: "new-assets", label: "New Assets" },
-  { id: "review", label: "Review" },
+const STEPS: { id: GroupWizardStep; label: string; icon: typeof FileText }[] = [
+  { id: "basic", label: "Basic Info", icon: FileText },
+  { id: "add-assets", label: "Add Assets", icon: Package },
+  { id: "review", label: "Review", icon: Eye },
 ];
 
 export function GroupStepper({ currentStep, onStepClick }: GroupStepperProps) {
   const currentIndex = STEPS.findIndex((s) => s.id === currentStep);
 
   return (
-    <div className="flex items-center justify-center gap-2 px-4 py-4">
-      {STEPS.map((step, index) => {
-        const isCompleted = index < currentIndex;
-        const isCurrent = index === currentIndex;
-        const isPending = index > currentIndex;
+    <div className="px-6 py-5">
+      {/* Progress bar background */}
+      <div className="relative">
+        {/* Background track */}
+        <div className="absolute top-4 left-0 right-0 h-0.5 bg-muted" />
 
-        return (
-          <div key={step.id} className="flex items-center">
-            {/* Step indicator */}
-            <button
-              type="button"
-              onClick={() => isCompleted && onStepClick?.(step.id)}
-              disabled={!isCompleted}
-              className={cn(
-                "flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium transition-colors",
-                isCompleted &&
-                  "bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer",
-                isCurrent && "bg-primary text-primary-foreground",
-                isPending && "text-muted-foreground bg-muted/50"
-              )}
-            >
-              {isCompleted ? (
-                <Check className="h-4 w-4" />
-              ) : (
-                <span
+        {/* Progress fill */}
+        <div
+          className="absolute top-4 left-0 h-0.5 bg-primary transition-all duration-500 ease-out"
+          style={{ width: `${(currentIndex / (STEPS.length - 1)) * 100}%` }}
+        />
+
+        {/* Steps */}
+        <div className="relative flex justify-between">
+          {STEPS.map((step, index) => {
+            const isCompleted = index < currentIndex;
+            const isCurrent = index === currentIndex;
+            const isPending = index > currentIndex;
+            const StepIcon = step.icon;
+
+            return (
+              <button
+                key={step.id}
+                type="button"
+                onClick={() => isCompleted && onStepClick?.(step.id)}
+                disabled={!isCompleted}
+                className={cn(
+                  "flex flex-col items-center gap-2 group",
+                  isCompleted && "cursor-pointer"
+                )}
+              >
+                {/* Step circle */}
+                <div
                   className={cn(
-                    "flex h-5 w-5 items-center justify-center rounded-full text-xs",
-                    isCurrent && "bg-primary-foreground/20",
-                    isPending && "bg-muted-foreground/20"
+                    "relative z-10 flex h-8 w-8 items-center justify-center rounded-full border-2 transition-all duration-300",
+                    isCompleted && "border-primary bg-primary text-primary-foreground",
+                    isCurrent && "border-primary bg-background ring-4 ring-primary/20",
+                    isPending && "border-muted bg-background text-muted-foreground"
                   )}
                 >
-                  {index + 1}
-                </span>
-              )}
-              <span className="hidden sm:inline">{step.label}</span>
-            </button>
+                  {isCompleted ? (
+                    <Check className="h-4 w-4" />
+                  ) : (
+                    <StepIcon className={cn(
+                      "h-4 w-4",
+                      isCurrent && "text-primary",
+                      isPending && "text-muted-foreground"
+                    )} />
+                  )}
+                </div>
 
-            {/* Connector line */}
-            {index < STEPS.length - 1 && (
-              <div
-                className={cn(
-                  "mx-2 h-0.5 w-8",
-                  index < currentIndex ? "bg-primary" : "bg-muted"
-                )}
-              />
-            )}
-          </div>
-        );
-      })}
+                {/* Step label */}
+                <span
+                  className={cn(
+                    "text-xs font-medium transition-colors hidden sm:block",
+                    isCompleted && "text-primary group-hover:text-primary/80",
+                    isCurrent && "text-foreground",
+                    isPending && "text-muted-foreground"
+                  )}
+                >
+                  {step.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }

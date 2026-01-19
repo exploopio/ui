@@ -13,7 +13,6 @@ import {
   Play,
   Server,
   Database,
-  Scan,
 } from 'lucide-react';
 import type { Worker, WorkerType, ExecutionMode } from '@/lib/api/worker-types';
 

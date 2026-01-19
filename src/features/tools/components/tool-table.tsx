@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import {
   ColumnDef,
   flexRender,
@@ -94,9 +94,15 @@ export function ToolTable({
   onCheckUpdate,
   readOnly = false,
 }: ToolTableProps) {
-  // Helper functions to get category info
-  const getCategoryName = (tool: Tool) => getCategoryNameById(categories, tool.category_id);
-  const getCategoryDisplayName = (tool: Tool) => getCategoryDisplayNameById(categories, tool.category_id);
+  // Helper functions to get category info - memoized to avoid unnecessary re-renders
+  const getCategoryName = useCallback(
+    (tool: Tool) => getCategoryNameById(categories, tool.category_id),
+    [categories]
+  );
+  const getCategoryDisplayName = useCallback(
+    (tool: Tool) => getCategoryDisplayNameById(categories, tool.category_id),
+    [categories]
+  );
   const columns: ColumnDef<Tool>[] = useMemo(
     () => [
       {
@@ -137,6 +143,7 @@ export function ToolTable({
           return (
             <div className="flex items-center gap-3">
               {tool.logo_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={tool.logo_url}
                   alt={tool.display_name}
@@ -357,7 +364,7 @@ export function ToolTable({
         },
       },
     ],
-    [onViewTool, onEditTool, onDeleteTool, onActivateTool, onDeactivateTool, onCheckUpdate, readOnly]
+    [onViewTool, onEditTool, onDeleteTool, onActivateTool, onDeactivateTool, onCheckUpdate, readOnly, getCategoryName, getCategoryDisplayName]
   );
 
   const table = useReactTable({

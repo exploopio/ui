@@ -4,7 +4,7 @@
  * Transform API responses to UI types
  */
 
-import type { ApiComponent, ApiComponentListResponse } from '../api/component-api.types'
+import type { ApiComponent, ApiComponentListResponse, ApiVulnerableComponent } from '../api/component-api.types'
 import type {
   Component,
   ComponentStats,
@@ -287,4 +287,129 @@ export function calculateLicenseStats(components: Component[]) {
       ...data,
     }))
     .sort((a, b) => b.count - a.count)
+}
+
+// ============================================
+// VULNERABLE COMPONENT TRANSFORMATION
+// ============================================
+
+/**
+ * Calculate risk score from vulnerability counts
+ * Higher weights for more severe vulnerabilities
+ */
+function calculateRiskScore(critical: number, high: number, medium: number, low: number): number {
+  // Weighted calculation: critical=40, high=20, medium=5, low=1, capped at 100
+  const score = critical * 40 + high * 20 + medium * 5 + low * 1
+  return Math.min(100, score)
+}
+
+/**
+ * Transform API vulnerable component to UI Component type
+ * Used for the vulnerable components page
+ */
+export function transformVulnerableComponent(api: ApiVulnerableComponent): Component {
+  const ecosystem = mapEcosystem(api.ecosystem)
+  const licenseCategory = detectLicenseCategory(api.license)
+  const riskScore = calculateRiskScore(
+    api.critical_count,
+    api.high_count,
+    api.medium_count,
+    api.low_count
+  )
+
+  // Create placeholder vulnerabilities to support UI features
+  // The count tells us there are vulnerabilities, but we don't have full details
+  const vulnerabilities: Component['vulnerabilities'] = []
+
+  // Add a placeholder for each severity level to enable filtering
+  if (api.critical_count > 0) {
+    vulnerabilities.push({
+      id: `${api.id}-critical`,
+      cveId: `${api.critical_count} Critical`,
+      severity: 'critical',
+      cvssScore: 9.5,
+      cvssVector: null,
+      title: `${api.critical_count} critical vulnerabilities`,
+      description: '',
+      fixedVersion: null,
+      fixAvailable: false,
+      exploitAvailable: false,
+      exploitMaturity: 'not-defined',
+      inCisaKev: api.in_cisa_kev,
+      epssScore: null,
+      epssPercentile: null,
+      references: [],
+      publishedAt: new Date().toISOString(),
+      lastModifiedAt: new Date().toISOString(),
+    })
+  }
+
+  if (api.high_count > 0) {
+    vulnerabilities.push({
+      id: `${api.id}-high`,
+      cveId: `${api.high_count} High`,
+      severity: 'high',
+      cvssScore: 8.0,
+      cvssVector: null,
+      title: `${api.high_count} high vulnerabilities`,
+      description: '',
+      fixedVersion: null,
+      fixAvailable: false,
+      exploitAvailable: false,
+      exploitMaturity: 'not-defined',
+      inCisaKev: false,
+      epssScore: null,
+      epssPercentile: null,
+      references: [],
+      publishedAt: new Date().toISOString(),
+      lastModifiedAt: new Date().toISOString(),
+    })
+  }
+
+  const now = new Date().toISOString()
+
+  return {
+    id: api.id,
+    name: api.name,
+    version: api.version,
+    ecosystem,
+    type: 'library',
+    purl: api.purl,
+    description: undefined,
+    homepage: undefined,
+    repositoryUrl: undefined,
+    sources: [],
+    sourceCount: 1, // At least found in one source
+    isDirect: true, // Default to direct since we don't know
+    depth: 0,
+    latestVersion: null,
+    isOutdated: false,
+    vulnerabilities,
+    vulnerabilityCount: {
+      critical: api.critical_count,
+      high: api.high_count,
+      medium: api.medium_count,
+      low: api.low_count,
+      info: 0,
+    },
+    riskScore,
+    license: api.license || null,
+    licenseId: api.license || null,
+    licenseCategory,
+    licenseRisk: api.license ? mapLicenseRisk(undefined) : 'unknown',
+    author: undefined,
+    publishedAt: undefined,
+    status: 'active',
+    firstSeen: now,
+    lastSeen: now,
+    createdAt: now,
+    updatedAt: now,
+  }
+}
+
+/**
+ * Transform API vulnerable components array to UI Component array
+ */
+export function transformVulnerableComponents(apis: ApiVulnerableComponent[]): Component[] {
+  return apis.map(transformVulnerableComponent)
 }

@@ -34,6 +34,9 @@ export const API_BASE = {
   TOOL_CATEGORIES: '/api/v1/tool-categories',
   CUSTOM_TOOL_CATEGORIES: '/api/v1/custom-tool-categories',
   SCANS: '/api/v1/scans',
+  EXPOSURES: '/api/v1/exposures',
+  AGENT_INGEST: '/api/v1/agent/ingest',
+  THREAT_INTEL: '/api/v1/threat-intel',
 } as const
 
 // ============================================
@@ -1193,6 +1196,181 @@ export const scanEndpoints = {
 } as const
 
 // ============================================
+// EXPOSURE EVENT ENDPOINTS
+// ============================================
+
+import type { ExposureListFilters } from './exposure-types'
+
+/**
+ * Exposure Event endpoints for attack surface monitoring.
+ * Exposures track non-CVE attack surface changes (port opens, misconfigs, etc.)
+ */
+export const exposureEndpoints = {
+  /**
+   * List exposures with optional filters
+   */
+  list: (filters?: ExposureListFilters) => {
+    const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
+    return `${API_BASE.EXPOSURES}${queryString}`
+  },
+
+  /**
+   * Get exposure by ID
+   */
+  get: (exposureId: string) => `${API_BASE.EXPOSURES}/${exposureId}`,
+
+  /**
+   * Get exposure statistics
+   */
+  stats: () => `${API_BASE.EXPOSURES}/stats`,
+
+  /**
+   * Create a new exposure event
+   */
+  create: () => API_BASE.EXPOSURES,
+
+  /**
+   * Delete exposure
+   */
+  delete: (exposureId: string) => `${API_BASE.EXPOSURES}/${exposureId}`,
+
+  /**
+   * Bulk ingest exposures
+   */
+  bulkIngest: () => `${API_BASE.EXPOSURES}/ingest`,
+
+  /**
+   * Resolve an exposure (mark as fixed)
+   */
+  resolve: (exposureId: string) => `${API_BASE.EXPOSURES}/${exposureId}/resolve`,
+
+  /**
+   * Accept an exposure (acknowledge risk)
+   */
+  accept: (exposureId: string) => `${API_BASE.EXPOSURES}/${exposureId}/accept`,
+
+  /**
+   * Mark exposure as false positive
+   */
+  markFalsePositive: (exposureId: string) => `${API_BASE.EXPOSURES}/${exposureId}/false-positive`,
+
+  /**
+   * Reactivate a resolved/accepted exposure
+   */
+  reactivate: (exposureId: string) => `${API_BASE.EXPOSURES}/${exposureId}/reactivate`,
+
+  /**
+   * Get exposure state change history
+   */
+  history: (exposureId: string) => `${API_BASE.EXPOSURES}/${exposureId}/history`,
+} as const
+
+// ============================================
+// THREAT INTELLIGENCE ENDPOINTS
+// ============================================
+
+import type { ThreatIntelSource } from './threatintel-types'
+
+/**
+ * Threat Intelligence endpoints for EPSS and KEV data
+ */
+export const threatIntelEndpoints = {
+  // ============================================
+  // UNIFIED STATS
+  // ============================================
+
+  /**
+   * Get unified threat intel stats (EPSS + KEV + sync status in one call)
+   */
+  stats: () => `${API_BASE.THREAT_INTEL}/stats`,
+
+  // ============================================
+  // SYNC STATUS
+  // ============================================
+
+  /**
+   * Get sync status for all sources
+   */
+  syncStatuses: () => `${API_BASE.THREAT_INTEL}/sync`,
+
+  /**
+   * Get sync status for a specific source
+   */
+  syncStatus: (source: ThreatIntelSource) => `${API_BASE.THREAT_INTEL}/sync/${source}`,
+
+  /**
+   * Trigger sync for a source
+   */
+  triggerSync: (source: ThreatIntelSource) => `${API_BASE.THREAT_INTEL}/sync/${source}/trigger`,
+
+  /**
+   * Enable/disable sync for a source
+   */
+  setSyncEnabled: (source: ThreatIntelSource) => `${API_BASE.THREAT_INTEL}/sync/${source}/enabled`,
+
+  // ============================================
+  // CVE ENRICHMENT
+  // ============================================
+
+  /**
+   * Enrich a single CVE with threat intel
+   */
+  enrichCVE: (cveId: string) => `${API_BASE.THREAT_INTEL}/enrich/${cveId}`,
+
+  /**
+   * Bulk enrich multiple CVEs
+   */
+  enrichCVEs: () => `${API_BASE.THREAT_INTEL}/enrich/bulk`,
+
+  // ============================================
+  // EPSS
+  // ============================================
+
+  /**
+   * Get EPSS score for a CVE
+   */
+  epssScore: (cveId: string) => `${API_BASE.THREAT_INTEL}/epss/${cveId}`,
+
+  /**
+   * Get EPSS statistics
+   */
+  epssStats: () => `${API_BASE.THREAT_INTEL}/epss/stats`,
+
+  // ============================================
+  // KEV
+  // ============================================
+
+  /**
+   * Get KEV entry for a CVE
+   */
+  kevEntry: (cveId: string) => `${API_BASE.THREAT_INTEL}/kev/${cveId}`,
+
+  /**
+   * Get KEV statistics
+   */
+  kevStats: () => `${API_BASE.THREAT_INTEL}/kev/stats`,
+} as const
+
+// ============================================
+// INGEST ENDPOINTS
+// ============================================
+
+/**
+ * Ingest endpoints for importing security data from various sources.
+ */
+export const ingestEndpoints = {
+  /**
+   * Ingest SARIF format data (Static Analysis Results Interchange Format)
+   */
+  sarif: () => `${API_BASE.AGENT_INGEST}/sarif`,
+
+  /**
+   * Ingest RIS format data (Rediver Ingest Schema)
+   */
+  ris: () => `${API_BASE.AGENT_INGEST}/ris`,
+} as const
+
+// ============================================
 // ENDPOINT COLLECTIONS
 // ============================================
 
@@ -1219,6 +1397,9 @@ export const endpoints = {
   tenantTools: tenantToolEndpoints,
   toolStats: toolStatsEndpoints,
   scans: scanEndpoints,
+  exposures: exposureEndpoints,
+  threatIntel: threatIntelEndpoints,
+  ingest: ingestEndpoints,
 } as const
 
 /**
@@ -1244,4 +1425,7 @@ export {
   tenantToolEndpoints as tenantTools,
   toolStatsEndpoints as toolStats,
   scanEndpoints as scans,
+  exposureEndpoints as exposures,
+  threatIntelEndpoints as threatIntel,
+  ingestEndpoints as ingest,
 }

@@ -37,7 +37,6 @@ import {
   Puzzle,
   Command,
   AudioWaveform,
-  Play,
   Building,
   Zap,
   Server,
@@ -58,6 +57,9 @@ import {
   Package,
   Scale,
   Download,
+  // CTEM Phase 1 icons
+  TrendingUp,
+  AlertTriangle,
 } from "lucide-react";
 import { type SidebarData } from "@/components/types";
 import { Permission, Role } from "@/lib/permissions";
@@ -204,6 +206,15 @@ export const sidebarData: SidebarData = {
           ],
         },
         // ----------------------------------------
+        // EXPOSURES (Non-CVE security issues)
+        // ----------------------------------------
+        {
+          title: "Exposures",
+          url: "/exposures",
+          icon: AlertTriangle,
+          permission: Permission.FindingsRead,
+        },
+        // ----------------------------------------
         // CREDENTIAL LEAKS
         // ----------------------------------------
         {
@@ -268,6 +279,12 @@ export const sidebarData: SidebarData = {
     {
       title: "Prioritization",
       items: [
+        {
+          title: "Threat Intel",
+          url: "/threat-intel",
+          icon: TrendingUp,
+          permission: Permission.FindingsRead,
+        },
         {
           title: "Risk Analysis",
           url: "/risk-analysis",

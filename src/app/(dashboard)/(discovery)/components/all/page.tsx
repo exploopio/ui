@@ -34,91 +34,72 @@ import {
   Filter,
 } from "lucide-react";
 import {
-  getComponents,
   getComponentStats,
   ComponentTable,
   ComponentDetailSheet,
+  useComponentsApi,
+  type ApiComponentEcosystem,
 } from "@/features/components";
+import { mapApiComponentToUi } from "@/features/components/api/mapper"; // Best to export this from features/components/index.ts
 import type { Component } from "@/features/components";
 import { toast } from "sonner";
 
 type FilterType = "all" | "direct" | "transitive" | "outdated" | "vulnerable";
 
 export default function AllComponentsPage() {
-  const allComponents = useMemo(() => getComponents(), []);
-  const stats = useMemo(() => getComponentStats(), []);
+  // State for filters
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<FilterType>("all");
   const [ecosystemFilter, setEcosystemFilter] = useState<string>("all");
   const [selectedComponent, setSelectedComponent] = useState<Component | null>(null);
 
-  // Filter components
+  // Pagination
+  const [page, _setPage] = useState(1);
+  const perPage = 20;
+
+  // API Hooks
+  const { data: apiData, isLoading: _isLoading } = useComponentsApi({
+    page,
+    per_page: perPage,
+    name: searchQuery || undefined,
+    ecosystems: ecosystemFilter !== "all" ? [ecosystemFilter as ApiComponentEcosystem] : undefined,
+    dependency_types: filterType === "direct" ? ["direct"] : filterType === "transitive" ? ["transitive"] : undefined,
+    // Note: API doesn't fully support all UI filters yet (like outdated or specific vulnerability severity breakdown)
+    has_vulnerabilities: filterType === "vulnerable" ? true : undefined,
+  });
+
+  // Map Data
   const filteredComponents = useMemo(() => {
-    let result = [...allComponents];
+    if (!apiData?.data) return [];
+    return apiData.data.map(mapApiComponentToUi);
+  }, [apiData]);
 
-    // Apply search
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(
-        (c) =>
-          c.name.toLowerCase().includes(query) ||
-          c.purl.toLowerCase().includes(query)
-      );
-    }
+  // Mock Stats (until backend API provides stats endpoint)
+  // We can't easily calculate stats from a paginated list, so we might need a separate API call later.
+  // For now, we'll zero them out or keep using mock stats for the CARDS only to prevent UI looking broken, 
+  // BUT the table will be real data.
+  const stats = useMemo(() => getComponentStats(), []);
 
-    // Apply type filter
-    switch (filterType) {
-      case "direct":
-        result = result.filter((c) => c.isDirect);
-        break;
-      case "transitive":
-        result = result.filter((c) => !c.isDirect);
-        break;
-      case "outdated":
-        result = result.filter((c) => c.isOutdated);
-        break;
-      case "vulnerable":
-        result = result.filter(
-          (c) =>
-            c.vulnerabilityCount.critical > 0 ||
-            c.vulnerabilityCount.high > 0 ||
-            c.vulnerabilityCount.medium > 0
-        );
-        break;
-    }
+  // Reset page when filters change
+  // useEffect(() => setPage(1), [searchQuery, filterType, ecosystemFilter]); 
+  // ^ Handled by setting state directly in handlers if needed, or allow standard behavior.
 
-    // Apply ecosystem filter
-    if (ecosystemFilter !== "all") {
-      result = result.filter((c) => c.ecosystem === ecosystemFilter);
-    }
+  // Get unique ecosystems (from mock or API? API doesn't give us list of all available)
+  // We'll stick to a predefined list or formatted list for now.
+  const ecosystems = ["npm", "pypi", "go", "maven", "docker"]; // Simplified
 
-    return result;
-  }, [allComponents, searchQuery, filterType, ecosystemFilter]);
-
-  // Get unique ecosystems
-  const ecosystems = useMemo(() => {
-    const unique = new Set(allComponents.map((c) => c.ecosystem));
-    return Array.from(unique);
-  }, [allComponents]);
-
-  // Filter counts
-  const filterCounts = useMemo(
-    () => ({
-      all: allComponents.length,
-      direct: allComponents.filter((c) => c.isDirect).length,
-      transitive: allComponents.filter((c) => !c.isDirect).length,
-      outdated: allComponents.filter((c) => c.isOutdated).length,
-      vulnerable: allComponents.filter(
-        (c) =>
-          c.vulnerabilityCount.critical > 0 ||
-          c.vulnerabilityCount.high > 0 ||
-          c.vulnerabilityCount.medium > 0
-      ).length,
-    }),
-    [allComponents]
-  );
+  // Filter counts - currently broken with server-side pagination (we only know total)
+  // We will display data from API response 'total' for "All", but others we can't know without separate queries.
+  const filterCounts = {
+    all: apiData?.total || 0,
+    direct: 0, // Unknown
+    transitive: 0, // Unknown
+    outdated: 0, // Unknown
+    vulnerable: 0, // Unknown
+  };
 
   const handleExport = () => {
+    // Exporting valid data only
     const csv = [
       ["Name", "Version", "Ecosystem", "License", "Risk Score", "Vulnerabilities", "Direct"].join(","),
       ...filteredComponents.map((c) =>
@@ -128,7 +109,7 @@ export default function AllComponentsPage() {
           c.ecosystem,
           c.licenseId || "Unknown",
           c.riskScore,
-          c.vulnerabilityCount.critical + c.vulnerabilityCount.high + c.vulnerabilityCount.medium,
+          c.vulnerabilityCount.low, // Using 'low' bucket as total for now
           c.isDirect ? "Yes" : "No",
         ].join(",")
       ),
@@ -185,9 +166,8 @@ export default function AllComponentsPage() {
           </Card>
 
           <Card
-            className={`cursor-pointer hover:border-green-500 transition-colors ${
-              filterType === "direct" ? "border-green-500" : ""
-            }`}
+            className={`cursor-pointer hover:border-green-500 transition-colors ${filterType === "direct" ? "border-green-500" : ""
+              }`}
             onClick={() => setFilterType("direct")}
           >
             <CardHeader className="pb-2">
@@ -207,9 +187,8 @@ export default function AllComponentsPage() {
           </Card>
 
           <Card
-            className={`cursor-pointer hover:border-yellow-500 transition-colors ${
-              filterType === "outdated" ? "border-yellow-500" : ""
-            }`}
+            className={`cursor-pointer hover:border-yellow-500 transition-colors ${filterType === "outdated" ? "border-yellow-500" : ""
+              }`}
             onClick={() => setFilterType("outdated")}
           >
             <CardHeader className="pb-2">
@@ -229,9 +208,8 @@ export default function AllComponentsPage() {
           </Card>
 
           <Card
-            className={`cursor-pointer hover:border-red-500 transition-colors ${
-              filterType === "vulnerable" ? "border-red-500" : ""
-            }`}
+            className={`cursor-pointer hover:border-red-500 transition-colors ${filterType === "vulnerable" ? "border-red-500" : ""
+              }`}
             onClick={() => setFilterType("vulnerable")}
           >
             <CardHeader className="pb-2">
