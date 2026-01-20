@@ -22,10 +22,10 @@ export function WorkerTypeIcon({ type, className }: WorkerTypeIconProps) {
 }
 
 export const WORKER_TYPE_COLORS: Record<WorkerType, string> = {
-  agent: "bg-purple-600 text-white",
-  scanner: "bg-blue-600 text-white",
-  collector: "bg-green-600 text-white",
-  worker: "bg-gray-600 text-white",
+  agent: "bg-purple-500/10 text-purple-600 border-purple-500/30",
+  scanner: "bg-blue-500/10 text-blue-600 border-blue-500/30",
+  collector: "bg-green-500/10 text-green-600 border-green-500/30",
+  worker: "bg-orange-500/10 text-orange-600 border-orange-500/30",
 };
 
 export const WORKER_TYPE_LABELS: Record<WorkerType, string> = {

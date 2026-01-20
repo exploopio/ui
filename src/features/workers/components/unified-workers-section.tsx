@@ -57,6 +57,7 @@ import { UnifiedWorkerTable } from './unified-worker-table';
 import {
   useWorkers,
   useDeleteWorker,
+  useBulkDeleteWorkers,
   useActivateWorker,
   useDeactivateWorker,
   invalidateWorkersCache,
@@ -138,6 +139,7 @@ export function UnifiedWorkersSection() {
   const [regenerateKeyDialogOpen, setRegenerateKeyDialogOpen] = useState(false);
   const [configDialogOpen, setConfigDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
   const [detailSheetOpen, setDetailSheetOpen] = useState(false);
 
   // Selected worker for dialogs
@@ -160,6 +162,7 @@ export function UnifiedWorkersSection() {
   const { trigger: deleteWorker, isMutating: isDeleting } = useDeleteWorker(
     selectedWorker?.id || ''
   );
+  const { trigger: bulkDeleteWorkers, isMutating: isBulkDeleting } = useBulkDeleteWorkers();
   const { trigger: activateWorker } = useActivateWorker(selectedWorker?.id || '');
   const { trigger: deactivateWorker } = useDeactivateWorker(selectedWorker?.id || '');
 
@@ -243,6 +246,31 @@ export function UnifiedWorkersSection() {
     }
   }, [selectedWorker, deleteWorker]);
 
+  const handleBulkDeleteConfirm = useCallback(async () => {
+    const selectedIds = Object.keys(rowSelection).filter((key) => rowSelection[key]);
+    if (selectedIds.length === 0) return;
+
+    try {
+      const results = await bulkDeleteWorkers(selectedIds);
+      const successCount = results?.filter((r) => r.success).length || 0;
+      const failCount = results?.filter((r) => !r.success).length || 0;
+
+      if (failCount === 0) {
+        toast.success(`${successCount} worker(s) deleted successfully`);
+      } else if (successCount > 0) {
+        toast.warning(`${successCount} deleted, ${failCount} failed`);
+      } else {
+        toast.error('Failed to delete workers');
+      }
+
+      await invalidateWorkersCache();
+      setBulkDeleteDialogOpen(false);
+      setRowSelection({});
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete workers');
+    }
+  }, [rowSelection, bulkDeleteWorkers]);
+
   const handleActivateWorker = useCallback(async (worker: Worker) => {
     setSelectedWorker(worker);
     try {
@@ -264,11 +292,6 @@ export function UnifiedWorkersSection() {
       toast.error(err instanceof Error ? err.message : 'Failed to deactivate worker');
     }
   }, [deactivateWorker]);
-
-  const handleCopyToken = useCallback((worker: Worker) => {
-    navigator.clipboard.writeText(`${worker.api_key_prefix}...`);
-    toast.success('API key prefix copied');
-  }, []);
 
   const handleExport = useCallback(() => {
     const csv = [
@@ -470,17 +493,17 @@ export function UnifiedWorkersSection() {
               </div>
 
               {/* Bulk Actions */}
-              {Object.keys(rowSelection).length > 0 && (
+              {Object.keys(rowSelection).filter((k) => rowSelection[k]).length > 0 && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm">
-                      {Object.keys(rowSelection).length} selected
+                      {Object.keys(rowSelection).filter((k) => rowSelection[k]).length} selected
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem
                       className="text-red-500"
-                      onClick={() => toast.info('Bulk delete coming soon')}
+                      onClick={() => setBulkDeleteDialogOpen(true)}
                     >
                       <Trash2 className="mr-2 h-4 w-4" />
                       Delete Selected
@@ -508,7 +531,6 @@ export function UnifiedWorkersSection() {
             ) : filteredWorkers.length > 0 ? (
               <UnifiedWorkerTable
                 workers={filteredWorkers}
-                showMonitoring={activeTab === 'daemon' || activeTab === 'all'}
                 sorting={sorting}
                 onSortingChange={setSorting}
                 globalFilter={searchQuery}
@@ -519,7 +541,7 @@ export function UnifiedWorkersSection() {
                 onActivateWorker={handleActivateWorker}
                 onDeactivateWorker={handleDeactivateWorker}
                 onDeleteWorker={handleDeleteClick}
-                onCopyToken={handleCopyToken}
+                onRegenerateKey={handleRegenerateKey}
               />
             ) : (
               <div className="rounded-lg border border-dashed p-8 text-center">
@@ -602,6 +624,31 @@ export function UnifiedWorkersSection() {
             >
               {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Delete
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Delete Confirmation */}
+      <AlertDialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Multiple Workers</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete{' '}
+              <strong>{Object.keys(rowSelection).filter((k) => rowSelection[k]).length}</strong>{' '}
+              worker(s)? This action cannot be undone and will invalidate all their API keys.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isBulkDeleting}>Cancel</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              onClick={handleBulkDeleteConfirm}
+              disabled={isBulkDeleting}
+            >
+              {isBulkDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Delete All
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -4,6 +4,10 @@ import { useMemo } from "react";
 import { useTools } from "@/lib/api/tool-hooks";
 import { useAllToolCategories, getCategoryNameById } from "@/lib/api/tool-category-hooks";
 import type { Tool } from "@/lib/api/tool-types";
+import type { ToolListFilters } from "@/lib/api/tool-types";
+
+// Static filter to prevent new object reference on every render
+const ACTIVE_TOOLS_FILTER: ToolListFilters = { is_active: true, per_page: 100 };
 
 // ============================================
 // TYPES
@@ -82,15 +86,15 @@ const CAPABILITY_LABELS: Record<string, { label: string; description: string }> 
  * const filteredTools = getToolsByCapabilities(selectedCapabilities);
  * ```
  */
+// Static SWR config to prevent new object reference on every render
+const SWR_CONFIG = {
+  revalidateOnFocus: false,
+  dedupingInterval: 30000, // Cache for 30 seconds
+};
+
 export function useWorkerFormOptions(): UseWorkerFormOptionsReturn {
-  // Fetch only active tools
-  const { data, isLoading, error } = useTools(
-    { is_active: true, per_page: 100 },
-    {
-      revalidateOnFocus: false,
-      dedupingInterval: 30000, // Cache for 30 seconds
-    }
-  );
+  // Fetch only active tools - use static filter and config objects
+  const { data, isLoading, error } = useTools(ACTIVE_TOOLS_FILTER, SWR_CONFIG);
 
   // Fetch tool categories
   const { data: categoriesData } = useAllToolCategories();

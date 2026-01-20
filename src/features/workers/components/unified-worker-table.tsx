@@ -39,24 +39,23 @@ import {
   MoreHorizontal,
   Eye,
   Settings,
-  Copy,
+  KeyRound,
   Trash2,
   CheckCircle,
   XCircle,
   AlertCircle,
-  Zap,
   Power,
   PowerOff,
   Globe,
+  Zap,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 import type { Worker } from '@/lib/api/worker-types';
-import { WorkerTypeIcon, WORKER_TYPE_LABELS } from './worker-type-icon';
+import { WorkerTypeIcon, WORKER_TYPE_LABELS, WORKER_TYPE_COLORS } from './worker-type-icon';
 
 interface UnifiedWorkerTableProps {
   workers: Worker[];
-  showMonitoring: boolean; // Show CPU/Memory columns for daemon workers
   sorting: SortingState;
   onSortingChange: (sorting: SortingState) => void;
   globalFilter: string;
@@ -67,7 +66,7 @@ interface UnifiedWorkerTableProps {
   onActivateWorker: (worker: Worker) => void;
   onDeactivateWorker: (worker: Worker) => void;
   onDeleteWorker: (worker: Worker) => void;
-  onCopyToken: (worker: Worker) => void;
+  onRegenerateKey: (worker: Worker) => void;
 }
 
 // Calculate online status from last_seen_at (within 5 minutes)
@@ -81,48 +80,8 @@ function isWorkerOnline(worker: Worker): boolean {
   return diffMs <= fiveMinutes;
 }
 
-// Get mock metrics for a worker (until backend supports)
-function getWorkerMetrics(worker: Worker) {
-  if (worker.status !== 'active' || !isWorkerOnline(worker)) {
-    return { cpu: 0, memory: 0, activeJobs: 0 };
-  }
-  // Generate consistent mock data based on worker id
-  const hash = worker.id.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
-  return {
-    cpu: (hash % 60) + 20,
-    memory: (hash % 50) + 30,
-    activeJobs: (hash % 5) + 1,
-  };
-}
-
-// Get deployment type from labels or derive from IP
-function getDeploymentType(worker: Worker): 'cloud' | 'self-hosted' | 'hybrid' {
-  const env = worker.labels?.env?.toLowerCase() || '';
-  const ip = worker.ip_address || '';
-
-  if (worker.labels?.deployment_type) {
-    return worker.labels.deployment_type as 'cloud' | 'self-hosted' | 'hybrid';
-  }
-
-  // Derive from IP address
-  if (ip.startsWith('10.') || ip.startsWith('192.168.')) {
-    return 'self-hosted';
-  }
-  if (env === 'production' || env === 'prod') {
-    return 'cloud';
-  }
-  return 'self-hosted';
-}
-
-const deploymentConfig = {
-  cloud: { label: 'Cloud', color: 'bg-blue-500/10 text-blue-500 border-blue-500/30' },
-  'self-hosted': { label: 'Self-Hosted', color: 'bg-purple-500/10 text-purple-500 border-purple-500/30' },
-  hybrid: { label: 'Hybrid', color: 'bg-orange-500/10 text-orange-500 border-orange-500/30' },
-};
-
 export function UnifiedWorkerTable({
   workers,
-  showMonitoring,
   sorting,
   onSortingChange,
   globalFilter,
@@ -133,7 +92,7 @@ export function UnifiedWorkerTable({
   onActivateWorker,
   onDeactivateWorker,
   onDeleteWorker,
-  onCopyToken,
+  onRegenerateKey,
 }: UnifiedWorkerTableProps) {
   const columns: ColumnDef<Worker>[] = useMemo(() => {
     const baseColumns: ColumnDef<Worker>[] = [
@@ -190,15 +149,10 @@ export function UnifiedWorkerTable({
         header: 'Type',
         cell: ({ row }) => {
           const worker = row.original;
-          const deployType = getDeploymentType(worker);
-          const config = deploymentConfig[deployType];
-
-          return showMonitoring && worker.execution_mode === 'daemon' ? (
-            <Badge variant="outline" className={config.color}>
-              {config.label}
+          return (
+            <Badge variant="outline" className={WORKER_TYPE_COLORS[worker.type]}>
+              {WORKER_TYPE_LABELS[worker.type]}
             </Badge>
-          ) : (
-            <Badge variant="outline">{WORKER_TYPE_LABELS[worker.type]}</Badge>
           );
         },
       },
@@ -243,127 +197,66 @@ export function UnifiedWorkerTable({
       },
     ];
 
-    // Add monitoring columns for daemon workers
-    if (showMonitoring) {
-      baseColumns.push(
-        {
-          id: 'activeJobs',
-          header: ({ column }) => (
-            <Button
-              variant="ghost"
-              onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-              className="-ml-4"
-            >
-              Active Jobs
-              <ArrowUpDown className="ml-2 h-4 w-4" />
-            </Button>
-          ),
-          accessorFn: (row) => {
-            if (row.execution_mode !== 'daemon') return -1;
-            return getWorkerMetrics(row).activeJobs;
-          },
-          cell: ({ row }) => {
-            const worker = row.original;
-            if (worker.execution_mode !== 'daemon') {
-              return <span className="text-muted-foreground">—</span>;
-            }
-            const { activeJobs } = getWorkerMetrics(worker);
-            return (
-              <div className="flex items-center gap-2">
-                <Zap
-                  className={cn(
-                    'h-4 w-4 shrink-0',
-                    activeJobs > 0 ? 'text-yellow-500' : 'text-muted-foreground'
-                  )}
-                />
-                <span>{activeJobs}</span>
-              </div>
-            );
-          },
-        },
-        {
-          id: 'cpuUsage',
-          header: 'CPU',
-          accessorFn: (row) => {
-            if (row.execution_mode !== 'daemon') return -1;
-            return getWorkerMetrics(row).cpu;
-          },
-          cell: ({ row }) => {
-            const worker = row.original;
-            if (worker.execution_mode !== 'daemon') {
-              return <span className="text-muted-foreground">—</span>;
-            }
-            const { cpu } = getWorkerMetrics(worker);
-            const online = isWorkerOnline(worker);
-
-            if (!online) {
-              return (
-                <div className="flex items-center gap-2 w-24">
-                  <span className="text-xs text-muted-foreground">0%</span>
-                  <Progress value={0} className="h-1.5 flex-1" />
-                </div>
-              );
-            }
-
-            return (
-              <div className="flex items-center gap-2 w-24">
-                <span className="text-xs w-8">{cpu}%</span>
-                <Progress
-                  value={cpu}
-                  className={cn(
-                    'h-1.5 flex-1',
-                    cpu > 80 && '[&>div]:bg-red-500',
-                    cpu > 60 && cpu <= 80 && '[&>div]:bg-yellow-500'
-                  )}
-                />
-              </div>
-            );
-          },
-        },
-        {
-          id: 'memoryUsage',
-          header: 'Memory',
-          accessorFn: (row) => {
-            if (row.execution_mode !== 'daemon') return -1;
-            return getWorkerMetrics(row).memory;
-          },
-          cell: ({ row }) => {
-            const worker = row.original;
-            if (worker.execution_mode !== 'daemon') {
-              return <span className="text-muted-foreground">—</span>;
-            }
-            const { memory } = getWorkerMetrics(worker);
-            const online = isWorkerOnline(worker);
-
-            if (!online) {
-              return (
-                <div className="flex items-center gap-2 w-24">
-                  <span className="text-xs text-muted-foreground">0%</span>
-                  <Progress value={0} className="h-1.5 flex-1" />
-                </div>
-              );
-            }
-
-            return (
-              <div className="flex items-center gap-2 w-24">
-                <span className="text-xs w-8">{memory}%</span>
-                <Progress
-                  value={memory}
-                  className={cn(
-                    'h-1.5 flex-1',
-                    memory > 80 && '[&>div]:bg-red-500',
-                    memory > 60 && memory <= 80 && '[&>div]:bg-yellow-500'
-                  )}
-                />
-              </div>
-            );
-          },
-        }
-      );
-    }
-
     // Add remaining columns
     baseColumns.push(
+      {
+        id: 'activeJobs',
+        header: ({ column }) => (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+            className="-ml-4"
+          >
+            Active Jobs
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        ),
+        cell: ({ row }) => {
+          const worker = row.original;
+          const activeJobs = worker.active_jobs || 0;
+          return (
+            <span className="flex items-center gap-1.5 text-sm font-medium">
+              <Zap
+                className={cn(
+                  'h-4 w-4',
+                  activeJobs > 0
+                    ? 'text-amber-500 fill-amber-500/20'
+                    : 'text-gray-400'
+                )}
+              />
+              {activeJobs}
+            </span>
+          );
+        },
+      },
+      {
+        id: 'cpuUsage',
+        header: 'CPU',
+        cell: ({ row }) => {
+          const worker = row.original;
+          const cpuPercent = worker.cpu_percent || 0;
+          return (
+            <div className="flex items-center gap-2 w-24">
+              <span className="text-xs w-8">{cpuPercent.toFixed(0)}%</span>
+              <Progress value={cpuPercent} className="h-1.5 flex-1" />
+            </div>
+          );
+        },
+      },
+      {
+        id: 'memoryUsage',
+        header: 'Memory',
+        cell: ({ row }) => {
+          const worker = row.original;
+          const memoryPercent = worker.memory_percent || 0;
+          return (
+            <div className="flex items-center gap-2 w-24">
+              <span className="text-xs w-8">{memoryPercent.toFixed(0)}%</span>
+              <Progress value={memoryPercent} className="h-1.5 flex-1" />
+            </div>
+          );
+        },
+      },
       {
         accessorKey: 'version',
         header: 'Version',
@@ -378,7 +271,7 @@ export function UnifiedWorkerTable({
         header: 'Region',
         cell: ({ row }) => {
           const worker = row.original;
-          const region = worker.labels?.region || worker.labels?.env || 'local';
+          const region = worker.region || worker.labels?.region || worker.labels?.env || 'local';
           return (
             <span className="flex items-center gap-1 text-sm">
               <Globe className="h-3 w-3 text-muted-foreground" />
@@ -408,9 +301,9 @@ export function UnifiedWorkerTable({
                   <Settings className="mr-2 h-4 w-4" />
                   Edit
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onCopyToken(worker)}>
-                  <Copy className="mr-2 h-4 w-4" />
-                  Copy Token
+                <DropdownMenuItem onClick={() => onRegenerateKey(worker)}>
+                  <KeyRound className="mr-2 h-4 w-4" />
+                  Regenerate API Key
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 {worker.status === 'inactive' || worker.status === 'revoked' ? (
@@ -446,7 +339,7 @@ export function UnifiedWorkerTable({
     );
 
     return baseColumns;
-  }, [showMonitoring, onViewWorker, onEditWorker, onActivateWorker, onDeactivateWorker, onDeleteWorker, onCopyToken]);
+  }, [onViewWorker, onEditWorker, onActivateWorker, onDeactivateWorker, onDeleteWorker, onRegenerateKey]);
 
   const table = useReactTable({
     data: workers,

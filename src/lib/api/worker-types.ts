@@ -57,6 +57,12 @@ export interface Worker {
     version?: string;
     hostname?: string;
     ip_address?: string;
+    // System metrics
+    cpu_percent: number;
+    memory_percent: number;
+    active_jobs: number;
+    region?: string;
+    // Other fields
     labels: Record<string, string>;
     config: Record<string, unknown>;
     metadata: Record<string, unknown>;

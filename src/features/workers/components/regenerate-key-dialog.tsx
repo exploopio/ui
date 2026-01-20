@@ -53,9 +53,6 @@ export function RegenerateKeyDialog({
     try {
       const result = await regenerateKey();
 
-      // Debug: log the result to see its structure
-      console.log("Regenerate API key result:", result);
-
       // Try to extract api_key from various possible structures
       let newApiKey: string | undefined;
 
@@ -79,11 +76,9 @@ export function RegenerateKeyDialog({
         setApiKey(newApiKey);
         toast.success("API key regenerated successfully");
       } else {
-        console.error("Unexpected response format:", JSON.stringify(result, null, 2));
         toast.error("Failed to get new API key from response");
       }
     } catch (error) {
-      console.error("Regenerate key error:", error);
       toast.error(
         error instanceof Error ? error.message : "Failed to regenerate API key"
       );

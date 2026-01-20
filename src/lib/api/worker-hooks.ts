@@ -154,6 +154,36 @@ export function useDeleteWorker(workerId: string) {
 }
 
 /**
+ * Delete multiple workers (bulk delete)
+ */
+export function useBulkDeleteWorkers() {
+  const { currentTenant } = useTenant();
+
+  return useSWRMutation(
+    currentTenant ? "bulk-delete-workers" : null,
+    async (_key: string, { arg: workerIds }: { arg: string[] }) => {
+      // Delete workers sequentially to avoid overwhelming the server
+      const results: { id: string; success: boolean; error?: string }[] = [];
+
+      for (const id of workerIds) {
+        try {
+          await del<void>(workerEndpoints.delete(id));
+          results.push({ id, success: true });
+        } catch (error) {
+          results.push({
+            id,
+            success: false,
+            error: error instanceof Error ? error.message : "Unknown error"
+          });
+        }
+      }
+
+      return results;
+    }
+  );
+}
+
+/**
  * Regenerate worker API key
  */
 export function useRegenerateWorkerKey(workerId: string) {

@@ -1,9 +1,18 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, Bot, Copy, Check, Eye, EyeOff, AlertCircle } from "lucide-react";
+import {
+  Loader2,
+  Bot,
+  Copy,
+  Check,
+  Eye,
+  EyeOff,
+  ChevronRight,
+  ChevronLeft,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -18,7 +27,6 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -33,12 +41,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 import { WorkerTypeIcon } from "./worker-type-icon";
+import { ToolSelection, type ToolOption } from "./tool-selection";
 import {
   createWorkerSchema,
   type CreateWorkerFormData,
@@ -60,14 +66,14 @@ export function AddWorkerDialog({
   onOpenChange,
   onSuccess,
 }: AddWorkerDialogProps) {
+  const [step, setStep] = useState<1 | 2>(1);
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
+  const [selectedTools, setSelectedTools] = useState<string[]>([]);
 
-  // Fetch dynamic tool and capability options from API
   const {
     toolOptions,
-    capabilityOptions,
     isLoading: isLoadingOptions,
     error: optionsError,
     getCapabilitiesForTools,
@@ -87,60 +93,60 @@ export function AddWorkerDialog({
     },
   });
 
-  // Auto-add capabilities when tools are selected
-  const handleToolChange = useCallback(
-    (toolName: string, checked: boolean) => {
-      const currentTools = form.getValues("tools") || [];
-      const currentCapabilities = form.getValues("capabilities") || [];
+  const watchedName = form.watch("name");
+  const watchedType = form.watch("type");
+  const canProceedToStep2 = watchedName?.trim().length > 0 && !!watchedType;
 
-      let newTools: string[];
-      if (checked) {
-        newTools = [...currentTools, toolName];
-      } else {
-        newTools = currentTools.filter((t) => t !== toolName);
-      }
+  // Convert toolOptions to the format expected by ToolSelection
+  const toolSelectionOptions: ToolOption[] = toolOptions.map((t) => ({
+    value: t.value,
+    label: t.label,
+    description: t.description,
+    category: t.category,
+  }));
 
-      form.setValue("tools", newTools);
-
-      // Auto-add capabilities from selected tools
-      if (checked) {
-        const toolCapabilities = getCapabilitiesForTools([toolName]);
-        const newCapabilities = [...new Set([...currentCapabilities, ...toolCapabilities])];
-        form.setValue("capabilities", newCapabilities);
-      }
-    },
-    [form, getCapabilitiesForTools]
-  );
-
-  // Reset state when dialog opens
+  // Reset state when dialog opens/closes
   useEffect(() => {
     if (open) {
+      setStep(1);
       setApiKey(null);
       setCopied(false);
       setShowApiKey(false);
+      setSelectedTools([]);
       form.reset();
     }
-  }, [open, form]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  const handleNextStep = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (canProceedToStep2) {
+      setStep(2);
+    } else {
+      form.trigger(["name", "type"]);
+    }
+  };
 
   const onSubmit = async (data: CreateWorkerFormData) => {
     try {
+      const capabilities = getCapabilitiesForTools(selectedTools);
+
       const result = await createWorker({
         name: data.name,
         type: data.type,
         description: data.description,
-        capabilities: data.capabilities as never[],
-        tools: data.tools as never[],
+        capabilities: capabilities as never[],
+        tools: selectedTools as never[],
         execution_mode: data.execution_mode,
       });
 
       toast.success(`Worker "${data.name}" created successfully`);
       await invalidateWorkersCache();
 
-      // Show the API key
       if (result?.api_key) {
         setApiKey(result.api_key);
       } else {
-        // If no API key returned, close dialog
         form.reset();
         onOpenChange(false);
         onSuccess?.();
@@ -163,16 +169,18 @@ export function AddWorkerDialog({
 
   const handleClose = () => {
     form.reset();
+    setStep(1);
     setApiKey(null);
     setCopied(false);
     setShowApiKey(false);
+    setSelectedTools([]);
     onOpenChange(false);
     if (apiKey) {
       onSuccess?.();
     }
   };
 
-  // If API key is shown, display the success view
+  // Success view - API key display
   if (apiKey) {
     return (
       <Dialog open={open} onOpenChange={handleClose}>
@@ -194,7 +202,6 @@ export function AddWorkerDialog({
               </p>
               <p className="text-xs text-muted-foreground">
                 This API key will only be shown once. Please copy it and store it securely.
-                If you lose it, you&apos;ll need to regenerate a new one.
               </p>
             </div>
 
@@ -222,11 +229,7 @@ export function AddWorkerDialog({
                     )}
                   </Button>
                 </div>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={handleCopyApiKey}
-                >
+                <Button variant="outline" size="icon" onClick={handleCopyApiKey}>
                   {copied ? (
                     <Check className="h-4 w-4 text-green-500" />
                   ) : (
@@ -247,299 +250,178 @@ export function AddWorkerDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Bot className="h-5 w-5" />
             Add Worker
           </DialogTitle>
           <DialogDescription>
-            Create a new worker to run scans and collect data
+            {step === 1
+              ? "Configure the basic settings for your worker"
+              : "Select the tools this worker will use"}
           </DialogDescription>
         </DialogHeader>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            {/* Worker Type */}
-            <FormField
-              control={form.control}
-              name="type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Type</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
+        {/* Step indicator */}
+        <div className="flex items-center justify-center gap-2 py-2">
+          <div
+            className={cn(
+              "flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium",
+              step === 1
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground"
+            )}
+          >
+            1
+          </div>
+          <div className="h-px w-8 bg-border" />
+          <div
+            className={cn(
+              "flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium",
+              step === 2
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground"
+            )}
+          >
+            2
+          </div>
+        </div>
+
+        {/* Step 1: Basic Info */}
+        {step === 1 && (
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Worker Type</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select worker type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {WORKER_TYPE_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            <div className="flex items-center gap-2">
+                              <WorkerTypeIcon type={option.value as WorkerType} className="h-4 w-4" />
+                              <span>{option.label}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
                     <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select worker type" />
-                      </SelectTrigger>
+                      <Input placeholder="e.g., Production Scanner" {...field} />
                     </FormControl>
-                    <SelectContent>
-                      {WORKER_TYPE_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          <div className="flex items-center gap-2">
-                            <WorkerTypeIcon
-                              type={option.value as WorkerType}
-                              className="h-4 w-4"
-                            />
-                            <span>{option.label}</span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    The type of worker determines its primary function
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            {/* Name */}
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., Production Scanner" {...field} />
-                  </FormControl>
-                  <FormDescription>
-                    A friendly name to identify this worker
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Description */}
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description (Optional)</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Describe what this worker does..."
-                      className="resize-none"
-                      rows={2}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Execution Mode */}
-            <FormField
-              control={form.control}
-              name="execution_mode"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Execution Mode</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Description <span className="text-muted-foreground font-normal">(optional)</span>
+                    </FormLabel>
                     <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select execution mode" />
-                      </SelectTrigger>
+                      <Textarea placeholder="What does this worker do?" className="resize-none" rows={2} {...field} />
                     </FormControl>
-                    <SelectContent>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="execution_mode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Execution Mode</FormLabel>
+                    <div className="grid grid-cols-2 gap-3">
                       {EXECUTION_MODE_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    Standalone runs on-demand, Daemon runs continuously
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Capabilities */}
-            <FormField
-              control={form.control}
-              name="capabilities"
-              render={() => (
-                <FormItem>
-                  <FormLabel>Capabilities</FormLabel>
-                  <FormDescription className="mb-2">
-                    Select the security scanning capabilities (auto-added when selecting tools)
-                  </FormDescription>
-                  {isLoadingOptions ? (
-                    <div className="grid grid-cols-2 gap-2">
-                      {[1, 2, 3, 4].map((i) => (
-                        <Skeleton key={i} className="h-16 w-full" />
-                      ))}
-                    </div>
-                  ) : optionsError ? (
-                    <div className="flex items-center gap-2 text-sm text-destructive p-3 border border-destructive/30 rounded-md">
-                      <AlertCircle className="h-4 w-4" />
-                      Failed to load capabilities
-                    </div>
-                  ) : capabilityOptions.length === 0 ? (
-                    <div className="text-sm text-muted-foreground p-3 border rounded-md">
-                      No capabilities available
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-2 gap-2">
-                      {capabilityOptions.map((capability) => (
-                        <FormField
-                          key={capability.value}
-                          control={form.control}
-                          name="capabilities"
-                          render={({ field }) => (
-                            <FormItem
-                              className={cn(
-                                "flex flex-row items-start space-x-2 space-y-0 rounded-md border p-2",
-                                field.value?.includes(capability.value) &&
-                                  "border-primary bg-primary/5"
-                              )}
-                            >
-                              <FormControl>
-                                <Checkbox
-                                  checked={field.value?.includes(capability.value)}
-                                  onCheckedChange={(checked) => {
-                                    const currentValue = field.value || [];
-                                    if (checked) {
-                                      field.onChange([...currentValue, capability.value]);
-                                    } else {
-                                      field.onChange(
-                                        currentValue.filter((v) => v !== capability.value)
-                                      );
-                                    }
-                                  }}
-                                />
-                              </FormControl>
-                              <div className="space-y-0.5 leading-none flex-1">
-                                <div className="flex items-center justify-between">
-                                  <FormLabel className="text-sm font-normal cursor-pointer">
-                                    {capability.label}
-                                  </FormLabel>
-                                  <Badge variant="secondary" className="text-xs h-5">
-                                    {capability.toolCount}
-                                  </Badge>
-                                </div>
-                                <p className="text-xs text-muted-foreground">
-                                  {capability.description}
-                                </p>
-                              </div>
-                            </FormItem>
+                        <div
+                          key={option.value}
+                          onClick={() => field.onChange(option.value)}
+                          className={cn(
+                            "flex flex-col gap-1 rounded-lg border-2 p-3 cursor-pointer transition-colors",
+                            field.value === option.value
+                              ? "border-primary bg-primary/5"
+                              : "border-border hover:border-primary/50"
                           )}
-                        />
+                        >
+                          <span className="font-medium text-sm">{option.label}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {option.value === "standalone"
+                              ? "Runs once per command (CI/CD)"
+                              : "Runs continuously, polling for commands"}
+                          </span>
+                        </div>
                       ))}
                     </div>
-                  )}
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </form>
+          </Form>
+        )}
 
-            {/* Tools */}
-            <FormField
-              control={form.control}
-              name="tools"
-              render={() => (
-                <FormItem>
-                  <FormLabel>Tools</FormLabel>
-                  <FormDescription className="mb-2">
-                    Select the security tools this worker will use (capabilities will be auto-added)
-                  </FormDescription>
-                  {isLoadingOptions ? (
-                    <div className="grid grid-cols-2 gap-2">
-                      {[1, 2, 3, 4, 5, 6].map((i) => (
-                        <Skeleton key={i} className="h-16 w-full" />
-                      ))}
-                    </div>
-                  ) : optionsError ? (
-                    <div className="flex items-center gap-2 text-sm text-destructive p-3 border border-destructive/30 rounded-md">
-                      <AlertCircle className="h-4 w-4" />
-                      Failed to load tools
-                    </div>
-                  ) : toolOptions.length === 0 ? (
-                    <div className="text-sm text-muted-foreground p-3 border rounded-md">
-                      No tools available. Please add tools in the Tool Registry first.
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-2 gap-2 max-h-[300px] overflow-y-auto pr-1">
-                      {toolOptions.map((tool) => (
-                        <FormField
-                          key={tool.value}
-                          control={form.control}
-                          name="tools"
-                          render={({ field }) => (
-                            <FormItem
-                              className={cn(
-                                "flex flex-row items-start space-x-2 space-y-0 rounded-md border p-2",
-                                field.value?.includes(tool.value) &&
-                                  "border-primary bg-primary/5"
-                              )}
-                            >
-                              <FormControl>
-                                <Checkbox
-                                  checked={field.value?.includes(tool.value)}
-                                  onCheckedChange={(checked) => {
-                                    handleToolChange(tool.value, !!checked);
-                                  }}
-                                />
-                              </FormControl>
-                              <div className="space-y-0.5 leading-none flex-1 min-w-0">
-                                <div className="flex items-center gap-1.5">
-                                  <FormLabel className="text-sm font-normal cursor-pointer truncate">
-                                    {tool.label}
-                                  </FormLabel>
-                                  <Badge
-                                    variant="outline"
-                                    className="text-[10px] h-4 px-1 shrink-0"
-                                  >
-                                    {tool.category.toUpperCase()}
-                                  </Badge>
-                                </div>
-                                <p className="text-xs text-muted-foreground truncate">
-                                  {tool.description}
-                                </p>
-                              </div>
-                            </FormItem>
-                          )}
-                        />
-                      ))}
-                    </div>
-                  )}
-                  <FormMessage />
-                </FormItem>
-              )}
+        {/* Step 2: Tool Selection - Isolated component */}
+        {step === 2 && (
+          <div>
+            <ToolSelection
+              tools={toolSelectionOptions}
+              selectedTools={selectedTools}
+              onSelectionChange={setSelectedTools}
+              isLoading={isLoadingOptions}
+              error={optionsError}
             />
+          </div>
+        )}
 
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleClose}
-                disabled={isMutating}
-              >
+        <DialogFooter className="gap-3">
+          {step === 1 ? (
+            <>
+              <Button type="button" variant="outline" onClick={handleClose}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={isMutating}>
-                {isMutating && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
+              <Button type="button" onClick={handleNextStep} disabled={!canProceedToStep2}>
+                Next
+                <ChevronRight className="ml-1 h-4 w-4" />
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button type="button" variant="outline" onClick={() => setStep(1)} disabled={isMutating}>
+                <ChevronLeft className="mr-1 h-4 w-4" />
+                Back
+              </Button>
+              <Button onClick={form.handleSubmit(onSubmit)} disabled={isMutating}>
+                {isMutating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Create Worker
               </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+            </>
+          )}
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

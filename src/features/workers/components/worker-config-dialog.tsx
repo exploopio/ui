@@ -31,10 +31,11 @@ export function WorkerConfigDialog({
 }: WorkerConfigDialogProps) {
   const [copied, setCopied] = useState<string | null>(null);
 
-  // Get the base URL from environment or default
-  const baseUrl = typeof window !== "undefined"
-    ? window.location.origin.replace(/:\d+$/, ":8080") // Replace frontend port with API port
-    : "http://localhost:8080";
+  // Get the API URL from environment variable or derive from current origin
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL ||
+    (typeof window !== "undefined"
+      ? window.location.origin.replace(/:\d+$/, ":8080")
+      : "http://localhost:8080");
 
   // Generate scanner configs based on worker's tools
   const scannerConfigs = worker.tools.length > 0
@@ -51,6 +52,7 @@ export function WorkerConfigDialog({
 
 agent:
   name: ${worker.name}
+  region: "${worker.region || ""}"  # Optional: deployment region for monitoring
   enable_commands: true
   command_poll_interval: 30s
   heartbeat_interval: 1m
@@ -75,6 +77,7 @@ ${scannerConfigs}
 export API_URL=${baseUrl}
 export API_KEY=${apiKey || "<YOUR_API_KEY>"}
 export WORKER_ID=${worker.id}
+${worker.region ? `export REDIVER_REGION=${worker.region}` : "# export REDIVER_REGION=ap-southeast-1  # Optional: deployment region"}
 `;
 
   // Docker run command
@@ -86,6 +89,7 @@ docker run -d \\
   -e API_URL=${baseUrl} \\
   -e API_KEY=${apiKey || "<YOUR_API_KEY>"} \\
   -e WORKER_ID=${worker.id} \\
+  ${worker.region ? `-e REDIVER_REGION=${worker.region} \\` : "# -e REDIVER_REGION=ap-southeast-1 \\  # Optional"}
   rediverio/agent:latest \\
   -daemon -config /app/agent.yaml
 `;

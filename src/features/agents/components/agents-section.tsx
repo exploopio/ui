@@ -217,11 +217,11 @@ export function AgentsSection({
           api_key_prefix: 'rk_xxxx',
           labels: data.labels
             ? Object.fromEntries(
-                data.labels.split(',').map((l) => {
-                  const [k, v] = l.trim().split(':');
-                  return [k, v || ''];
-                })
-              )
+              data.labels.split(',').map((l) => {
+                const [k, v] = l.trim().split(':');
+                return [k, v || ''];
+              })
+            )
             : {},
           config: {},
           metadata: {},
@@ -229,6 +229,9 @@ export function AgentsSection({
           total_scans: 0,
           error_count: 0,
           jobs_completed: 0,
+          cpu_percent: 0,
+          memory_percent: 0,
+          active_jobs: 0,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
@@ -252,23 +255,23 @@ export function AgentsSection({
           prev.map((a) =>
             a.id === selectedAgent.id
               ? {
-                  ...a,
-                  name: data.name,
-                  description: data.description,
-                  deployment_type: data.deployment_type,
-                  region: data.region,
-                  capabilities: data.capabilities,
-                  tools: data.tools,
-                  labels: data.labels
-                    ? Object.fromEntries(
-                        data.labels.split(',').map((l) => {
-                          const [k, v] = l.trim().split(':');
-                          return [k, v || ''];
-                        })
-                      )
-                    : {},
-                  updated_at: new Date().toISOString(),
-                }
+                ...a,
+                name: data.name,
+                description: data.description,
+                deployment_type: data.deployment_type,
+                region: data.region,
+                capabilities: data.capabilities,
+                tools: data.tools,
+                labels: data.labels
+                  ? Object.fromEntries(
+                    data.labels.split(',').map((l) => {
+                      const [k, v] = l.trim().split(':');
+                      return [k, v || ''];
+                    })
+                  )
+                  : {},
+                updated_at: new Date().toISOString(),
+              }
               : a
           )
         );
