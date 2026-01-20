@@ -77,7 +77,7 @@ ${scannerConfigs}
 export API_URL=${baseUrl}
 export API_KEY=${apiKey || "<YOUR_API_KEY>"}
 export WORKER_ID=${worker.id}
-${worker.region ? `export REDIVER_REGION=${worker.region}` : "# export REDIVER_REGION=ap-southeast-1  # Optional: deployment region"}
+${worker.region ? `export REGION=${worker.region}` : "# export REGION=ap-southeast-1  # Optional: deployment region"}
 `;
 
   // Docker run command
@@ -89,7 +89,7 @@ docker run -d \\
   -e API_URL=${baseUrl} \\
   -e API_KEY=${apiKey || "<YOUR_API_KEY>"} \\
   -e WORKER_ID=${worker.id} \\
-  ${worker.region ? `-e REDIVER_REGION=${worker.region} \\` : "# -e REDIVER_REGION=ap-southeast-1 \\  # Optional"}
+  ${worker.region ? `-e REGION=${worker.region} \\` : "# -e REGION=ap-southeast-1 \\  # Optional"}
   rediverio/agent:latest \\
   -daemon -config /app/agent.yaml
 `;

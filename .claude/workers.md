@@ -209,8 +209,8 @@ scanners:
 export API_URL=http://api.example.com:8080
 export API_KEY=<YOUR_API_KEY>
 export WORKER_ID=<WORKER_UUID>
-export REDIVER_REGION=ap-southeast-1  # Optional: deployment region
-# Region auto-detection: AWS_REGION, GOOGLE_CLOUD_REGION, AZURE_REGION
+export REGION=ap-southeast-1  # Optional: deployment region
+# Auto-detection: AWS_REGION, GOOGLE_CLOUD_REGION, AZURE_REGION
 ```
 
 ### Docker Command
@@ -221,7 +221,7 @@ docker run -d \
   -e API_URL=http://api.example.com:8080 \
   -e API_KEY=<YOUR_API_KEY> \
   -e WORKER_ID=<WORKER_UUID> \
-  -e REDIVER_REGION=ap-southeast-1 \
+  -e REGION=ap-southeast-1 \
   rediverio/agent:latest \
   -daemon -config /app/agent.yaml
 ```
