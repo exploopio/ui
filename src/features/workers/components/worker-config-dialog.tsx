@@ -31,11 +31,39 @@ export function WorkerConfigDialog({
 }: WorkerConfigDialogProps) {
   const [copied, setCopied] = useState<string | null>(null);
 
-  // Get the API URL from environment variable or derive from current origin
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL ||
-    (typeof window !== "undefined"
-      ? window.location.origin.replace(/:\d+$/, ":8080")
-      : "http://localhost:8080");
+  // Get the public API URL for external agent connections
+  // Priority: NEXT_PUBLIC_API_BASE_URL > derive from NEXT_PUBLIC_APP_URL > fallback
+  const baseUrl = (() => {
+    // Use explicit API base URL if set
+    if (process.env.NEXT_PUBLIC_API_BASE_URL) {
+      return process.env.NEXT_PUBLIC_API_BASE_URL;
+    }
+
+    // Derive from app URL by replacing 'app.' with 'api.' or prepending 'api.'
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ||
+      (typeof window !== "undefined" ? window.location.origin : "http://localhost:3000");
+
+    try {
+      const url = new URL(appUrl);
+      // If hostname starts with 'app.', replace with 'api.'
+      if (url.hostname.startsWith("app.")) {
+        url.hostname = url.hostname.replace(/^app\./, "api.");
+      } else if (!url.hostname.startsWith("api.") && url.hostname !== "localhost") {
+        // For other domains, prepend 'api.'
+        url.hostname = `api.${url.hostname}`;
+      } else if (url.hostname === "localhost") {
+        // For localhost, use api.localhost or add port 8080
+        if (url.port) {
+          url.port = "8080";
+        } else {
+          url.hostname = "api.localhost";
+        }
+      }
+      return url.origin;
+    } catch {
+      return "http://localhost:8080";
+    }
+  })();
 
   // Generate scanner configs based on worker's tools
   const scannerConfigs = worker.tools.length > 0
