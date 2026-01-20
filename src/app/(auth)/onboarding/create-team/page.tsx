@@ -8,7 +8,7 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { env } from '@/lib/env'
-import { CreateTeamForm } from '@/features/tenant'
+import { CreateTeamForm, OnboardingLogout } from '@/features/tenant'
 
 // Helper to get suggested name from cookie
 async function getSuggestedName(): Promise<string> {
@@ -47,6 +47,11 @@ export default async function CreateFirstTeamPage() {
 
   return (
     <div className="mx-auto max-w-lg">
+      {/* Logout button in top right */}
+      <div className="absolute right-4 top-4 sm:right-6 sm:top-6">
+        <OnboardingLogout />
+      </div>
+
       <div className="mb-6 text-center">
         <h1 className="text-2xl font-bold tracking-tight">
           Welcome to Rediver
@@ -64,3 +69,4 @@ export default async function CreateFirstTeamPage() {
     </div>
   )
 }
+
