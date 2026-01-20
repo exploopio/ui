@@ -101,11 +101,34 @@ import {
   Copy,
   User,
   Calendar,
-  FileText,
+  X,
+  ArrowRight,
+  Users,
+  List,
+  ChevronDown,
+  Mail,
 } from "lucide-react";
-import { getCredentials, getAssetRelationships, type Asset } from "@/features/assets";
+import { type Asset } from "@/features/assets";
 import { mockAssetGroups } from "@/features/asset-groups";
 import type { Status } from "@/features/shared/types";
+import {
+  useCredentialsApi,
+  useCredentialStatsApi,
+  useCredentialIdentitiesApi,
+  useRelatedCredentialsApi,
+  useIdentityExposuresApi,
+  mapCredentialsToAssets,
+  extractCredentialStats,
+  invalidateCredentialsCache,
+} from "@/features/credentials";
+import type { ApiIdentityExposure, ApiCredential } from "@/features/credentials/api/credential-api.types";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Filter types
 type StatusFilter = Status | "all";
@@ -152,13 +175,63 @@ const categorizeSource = (source: string): SourceFilter => {
 };
 
 export default function CredentialsPage() {
-  const [credentials, setCredentials] = useState<Asset[]>(getCredentials());
-  const [selectedCredential, setSelectedCredential] = useState<Asset | null>(null);
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [globalFilter, setGlobalFilter] = useState("");
+  // API hooks
+  const [page, _setPage] = useState(1);
+  const pageSize = 20;
+
+  // Build API filters based on UI filters
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
+  const [globalFilter, setGlobalFilter] = useState("");
+
+  // Map status filter to API state filter
+  const apiStateFilter = useMemo(() => {
+    const statusToState: Record<StatusFilter, string[]> = {
+      all: [],
+      active: ["active"],
+      pending: ["active"], // Pending maps to active in API
+      completed: ["resolved"],
+      inactive: ["accepted", "false_positive"],
+      failed: ["active"], // Failed maps to active in API
+      archived: ["resolved"], // Archived maps to resolved in API
+    };
+    return statusToState[statusFilter];
+  }, [statusFilter]);
+
+  // Fetch credentials from API
+  const { data: apiResponse, isLoading, mutate } = useCredentialsApi({
+    page,
+    page_size: pageSize,
+    state: apiStateFilter.length > 0 ? apiStateFilter : undefined,
+    search: globalFilter || undefined,
+  });
+
+  // Fetch stats from API
+  const { data: apiStats, isLoading: statsLoading } = useCredentialStatsApi();
+
+  // Fetch identities (grouped by username/email) for identity view
+  const { data: identitiesResponse, isLoading: identitiesLoading } = useCredentialIdentitiesApi({
+    page,
+    page_size: pageSize,
+    state: apiStateFilter.length > 0 ? apiStateFilter : undefined,
+    search: globalFilter || undefined,
+  });
+
+  // Map API data to Asset type for UI compatibility
+  const credentials = useMemo(() => {
+    if (!apiResponse?.items) return [];
+    return mapCredentialsToAssets(apiResponse.items);
+  }, [apiResponse]);
+
+  // Extract stats
+  const stats = useMemo(() => extractCredentialStats(apiStats), [apiStats]);
+
+  const [selectedCredential, setSelectedCredential] = useState<Asset | null>(null);
+  const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState({});
+  const [alertDismissed, setAlertDismissed] = useState(false);
+  const [viewMode, setViewMode] = useState<"list" | "identity">("list");
+  const [expandedIdentities, setExpandedIdentities] = useState<Set<string>>(new Set());
 
   // Dialog states
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -169,12 +242,9 @@ export default function CredentialsPage() {
   // Form state
   const [formData, setFormData] = useState(emptyCredentialForm);
 
-  // Filter data
+  // Filter data (client-side filtering for source since API doesn't support it directly)
   const filteredData = useMemo(() => {
     let data = [...credentials];
-    if (statusFilter !== "all") {
-      data = data.filter((c) => c.status === statusFilter);
-    }
     if (sourceFilter !== "all") {
       data = data.filter((c) => {
         const source = c.metadata.source || "";
@@ -182,27 +252,24 @@ export default function CredentialsPage() {
       });
     }
     return data;
-  }, [credentials, statusFilter, sourceFilter]);
+  }, [credentials, sourceFilter]);
 
-  // Status counts
+  // Status counts from API stats
   const statusCounts = useMemo(() => ({
-    all: credentials.length,
-    active: credentials.filter((c) => c.status === "active").length,
-    pending: credentials.filter((c) => c.status === "pending").length,
-    completed: credentials.filter((c) => c.status === "completed").length,
-    inactive: credentials.filter((c) => c.status === "inactive").length,
-  }), [credentials]);
+    all: stats.total,
+    active: stats.active,
+    pending: 0, // API doesn't have pending state
+    completed: stats.resolved,
+    inactive: stats.accepted + stats.falsePositive,
+  }), [stats]);
 
-  // Risk stats
-  const riskStats = useMemo(() => {
-    const active = credentials.filter((c) => c.status === "active");
-    return {
-      critical: active.filter((c) => c.riskScore >= 90).length,
-      high: active.filter((c) => c.riskScore >= 70 && c.riskScore < 90).length,
-      medium: active.filter((c) => c.riskScore >= 40 && c.riskScore < 70).length,
-      low: active.filter((c) => c.riskScore < 40).length,
-    };
-  }, [credentials]);
+  // Risk stats from API stats
+  const riskStats = useMemo(() => ({
+    critical: stats.critical,
+    high: stats.high,
+    medium: stats.medium,
+    low: stats.low,
+  }), [stats]);
 
   // Table columns
   const columns: ColumnDef<Asset>[] = [
@@ -418,40 +485,10 @@ export default function CredentialsPage() {
       return;
     }
 
-    const newCredential: Asset = {
-      id: `cred-${Date.now()}`,
-      type: "credential",
-      name: formData.name,
-      description: formData.description,
-      criticality: "critical",
-      status: "active",
-      scope: "internal",
-      exposure: "isolated",
-      riskScore: 75,
-      findingCount: 1,
-      groupId: formData.groupId || undefined,
-      groupName: formData.groupId
-        ? mockAssetGroups.find((g) => g.id === formData.groupId)?.name
-        : undefined,
-      metadata: {
-        source: formData.source,
-        username: formData.username,
-        leakDate: formData.leakDate || new Date().toISOString().split("T")[0],
-      },
-      tags: formData.tags
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean),
-      firstSeen: new Date().toISOString(),
-      lastSeen: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    setCredentials([newCredential, ...credentials]);
+    // TODO: Call import API to add credential
+    toast.info("Use the Import feature to add credentials via API or CSV");
     setFormData(emptyCredentialForm);
     setAddDialogOpen(false);
-    toast.success("Credential leak added successfully");
   };
 
   const handleUpdateCredential = () => {
@@ -460,45 +497,20 @@ export default function CredentialsPage() {
       return;
     }
 
-    const updated = credentials.map((c) =>
-      c.id === selectedCredential.id
-        ? {
-            ...c,
-            name: formData.name,
-            description: formData.description,
-            groupId: formData.groupId || undefined,
-            groupName: formData.groupId
-              ? mockAssetGroups.find((g) => g.id === formData.groupId)?.name
-              : undefined,
-            metadata: {
-              ...c.metadata,
-              source: formData.source,
-              username: formData.username,
-              leakDate: formData.leakDate,
-            },
-            tags: formData.tags
-              .split(",")
-              .map((s) => s.trim())
-              .filter(Boolean),
-            updatedAt: new Date().toISOString(),
-          }
-        : c
-    );
-
-    setCredentials(updated);
+    // TODO: Implement update API endpoint
+    toast.info("Update functionality coming soon");
     setFormData(emptyCredentialForm);
     setEditDialogOpen(false);
     setSelectedCredential(null);
-    toast.success("Credential updated successfully");
   };
 
   const handleDeleteCredential = () => {
     if (!credentialToDelete) return;
 
-    setCredentials(credentials.filter((c) => c.id !== credentialToDelete.id));
+    // TODO: Implement delete API endpoint
+    toast.info("Delete functionality coming soon");
     setDeleteDialogOpen(false);
     setCredentialToDelete(null);
-    toast.success("Credential deleted successfully");
   };
 
   const handleCopyCredential = (credential: Asset) => {
@@ -506,14 +518,29 @@ export default function CredentialsPage() {
     toast.success("Credential name copied to clipboard");
   };
 
-  const handleMarkResolved = (credential: Asset) => {
-    const updated = credentials.map((c) =>
-      c.id === credential.id
-        ? { ...c, status: "completed" as Status, updatedAt: new Date().toISOString() }
-        : c
-    );
-    setCredentials(updated);
-    toast.success("Credential marked as resolved");
+  const handleMarkResolved = async (credential: Asset) => {
+    try {
+      const response = await fetch(`/api/v1/credentials/${credential.id}/resolve`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ notes: '' }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to resolve credential');
+      }
+
+      toast.success("Credential marked as resolved");
+      setSelectedCredential(null); // Close sheet after success
+      void mutate(); // Refresh data after state change
+      void invalidateCredentialsCache(); // Invalidate all credential caches
+    } catch (error) {
+      console.error('Error resolving credential:', error);
+      toast.error("Failed to resolve credential");
+    }
   };
 
   return (
@@ -530,7 +557,7 @@ export default function CredentialsPage() {
         <div className="flex items-center justify-between">
           <PageHeader
             title="Credential Leaks"
-            description={`${credentials.length} leaked credentials detected`}
+            description={statsLoading ? "Loading..." : `${stats.total} leaked credentials detected`}
           />
           <Button onClick={() => setAddDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
@@ -538,67 +565,113 @@ export default function CredentialsPage() {
           </Button>
         </div>
 
-        {/* Warning Banner */}
-        {statusCounts.active > 0 && (
-          <Card className="mt-6 border-red-500/50 bg-red-50 dark:bg-red-950/20">
-            <CardContent className="flex items-center gap-3 pt-6">
-              <AlertTriangle className="h-5 w-5 text-red-600" />
-              <div>
-                <p className="font-medium text-red-800 dark:text-red-200">
-                  Active Credential Leaks Detected
-                </p>
-                <p className="text-sm text-red-700 dark:text-red-300">
-                  {statusCounts.active} active credential leaks require immediate attention.
-                  {riskStats.critical > 0 && ` ${riskStats.critical} are critical risk.`}
-                </p>
+        {/* Compact Alert - Only show for critical issues */}
+        {!alertDismissed && riskStats.critical > 0 && (
+          <div className="mt-6 flex items-center justify-between gap-4 rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50/50 dark:bg-red-950/20 px-4 py-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/50">
+                <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
               </div>
-            </CardContent>
-          </Card>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-red-800 dark:text-red-200">
+                  {riskStats.critical} critical {riskStats.critical === 1 ? 'leak' : 'leaks'} require immediate attention
+                </span>
+                {riskStats.high > 0 && (
+                  <span className="text-sm text-red-600/80 dark:text-red-300/80">
+                    + {riskStats.high} high severity
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="destructive"
+                className="h-8"
+                onClick={() => setStatusFilter("active")}
+              >
+                Review Now
+                <ArrowRight className="ml-1 h-3 w-3" />
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-8 w-8 p-0 text-red-600/60 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30"
+                onClick={() => setAlertDismissed(true)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         )}
 
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-          <Card>
+          <Card className={statusCounts.active > 0 ? "border-red-200 dark:border-red-900/50" : ""}>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Active Leaks</p>
-                  <p className="text-2xl font-bold text-red-600">{statusCounts.active}</p>
+                  {statsLoading ? (
+                    <Skeleton className="h-8 w-12" />
+                  ) : (
+                    <p className={`text-2xl font-bold ${statusCounts.active > 0 ? "text-red-600" : "text-muted-foreground"}`}>
+                      {statusCounts.active}
+                    </p>
+                  )}
                 </div>
-                <AlertTriangle className="h-8 w-8 text-red-500/20" />
+                <AlertTriangle className={`h-8 w-8 ${statusCounts.active > 0 ? "text-red-500/30" : "text-muted-foreground/20"}`} />
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className={riskStats.critical > 0 ? "border-red-200 dark:border-red-900/50" : ""}>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Critical Risk</p>
-                  <p className="text-2xl font-bold text-red-600">{riskStats.critical}</p>
+                  {statsLoading ? (
+                    <Skeleton className="h-8 w-12" />
+                  ) : (
+                    <p className={`text-2xl font-bold ${riskStats.critical > 0 ? "text-red-600" : "text-muted-foreground"}`}>
+                      {riskStats.critical}
+                    </p>
+                  )}
                 </div>
-                <Shield className="h-8 w-8 text-red-500/20" />
+                <Shield className={`h-8 w-8 ${riskStats.critical > 0 ? "text-red-500/30" : "text-muted-foreground/20"}`} />
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className={riskStats.high > 0 ? "border-yellow-200 dark:border-yellow-900/50" : ""}>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Pending Review</p>
-                  <p className="text-2xl font-bold text-yellow-600">{statusCounts.pending}</p>
+                  <p className="text-sm text-muted-foreground">High Risk</p>
+                  {statsLoading ? (
+                    <Skeleton className="h-8 w-12" />
+                  ) : (
+                    <p className={`text-2xl font-bold ${riskStats.high > 0 ? "text-yellow-600" : "text-muted-foreground"}`}>
+                      {riskStats.high}
+                    </p>
+                  )}
                 </div>
-                <Clock className="h-8 w-8 text-yellow-500/20" />
+                <Clock className={`h-8 w-8 ${riskStats.high > 0 ? "text-yellow-500/30" : "text-muted-foreground/20"}`} />
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className={statusCounts.completed > 0 ? "border-green-200 dark:border-green-900/50" : ""}>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Resolved</p>
-                  <p className="text-2xl font-bold text-green-600">{statusCounts.completed}</p>
+                  {statsLoading ? (
+                    <Skeleton className="h-8 w-12" />
+                  ) : (
+                    <p className={`text-2xl font-bold ${statusCounts.completed > 0 ? "text-green-600" : "text-muted-foreground"}`}>
+                      {statusCounts.completed}
+                    </p>
+                  )}
                 </div>
-                <CheckCircle className="h-8 w-8 text-green-500/20" />
+                <CheckCircle className={`h-8 w-8 ${statusCounts.completed > 0 ? "text-green-500/30" : "text-muted-foreground/20"}`} />
               </div>
             </CardContent>
           </Card>
@@ -608,14 +681,30 @@ export default function CredentialsPage() {
         <Card className="mt-6">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <KeyRound className="h-5 w-5" />
-                  All Credential Leaks
-                </CardTitle>
-                <CardDescription>
-                  {filteredData.length} of {credentials.length} credentials
-                </CardDescription>
+              <div className="flex items-center gap-4">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <KeyRound className="h-5 w-5" />
+                    {viewMode === "list" ? "All Credential Leaks" : "By Identity"}
+                  </CardTitle>
+                  <CardDescription>
+                    {viewMode === "list"
+                      ? `${filteredData.length} of ${credentials.length} credentials`
+                      : `${identitiesResponse?.items?.length || 0} identities with exposures`}
+                  </CardDescription>
+                </div>
+                <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "list" | "identity")}>
+                  <TabsList className="h-8">
+                    <TabsTrigger value="list" className="h-7 px-3 text-xs">
+                      <List className="mr-1 h-3 w-3" />
+                      List
+                    </TabsTrigger>
+                    <TabsTrigger value="identity" className="h-7 px-3 text-xs">
+                      <Users className="mr-1 h-3 w-3" />
+                      By Identity
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
               </div>
               <Button variant="outline" size="sm">
                 <Download className="mr-2 h-4 w-4" />
@@ -667,113 +756,177 @@ export default function CredentialsPage() {
               </Select>
             </div>
 
-            {/* Table */}
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  {table.getHeaderGroups().map((headerGroup) => (
-                    <TableRow key={headerGroup.id}>
-                      {headerGroup.headers.map((header) => (
-                        <TableHead key={header.id}>
-                          {header.isPlaceholder
-                            ? null
-                            : flexRender(
-                                header.column.columnDef.header,
-                                header.getContext()
-                              )}
-                        </TableHead>
+            {/* View Content */}
+            {viewMode === "identity" ? (
+              /* Identity View */
+              <div className="space-y-3">
+                {identitiesLoading ? (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <div key={i} className="rounded-lg border p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-2">
+                          <Skeleton className="h-5 w-48" />
+                          <Skeleton className="h-4 w-64" />
+                        </div>
+                        <Skeleton className="h-6 w-20" />
+                      </div>
+                    </div>
+                  ))
+                ) : identitiesResponse?.items?.length ? (
+                  identitiesResponse.items.map((identity) => (
+                    <IdentityCard
+                      key={identity.identity}
+                      identity={identity}
+                      isExpanded={expandedIdentities.has(identity.identity)}
+                      onToggle={() => {
+                        setExpandedIdentities((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(identity.identity)) {
+                            next.delete(identity.identity);
+                          } else {
+                            next.add(identity.identity);
+                          }
+                          return next;
+                        });
+                      }}
+                      onSelectCredential={(cred) => {
+                        const asset = mapCredentialsToAssets([cred])[0];
+                        setSelectedCredential(asset);
+                      }}
+                    />
+                  ))
+                ) : (
+                  <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
+                    No identities found
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* List View - Table */
+              <>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      {table.getHeaderGroups().map((headerGroup) => (
+                        <TableRow key={headerGroup.id}>
+                          {headerGroup.headers.map((header) => (
+                            <TableHead key={header.id}>
+                              {header.isPlaceholder
+                                ? null
+                                : flexRender(
+                                  header.column.columnDef.header,
+                                  header.getContext()
+                                )}
+                            </TableHead>
+                          ))}
+                        </TableRow>
                       ))}
-                    </TableRow>
-                  ))}
-                </TableHeader>
-                <TableBody>
-                  {table.getRowModel().rows?.length ? (
-                    table.getRowModel().rows.map((row) => (
-                      <TableRow
-                        key={row.id}
-                        data-state={row.getIsSelected() && "selected"}
-                        className="cursor-pointer"
-                        onClick={() => setSelectedCredential(row.original)}
-                      >
-                        {row.getVisibleCells().map((cell) => (
-                          <TableCell
-                            key={cell.id}
-                            onClick={(e) => {
-                              if (
-                                cell.column.id === "select" ||
-                                cell.column.id === "actions"
-                              ) {
-                                e.stopPropagation();
-                              }
-                            }}
+                    </TableHeader>
+                    <TableBody>
+                      {isLoading ? (
+                        // Loading skeleton rows
+                        Array.from({ length: 5 }).map((_, i) => (
+                          <TableRow key={i}>
+                            <TableCell><Skeleton className="h-4 w-4" /></TableCell>
+                            <TableCell><Skeleton className="h-8 w-48" /></TableCell>
+                            <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+                            <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                            <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                            <TableCell><Skeleton className="h-6 w-16" /></TableCell>
+                            <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+                            <TableCell><Skeleton className="h-6 w-12" /></TableCell>
+                            <TableCell><Skeleton className="h-8 w-8" /></TableCell>
+                          </TableRow>
+                        ))
+                      ) : table.getRowModel().rows?.length ? (
+                        table.getRowModel().rows.map((row) => (
+                          <TableRow
+                            key={row.id}
+                            data-state={row.getIsSelected() && "selected"}
+                            className="cursor-pointer"
+                            onClick={() => setSelectedCredential(row.original)}
                           >
-                            {flexRender(
-                              cell.column.columnDef.cell,
-                              cell.getContext()
-                            )}
+                            {row.getVisibleCells().map((cell) => (
+                              <TableCell
+                                key={cell.id}
+                                onClick={(e) => {
+                                  if (
+                                    cell.column.id === "select" ||
+                                    cell.column.id === "actions"
+                                  ) {
+                                    e.stopPropagation();
+                                  }
+                                }}
+                              >
+                                {flexRender(
+                                  cell.column.columnDef.cell,
+                                  cell.getContext()
+                                )}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell
+                            colSpan={columns.length}
+                            className="h-24 text-center"
+                          >
+                            No credential leaks found.
                           </TableCell>
-                        ))}
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell
-                        colSpan={columns.length}
-                        className="h-24 text-center"
-                      >
-                        No credential leaks found.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
 
-            {/* Pagination */}
-            <div className="flex items-center justify-between mt-4">
-              <div className="text-sm text-muted-foreground">
-                {table.getFilteredSelectedRowModel().rows.length} of{" "}
-                {table.getFilteredRowModel().rows.length} row(s) selected.
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => table.setPageIndex(0)}
-                  disabled={!table.getCanPreviousPage()}
-                >
-                  <ChevronsLeft className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => table.previousPage()}
-                  disabled={!table.getCanPreviousPage()}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <span className="text-sm">
-                  Page {table.getState().pagination.pageIndex + 1} of{" "}
-                  {table.getPageCount()}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => table.nextPage()}
-                  disabled={!table.getCanNextPage()}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-                  disabled={!table.getCanNextPage()}
-                >
-                  <ChevronsRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
+                {/* Pagination - only for list view */}
+                <div className="flex items-center justify-between mt-4">
+                  <div className="text-sm text-muted-foreground">
+                    {table.getFilteredSelectedRowModel().rows.length} of{" "}
+                    {table.getFilteredRowModel().rows.length} row(s) selected.
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => table.setPageIndex(0)}
+                      disabled={!table.getCanPreviousPage()}
+                    >
+                      <ChevronsLeft className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => table.previousPage()}
+                      disabled={!table.getCanPreviousPage()}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <span className="text-sm">
+                      Page {table.getState().pagination.pageIndex + 1} of{" "}
+                      {table.getPageCount()}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => table.nextPage()}
+                      disabled={!table.getCanNextPage()}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                      disabled={!table.getCanNextPage()}
+                    >
+                      <ChevronsRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       </Main>
@@ -794,7 +947,22 @@ export default function CredentialsPage() {
           }
         }}
         assetTypeName="Credential"
-        relationships={selectedCredential ? getAssetRelationships(selectedCredential.id) : []}
+        showFindingsTab={false}
+        extraTabs={selectedCredential ? [
+          {
+            value: "related",
+            label: "Related",
+            content: (
+              <RelatedExposuresSection
+                credentialId={selectedCredential.id}
+                onSelectCredential={(cred) => {
+                  const asset = mapCredentialsToAssets([cred])[0];
+                  setSelectedCredential(asset);
+                }}
+              />
+            ),
+          },
+        ] : undefined}
         quickActions={
           selectedCredential?.status === "active" ? (
             <Button
@@ -802,7 +970,7 @@ export default function CredentialsPage() {
               variant="outline"
               onClick={() => {
                 handleMarkResolved(selectedCredential);
-                setSelectedCredential(null);
+                // Sheet will be closed by handleMarkResolved after success
               }}
             >
               <CheckCircle className="mr-2 h-4 w-4" />
@@ -819,25 +987,25 @@ export default function CredentialsPage() {
                   selectedCredential.riskScore >= 80
                     ? "bg-red-100 dark:bg-red-900/30"
                     : selectedCredential.riskScore >= 50
-                    ? "bg-yellow-100 dark:bg-yellow-900/30"
-                    : "bg-green-100 dark:bg-green-900/30"
+                      ? "bg-yellow-100 dark:bg-yellow-900/30"
+                      : "bg-green-100 dark:bg-green-900/30"
                 }
                 iconColor={
                   selectedCredential.riskScore >= 80
                     ? "text-red-600"
                     : selectedCredential.riskScore >= 50
-                    ? "text-yellow-600"
-                    : "text-green-600"
+                      ? "text-yellow-600"
+                      : "text-green-600"
                 }
                 label="Risk Score"
                 value={selectedCredential.riskScore}
               />
               <StatCard
-                icon={FileText}
+                icon={Shield}
                 iconBg="bg-blue-100 dark:bg-blue-900/30"
                 iconColor="text-blue-600"
-                label="Findings"
-                value={selectedCredential.findingCount}
+                label="Severity"
+                value={selectedCredential.criticality === "critical" ? "Critical" : "High"}
               />
               <StatCard
                 icon={Clock}
@@ -847,10 +1015,10 @@ export default function CredentialsPage() {
                 value={
                   selectedCredential.metadata.leakDate
                     ? Math.ceil(
-                        (new Date().getTime() -
-                          new Date(selectedCredential.metadata.leakDate).getTime()) /
-                          (1000 * 60 * 60 * 24)
-                      )
+                      (new Date().getTime() -
+                        new Date(selectedCredential.metadata.leakDate).getTime()) /
+                      (1000 * 60 * 60 * 24)
+                    )
                     : "-"
                 }
               />
@@ -1089,5 +1257,214 @@ export default function CredentialsPage() {
         </AlertDialogContent>
       </AlertDialog>
     </>
+  );
+}
+
+// ============================================
+// IDENTITY CARD COMPONENT
+// ============================================
+
+interface IdentityCardProps {
+  identity: ApiIdentityExposure;
+  isExpanded: boolean;
+  onToggle: () => void;
+  onSelectCredential: (cred: ApiCredential) => void;
+}
+
+// ============================================
+// RELATED EXPOSURES SECTION COMPONENT
+// ============================================
+
+interface RelatedExposuresSectionProps {
+  credentialId: string;
+  onSelectCredential: (cred: ApiCredential) => void;
+}
+
+function RelatedExposuresSection({ credentialId, onSelectCredential }: RelatedExposuresSectionProps) {
+  const { data: relatedCredentials, isLoading } = useRelatedCredentialsApi(credentialId);
+
+  if (isLoading) {
+    return (
+      <div className="mt-6">
+        <SectionTitle>Related Exposures</SectionTitle>
+        <div className="space-y-2">
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-12 w-full" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!relatedCredentials || relatedCredentials.length === 0) {
+    return null; // Don't show section if no related exposures
+  }
+
+  const severityColors: Record<string, string> = {
+    critical: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+    high: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
+    medium: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
+    low: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+    info: "bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-400",
+  };
+
+  return (
+    <div className="mt-6">
+      <SectionTitle>
+        Related Exposures ({relatedCredentials.length})
+      </SectionTitle>
+      <p className="text-sm text-muted-foreground mb-3">
+        Other credentials leaked for the same identity
+      </p>
+      <div className="space-y-2">
+        {relatedCredentials.map((cred) => (
+          <button
+            key={cred.id}
+            className="w-full text-left rounded-md border bg-muted/30 p-3 hover:bg-muted/50 transition-colors"
+            onClick={() => onSelectCredential(cred)}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <KeyRound className="h-4 w-4 text-red-500" />
+                <span className="font-medium text-sm">{cred.identifier}</span>
+                <Badge variant="outline" className="text-xs">
+                  {cred.credential_type}
+                </Badge>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-xs">
+                  {cred.source}
+                </Badge>
+                <Badge className={severityColors[cred.severity] || severityColors.info}>
+                  {cred.severity}
+                </Badge>
+              </div>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function IdentityCard({ identity, isExpanded, onToggle, onSelectCredential }: IdentityCardProps) {
+  // Fetch exposures only when card is expanded
+  const { data: exposuresResponse, isLoading: exposuresLoading } = useIdentityExposuresApi(
+    isExpanded ? identity.identity : null,
+    { page_size: 50 }
+  );
+
+  const severityColors: Record<string, string> = {
+    critical: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+    high: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
+    medium: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
+    low: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+    info: "bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-400",
+  };
+
+  const activeCount = identity.states?.active || 0;
+  const resolvedCount = identity.states?.resolved || 0;
+
+  return (
+    <Collapsible open={isExpanded} onOpenChange={onToggle}>
+      <div className={`rounded-lg border ${activeCount > 0 ? "border-red-200 dark:border-red-900/50" : ""}`}>
+        <CollapsibleTrigger asChild>
+          <button className="w-full p-4 text-left hover:bg-muted/50 transition-colors">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+                  {identity.identity_type === "email" ? (
+                    <Mail className="h-5 w-5 text-muted-foreground" />
+                  ) : (
+                    <User className="h-5 w-5 text-muted-foreground" />
+                  )}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{identity.identity}</span>
+                    <Badge variant="secondary" className="text-xs">
+                      {identity.exposure_count} {identity.exposure_count === 1 ? "exposure" : "exposures"}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                    <span>Sources: {identity.sources.join(", ")}</span>
+                    <span className="text-muted-foreground/50">|</span>
+                    <span>Types: {identity.credential_types.join(", ")}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  {activeCount > 0 && (
+                    <Badge variant="destructive" className="text-xs">
+                      {activeCount} active
+                    </Badge>
+                  )}
+                  {resolvedCount > 0 && (
+                    <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                      {resolvedCount} resolved
+                    </Badge>
+                  )}
+                </div>
+                <Badge className={severityColors[identity.highest_severity] || severityColors.info}>
+                  {identity.highest_severity}
+                </Badge>
+                <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+              </div>
+            </div>
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="border-t px-4 py-3 bg-muted/30">
+            <div className="text-xs font-medium text-muted-foreground mb-2">
+              Exposures for this identity
+            </div>
+            <div className="space-y-2">
+              {exposuresLoading ? (
+                <>
+                  <Skeleton className="h-16 w-full" />
+                  <Skeleton className="h-16 w-full" />
+                </>
+              ) : exposuresResponse?.items && exposuresResponse.items.length > 0 ? (
+                exposuresResponse.items.map((exposure) => (
+                  <button
+                    key={exposure.id}
+                    className="w-full text-left rounded-md border bg-background p-3 hover:bg-muted/50 transition-colors"
+                    onClick={() => onSelectCredential(exposure)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <KeyRound className="h-4 w-4 text-red-500" />
+                        <span className="font-medium text-sm">{exposure.identifier}</span>
+                        <Badge variant="outline" className="text-xs">
+                          {exposure.credential_type}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs">
+                          {exposure.source}
+                        </Badge>
+                        <Badge className={severityColors[exposure.severity] || severityColors.info}>
+                          {exposure.severity}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      First seen: {new Date(exposure.first_seen_at).toLocaleDateString()}
+                      {exposure.last_seen_at !== exposure.first_seen_at && (
+                        <> | Last seen: {new Date(exposure.last_seen_at).toLocaleDateString()}</>
+                      )}
+                    </div>
+                  </button>
+                ))
+              ) : (
+                <div className="text-sm text-muted-foreground text-center py-4">
+                  No exposures found for this identity
+                </div>
+              )}
+            </div>
+          </div>
+        </CollapsibleContent>
+      </div>
+    </Collapsible>
   );
 }

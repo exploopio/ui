@@ -12,6 +12,7 @@ import useSWR from 'swr'
 import { get } from '@/lib/api/client'
 import { useTenant } from '@/context/tenant-provider'
 import { useAssetGroupStatsApi } from '@/features/asset-groups/api'
+import { useCredentialStatsApi } from '@/features/credentials/api'
 
 // ============================================
 // TYPES
@@ -79,6 +80,12 @@ export function useDynamicBadges(): DynamicBadges {
     // Fetch dashboard stats for findings count
     const { data: dashboardStats } = useDashboardStatsForBadges()
 
+    // Fetch credential stats for credential leaks badge
+    const { data: credentialStats } = useCredentialStatsApi({
+        revalidateOnFocus: false,
+        dedupingInterval: 60000,
+    })
+
     const badges = useMemo(() => {
         const result: DynamicBadges = {}
 
@@ -101,8 +108,16 @@ export function useDynamicBadges(): DynamicBadges {
             }
         }
 
+        // Credential Leaks badge - show active credential leak count
+        if (credentialStats?.by_state) {
+            const activeCount = credentialStats.by_state.active || 0
+            if (activeCount > 0) {
+                result['/credentials'] = String(activeCount)
+            }
+        }
+
         return result
-    }, [assetGroupStats, dashboardStats])
+    }, [assetGroupStats, dashboardStats, credentialStats])
 
     return badges
 }

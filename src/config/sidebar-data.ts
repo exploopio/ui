@@ -221,7 +221,7 @@ export const sidebarData: SidebarData = {
           title: "Credential Leaks",
           url: "/credentials",
           icon: KeyRound,
-          badge: "7",
+          // Badge is now dynamic - fetched from API via useDynamicBadges hook
           permission: Permission.CredentialsRead,
         },
         // ----------------------------------------

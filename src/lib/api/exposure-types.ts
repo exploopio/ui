@@ -57,6 +57,16 @@ export interface ExposureEvent {
 }
 
 /**
+ * User info for state history attribution
+ */
+export interface StateHistoryUser {
+  id: string
+  name: string
+  email: string
+  avatar_url?: string
+}
+
+/**
  * State history entry - audit trail for state changes
  */
 export interface ExposureStateHistory {
@@ -64,6 +74,7 @@ export interface ExposureStateHistory {
   previous_state: ExposureState
   new_state: ExposureState
   changed_by?: string
+  changed_by_user?: StateHistoryUser
   reason?: string
   created_at: string
 }

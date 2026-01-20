@@ -81,6 +81,9 @@ interface AssetDetailSheetProps<T extends Asset> {
   /** Whether to show the Details tab (default: true) */
   showDetailsTab?: boolean;
 
+  /** Whether to show the Findings tab (default: true) */
+  showFindingsTab?: boolean;
+
   /** Custom tabs to insert between Overview and Findings */
   extraTabs?: Array<{
     value: string;
@@ -131,6 +134,7 @@ export function AssetDetailSheet<T extends Asset>({
   subtitle,
   assetTypeName,
   showDetailsTab = true,
+  showFindingsTab = true,
   extraTabs,
   // Relationship props
   relationships,
@@ -153,7 +157,7 @@ export function AssetDetailSheet<T extends Asset>({
   const shouldShowRelationshipPreview = showRelationshipPreview ?? hasRelationships;
 
   // Calculate total number of tabs
-  const tabCount = 2 + (showDetailsTab ? 1 : 0) + (extraTabs?.length || 0) + (shouldShowRelationshipTab ? 1 : 0);
+  const tabCount = 1 + (showFindingsTab ? 1 : 0) + (showDetailsTab ? 1 : 0) + (extraTabs?.length || 0) + (shouldShowRelationshipTab ? 1 : 0);
   const tabGridClass =
     tabCount === 2 ? "grid-cols-2" :
     tabCount === 3 ? "grid-cols-3" :
@@ -229,7 +233,9 @@ export function AssetDetailSheet<T extends Asset>({
                 Relations
               </TabsTrigger>
             )}
-            <TabsTrigger value="findings">Findings</TabsTrigger>
+            {showFindingsTab && (
+              <TabsTrigger value="findings">Findings</TabsTrigger>
+            )}
             {showDetailsTab && (
               <TabsTrigger value="details">Details</TabsTrigger>
             )}
@@ -277,9 +283,11 @@ export function AssetDetailSheet<T extends Asset>({
           )}
 
           {/* Findings Tab */}
-          <TabsContent value="findings" className="mt-0">
-            <AssetFindings assetId={asset.id} assetName={asset.name} />
-          </TabsContent>
+          {showFindingsTab && (
+            <TabsContent value="findings" className="mt-0">
+              <AssetFindings assetId={asset.id} assetName={asset.name} />
+            </TabsContent>
+          )}
 
           {/* Details Tab */}
           {showDetailsTab && (
