@@ -265,7 +265,7 @@ export interface ToolExecution {
   id: string;
   tenant_id: string;
   tool_id: string;
-  worker_id?: string;
+  agent_id?: string;
   pipeline_run_id?: string;
   step_run_id?: string;
   status: ExecutionStatus;
@@ -295,7 +295,7 @@ export interface ToolExecutionListResponse {
  */
 export interface ToolExecutionListFilters {
   tool_id?: string;
-  worker_id?: string;
+  agent_id?: string;
   pipeline_run_id?: string;
   status?: ExecutionStatus;
   page?: number;

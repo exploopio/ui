@@ -412,8 +412,8 @@ export const sidebarData: SidebarData = {
           permission: Permission.ScansRead,
           items: [
             {
-              title: "Workers",
-              url: "/workers",
+              title: "Agents",
+              url: "/agents",
               icon: Bot,
               permission: Permission.ScansRead,
             },

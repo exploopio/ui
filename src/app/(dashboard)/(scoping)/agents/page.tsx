@@ -4,9 +4,9 @@ import { Header, Main } from "@/components/layout";
 import { ProfileDropdown } from "@/components/profile-dropdown";
 import { Search } from "@/components/search";
 import { ThemeSwitch } from "@/components/theme-switch";
-import { UnifiedWorkersSection } from "@/features/workers";
+import { AgentsSection } from "@/features/agents";
 
-export default function WorkersPage() {
+export default function AgentsPage() {
   return (
     <>
       <Header fixed>
@@ -18,7 +18,7 @@ export default function WorkersPage() {
       </Header>
 
       <Main>
-        <UnifiedWorkersSection />
+        <AgentsSection />
       </Main>
     </>
   );

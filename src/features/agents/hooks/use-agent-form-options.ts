@@ -29,7 +29,7 @@ export interface CapabilityOption extends FormOption {
   toolCount: number;
 }
 
-export interface UseWorkerFormOptionsReturn {
+export interface UseAgentFormOptionsReturn {
   /** Tool options derived from active tools in database */
   toolOptions: ToolOption[];
   /** Capability options derived from tools' capabilities */
@@ -70,7 +70,7 @@ const CAPABILITY_LABELS: Record<string, { label: string; description: string }> 
 // ============================================
 
 /**
- * Hook to get dynamic tool and capability options for worker forms.
+ * Hook to get dynamic tool and capability options for agent forms.
  *
  * Features:
  * - Fetches active tools from database
@@ -80,7 +80,7 @@ const CAPABILITY_LABELS: Record<string, { label: string; description: string }> 
  *
  * @example
  * ```tsx
- * const { toolOptions, capabilityOptions, isLoading } = useWorkerFormOptions();
+ * const { toolOptions, capabilityOptions, isLoading } = useAgentFormOptions();
  *
  * // Filter tools by selected capabilities
  * const filteredTools = getToolsByCapabilities(selectedCapabilities);
@@ -92,7 +92,7 @@ const SWR_CONFIG = {
   dedupingInterval: 30000, // Cache for 30 seconds
 };
 
-export function useWorkerFormOptions(): UseWorkerFormOptionsReturn {
+export function useAgentFormOptions(): UseAgentFormOptionsReturn {
   // Fetch only active tools - use static filter and config objects
   const { data, isLoading, error } = useTools(ACTIVE_TOOLS_FILTER, SWR_CONFIG);
 

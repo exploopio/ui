@@ -31,27 +31,20 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
-import type { Worker } from '@/lib/api/worker-types';
-import { WorkerTypeIcon, WORKER_TYPE_COLORS } from './worker-type-icon';
+import type { Agent } from '@/lib/api/agent-types';
+import { AgentTypeIcon, AGENT_TYPE_COLORS } from './agent-type-icon';
 
-interface WorkerMonitoringCardProps {
-  worker: Worker;
-  onEdit: (worker: Worker) => void;
-  onViewConfig: (worker: Worker) => void;
-  onActivate: (worker: Worker) => void;
-  onDeactivate: (worker: Worker) => void;
-  onViewDetails: (worker: Worker) => void;
+interface AgentMonitoringCardProps {
+  agent: Agent;
+  onEdit: (agent: Agent) => void;
+  onViewConfig: (agent: Agent) => void;
+  onActivate: (agent: Agent) => void;
+  onDeactivate: (agent: Agent) => void;
+  onViewDetails: (agent: Agent) => void;
 }
 
-// Calculate online status from last_seen_at
-function getOnlineStatus(lastSeenAt?: string): 'online' | 'offline' | 'unknown' {
-  if (!lastSeenAt) return 'unknown';
-  const lastSeen = new Date(lastSeenAt);
-  const now = new Date();
-  const diffMs = now.getTime() - lastSeen.getTime();
-  const fiveMinutes = 5 * 60 * 1000;
-  return diffMs <= fiveMinutes ? 'online' : 'offline';
-}
+// Note: Online status now comes from the health field in Agent type
+// The backend tracks heartbeat and sets health = 'online' | 'offline' | 'error' | 'unknown'
 
 // Format uptime from last_seen_at
 function formatUptime(lastSeenAt?: string): string {
@@ -66,29 +59,27 @@ function formatUptime(lastSeenAt?: string): string {
   return `${Math.floor(diffMs / 86400000)}d ago`;
 }
 
-export function WorkerMonitoringCard({
-  worker,
+export function AgentMonitoringCard({
+  agent,
   onEdit,
   onViewConfig,
   onActivate,
   onDeactivate,
   onViewDetails,
-}: WorkerMonitoringCardProps) {
-  const onlineStatus = worker.status === 'active'
-    ? getOnlineStatus(worker.last_seen_at)
-    : 'offline';
-
-  const isOnline = onlineStatus === 'online';
-  const isActive = worker.status === 'active';
+}: AgentMonitoringCardProps) {
+  // Use health field from backend (heartbeat-based)
+  const isOnline = agent.status === 'active' && agent.health === 'online';
+  const isActive = agent.status === 'active';
+  const hasError = agent.health === 'error';
 
   // Mock metrics - will be replaced when backend supports
-  // These could come from worker.metadata or a separate metrics endpoint
-  // Using deterministic hash based on worker ID for consistent display
-  const hash = worker.id.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
+  // These could come from agent.metadata or a separate metrics endpoint
+  // Using deterministic hash based on agent ID for consistent display
+  const hash = agent.id.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
   const metrics = {
     cpu: (hash % 60) + 20,
     memory: (hash % 50) + 30,
-    activeJobs: worker.status === 'active' ? (hash % 5) + 1 : 0,
+    activeJobs: agent.status === 'active' ? (hash % 5) + 1 : 0,
   };
 
   return (
@@ -96,11 +87,11 @@ export function WorkerMonitoringCard({
       className={cn(
         'transition-all hover:border-primary/50 cursor-pointer',
         isOnline && 'border-green-500/30',
-        !isOnline && worker.status === 'active' && 'border-yellow-500/30',
-        worker.status === 'inactive' && 'border-gray-500/30 opacity-75',
-        worker.status === 'error' && 'border-red-500/30'
+        !isOnline && agent.status === 'active' && !hasError && 'border-yellow-500/30',
+        agent.status === 'disabled' && 'border-gray-500/30 opacity-75',
+        hasError && 'border-red-500/30'
       )}
-      onClick={() => onViewDetails(worker)}
+      onClick={() => onViewDetails(agent)}
     >
       <CardContent className="p-4">
         {/* Header */}
@@ -110,10 +101,10 @@ export function WorkerMonitoringCard({
               <div
                 className={cn(
                   'flex h-10 w-10 items-center justify-center rounded-lg',
-                  WORKER_TYPE_COLORS[worker.type]
+                  AGENT_TYPE_COLORS[agent.type]
                 )}
               >
-                <WorkerTypeIcon type={worker.type} className="h-5 w-5" />
+                <AgentTypeIcon type={agent.type} className="h-5 w-5" />
               </div>
               {/* Online indicator */}
               <div
@@ -124,9 +115,9 @@ export function WorkerMonitoringCard({
               />
             </div>
             <div>
-              <h3 className="font-medium text-sm">{worker.name}</h3>
+              <h3 className="font-medium text-sm">{agent.name}</h3>
               <p className="text-xs text-muted-foreground">
-                {worker.hostname || worker.ip_address || 'No host info'}
+                {agent.hostname || agent.ip_address || 'No host info'}
               </p>
             </div>
           </div>
@@ -138,30 +129,30 @@ export function WorkerMonitoringCard({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-              <DropdownMenuItem onClick={() => onViewDetails(worker)}>
+              <DropdownMenuItem onClick={() => onViewDetails(agent)}>
                 <Activity className="mr-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onEdit(worker)}>
+              <DropdownMenuItem onClick={() => onEdit(agent)}>
                 <Settings className="mr-2 h-4 w-4" />
                 Edit
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onViewConfig(worker)}>
+              <DropdownMenuItem onClick={() => onViewConfig(agent)}>
                 <Settings className="mr-2 h-4 w-4" />
                 View Config
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              {worker.status === 'inactive' || worker.status === 'revoked' ? (
+              {agent.status === 'disabled' || agent.status === 'revoked' ? (
                 <DropdownMenuItem
-                  onClick={() => onActivate(worker)}
+                  onClick={() => onActivate(agent)}
                   className="text-green-500"
                 >
                   <Power className="mr-2 h-4 w-4" />
                   Activate
                 </DropdownMenuItem>
-              ) : worker.status === 'active' ? (
+              ) : agent.status === 'active' ? (
                 <DropdownMenuItem
-                  onClick={() => onDeactivate(worker)}
+                  onClick={() => onDeactivate(agent)}
                   className="text-amber-500"
                 >
                   <PowerOff className="mr-2 h-4 w-4" />
@@ -198,10 +189,10 @@ export function WorkerMonitoringCard({
             </Badge>
           )}
 
-          {worker.error_count > 0 && (
+          {agent.error_count > 0 && (
             <Badge variant="secondary" className="bg-red-500/10 text-red-500 text-xs">
               <AlertTriangle className="mr-1 h-3 w-3" />
-              {worker.error_count}
+              {agent.error_count}
             </Badge>
           )}
         </div>
@@ -251,7 +242,7 @@ export function WorkerMonitoringCard({
               <TooltipTrigger asChild>
                 <span className="flex items-center gap-1">
                   <Activity className="h-3 w-3" />
-                  {worker.total_scans.toLocaleString()} scans
+                  {agent.total_scans.toLocaleString()} scans
                 </span>
               </TooltipTrigger>
               <TooltipContent>Total scans completed</TooltipContent>
@@ -263,12 +254,12 @@ export function WorkerMonitoringCard({
               <TooltipTrigger asChild>
                 <span className="flex items-center gap-1">
                   <Clock className="h-3 w-3" />
-                  {formatUptime(worker.last_seen_at)}
+                  {formatUptime(agent.last_seen_at)}
                 </span>
               </TooltipTrigger>
               <TooltipContent>
-                Last seen: {worker.last_seen_at
-                  ? new Date(worker.last_seen_at).toLocaleString()
+                Last seen: {agent.last_seen_at
+                  ? new Date(agent.last_seen_at).toLocaleString()
                   : 'Never'}
               </TooltipContent>
             </Tooltip>

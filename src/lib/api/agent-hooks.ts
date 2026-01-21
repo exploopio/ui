@@ -1,7 +1,7 @@
 /**
- * Worker API Hooks
+ * Agent API Hooks
  *
- * SWR hooks for Worker Management
+ * SWR hooks for Agent Management
  */
 
 "use client";
@@ -11,16 +11,16 @@ import useSWRMutation from "swr/mutation";
 import { get, post, put, del } from "./client";
 import { handleApiError } from "./error-handler";
 import { useTenant } from "@/context/tenant-provider";
-import { workerEndpoints } from "./endpoints";
+import { agentEndpoints } from "./endpoints";
 import type {
-  Worker,
-  WorkerListResponse,
-  WorkerListFilters,
-  CreateWorkerRequest,
-  CreateWorkerResponse,
-  UpdateWorkerRequest,
+  Agent,
+  AgentListResponse,
+  AgentListFilters,
+  CreateAgentRequest,
+  CreateAgentResponse,
+  UpdateAgentRequest,
   RegenerateAPIKeyResponse,
-} from "./worker-types";
+} from "./agent-types";
 
 // ============================================
 // SWR CONFIGURATION
@@ -54,25 +54,25 @@ const defaultConfig: SWRConfiguration = {
 // CACHE KEYS
 // ============================================
 
-export const workerKeys = {
-  all: ["workers"] as const,
-  lists: () => [...workerKeys.all, "list"] as const,
-  list: (filters?: WorkerListFilters) =>
-    [...workerKeys.lists(), filters] as const,
-  details: () => [...workerKeys.all, "detail"] as const,
-  detail: (id: string) => [...workerKeys.details(), id] as const,
+export const agentKeys = {
+  all: ["agents"] as const,
+  lists: () => [...agentKeys.all, "list"] as const,
+  list: (filters?: AgentListFilters) =>
+    [...agentKeys.lists(), filters] as const,
+  details: () => [...agentKeys.all, "detail"] as const,
+  detail: (id: string) => [...agentKeys.details(), id] as const,
 };
 
 // ============================================
 // FETCHER FUNCTIONS
 // ============================================
 
-async function fetchWorkers(url: string): Promise<WorkerListResponse> {
-  return get<WorkerListResponse>(url);
+async function fetchAgents(url: string): Promise<AgentListResponse> {
+  return get<AgentListResponse>(url);
 }
 
-async function fetchWorker(url: string): Promise<Worker> {
-  return get<Worker>(url);
+async function fetchAgent(url: string): Promise<Agent> {
+  return get<Agent>(url);
 }
 
 // ============================================
@@ -80,28 +80,28 @@ async function fetchWorker(url: string): Promise<Worker> {
 // ============================================
 
 /**
- * Fetch workers list
+ * Fetch agents list
  */
-export function useWorkers(filters?: WorkerListFilters, config?: SWRConfiguration) {
+export function useAgents(filters?: AgentListFilters, config?: SWRConfiguration) {
   const { currentTenant } = useTenant();
 
-  const key = currentTenant ? workerEndpoints.list(filters) : null;
+  const key = currentTenant ? agentEndpoints.list(filters) : null;
 
-  return useSWR<WorkerListResponse>(key, fetchWorkers, {
+  return useSWR<AgentListResponse>(key, fetchAgents, {
     ...defaultConfig,
     ...config,
   });
 }
 
 /**
- * Fetch a single worker by ID
+ * Fetch a single agent by ID
  */
-export function useWorker(workerId: string | null, config?: SWRConfiguration) {
+export function useAgent(agentId: string | null, config?: SWRConfiguration) {
   const { currentTenant } = useTenant();
 
-  const key = currentTenant && workerId ? workerEndpoints.get(workerId) : null;
+  const key = currentTenant && agentId ? agentEndpoints.get(agentId) : null;
 
-  return useSWR<Worker>(key, fetchWorker, {
+  return useSWR<Agent>(key, fetchAgent, {
     ...defaultConfig,
     ...config,
   });
@@ -112,41 +112,41 @@ export function useWorker(workerId: string | null, config?: SWRConfiguration) {
 // ============================================
 
 /**
- * Create a new worker
+ * Create a new agent
  */
-export function useCreateWorker() {
+export function useCreateAgent() {
   const { currentTenant } = useTenant();
 
   return useSWRMutation(
-    currentTenant ? workerEndpoints.create() : null,
-    async (url: string, { arg }: { arg: CreateWorkerRequest }) => {
-      return post<CreateWorkerResponse>(url, arg);
+    currentTenant ? agentEndpoints.create() : null,
+    async (url: string, { arg }: { arg: CreateAgentRequest }) => {
+      return post<CreateAgentResponse>(url, arg);
     }
   );
 }
 
 /**
- * Update a worker
+ * Update an agent
  */
-export function useUpdateWorker(workerId: string) {
+export function useUpdateAgent(agentId: string) {
   const { currentTenant } = useTenant();
 
   return useSWRMutation(
-    currentTenant && workerId ? workerEndpoints.update(workerId) : null,
-    async (url: string, { arg }: { arg: UpdateWorkerRequest }) => {
-      return put<Worker>(url, arg);
+    currentTenant && agentId ? agentEndpoints.update(agentId) : null,
+    async (url: string, { arg }: { arg: UpdateAgentRequest }) => {
+      return put<Agent>(url, arg);
     }
   );
 }
 
 /**
- * Delete a worker
+ * Delete an agent
  */
-export function useDeleteWorker(workerId: string) {
+export function useDeleteAgent(agentId: string) {
   const { currentTenant } = useTenant();
 
   return useSWRMutation(
-    currentTenant && workerId ? workerEndpoints.delete(workerId) : null,
+    currentTenant && agentId ? agentEndpoints.delete(agentId) : null,
     async (url: string) => {
       return del<void>(url);
     }
@@ -154,20 +154,20 @@ export function useDeleteWorker(workerId: string) {
 }
 
 /**
- * Delete multiple workers (bulk delete)
+ * Delete multiple agents (bulk delete)
  */
-export function useBulkDeleteWorkers() {
+export function useBulkDeleteAgents() {
   const { currentTenant } = useTenant();
 
   return useSWRMutation(
-    currentTenant ? "bulk-delete-workers" : null,
-    async (_key: string, { arg: workerIds }: { arg: string[] }) => {
-      // Delete workers sequentially to avoid overwhelming the server
+    currentTenant ? "bulk-delete-agents" : null,
+    async (_key: string, { arg: agentIds }: { arg: string[] }) => {
+      // Delete agents sequentially to avoid overwhelming the server
       const results: { id: string; success: boolean; error?: string }[] = [];
 
-      for (const id of workerIds) {
+      for (const id of agentIds) {
         try {
-          await del<void>(workerEndpoints.delete(id));
+          await del<void>(agentEndpoints.delete(id));
           results.push({ id, success: true });
         } catch (error) {
           results.push({
@@ -184,13 +184,13 @@ export function useBulkDeleteWorkers() {
 }
 
 /**
- * Regenerate worker API key
+ * Regenerate agent API key
  */
-export function useRegenerateWorkerKey(workerId: string) {
+export function useRegenerateAgentKey(agentId: string) {
   const { currentTenant } = useTenant();
 
   return useSWRMutation(
-    currentTenant && workerId ? workerEndpoints.regenerateKey(workerId) : null,
+    currentTenant && agentId ? agentEndpoints.regenerateKey(agentId) : null,
     async (url: string) => {
       return post<RegenerateAPIKeyResponse>(url, {});
     },
@@ -204,29 +204,43 @@ export function useRegenerateWorkerKey(workerId: string) {
 }
 
 /**
- * Activate a worker (set status to active)
+ * Activate an agent (set status to active)
  */
-export function useActivateWorker(workerId: string) {
+export function useActivateAgent(agentId: string) {
   const { currentTenant } = useTenant();
 
   return useSWRMutation(
-    currentTenant && workerId ? workerEndpoints.activate(workerId) : null,
+    currentTenant && agentId ? agentEndpoints.activate(agentId) : null,
     async (url: string) => {
-      return post<Worker>(url, {});
+      return post<Agent>(url, {});
     }
   );
 }
 
 /**
- * Deactivate a worker (set status to inactive)
+ * Deactivate an agent (set status to disabled)
  */
-export function useDeactivateWorker(workerId: string) {
+export function useDeactivateAgent(agentId: string) {
   const { currentTenant } = useTenant();
 
   return useSWRMutation(
-    currentTenant && workerId ? workerEndpoints.deactivate(workerId) : null,
+    currentTenant && agentId ? agentEndpoints.deactivate(agentId) : null,
     async (url: string) => {
-      return post<Worker>(url, {});
+      return post<Agent>(url, {});
+    }
+  );
+}
+
+/**
+ * Revoke an agent (permanently revoke access)
+ */
+export function useRevokeAgent(agentId: string) {
+  const { currentTenant } = useTenant();
+
+  return useSWRMutation(
+    currentTenant && agentId ? agentEndpoints.revoke(agentId) : null,
+    async (url: string) => {
+      return post<Agent>(url, {});
     }
   );
 }
@@ -236,12 +250,12 @@ export function useDeactivateWorker(workerId: string) {
 // ============================================
 
 /**
- * Invalidate workers cache
+ * Invalidate agents cache
  */
-export async function invalidateWorkersCache() {
+export async function invalidateAgentsCache() {
   const { mutate } = await import("swr");
   await mutate(
-    (key) => typeof key === "string" && key.includes("/api/v1/workers"),
+    (key) => typeof key === "string" && key.includes("/api/v1/agents"),
     undefined,
     { revalidate: true }
   );

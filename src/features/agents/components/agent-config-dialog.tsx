@@ -14,21 +14,21 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import type { Worker } from "@/lib/api/worker-types";
+import type { Agent } from "@/lib/api/agent-types";
 
-interface WorkerConfigDialogProps {
+interface AgentConfigDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  worker: Worker;
+  agent: Agent;
   apiKey?: string; // Optional - only available right after creation/regeneration
 }
 
-export function WorkerConfigDialog({
+export function AgentConfigDialog({
   open,
   onOpenChange,
-  worker,
+  agent,
   apiKey,
-}: WorkerConfigDialogProps) {
+}: AgentConfigDialogProps) {
   const [copied, setCopied] = useState<string | null>(null);
 
   // Get the public API URL for external agent connections
@@ -65,9 +65,9 @@ export function WorkerConfigDialog({
     }
   })();
 
-  // Generate scanner configs based on worker's tools
-  const scannerConfigs = worker.tools.length > 0
-    ? worker.tools.map(tool => {
+  // Generate scanner configs based on agent's tools
+  const scannerConfigs = agent.tools.length > 0
+    ? agent.tools.map(tool => {
         // Map tool names to scanner names
         const scannerName = tool === "trivy" ? "trivy-fs" : tool;
         return `  - name: ${scannerName}\n    enabled: true`;
@@ -75,12 +75,12 @@ export function WorkerConfigDialog({
     : `  - name: semgrep\n    enabled: true`;
 
   // YAML config template
-  const yamlConfig = `# Agent Configuration for ${worker.name}
+  const yamlConfig = `# Agent Configuration for ${agent.name}
 # Generated from UI
 
 agent:
-  name: ${worker.name}
-  region: "${worker.region || ""}"  # Optional: deployment region for monitoring
+  name: ${agent.name}
+  region: "${agent.region || ""}"  # Optional: deployment region for monitoring
   enable_commands: true
   command_poll_interval: 30s
   heartbeat_interval: 1m
@@ -88,7 +88,7 @@ agent:
 server:
   base_url: ${baseUrl}
   api_key: ${apiKey || "<YOUR_API_KEY>"}
-  worker_id: ${worker.id}
+  agent_id: ${agent.id}
 
 scanners:
 ${scannerConfigs}
@@ -100,34 +100,34 @@ ${scannerConfigs}
 `;
 
   // Environment variables
-  const envConfig = `# Environment Variables for ${worker.name}
+  const envConfig = `# Environment Variables for ${agent.name}
 
 export API_URL=${baseUrl}
 export API_KEY=${apiKey || "<YOUR_API_KEY>"}
-export WORKER_ID=${worker.id}
-${worker.region ? `export REGION=${worker.region}` : "# export REGION=ap-southeast-1  # Optional: deployment region"}
+export AGENT_ID=${agent.id}
+${agent.region ? `export REGION=${agent.region}` : "# export REGION=ap-southeast-1  # Optional: deployment region"}
 `;
 
   // Docker run command
-  const dockerConfig = `# Docker run command for ${worker.name}
+  const dockerConfig = `# Docker run command for ${agent.name}
 
 docker run -d \\
-  --name ${worker.name.toLowerCase().replace(/\s+/g, "-")} \\
+  --name ${agent.name.toLowerCase().replace(/\s+/g, "-")} \\
   -v /path/to/scan:/code:ro \\
   -e API_URL=${baseUrl} \\
   -e API_KEY=${apiKey || "<YOUR_API_KEY>"} \\
-  -e WORKER_ID=${worker.id} \\
-  ${worker.region ? `-e REGION=${worker.region} \\` : "# -e REGION=ap-southeast-1 \\  # Optional"}
+  -e AGENT_ID=${agent.id} \\
+  ${agent.region ? `-e REGION=${agent.region} \\` : "# -e REGION=ap-southeast-1 \\  # Optional"}
   rediverio/agent:latest \\
   -daemon -config /app/agent.yaml
 `;
 
   // CLI one-shot command
-  const cliConfig = `# CLI Commands for ${worker.name}
+  const cliConfig = `# CLI Commands for ${agent.name}
 
 # One-shot scan (run once and exit)
 ./agent \\
-  -tool ${worker.tools[0] === "trivy" ? "trivy-fs" : worker.tools[0] || "semgrep"} \\
+  -tool ${agent.tools[0] === "trivy" ? "trivy-fs" : agent.tools[0] || "semgrep"} \\
   -target /path/to/project \\
   -push
 
@@ -137,7 +137,7 @@ docker run -d \\
 # With environment variables
 export API_URL=${baseUrl}
 export API_KEY=${apiKey || "<YOUR_API_KEY>"}
-./agent -tool ${worker.tools[0] === "trivy" ? "trivy-fs" : worker.tools[0] || "semgrep"} -target . -push
+./agent -tool ${agent.tools[0] === "trivy" ? "trivy-fs" : agent.tools[0] || "semgrep"} -target . -push
 `;
 
   const handleCopy = async (text: string, label: string) => {
@@ -169,7 +169,7 @@ export API_KEY=${apiKey || "<YOUR_API_KEY>"}
             Agent Configuration
           </DialogTitle>
           <DialogDescription>
-            Configuration templates for <strong>{worker.name}</strong>
+            Configuration templates for <strong>{agent.name}</strong>
             {!apiKey && (
               <span className="text-yellow-600 dark:text-yellow-400 block mt-1">
                 Note: Replace {"<YOUR_API_KEY>"} with your actual API key
@@ -191,7 +191,7 @@ export API_KEY=${apiKey || "<YOUR_API_KEY>"}
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => handleDownload(yamlConfig, `${worker.name.toLowerCase().replace(/\s+/g, "-")}-agent.yaml`)}
+                onClick={() => handleDownload(yamlConfig, `${agent.name.toLowerCase().replace(/\s+/g, "-")}-agent.yaml`)}
               >
                 <Download className="mr-2 h-4 w-4" />
                 Download

@@ -24,7 +24,7 @@ export const API_BASE = {
   VULNERABILITIES: '/api/v1/vulnerabilities',
   DASHBOARD: '/api/v1/dashboard',
   AUDIT_LOGS: '/api/v1/audit-logs',
-  WORKERS: '/api/v1/workers',
+  AGENTS: '/api/v1/agents',
   SCAN_PROFILES: '/api/v1/scan-profiles',
   TOOLS: '/api/v1/tools',
   PLATFORM_TOOLS: '/api/v1/tools/platform',
@@ -741,62 +741,67 @@ export const auditLogEndpoints = {
 } as const
 
 // ============================================
-// WORKER ENDPOINTS
+// AGENT ENDPOINTS
 // ============================================
 
-import type { WorkerListFilters } from './worker-types'
+import type { AgentListFilters } from './agent-types'
 
 /**
- * Worker endpoints for managing workers (agents, scanners, collectors)
+ * Agent endpoints for managing agents (runners, workers, collectors, sensors)
  */
-export const workerEndpoints = {
+export const agentEndpoints = {
   /**
-   * List workers with optional filters
+   * List agents with optional filters
    */
-  list: (filters?: WorkerListFilters) => {
+  list: (filters?: AgentListFilters) => {
     const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
-    return `${API_BASE.WORKERS}${queryString}`
+    return `${API_BASE.AGENTS}${queryString}`
   },
 
   /**
-   * Get worker by ID
+   * Get agent by ID
    */
-  get: (workerId: string) => `${API_BASE.WORKERS}/${workerId}`,
+  get: (agentId: string) => `${API_BASE.AGENTS}/${agentId}`,
 
   /**
-   * Create a new worker
+   * Create a new agent
    */
-  create: () => API_BASE.WORKERS,
+  create: () => API_BASE.AGENTS,
 
   /**
-   * Update worker
+   * Update agent
    */
-  update: (workerId: string) => `${API_BASE.WORKERS}/${workerId}`,
+  update: (agentId: string) => `${API_BASE.AGENTS}/${agentId}`,
 
   /**
-   * Delete worker
+   * Delete agent
    */
-  delete: (workerId: string) => `${API_BASE.WORKERS}/${workerId}`,
+  delete: (agentId: string) => `${API_BASE.AGENTS}/${agentId}`,
 
   /**
-   * Regenerate worker API key
+   * Regenerate agent API key
    */
-  regenerateKey: (workerId: string) => `${API_BASE.WORKERS}/${workerId}/regenerate-key`,
+  regenerateKey: (agentId: string) => `${API_BASE.AGENTS}/${agentId}/regenerate-key`,
 
   /**
-   * Get worker statistics
+   * Get agent statistics
    */
-  stats: (workerId: string) => `${API_BASE.WORKERS}/${workerId}/stats`,
+  stats: (agentId: string) => `${API_BASE.AGENTS}/${agentId}/stats`,
 
   /**
-   * Activate worker (set status to active)
+   * Activate agent (set status to active)
    */
-  activate: (workerId: string) => `${API_BASE.WORKERS}/${workerId}/activate`,
+  activate: (agentId: string) => `${API_BASE.AGENTS}/${agentId}/activate`,
 
   /**
-   * Deactivate worker (set status to inactive)
+   * Deactivate agent (set status to disabled)
    */
-  deactivate: (workerId: string) => `${API_BASE.WORKERS}/${workerId}/deactivate`,
+  deactivate: (agentId: string) => `${API_BASE.AGENTS}/${agentId}/deactivate`,
+
+  /**
+   * Revoke agent (permanently revoke access)
+   */
+  revoke: (agentId: string) => `${API_BASE.AGENTS}/${agentId}/revoke`,
 } as const
 
 // ============================================
@@ -1389,7 +1394,7 @@ export const endpoints = {
   findings: findingEndpoints,
   dashboard: dashboardEndpoints,
   auditLogs: auditLogEndpoints,
-  workers: workerEndpoints,
+  agents: agentEndpoints,
   scanProfiles: scanProfileEndpoints,
   tools: toolEndpoints,
   platformTools: platformToolEndpoints,
@@ -1417,7 +1422,7 @@ export {
   findingEndpoints as findings,
   dashboardEndpoints as dashboard,
   auditLogEndpoints as auditLogs,
-  workerEndpoints as workers,
+  agentEndpoints as agents,
   scanProfileEndpoints as scanProfiles,
   toolEndpoints as tools,
   platformToolEndpoints as platformTools,

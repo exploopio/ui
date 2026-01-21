@@ -12,7 +12,9 @@ import {
   useReactTable,
 } from '@tanstack/react-table';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Progress } from '@/components/ui/progress';
 import {
   Table,
   TableBody,
@@ -34,35 +36,43 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
-  Copy,
-  Eye,
-  Globe,
   MoreHorizontal,
-  Pause,
-  Pencil,
+  Eye,
+  Settings,
+  KeyRound,
   Trash2,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Power,
+  PowerOff,
+  Globe,
   Zap,
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-import type { Agent, AgentStatus } from '../types';
-import { AgentStatusBadge } from './agent-status-badge';
-import { AgentTypeIcon, AgentTypeBadge } from './agent-type-icon';
-import { CpuUsageCell, MemoryUsageCell } from './agent-metrics-display';
+import type { Agent } from '@/lib/api/agent-types';
+import { AgentTypeIcon, AGENT_TYPE_LABELS, AGENT_TYPE_COLORS } from './agent-type-icon';
 
 interface AgentTableProps {
   agents: Agent[];
   sorting: SortingState;
   onSortingChange: (sorting: SortingState) => void;
   globalFilter: string;
-  onGlobalFilterChange: (filter: string) => void;
   rowSelection: Record<string, boolean>;
   onRowSelectionChange: (selection: Record<string, boolean>) => void;
   onViewAgent: (agent: Agent) => void;
   onEditAgent: (agent: Agent) => void;
+  onActivateAgent: (agent: Agent) => void;
+  onDeactivateAgent: (agent: Agent) => void;
   onDeleteAgent: (agent: Agent) => void;
-  onPauseAgent: (agent: Agent) => void;
-  onResumeAgent: (agent: Agent) => void;
-  onCopyToken: (agent: Agent) => void;
+  onRegenerateKey: (agent: Agent) => void;
+}
+
+// Check if agent is online using the health field from backend
+function _isAgentOnline(agent: Agent): boolean {
+  if (agent.status !== 'active') return false;
+  return agent.health === 'online';
 }
 
 export function AgentTable({
@@ -70,18 +80,17 @@ export function AgentTable({
   sorting,
   onSortingChange,
   globalFilter,
-  onGlobalFilterChange,
   rowSelection,
   onRowSelectionChange,
   onViewAgent,
   onEditAgent,
+  onActivateAgent,
+  onDeactivateAgent,
   onDeleteAgent,
-  onPauseAgent,
-  onResumeAgent: _onResumeAgent,
-  onCopyToken,
+  onRegenerateKey,
 }: AgentTableProps) {
-  const columns: ColumnDef<Agent>[] = useMemo(
-    () => [
+  const columns: ColumnDef<Agent>[] = useMemo(() => {
+    const baseColumns: ColumnDef<Agent>[] = [
       {
         id: 'select',
         header: ({ table }) => (
@@ -119,11 +128,11 @@ export function AgentTable({
           const agent = row.original;
           return (
             <div className="flex items-center gap-3">
-              <AgentTypeIcon type={agent.deployment_type} />
+              <AgentTypeIcon type={agent.type} className="h-5 w-5" />
               <div>
                 <p className="font-medium">{agent.name}</p>
                 <p className="text-xs text-muted-foreground">
-                  {agent.ip_address || 'No IP'}
+                  {agent.ip_address || agent.hostname || 'No host info'}
                 </p>
               </div>
             </div>
@@ -131,21 +140,74 @@ export function AgentTable({
         },
       },
       {
-        accessorKey: 'deployment_type',
+        accessorKey: 'type',
         header: 'Type',
-        cell: ({ row }) => (
-          <AgentTypeBadge type={row.original.deployment_type} />
-        ),
+        cell: ({ row }) => {
+          const agent = row.original;
+          return (
+            <Badge variant="outline" className={AGENT_TYPE_COLORS[agent.type]}>
+              {AGENT_TYPE_LABELS[agent.type]}
+            </Badge>
+          );
+        },
       },
       {
         accessorKey: 'status',
         header: 'Status',
         cell: ({ row }) => {
-          const status: AgentStatus =
-            row.original.status === 'active' ? 'online' : 'offline';
-          return <AgentStatusBadge status={status} />;
+          const agent = row.original;
+
+          // Check admin status first
+          if (agent.status === 'disabled') {
+            return (
+              <Badge className="bg-gray-500 text-white gap-1">
+                <XCircle className="h-3.5 w-3.5" />
+                Disabled
+              </Badge>
+            );
+          }
+
+          if (agent.status === 'revoked') {
+            return (
+              <Badge className="bg-gray-600 text-white gap-1">
+                <XCircle className="h-3.5 w-3.5" />
+                Revoked
+              </Badge>
+            );
+          }
+
+          // For active agents, show health status
+          if (agent.health === 'error') {
+            return (
+              <Badge className="bg-red-500 text-white gap-1">
+                <AlertCircle className="h-3.5 w-3.5" />
+                Error
+              </Badge>
+            );
+          }
+
+          if (agent.health === 'online') {
+            return (
+              <Badge className="bg-green-500 text-white gap-1">
+                <CheckCircle className="h-3.5 w-3.5" />
+                Online
+              </Badge>
+            );
+          }
+
+          // offline or unknown
+          return (
+            <Badge className="bg-gray-400 text-white gap-1">
+              <XCircle className="h-3.5 w-3.5" />
+              Offline
+            </Badge>
+          );
         },
       },
+    ];
+
+    // Add remaining columns
+    baseColumns.push(
       {
         id: 'activeJobs',
         header: ({ column }) => (
@@ -158,62 +220,79 @@ export function AgentTable({
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
         ),
-        accessorFn: (row) => row.metrics?.active_jobs ?? 0,
         cell: ({ row }) => {
-          const activeJobs = row.original.metrics?.active_jobs ?? 0;
+          const agent = row.original;
+          const activeJobs = agent.active_jobs || 0;
           return (
-            <div className="flex items-center gap-2">
+            <span className="flex items-center gap-1.5 text-sm font-medium">
               <Zap
-                className={`h-4 w-4 shrink-0 ${
-                  activeJobs > 0 ? 'text-yellow-500' : 'text-muted-foreground'
-                }`}
+                className={cn(
+                  'h-4 w-4',
+                  activeJobs > 0
+                    ? 'text-amber-500 fill-amber-500/20'
+                    : 'text-gray-400'
+                )}
               />
-              <span>{activeJobs}</span>
-            </div>
+              {activeJobs}
+            </span>
           );
         },
       },
       {
         id: 'cpuUsage',
         header: 'CPU',
-        accessorFn: (row) => row.metrics?.cpu_usage ?? 0,
-        cell: ({ row }) => (
-          <CpuUsageCell value={row.original.metrics?.cpu_usage ?? 0} />
-        ),
+        cell: ({ row }) => {
+          const agent = row.original;
+          const cpuPercent = agent.cpu_percent || 0;
+          return (
+            <div className="flex items-center gap-2 w-24">
+              <span className="text-xs w-8">{cpuPercent.toFixed(0)}%</span>
+              <Progress value={cpuPercent} className="h-1.5 flex-1" />
+            </div>
+          );
+        },
       },
       {
         id: 'memoryUsage',
         header: 'Memory',
-        accessorFn: (row) => row.metrics?.memory_usage ?? 0,
-        cell: ({ row }) => (
-          <MemoryUsageCell value={row.original.metrics?.memory_usage ?? 0} />
-        ),
+        cell: ({ row }) => {
+          const agent = row.original;
+          const memoryPercent = agent.memory_percent || 0;
+          return (
+            <div className="flex items-center gap-2 w-24">
+              <span className="text-xs w-8">{memoryPercent.toFixed(0)}%</span>
+              <Progress value={memoryPercent} className="h-1.5 flex-1" />
+            </div>
+          );
+        },
       },
       {
         accessorKey: 'version',
         header: 'Version',
         cell: ({ row }) => (
           <span className="font-mono text-sm text-muted-foreground">
-            v{row.original.version || 'unknown'}
+            {row.original.version ? `v${row.original.version}` : '—'}
           </span>
         ),
       },
       {
-        accessorKey: 'region',
+        id: 'region',
         header: 'Region',
-        cell: ({ row }) => (
-          <span className="flex items-center gap-1 text-sm">
-            <Globe className="h-3 w-3 text-muted-foreground" />
-            {row.original.region || 'N/A'}
-          </span>
-        ),
+        cell: ({ row }) => {
+          const agent = row.original;
+          const region = agent.region || agent.labels?.region || agent.labels?.env || 'local';
+          return (
+            <span className="flex items-center gap-1 text-sm">
+              <Globe className="h-3 w-3 text-muted-foreground" />
+              {region}
+            </span>
+          );
+        },
       },
       {
         id: 'actions',
         cell: ({ row }) => {
           const agent = row.original;
-          const status: AgentStatus =
-            agent.status === 'active' ? 'online' : 'offline';
 
           return (
             <DropdownMenu>
@@ -228,36 +307,48 @@ export function AgentTable({
                   View Details
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onEditAgent(agent)}>
-                  <Pencil className="mr-2 h-4 w-4" />
+                  <Settings className="mr-2 h-4 w-4" />
                   Edit
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onCopyToken(agent)}>
-                  <Copy className="mr-2 h-4 w-4" />
-                  Copy Token
+                <DropdownMenuItem onClick={() => onRegenerateKey(agent)}>
+                  <KeyRound className="mr-2 h-4 w-4" />
+                  Regenerate API Key
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                {status === 'online' && (
-                  <DropdownMenuItem onClick={() => onPauseAgent(agent)}>
-                    <Pause className="mr-2 h-4 w-4" />
-                    Pause
+                {agent.status === 'disabled' || agent.status === 'revoked' ? (
+                  <DropdownMenuItem
+                    onClick={() => onActivateAgent(agent)}
+                    className="text-green-500"
+                  >
+                    <Power className="mr-2 h-4 w-4" />
+                    Activate
                   </DropdownMenuItem>
-                )}
+                ) : agent.status === 'active' ? (
+                  <DropdownMenuItem
+                    onClick={() => onDeactivateAgent(agent)}
+                    className="text-amber-500"
+                  >
+                    <PowerOff className="mr-2 h-4 w-4" />
+                    Deactivate
+                  </DropdownMenuItem>
+                ) : null}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  className="text-red-400"
+                  className="text-red-500"
                   onClick={() => onDeleteAgent(agent)}
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
-                  Remove Agent
+                  Delete
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           );
         },
-      },
-    ],
-    [onViewAgent, onEditAgent, onDeleteAgent, onPauseAgent, onCopyToken]
-  );
+      }
+    );
+
+    return baseColumns;
+  }, [onViewAgent, onEditAgent, onActivateAgent, onDeactivateAgent, onDeleteAgent, onRegenerateKey]);
 
   const table = useReactTable({
     data: agents,
@@ -267,7 +358,6 @@ export function AgentTable({
       const newSorting = typeof updater === 'function' ? updater(sorting) : updater;
       onSortingChange(newSorting);
     },
-    onGlobalFilterChange: onGlobalFilterChange,
     onRowSelectionChange: (updater) => {
       const newSelection =
         typeof updater === 'function' ? updater(rowSelection) : updater;
@@ -308,9 +398,13 @@ export function AgentTable({
                   data-state={row.getIsSelected() && 'selected'}
                   className="cursor-pointer"
                   onClick={(e) => {
+                    // Don't trigger row click for checkboxes, buttons, menu items, or links
                     if (
                       (e.target as HTMLElement).closest('[role="checkbox"]') ||
-                      (e.target as HTMLElement).closest('button')
+                      (e.target as HTMLElement).closest('[role="menuitem"]') ||
+                      (e.target as HTMLElement).closest('[data-radix-collection-item]') ||
+                      (e.target as HTMLElement).closest('button') ||
+                      (e.target as HTMLElement).closest('a')
                     ) {
                       return;
                     }

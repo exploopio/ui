@@ -15,21 +15,21 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 
-import { useRegenerateWorkerKey, invalidateWorkersCache } from "@/lib/api/worker-hooks";
-import { WorkerConfigDialog } from "./worker-config-dialog";
-import type { Worker } from "@/lib/api/worker-types";
+import { useRegenerateAgentKey, invalidateAgentsCache } from "@/lib/api/agent-hooks";
+import { AgentConfigDialog } from "./agent-config-dialog";
+import type { Agent } from "@/lib/api/agent-types";
 
 interface RegenerateKeyDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  worker: Worker;
+  agent: Agent;
   onSuccess?: () => void;
 }
 
 export function RegenerateKeyDialog({
   open,
   onOpenChange,
-  worker,
+  agent,
   onSuccess,
 }: RegenerateKeyDialogProps) {
   const [apiKey, setApiKey] = useState<string | null>(null);
@@ -37,7 +37,7 @@ export function RegenerateKeyDialog({
   const [showApiKey, setShowApiKey] = useState(false);
   const [configDialogOpen, setConfigDialogOpen] = useState(false);
 
-  const { trigger: regenerateKey, isMutating } = useRegenerateWorkerKey(worker.id);
+  const { trigger: regenerateKey, isMutating } = useRegenerateAgentKey(agent.id);
 
   // Reset state when dialog opens
   useEffect(() => {
@@ -103,7 +103,7 @@ export function RegenerateKeyDialog({
 
     // Invalidate cache after dialog closes if we regenerated a key
     if (hadNewKey) {
-      await invalidateWorkersCache();
+      await invalidateAgentsCache();
       onSuccess?.();
     }
   };
@@ -130,7 +130,7 @@ export function RegenerateKeyDialog({
                 Important: Save your new API key
               </p>
               <p className="text-xs text-muted-foreground">
-                The old API key has been invalidated. Any workers using the old key
+                The old API key has been invalidated. Any agents using the old key
                 will no longer be able to authenticate.
               </p>
             </div>
@@ -191,10 +191,10 @@ export function RegenerateKeyDialog({
       </Dialog>
 
       {/* Config dialog with actual API key */}
-      <WorkerConfigDialog
+      <AgentConfigDialog
         open={configDialogOpen}
         onOpenChange={setConfigDialogOpen}
-        worker={worker}
+        agent={agent}
         apiKey={apiKey}
       />
     </>
@@ -211,7 +211,7 @@ export function RegenerateKeyDialog({
             Regenerate API Key
           </DialogTitle>
           <DialogDescription>
-            Generate a new API key for <strong>{worker.name}</strong>
+            Generate a new API key for <strong>{agent.name}</strong>
           </DialogDescription>
         </DialogHeader>
 
@@ -223,8 +223,8 @@ export function RegenerateKeyDialog({
                 Warning: This will invalidate the current API key
               </p>
               <p className="text-xs text-muted-foreground">
-                Any workers currently using this API key will no longer be able to
-                authenticate. Make sure to update your worker configuration with the
+                Any agents currently using this API key will no longer be able to
+                authenticate. Make sure to update your agent configuration with the
                 new key.
               </p>
             </div>
@@ -232,7 +232,7 @@ export function RegenerateKeyDialog({
         </div>
 
         <div className="text-sm text-muted-foreground">
-          <p>Current API key prefix: <code className="bg-muted px-1 rounded">{worker.api_key_prefix}...</code></p>
+          <p>Current API key prefix: <code className="bg-muted px-1 rounded">{agent.api_key_prefix}...</code></p>
         </div>
 
         <DialogFooter>

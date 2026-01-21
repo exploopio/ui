@@ -43,29 +43,29 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
-import { WorkerTypeIcon } from "./worker-type-icon";
+import { AgentTypeIcon } from "./agent-type-icon";
 import { ToolSelection, type ToolOption } from "./tool-selection";
 import {
-  createWorkerSchema,
-  type CreateWorkerFormData,
-  WORKER_TYPE_OPTIONS,
-  EXECUTION_MODE_OPTIONS,
-} from "../schemas/worker-schema";
-import { useWorkerFormOptions } from "../hooks";
-import { useCreateWorker, invalidateWorkersCache } from "@/lib/api/worker-hooks";
-import type { WorkerType } from "@/lib/api/worker-types";
+  createAgentSchema,
+  type CreateAgentFormData,
+  AGENT_TYPE_OPTIONS,
+  AGENT_EXECUTION_MODE_OPTIONS,
+} from "../schemas/agent-schema";
+import { useAgentFormOptions } from "../hooks";
+import { useCreateAgent, invalidateAgentsCache } from "@/lib/api/agent-hooks";
+import type { AgentType } from "@/lib/api/agent-types";
 
-interface AddWorkerDialogProps {
+interface AddAgentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
 }
 
-export function AddWorkerDialog({
+export function AddAgentDialog({
   open,
   onOpenChange,
   onSuccess,
-}: AddWorkerDialogProps) {
+}: AddAgentDialogProps) {
   const [step, setStep] = useState<1 | 2>(1);
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -77,19 +77,19 @@ export function AddWorkerDialog({
     isLoading: isLoadingOptions,
     error: optionsError,
     getCapabilitiesForTools,
-  } = useWorkerFormOptions();
+  } = useAgentFormOptions();
 
-  const { trigger: createWorker, isMutating } = useCreateWorker();
+  const { trigger: createAgent, isMutating } = useCreateAgent();
 
-  const form = useForm<CreateWorkerFormData>({
-    resolver: zodResolver(createWorkerSchema),
+  const form = useForm<CreateAgentFormData>({
+    resolver: zodResolver(createAgentSchema),
     defaultValues: {
       name: "",
-      type: "scanner",
+      type: "worker",  // Default to daemon agent type
       description: "",
       capabilities: [],
       tools: [],
-      execution_mode: "standalone",
+      execution_mode: "daemon",  // Default to daemon mode
     },
   });
 
@@ -128,11 +128,11 @@ export function AddWorkerDialog({
     }
   };
 
-  const onSubmit = async (data: CreateWorkerFormData) => {
+  const onSubmit = async (data: CreateAgentFormData) => {
     try {
       const capabilities = getCapabilitiesForTools(selectedTools);
 
-      const result = await createWorker({
+      const result = await createAgent({
         name: data.name,
         type: data.type,
         description: data.description,
@@ -141,8 +141,8 @@ export function AddWorkerDialog({
         execution_mode: data.execution_mode,
       });
 
-      toast.success(`Worker "${data.name}" created successfully`);
-      await invalidateWorkersCache();
+      toast.success(`Agent "${data.name}" created successfully`);
+      await invalidateAgentsCache();
 
       if (result?.api_key) {
         setApiKey(result.api_key);
@@ -153,7 +153,7 @@ export function AddWorkerDialog({
       }
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to create worker"
+        error instanceof Error ? error.message : "Failed to create agent"
       );
     }
   };
@@ -188,7 +188,7 @@ export function AddWorkerDialog({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-green-600">
               <Check className="h-5 w-5" />
-              Worker Created Successfully
+              Agent Created Successfully
             </DialogTitle>
             <DialogDescription>
               Save this API key now. You won&apos;t be able to see it again.
@@ -254,12 +254,12 @@ export function AddWorkerDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Bot className="h-5 w-5" />
-            Add Worker
+            Add Agent
           </DialogTitle>
           <DialogDescription>
             {step === 1
-              ? "Configure the basic settings for your worker"
-              : "Select the tools this worker will use"}
+              ? "Configure the basic settings for your agent"
+              : "Select the tools this agent will use"}
           </DialogDescription>
         </DialogHeader>
 
@@ -297,18 +297,18 @@ export function AddWorkerDialog({
                 name="type"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Worker Type</FormLabel>
+                    <FormLabel>Agent Type</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select worker type" />
+                          <SelectValue placeholder="Select agent type" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {WORKER_TYPE_OPTIONS.map((option) => (
+                        {AGENT_TYPE_OPTIONS.map((option) => (
                           <SelectItem key={option.value} value={option.value}>
                             <div className="flex items-center gap-2">
-                              <WorkerTypeIcon type={option.value as WorkerType} className="h-4 w-4" />
+                              <AgentTypeIcon type={option.value as AgentType} className="h-4 w-4" />
                               <span>{option.label}</span>
                             </div>
                           </SelectItem>
@@ -343,7 +343,7 @@ export function AddWorkerDialog({
                       Description <span className="text-muted-foreground font-normal">(optional)</span>
                     </FormLabel>
                     <FormControl>
-                      <Textarea placeholder="What does this worker do?" className="resize-none" rows={2} {...field} />
+                      <Textarea placeholder="What does this agent do?" className="resize-none" rows={2} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -357,7 +357,7 @@ export function AddWorkerDialog({
                   <FormItem>
                     <FormLabel>Execution Mode</FormLabel>
                     <div className="grid grid-cols-2 gap-3">
-                      {EXECUTION_MODE_OPTIONS.map((option) => (
+                      {AGENT_EXECUTION_MODE_OPTIONS.map((option) => (
                         <div
                           key={option.value}
                           onClick={() => field.onChange(option.value)}
@@ -417,7 +417,7 @@ export function AddWorkerDialog({
               </Button>
               <Button onClick={form.handleSubmit(onSubmit)} disabled={isMutating}>
                 {isMutating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Create Worker
+                Create Agent
               </Button>
             </>
           )}

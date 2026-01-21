@@ -386,3 +386,36 @@ export {
   STATUS_CONFIG,
   SOURCE_CONFIG,
 } from './finding-types'
+
+// ============================================
+// AUDIT LOG HOOKS & TYPES
+// ============================================
+
+export {
+  useAuditLogs,
+  useAuditLog,
+  useAuditLogStats,
+  useResourceAuditHistory,
+  useUserAuditActivity,
+  auditLogKeys,
+  invalidateAuditLogsCache,
+} from './audit-hooks'
+
+export type {
+  AuditAction,
+  AuditResourceType,
+  AuditResult,
+  AuditSeverity,
+  AuditChanges,
+  AuditLog,
+  AuditLogListResponse,
+  AuditLogListFilters,
+  AuditLogStats,
+} from './audit-types'
+
+export {
+  getActionLabel,
+  getSeverityColor,
+  getResultColor,
+  getActionCategory,
+} from './audit-types'

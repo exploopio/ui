@@ -30,28 +30,28 @@ import { cn } from "@/lib/utils";
 
 import { ToolSelection, type ToolOption } from "./tool-selection";
 import {
-  updateWorkerSchema,
-  type UpdateWorkerFormData,
-  WORKER_STATUS_OPTIONS,
-  EXECUTION_MODE_OPTIONS,
-} from "../schemas/worker-schema";
-import { useWorkerFormOptions } from "../hooks";
-import { useUpdateWorker, invalidateWorkersCache } from "@/lib/api/worker-hooks";
-import type { Worker } from "@/lib/api/worker-types";
+  updateAgentSchema,
+  type UpdateAgentFormData,
+  AGENT_STATUS_OPTIONS,
+  AGENT_EXECUTION_MODE_OPTIONS,
+} from "../schemas/agent-schema";
+import { useAgentFormOptions } from "../hooks";
+import { useUpdateAgent, invalidateAgentsCache } from "@/lib/api/agent-hooks";
+import type { Agent } from "@/lib/api/agent-types";
 
-interface EditWorkerDialogProps {
+interface EditAgentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  worker: Worker;
+  agent: Agent;
   onSuccess?: () => void;
 }
 
-export function EditWorkerDialog({
+export function EditAgentDialog({
   open,
   onOpenChange,
-  worker,
+  agent,
   onSuccess,
-}: EditWorkerDialogProps) {
+}: EditAgentDialogProps) {
   const [selectedTools, setSelectedTools] = useState<string[]>([]);
 
   const {
@@ -59,19 +59,19 @@ export function EditWorkerDialog({
     isLoading: isLoadingOptions,
     error: optionsError,
     getCapabilitiesForTools,
-  } = useWorkerFormOptions();
+  } = useAgentFormOptions();
 
-  const { trigger: updateWorker, isMutating } = useUpdateWorker(worker.id);
+  const { trigger: updateAgent, isMutating } = useUpdateAgent(agent.id);
 
-  const form = useForm<UpdateWorkerFormData>({
-    resolver: zodResolver(updateWorkerSchema),
+  const form = useForm<UpdateAgentFormData>({
+    resolver: zodResolver(updateAgentSchema),
     defaultValues: {
-      name: worker.name,
-      description: worker.description || "",
-      capabilities: worker.capabilities || [],
-      tools: worker.tools || [],
-      execution_mode: worker.execution_mode,
-      status: worker.status,
+      name: agent.name,
+      description: agent.description || "",
+      capabilities: agent.capabilities || [],
+      tools: agent.tools || [],
+      execution_mode: agent.execution_mode,
+      status: agent.status,
     },
   });
 
@@ -86,24 +86,24 @@ export function EditWorkerDialog({
   // Reset state when dialog opens
   useEffect(() => {
     if (open) {
-      setSelectedTools(worker.tools || []);
+      setSelectedTools(agent.tools || []);
       form.reset({
-        name: worker.name,
-        description: worker.description || "",
-        capabilities: worker.capabilities || [],
-        tools: worker.tools || [],
-        execution_mode: worker.execution_mode,
-        status: worker.status,
+        name: agent.name,
+        description: agent.description || "",
+        capabilities: agent.capabilities || [],
+        tools: agent.tools || [],
+        execution_mode: agent.execution_mode,
+        status: agent.status,
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, worker.id]);
+  }, [open, agent.id]);
 
-  const onSubmit = async (data: UpdateWorkerFormData) => {
+  const onSubmit = async (data: UpdateAgentFormData) => {
     try {
       const capabilities = getCapabilitiesForTools(selectedTools);
 
-      await updateWorker({
+      await updateAgent({
         name: data.name,
         description: data.description,
         capabilities: capabilities as never[],
@@ -112,13 +112,13 @@ export function EditWorkerDialog({
         status: data.status,
       });
 
-      toast.success(`Worker "${data.name || worker.name}" updated successfully`);
-      await invalidateWorkersCache();
+      toast.success(`Agent "${data.name || agent.name}" updated successfully`);
+      await invalidateAgentsCache();
       onOpenChange(false);
       onSuccess?.();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to update worker"
+        error instanceof Error ? error.message : "Failed to update agent"
       );
     }
   };
@@ -135,10 +135,10 @@ export function EditWorkerDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Settings className="h-5 w-5" />
-            Edit Worker
+            Edit Agent
           </DialogTitle>
           <DialogDescription>
-            Update configuration for <strong>{worker.name}</strong>
+            Update configuration for <strong>{agent.name}</strong>
           </DialogDescription>
         </DialogHeader>
 
@@ -182,7 +182,7 @@ export function EditWorkerDialog({
                         Description <span className="text-muted-foreground font-normal">(optional)</span>
                       </FormLabel>
                       <FormControl>
-                        <Textarea placeholder="What does this worker do?" className="resize-none" rows={2} {...field} />
+                        <Textarea placeholder="What does this agent do?" className="resize-none" rows={2} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -196,7 +196,7 @@ export function EditWorkerDialog({
                     <FormItem>
                       <FormLabel>Status</FormLabel>
                       <div className="grid grid-cols-3 gap-2">
-                        {WORKER_STATUS_OPTIONS.filter((opt) =>
+                        {AGENT_STATUS_OPTIONS.filter((opt) =>
                           ["active", "inactive", "pending"].includes(opt.value)
                         ).map((option) => (
                           <div
@@ -225,7 +225,7 @@ export function EditWorkerDialog({
                     <FormItem>
                       <FormLabel>Execution Mode</FormLabel>
                       <div className="grid grid-cols-2 gap-3">
-                        {EXECUTION_MODE_OPTIONS.map((option) => (
+                        {AGENT_EXECUTION_MODE_OPTIONS.map((option) => (
                           <div
                             key={option.value}
                             onClick={() => field.onChange(option.value)}
