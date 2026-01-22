@@ -32,6 +32,7 @@ import {
   Key,
   Webhook,
 } from "lucide-react";
+import { Can, Permission } from "@/lib/permissions";
 
 // Mock data for integrations
 const integrationStats = {
@@ -348,10 +349,14 @@ export default function IntegrationsPage() {
                           {status.icon}
                           <span className="ml-1">{integration.status}</span>
                         </Badge>
-                        <Switch checked={integration.status === "connected"} />
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                          <Settings className="h-4 w-4" />
-                        </Button>
+                        <Can permission={Permission.IntegrationsManage} mode="disable">
+                          <Switch checked={integration.status === "connected"} />
+                        </Can>
+                        <Can permission={Permission.IntegrationsManage} mode="disable">
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <Settings className="h-4 w-4" />
+                          </Button>
+                        </Can>
                       </div>
                     </div>
                   );
@@ -395,10 +400,12 @@ export default function IntegrationsPage() {
                       </Badge>
                       <p className="text-muted-foreground mt-2 text-xs">{integration.description}</p>
                     </div>
-                    <Button variant="outline" size="sm" className="mt-3 w-full">
-                      <Plus className="mr-2 h-4 w-4" />
-                      Connect
-                    </Button>
+                    <Can permission={Permission.IntegrationsManage} mode="disable">
+                      <Button variant="outline" size="sm" className="mt-3 w-full">
+                        <Plus className="mr-2 h-4 w-4" />
+                        Connect
+                      </Button>
+                    </Can>
                   </CardContent>
                 </Card>
               ))}

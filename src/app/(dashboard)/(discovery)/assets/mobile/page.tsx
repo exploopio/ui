@@ -109,6 +109,7 @@ import {
   ClassificationBadges,
   type Asset
 } from "@/features/assets";
+import { Can, Permission, usePermissions } from "@/lib/permissions";
 import { mockAssetGroups } from "@/features/asset-groups";
 import type { Status } from "@/features/shared/types";
 import {
@@ -174,6 +175,11 @@ const formatDownloads = (downloads?: number) => {
 };
 
 export default function MobileAppsPage() {
+  // Permission checks
+  const { can } = usePermissions();
+  const canWriteAssets = can(Permission.AssetsWrite);
+  const canDeleteAssets = can(Permission.AssetsDelete);
+
   // Fetch mobile apps from API
   const { assets: mobileApps, isLoading: _isLoading, isError: _isError, error: _fetchError, mutate } = useAssets({
     types: ['mobile_app'],
@@ -390,10 +396,12 @@ export default function MobileAppsPage() {
                 <Eye className="mr-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenEdit(app); }}>
-                <Pencil className="mr-2 h-4 w-4" />
-                Edit
-              </DropdownMenuItem>
+              <Can permission={Permission.AssetsWrite}>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenEdit(app); }}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Edit
+                </DropdownMenuItem>
+              </Can>
               {app.metadata.bundleId && (
                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleCopyBundleId(app); }}>
                   <Copy className="mr-2 h-4 w-4" />
@@ -406,18 +414,20 @@ export default function MobileAppsPage() {
                   Open Store
                 </DropdownMenuItem>
               )}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="text-red-400"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setMobileAppToDelete(app);
-                  setDeleteDialogOpen(true);
-                }}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
-              </DropdownMenuItem>
+              <Can permission={Permission.AssetsDelete}>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-red-400"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMobileAppToDelete(app);
+                    setDeleteDialogOpen(true);
+                  }}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </DropdownMenuItem>
+              </Can>
             </DropdownMenuContent>
           </DropdownMenu>
         );
@@ -596,13 +606,15 @@ export default function MobileAppsPage() {
               <Download className="mr-2 h-4 w-4" />
               Export
             </Button>
-            <Button onClick={() => {
-              setFormData(emptyMobileForm);
-              setAddDialogOpen(true);
-            }}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add App
-            </Button>
+            <Can permission={Permission.AssetsWrite}>
+              <Button onClick={() => {
+                setFormData(emptyMobileForm);
+                setAddDialogOpen(true);
+              }}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add App
+              </Button>
+            </Can>
           </div>
         </PageHeader>
 
@@ -723,11 +735,13 @@ export default function MobileAppsPage() {
                         <RefreshCw className="mr-2 h-4 w-4" />
                         Rescan Selected
                       </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-red-400" onClick={handleBulkDelete}>
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete Selected
-                      </DropdownMenuItem>
+                      <Can permission={Permission.AssetsDelete}>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="text-red-400" onClick={handleBulkDelete}>
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete Selected
+                        </DropdownMenuItem>
+                      </Can>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
@@ -851,6 +865,8 @@ export default function MobileAppsPage() {
             setSelectedMobileApp(null);
           }
         }}
+        canEdit={canWriteAssets}
+        canDelete={canDeleteAssets}
         quickActions={
           selectedMobileApp?.metadata.bundleId && (
             <Button size="sm" variant="outline" onClick={() => selectedMobileApp && handleCopyBundleId(selectedMobileApp)}>

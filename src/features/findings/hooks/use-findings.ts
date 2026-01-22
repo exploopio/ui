@@ -6,6 +6,7 @@ import { endpoints } from '@/lib/api/endpoints'
 import type { PaginatedResponse, SearchFilters } from '@/lib/api/types'
 import type { Finding, FindingStatus, FindingStats } from '../types'
 import type { Severity } from '@/features/shared/types'
+import { usePermissions, Permission } from '@/lib/permissions'
 
 // Backend finding type mapping
 interface BackendFinding {
@@ -112,10 +113,17 @@ function transformFindingStats(backend: BackendFindingStats): FindingStats {
 /**
  * Hook to fetch paginated findings list
  * Note: Tenant is extracted from JWT token, not URL path
+ * Only fetches if user has findings:read permission
  */
 export function useFindings(tenantId: string | null, filters?: SearchFilters) {
+  const { can } = usePermissions()
+  const canReadFindings = can(Permission.FindingsRead)
+
+  // Only fetch if user has permission
+  const shouldFetch = tenantId && canReadFindings
+
   const { data, error, isLoading, mutate } = useSWR<PaginatedResponse<BackendFinding>>(
-    tenantId ? ['findings', tenantId, filters] : null,
+    shouldFetch ? ['findings', tenantId, filters] : null,
     () => get<PaginatedResponse<BackendFinding>>(endpoints.findings.list(filters)),
     {
       revalidateOnFocus: false,
@@ -128,7 +136,7 @@ export function useFindings(tenantId: string | null, filters?: SearchFilters) {
     total: data?.pagination?.total || 0,
     page: data?.pagination?.page || 1,
     pageSize: data?.pagination?.pageSize || 10,
-    isLoading,
+    isLoading: shouldFetch ? isLoading : false,
     error,
     mutate,
   }
@@ -137,10 +145,17 @@ export function useFindings(tenantId: string | null, filters?: SearchFilters) {
 /**
  * Hook to fetch a single finding by ID
  * Note: Tenant is extracted from JWT token, not URL path
+ * Only fetches if user has findings:read permission
  */
 export function useFinding(tenantId: string | null, findingId: string | null) {
+  const { can } = usePermissions()
+  const canReadFindings = can(Permission.FindingsRead)
+
+  // Only fetch if user has permission
+  const shouldFetch = tenantId && findingId && canReadFindings
+
   const { data, error, isLoading, mutate } = useSWR<BackendFinding>(
-    tenantId && findingId ? ['finding', tenantId, findingId] : null,
+    shouldFetch ? ['finding', tenantId, findingId] : null,
     () => get<BackendFinding>(endpoints.findings.get(findingId!)),
     {
       revalidateOnFocus: false,
@@ -149,7 +164,7 @@ export function useFinding(tenantId: string | null, findingId: string | null) {
 
   return {
     finding: data ? transformFinding(data) : null,
-    isLoading,
+    isLoading: shouldFetch ? isLoading : false,
     error,
     mutate,
   }
@@ -158,10 +173,17 @@ export function useFinding(tenantId: string | null, findingId: string | null) {
 /**
  * Hook to fetch findings by asset
  * Note: Projects are now assets with type="repository", use asset_id filter
+ * Only fetches if user has findings:read permission
  */
 export function useFindingsByProject(tenantId: string | null, projectId: string | null, filters?: SearchFilters) {
+  const { can } = usePermissions()
+  const canReadFindings = can(Permission.FindingsRead)
+
+  // Only fetch if user has permission
+  const shouldFetch = tenantId && projectId && canReadFindings
+
   const { data, error, isLoading, mutate } = useSWR<PaginatedResponse<BackendFinding>>(
-    tenantId && projectId ? ['findings-by-project', tenantId, projectId, filters] : null,
+    shouldFetch ? ['findings-by-project', tenantId, projectId, filters] : null,
     () => get<PaginatedResponse<BackendFinding>>(endpoints.findings.listByAsset(projectId!, filters)),
     {
       revalidateOnFocus: false,
@@ -172,7 +194,7 @@ export function useFindingsByProject(tenantId: string | null, projectId: string 
   return {
     findings: data?.data?.map(transformFinding) || [],
     total: data?.pagination?.total || 0,
-    isLoading,
+    isLoading: shouldFetch ? isLoading : false,
     error,
     mutate,
   }
@@ -243,10 +265,17 @@ export async function deleteFinding(_tenantId: string, findingId: string): Promi
 
 /**
  * Hook for finding stats (uses tenant-scoped dashboard stats)
+ * Only fetches if user has findings:read or dashboard:read permission
  */
 export function useFindingStats(tenantId: string | null) {
+  const { canAny } = usePermissions()
+  const canReadStats = canAny(Permission.FindingsRead, Permission.DashboardRead)
+
+  // Only fetch if user has permission
+  const shouldFetch = tenantId && canReadStats
+
   const { data, error, isLoading } = useSWR<{ findings: BackendFindingStats }>(
-    tenantId ? ['finding-stats', tenantId] : null,
+    shouldFetch ? ['finding-stats', tenantId] : null,
     async () => {
       const response = await get<{ findings: BackendFindingStats }>(endpoints.dashboard.stats(tenantId!))
       return response
@@ -279,7 +308,7 @@ export function useFindingStats(tenantId: string | null) {
 
   return {
     stats: data?.findings ? transformFindingStats(data.findings) : emptyStats,
-    isLoading,
+    isLoading: shouldFetch ? isLoading : false,
     error,
   }
 }

@@ -79,20 +79,26 @@ async function tryRefreshToken(): Promise<boolean> {
 
   // If already redirecting to login, don't attempt refresh
   if (isRedirectingToLogin) {
-    console.log('[API Client] Already redirecting to login, skipping refresh')
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[API Client] Already redirecting to login, skipping refresh')
+    }
     return false
   }
 
   // If already refreshing, wait for the existing refresh to complete
   if (refreshPromise) {
-    console.log('[API Client] Token refresh already in progress, waiting...')
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[API Client] Token refresh already in progress, waiting...')
+    }
     return refreshPromise
   }
 
   // Create a new refresh promise
   refreshPromise = (async () => {
     try {
-      console.log('[API Client] Starting token refresh...')
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[API Client] Starting token refresh...')
+      }
       const response = await fetch('/api/auth/refresh', {
         method: 'POST',
         credentials: 'include',
@@ -101,15 +107,21 @@ async function tryRefreshToken(): Promise<boolean> {
       const data = await response.json()
 
       if (response.ok && data.success && data.data?.access_token) {
-        console.log('[API Client] Token refresh successful')
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[API Client] Token refresh successful')
+        }
         useAuthStore.getState().updateToken(data.data.access_token)
         return true
       }
 
-      console.warn('[API Client] Token refresh failed:', data.error?.message || 'Unknown error')
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('[API Client] Token refresh failed:', data.error?.message || 'Unknown error')
+      }
       return false
     } catch (error) {
-      console.error('[API Client] Token refresh error:', error)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('[API Client] Token refresh error:', error)
+      }
       return false
     } finally {
       // Clear the refresh promise after a short delay
@@ -128,7 +140,9 @@ async function tryRefreshToken(): Promise<boolean> {
  */
 function redirectToLoginOnce(): void {
   if (isRedirectingToLogin) {
-    console.log('[API Client] Already redirecting to login, skipping')
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[API Client] Already redirecting to login, skipping')
+    }
     return
   }
 
@@ -142,7 +156,9 @@ function redirectToLoginOnce(): void {
   }
 
   isRedirectingToLogin = true
-  console.log('[API Client] Auth failed permanently, redirecting to login')
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[API Client] Auth failed permanently, redirecting to login')
+  }
 
   // Clear auth state
   useAuthStore.getState().clearAuth()
@@ -233,7 +249,9 @@ export async function apiClient<T = unknown>(
       if (response.status === 401 && !_skipRefreshRetry && !skipAuth) {
         // If already redirecting, don't attempt anything
         if (isRedirectingToLogin) {
-          console.log('[API Client] Already redirecting, skipping 401 handling')
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[API Client] Already redirecting, skipping 401 handling')
+          }
           const error = await parseErrorResponse(response)
           throw new ApiClientError(error.message, error.code, error.statusCode, error.details)
         }
@@ -246,6 +264,19 @@ export async function apiClient<T = unknown>(
 
         // Refresh failed - redirect to login (this sets the lock and clears auth)
         redirectToLoginOnce()
+      }
+
+      // Handle 403 Forbidden - user doesn't have permission
+      // Note: We don't automatically retry on 403 because:
+      // 1. 403 means "authenticated but not authorized" - user identity is valid
+      // 2. Refreshing token won't help unless admin changed permissions
+      // 3. Auto-retry would cause unnecessary API calls and noise
+      // Instead, we just log it and let the component handle the error gracefully
+      if (response.status === 403) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[API Client] 403 Forbidden - user lacks permission for:', endpoint)
+        }
+        // Don't retry - just throw the error for the component to handle
       }
 
       const error = await parseErrorResponse(response)
@@ -261,12 +292,16 @@ export async function apiClient<T = unknown>(
     const contentType = response.headers.get('content-type')
     const responseText = await response.text()
 
-    // Log response for debugging
-    console.log('[API Client] Response:', response.status, 'Content-Type:', contentType, 'Body length:', responseText.length)
+    // Log response for debugging (only in development)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[API Client] Response:', response.status, 'Content-Type:', contentType, 'Body length:', responseText.length)
+    }
 
     // Handle empty response body
     if (!responseText || responseText.trim() === '') {
-      console.warn('[API Client] Empty response body from:', endpoint)
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('[API Client] Empty response body from:', endpoint)
+      }
       return undefined as T
     }
 
@@ -275,7 +310,9 @@ export async function apiClient<T = unknown>(
     try {
       data = JSON.parse(responseText)
     } catch (_parseError) {
-      console.error('[API Client] Failed to parse JSON:', responseText.substring(0, 200))
+      if (process.env.NODE_ENV === 'development') {
+        console.error('[API Client] Failed to parse JSON:', responseText.substring(0, 200))
+      }
       throw new ApiClientError(
         'Invalid JSON response from server',
         'PARSE_ERROR',
@@ -301,8 +338,10 @@ export async function apiClient<T = unknown>(
   } catch (error) {
     clearTimeout(timeoutId)
 
-    // Log the actual error for debugging
-    console.error('[API Client] Caught error:', error)
+    // Log the actual error for debugging (only in development)
+    if (process.env.NODE_ENV === 'development') {
+      console.error('[API Client] Caught error:', error)
+    }
 
     // Handle timeout
     if (error instanceof Error && error.name === 'AbortError') {

@@ -3,6 +3,7 @@
 import useSWR from "swr";
 import { useTenant } from "@/context/tenant-provider";
 import { get } from "@/lib/api/client";
+import { usePermissions, Permission } from "@/lib/permissions";
 
 // ============================================
 // API Response Types (snake_case from backend)
@@ -138,8 +139,13 @@ async function fetchAttackSurfaceStats(url: string): Promise<AttackSurfaceStats>
 
 export function useAttackSurfaceStats() {
   const { currentTenant } = useTenant();
+  const { can } = usePermissions();
+  const canReadAssets = can(Permission.AssetsRead);
 
-  const key = currentTenant ? "/api/v1/attack-surface/stats" : null;
+  // Only fetch if user has permission
+  const shouldFetch = currentTenant && canReadAssets;
+
+  const key = shouldFetch ? "/api/v1/attack-surface/stats" : null;
 
   const { data, error, isLoading, mutate } = useSWR<AttackSurfaceStats>(
     key,
@@ -154,7 +160,7 @@ export function useAttackSurfaceStats() {
   return {
     stats: data,
     error,
-    isLoading,
+    isLoading: shouldFetch ? isLoading : false,
     mutate,
   };
 }

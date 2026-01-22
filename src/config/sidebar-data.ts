@@ -60,6 +60,9 @@ import {
   // CTEM Phase 1 icons
   TrendingUp,
   AlertTriangle,
+  // Access Control icons
+  FolderKey,
+  Key,
 } from "lucide-react";
 import { type SidebarData } from "@/components/types";
 import { Permission, Role } from "@/lib/permissions";
@@ -118,13 +121,13 @@ export const sidebarData: SidebarData = {
           title: "Asset Groups",
           url: "/asset-groups",
           icon: FolderKanban,
-          permission: Permission.AssetsRead,
+          permission: Permission.AssetGroupsRead,
         },
         {
           title: "Scope Config",
           url: "/scope-config",
           icon: Settings2,
-          permission: Permission.AssetsRead,
+          permission: Permission.AssetGroupsRead,
         },
       ],
     },
@@ -437,17 +440,31 @@ export const sidebarData: SidebarData = {
           permission: Permission.TeamRead,
           items: [
             {
-              title: "Tenant Settings",
+              title: "General",
               url: "/settings/tenant",
               icon: Building,
               // Only admin and owner can modify tenant settings
               minRole: Role.Admin,
             },
             {
-              title: "Users & Roles",
+              title: "Members",
               url: "/settings/users",
               icon: Users,
               permission: Permission.MembersRead,
+            },
+            {
+              title: "Roles",
+              url: "/settings/roles",
+              icon: Key,
+              permission: Permission.RolesRead,
+              minRole: Role.Admin,
+            },
+            {
+              title: "Teams",
+              url: "/settings/teams",
+              icon: FolderKey,
+              permission: Permission.GroupsRead,
+              minRole: Role.Admin,
             },
             {
               title: "Audit Log",

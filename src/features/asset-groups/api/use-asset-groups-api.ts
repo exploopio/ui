@@ -14,6 +14,7 @@ import useSWRMutation from 'swr/mutation'
 import { get, post, put, patch, del } from '@/lib/api/client'
 import { handleApiError } from '@/lib/api/error-handler'
 import { useTenant } from '@/context/tenant-provider'
+import { usePermissions, Permission } from '@/lib/permissions'
 import type {
   ApiAssetGroup,
   ApiAssetGroupListResponse,
@@ -165,8 +166,13 @@ async function fetchAssetGroupStats(url: string): Promise<ApiAssetGroupStats> {
  */
 export function useAssetGroupsApi(filters?: AssetGroupApiFilters, config?: SWRConfiguration) {
   const { currentTenant } = useTenant()
+  const { can } = usePermissions()
+  const canReadAssetGroups = can(Permission.AssetGroupsRead)
 
-  const key = currentTenant ? buildAssetGroupsEndpoint(filters) : null
+  // Only fetch if user has permission
+  const shouldFetch = currentTenant && canReadAssetGroups
+
+  const key = shouldFetch ? buildAssetGroupsEndpoint(filters) : null
 
   return useSWR<ApiAssetGroupListResponse>(
     key,
@@ -177,11 +183,17 @@ export function useAssetGroupsApi(filters?: AssetGroupApiFilters, config?: SWRCo
 
 /**
  * Fetch a single asset group by ID
+ * Only fetches if user has asset-groups:read permission
  */
 export function useAssetGroupApi(groupId: string | null, config?: SWRConfiguration) {
   const { currentTenant } = useTenant()
+  const { can } = usePermissions()
+  const canReadAssetGroups = can(Permission.AssetGroupsRead)
 
-  const key = currentTenant && groupId ? buildAssetGroupEndpoint(groupId) : null
+  // Only fetch if user has permission
+  const shouldFetch = currentTenant && groupId && canReadAssetGroups
+
+  const key = shouldFetch ? buildAssetGroupEndpoint(groupId) : null
 
   return useSWR<ApiAssetGroup>(
     key,
@@ -192,6 +204,7 @@ export function useAssetGroupApi(groupId: string | null, config?: SWRConfigurati
 
 /**
  * Fetch assets for a specific group
+ * Only fetches if user has asset-groups:read permission
  */
 export function useGroupAssetsApi(
   groupId: string | null,
@@ -199,8 +212,13 @@ export function useGroupAssetsApi(
   config?: SWRConfiguration
 ) {
   const { currentTenant } = useTenant()
+  const { can } = usePermissions()
+  const canReadAssetGroups = can(Permission.AssetGroupsRead)
 
-  const key = currentTenant && groupId
+  // Only fetch if user has permission
+  const shouldFetch = currentTenant && groupId && canReadAssetGroups
+
+  const key = shouldFetch
     ? buildGroupAssetsEndpoint(groupId, filters)
     : null
 
@@ -213,6 +231,7 @@ export function useGroupAssetsApi(
 
 /**
  * Fetch findings for a specific group
+ * Only fetches if user has asset-groups:read permission
  */
 export function useGroupFindingsApi(
   groupId: string | null,
@@ -221,8 +240,13 @@ export function useGroupFindingsApi(
   config?: SWRConfiguration
 ) {
   const { currentTenant } = useTenant()
+  const { can } = usePermissions()
+  const canReadAssetGroups = can(Permission.AssetGroupsRead)
 
-  const key = currentTenant && groupId
+  // Only fetch if user has permission
+  const shouldFetch = currentTenant && groupId && canReadAssetGroups
+
+  const key = shouldFetch
     ? buildGroupFindingsEndpoint(groupId, page, perPage)
     : null
 
@@ -235,11 +259,17 @@ export function useGroupFindingsApi(
 
 /**
  * Fetch asset group statistics
+ * Only fetches if user has asset-groups:read permission
  */
 export function useAssetGroupStatsApi(config?: SWRConfiguration) {
   const { currentTenant } = useTenant()
+  const { can } = usePermissions()
+  const canReadAssetGroups = can(Permission.AssetGroupsRead)
 
-  const key = currentTenant ? `${BASE_URL}/stats` : null
+  // Only fetch if user has permission
+  const shouldFetch = currentTenant && canReadAssetGroups
+
+  const key = shouldFetch ? `${BASE_URL}/stats` : null
 
   return useSWR<ApiAssetGroupStats>(
     key,

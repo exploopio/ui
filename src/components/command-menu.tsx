@@ -16,12 +16,16 @@ import {
 } from '@/components/ui/command'
 // Use centralized sidebar data from features
 import { sidebarData } from '@/config/sidebar-data'
+import { useFilteredSidebarData } from '@/lib/permissions'
 import { ScrollArea } from './ui/scroll-area'
 
 export function CommandMenu() {
   const router = useRouter()
   const { setTheme } = useTheme()
   const { open, setOpen } = useSearch()
+
+  // Filter sidebar data based on user permissions
+  const filteredSidebarData = useFilteredSidebarData(sidebarData)
 
   const runCommand = React.useCallback(
     (command: () => unknown) => {
@@ -37,7 +41,7 @@ export function CommandMenu() {
       <CommandList>
         <ScrollArea type='hover' className='h-72 pe-1'>
           <CommandEmpty>No results found.</CommandEmpty>
-          {sidebarData.navGroups.map((group) => (
+          {filteredSidebarData.navGroups.map((group) => (
             <CommandGroup key={group.title} heading={group.title}>
               {group.items.map((navItem, i) => {
                 if ("url" in navItem)

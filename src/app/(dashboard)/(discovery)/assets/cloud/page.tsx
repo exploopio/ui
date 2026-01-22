@@ -113,6 +113,7 @@ import {
   ClassificationBadges,
   type Asset
 } from "@/features/assets";
+import { Can, Permission, usePermissions } from "@/lib/permissions";
 import { mockAssetGroups } from "@/features/asset-groups";
 import type { Status } from "@/features/shared/types";
 import {
@@ -202,6 +203,11 @@ const emptyCloudForm = {
 };
 
 export default function CloudPage() {
+  // Permission checks
+  const { can } = usePermissions();
+  const canWriteAssets = can(Permission.AssetsWrite);
+  const canDeleteAssets = can(Permission.AssetsDelete);
+
   // Fetch cloud assets from API (compute, storage, serverless types)
   const { assets: cloudAssets, isLoading: _isLoading, isError: _isError, error: _fetchError, mutate } = useAssets({
     types: ['compute', 'storage', 'serverless'],
@@ -435,26 +441,30 @@ export default function CloudPage() {
                 <Eye className="mr-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenEdit(asset); }}>
-                <Pencil className="mr-2 h-4 w-4" />
-                Edit
-              </DropdownMenuItem>
+              <Can permission={Permission.AssetsWrite}>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenEdit(asset); }}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Edit
+                </DropdownMenuItem>
+              </Can>
               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenConsole(asset); }}>
                 <Globe className="mr-2 h-4 w-4" />
                 Open Console
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="text-red-400"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setAssetToDelete(asset);
-                  setDeleteDialogOpen(true);
-                }}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
-              </DropdownMenuItem>
+              <Can permission={Permission.AssetsDelete}>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-red-400"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setAssetToDelete(asset);
+                    setDeleteDialogOpen(true);
+                  }}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </DropdownMenuItem>
+              </Can>
             </DropdownMenuContent>
           </DropdownMenu>
         );
@@ -649,15 +659,17 @@ export default function CloudPage() {
               <Download className="mr-2 h-4 w-4" />
               Export
             </Button>
-            <Button
-              onClick={() => {
-                setFormData(emptyCloudForm);
-                setAddDialogOpen(true);
-              }}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add Cloud Asset
-            </Button>
+            <Can permission={Permission.AssetsWrite}>
+              <Button
+                onClick={() => {
+                  setFormData(emptyCloudForm);
+                  setAddDialogOpen(true);
+                }}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add Cloud Asset
+              </Button>
+            </Can>
           </div>
         </PageHeader>
 
@@ -818,11 +830,13 @@ export default function CloudPage() {
                         <RefreshCw className="mr-2 h-4 w-4" />
                         Rescan Selected
                       </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-red-400" onClick={handleBulkDelete}>
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete Selected
-                      </DropdownMenuItem>
+                      <Can permission={Permission.AssetsDelete}>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="text-red-400" onClick={handleBulkDelete}>
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete Selected
+                        </DropdownMenuItem>
+                      </Can>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
@@ -947,6 +961,8 @@ export default function CloudPage() {
             setSelectedAsset(null);
           }
         }}
+        canEdit={canWriteAssets}
+        canDelete={canDeleteAssets}
         quickActions={
           selectedAsset && (
             <Button

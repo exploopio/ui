@@ -22,6 +22,28 @@ const BACKEND_URL = process.env.BACKEND_API_URL || 'http://localhost:8080'
 const ACCESS_TOKEN_COOKIE = env.auth.cookieName
 const REFRESH_TOKEN_COOKIE = env.auth.refreshCookieName
 const TENANT_COOKIE = env.cookies.tenant
+const PERMISSIONS_COOKIE = 'app_permissions'
+
+/**
+ * Extract permissions from JWT token
+ * JWT format: header.payload.signature (base64url encoded)
+ */
+function extractPermissionsFromToken(accessToken: string): string[] {
+  try {
+    const parts = accessToken.split('.')
+    if (parts.length !== 3) return []
+
+    // Decode base64url payload
+    const payload = parts[1]
+    const decoded = Buffer.from(payload.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf-8')
+    const parsed = JSON.parse(decoded)
+
+    return parsed.permissions || []
+  } catch (error) {
+    console.error('[Refresh] Failed to extract permissions from token:', error)
+    return []
+  }
+}
 
 interface BackendRefreshResponse {
   access_token: string
@@ -30,6 +52,7 @@ interface BackendRefreshResponse {
   tenant_id: string
   tenant_slug: string
   role: string
+  permissions?: string[]
 }
 
 interface TenantInfo {
@@ -148,6 +171,10 @@ export async function POST(_request: NextRequest): Promise<NextResponse> {
     const data: BackendRefreshResponse = await response.json()
     console.log('[Refresh] Backend success, new access_token:', !!data.access_token)
 
+    // Extract permissions from the access token
+    const permissions = extractPermissionsFromToken(data.access_token)
+    console.log('[Refresh] Extracted permissions:', permissions)
+
     // Build success response
     const clientResponse = NextResponse.json({
       success: true,
@@ -157,6 +184,7 @@ export async function POST(_request: NextRequest): Promise<NextResponse> {
         tenant_id: data.tenant_id,
         tenant_slug: data.tenant_slug,
         role: data.role,
+        permissions: permissions,
       }
     })
 
@@ -190,6 +218,16 @@ export async function POST(_request: NextRequest): Promise<NextResponse> {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 7 * 24 * 60 * 60,
+      path: '/',
+    })
+
+    // Store permissions in a separate cookie (non-httpOnly so client can read)
+    // This allows the sidebar to filter correctly on page load without waiting for API calls
+    clientResponse.cookies.set(PERMISSIONS_COOKIE, JSON.stringify(permissions), {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: data.expires_in || 900, // Same expiry as access token
       path: '/',
     })
 

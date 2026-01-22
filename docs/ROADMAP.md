@@ -61,6 +61,7 @@ The Rediver CTEM Platform follows the 5-stage CTEM (Continuous Threat Exposure M
 ### Settings
 - [x] Tenant Settings
 - [x] Users & Roles
+- [x] Access Control (Groups & Permission Sets)
 - [x] Billing
 - [x] Integrations
 

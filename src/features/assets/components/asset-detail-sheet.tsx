@@ -63,6 +63,12 @@ interface AssetDetailSheetProps<T extends Asset> {
   /** Callback when Delete is clicked from danger zone */
   onDelete: () => void;
 
+  /** Whether user can edit the asset (for permission gating, default: true) */
+  canEdit?: boolean;
+
+  /** Whether user can delete the asset (for permission gating, default: true) */
+  canDelete?: boolean;
+
   /** Additional quick action buttons (rendered after Edit button) */
   quickActions?: React.ReactNode;
 
@@ -128,6 +134,8 @@ export function AssetDetailSheet<T extends Asset>({
   gradientVia = "via-transparent",
   onEdit,
   onDelete,
+  canEdit = true,
+  canDelete = true,
   quickActions,
   statsContent,
   overviewContent,
@@ -210,10 +218,12 @@ export function AssetDetailSheet<T extends Asset>({
 
           {/* Quick Actions */}
           <div className="flex flex-wrap gap-2 mt-4">
-            <Button size="sm" variant="secondary" onClick={onEdit}>
-              <Pencil className="mr-2 h-4 w-4" />
-              Edit
-            </Button>
+            {canEdit && (
+              <Button size="sm" variant="secondary" onClick={onEdit}>
+                <Pencil className="mr-2 h-4 w-4" />
+                Edit
+              </Button>
+            )}
             {quickActions}
           </div>
         </div>
@@ -301,10 +311,12 @@ export function AssetDetailSheet<T extends Asset>({
                 type={asset.type}
                 groupId={asset.groupId}
               />
-              <DangerZoneSection
-                onDelete={onDelete}
-                assetTypeName={assetTypeName}
-              />
+              {canDelete && (
+                <DangerZoneSection
+                  onDelete={onDelete}
+                  assetTypeName={assetTypeName}
+                />
+              )}
             </TabsContent>
           )}
         </Tabs>

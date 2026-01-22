@@ -282,6 +282,50 @@ proxy.ts                       # Next.js 16 middleware
 
 **Important:** After auth changes, use `window.location.href` (not `router.push`) to ensure cookies are picked up.
 
+## 🛡️ Access Control (RBAC)
+
+Simplified permission model. See [access-control.md](.claude/access-control.md) for complete guide.
+
+**Architecture:**
+```
+User → Membership (owner | member)
+     → Roles → Feature Permissions (what can you DO)
+     → Groups → Data Scope (what can you SEE)
+```
+
+**Key Concepts:**
+- **Membership**: Owner (protected, full access) | Member (permissions from roles)
+- **RBAC Roles**: Feature permissions (system + custom roles with 150+ permissions)
+- **Groups**: Data scoping (teams, departments, projects)
+
+**Invitation Flow:**
+```
+Invite user → Select RBAC roles → User accepts → Becomes "member" + roles applied
+```
+
+**Key Files:**
+```
+src/features/access-control/        # RBAC feature
+src/features/access-control/api/    # Role & Group hooks
+src/features/access-control/types/  # Type definitions
+```
+
+**Hooks:**
+```tsx
+// Roles
+const { roles } = useRoles();                    // All available roles
+const { roles } = useUserRoles(userId);          // User's assigned roles
+const { setUserRoles } = useSetUserRoles(userId); // Assign roles
+
+// Groups
+const { groups } = useGroups();
+const { members } = useGroupMembers(groupId);
+
+// Permissions
+const { hasPermission } = useMyPermissions();
+if (hasPermission('assets:write')) { /* show edit */ }
+```
+
 ## 🎨 UI & Theming
 
 ```tsx
@@ -320,6 +364,7 @@ toast.error("Failed!")
 **Guides:**
 - [architecture.md](.claude/architecture.md) - Structure deep dive
 - [auth.md](.claude/auth.md) - Authentication & multi-tenant flow
+- [access-control.md](.claude/access-control.md) - RBAC & permissions system
 - [patterns.md](.claude/patterns.md) - Code patterns & examples
 - [i18n.md](.claude/i18n.md) - Internationalization guide
 - [troubleshooting.md](.claude/troubleshooting.md) - Common issues
@@ -339,14 +384,19 @@ npm run type-check   # TypeScript check
 npm run validate     # Run type-check + lint (use before commit)
 ```
 
-## 🔍 Code Quality Checklist
+## 🔍 MANDATORY: Code Quality Checks
 
-**IMPORTANT**: Before committing or completing a task, ALWAYS run:
+**CRITICAL**: After completing ANY code changes, you MUST run these checks and fix ALL errors before committing:
 
 ```bash
-npm run validate     # Quick check: type-check + lint
-npm run build        # Full check: production build
+# 1. Run type-check and lint - MUST pass with no errors
+npm run validate
+
+# 2. If validate passes, run full build to catch any remaining issues
+npm run build
 ```
+
+**Pre-commit hooks will automatically run type-check and ESLint on staged files.**
 
 ### Pre-commit Hook (Automatic)
 
@@ -488,4 +538,4 @@ export const config = {
 
 **Note**: Keep under 12KB. For patterns, examples, troubleshooting → see `.claude/`
 
-**Last Updated**: 2026-01-15
+**Last Updated**: 2026-01-22

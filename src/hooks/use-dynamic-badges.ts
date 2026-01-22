@@ -13,6 +13,7 @@ import { get } from '@/lib/api/client'
 import { useTenant } from '@/context/tenant-provider'
 import { useAssetGroupStatsApi } from '@/features/asset-groups/api'
 import { useCredentialStatsApi } from '@/features/credentials/api'
+import { usePermissions, Permission } from '@/lib/permissions'
 
 // ============================================
 // TYPES
@@ -43,12 +44,13 @@ interface DashboardStats {
  * Fetch dashboard stats for badge counts
  * Uses long cache since badge counts don't need real-time accuracy
  * Note: Tenant is extracted from JWT token by backend, not from URL
+ * @param shouldFetch - Whether to fetch data (based on permissions)
  */
-function useDashboardStatsForBadges() {
+function useDashboardStatsForBadges(shouldFetch: boolean = true) {
     const { currentTenant } = useTenant()
 
-    // Only fetch when we have a tenant (ensures JWT has tenant context)
-    const key = currentTenant?.id ? '/api/v1/dashboard/stats' : null
+    // Only fetch when we have a tenant AND user has permission
+    const key = currentTenant?.id && shouldFetch ? '/api/v1/dashboard/stats' : null
 
     return useSWR<DashboardStats>(
         key,
@@ -65,26 +67,38 @@ function useDashboardStatsForBadges() {
 /**
  * Hook to get dynamic badge values for sidebar navigation.
  * Returns a map of URL path to badge count.
+ * Only fetches data for features the user has permission to access.
  *
  * @example
  * const badges = useDynamicBadges()
  * // badges = { '/asset-groups': '12', '/findings': '24', ... }
  */
 export function useDynamicBadges(): DynamicBadges {
-    // Fetch asset group stats
-    const { data: assetGroupStats } = useAssetGroupStatsApi({
-        revalidateOnFocus: false,
-        dedupingInterval: 60000,
-    })
+    // Check user permissions to determine which APIs to call
+    const { can } = usePermissions()
+    const canReadGroups = can(Permission.GroupsRead)
+    const canReadFindings = can(Permission.FindingsRead)
+    const canReadCredentials = can(Permission.CredentialsRead)
+    const canReadDashboard = can(Permission.DashboardRead)
 
-    // Fetch dashboard stats for findings count
-    const { data: dashboardStats } = useDashboardStatsForBadges()
+    // Fetch asset group stats - only if user has permission
+    const { data: assetGroupStats } = useAssetGroupStatsApi(
+        canReadGroups ? {
+            revalidateOnFocus: false,
+            dedupingInterval: 60000,
+        } : { isPaused: () => true } // Don't fetch if no permission
+    )
 
-    // Fetch credential stats for credential leaks badge
-    const { data: credentialStats } = useCredentialStatsApi({
-        revalidateOnFocus: false,
-        dedupingInterval: 60000,
-    })
+    // Fetch dashboard stats for findings count - only if user has permission
+    const { data: dashboardStats } = useDashboardStatsForBadges(canReadDashboard && canReadFindings)
+
+    // Fetch credential stats for credential leaks badge - only if user has permission
+    const { data: credentialStats } = useCredentialStatsApi(
+        canReadCredentials ? {
+            revalidateOnFocus: false,
+            dedupingInterval: 60000,
+        } : { isPaused: () => true } // Don't fetch if no permission
+    )
 
     const badges = useMemo(() => {
         const result: DynamicBadges = {}

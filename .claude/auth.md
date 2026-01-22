@@ -51,6 +51,13 @@ Rediver uses a **multi-tenant authentication system** with:
 | `app_tenant` | No | Current tenant info | Server Action |
 | `app_user_info` | No | User info for onboarding | Server Action |
 | `app_pending_tenants` | No | Multi-tenant selection | Server Action |
+| `app_permissions` | No | User's permissions array (JSON) | Server Action after token exchange |
+
+**Permission Cookie Flow:**
+```
+Login/Token Exchange → Extract permissions from JWT → Store in app_permissions cookie
+    → Client reads cookie via usePermissions() hook → Permission checks without API calls
+```
 
 ## Route Protection
 
@@ -222,6 +229,39 @@ src/
 └── proxy.ts                       # Next.js 16 middleware
 ```
 
+## Access Control (Groups & Permission Sets)
+
+### Overview
+
+Rediver uses a **two-layer role model**:
+
+1. **Tenant Role** (tenant_members.role): owner, admin, member, viewer
+2. **Group Permissions**: Fine-grained permissions via groups and permission sets
+
+### Permission Checking
+
+```typescript
+import { Can, Permission, usePermissions } from "@/lib/permissions";
+
+// Component-based
+<Can permission={Permission.AssetsWrite}>
+  <Button>Create Asset</Button>
+</Can>
+
+// Hook-based
+const { can } = usePermissions();
+if (can(Permission.AssetsDelete)) {
+  // Show delete option
+}
+```
+
+### Admin Pages
+
+- **Groups**: `/settings/access-control/groups`
+- **Permission Sets**: `/settings/access-control/permission-sets`
+
+See [ACCESS_CONTROL.md](../docs/ACCESS_CONTROL.md) for full documentation.
+
 ## Security Best Practices
 
 ### 1. HttpOnly Cookies for Tokens
@@ -295,3 +335,4 @@ export default async function ProtectedPage() {
 - [Architecture](./architecture.md) - Project structure
 - [Patterns](./patterns.md) - Code patterns
 - [Troubleshooting](./troubleshooting.md) - Common issues
+- [Access Control](../docs/ACCESS_CONTROL.md) - Groups and permission sets

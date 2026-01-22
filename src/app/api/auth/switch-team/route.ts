@@ -20,6 +20,28 @@ const BACKEND_URL = process.env.BACKEND_API_URL || 'http://localhost:8080'
 const ACCESS_TOKEN_COOKIE = env.auth.cookieName
 const REFRESH_TOKEN_COOKIE = env.auth.refreshCookieName
 const TENANT_COOKIE = env.cookies.tenant
+const PERMISSIONS_COOKIE = 'app_permissions'
+
+/**
+ * Extract permissions from JWT token
+ * JWT format: header.payload.signature (base64url encoded)
+ */
+function extractPermissionsFromToken(accessToken: string): string[] {
+  try {
+    const parts = accessToken.split('.')
+    if (parts.length !== 3) return []
+
+    // Decode base64url payload
+    const payload = parts[1]
+    const decoded = Buffer.from(payload.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf-8')
+    const parsed = JSON.parse(decoded)
+
+    return parsed.permissions || []
+  } catch (error) {
+    console.error('[SwitchTeam] Failed to extract permissions from token:', error)
+    return []
+  }
+}
 
 interface SwitchTeamRequest {
   tenant_id: string
@@ -93,6 +115,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const data: TokenExchangeResponse = await response.json()
     console.log('[SwitchTeam] Token exchange successful for tenant:', data.tenant_slug)
 
+    // Extract permissions from the new access token
+    const permissions = extractPermissionsFromToken(data.access_token)
+    console.log('[SwitchTeam] Extracted permissions:', permissions)
+
     // Build success response
     const clientResponse = NextResponse.json({
       success: true,
@@ -101,6 +127,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         tenant_slug: data.tenant_slug,
         role: data.role,
         expires_in: data.expires_in,
+        permissions: permissions,
       }
     })
 
@@ -135,6 +162,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 7 * 24 * 60 * 60,
+      path: '/',
+    })
+
+    // Store permissions in a separate cookie (non-httpOnly so client can read)
+    // This allows the sidebar to filter correctly after team switch
+    clientResponse.cookies.set(PERMISSIONS_COOKIE, JSON.stringify(permissions), {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: data.expires_in || 900, // Same expiry as access token
       path: '/',
     })
 

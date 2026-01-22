@@ -69,6 +69,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
+import { Can, Permission } from "@/lib/permissions";
 
 // Mock data
 const workflowStats = {
@@ -365,10 +366,12 @@ export default function WorkflowsPage() {
           title="Automation Workflows"
           description="Create and manage automated security response workflows"
         >
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            New Workflow
-          </Button>
+          <Can permission={Permission.WorkflowsWrite} mode="disable">
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              New Workflow
+            </Button>
+          </Can>
         </PageHeader>
 
         {/* Stats */}

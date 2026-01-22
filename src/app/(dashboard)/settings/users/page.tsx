@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import {
   ColumnDef,
   flexRender,
@@ -64,6 +64,11 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { toast } from "sonner";
 import {
@@ -100,12 +105,12 @@ import {
   useCreateInvitation,
   type MemberWithUser,
   type MemberRole,
-  ROLE_DISPLAY,
   STATUS_DISPLAY,
-  INVITABLE_ROLES,
 } from "@/features/organization";
+import { useUserRoles, useRoles, useSetUserRoles, type Role } from "@/features/access-control";
 import { fetcherWithOptions } from "@/lib/api/client";
 import { tenantEndpoints } from "@/lib/api/endpoints";
+import { Can, Permission } from "@/lib/permissions";
 
 type StatusFilter = "all" | "active" | "pending" | "inactive";
 type RoleFilter = "all" | MemberRole;
@@ -114,8 +119,8 @@ type RoleFilter = "all" | MemberRole;
 const statusFilters: { value: StatusFilter; label: string }[] = [
   { value: "all", label: "All" },
   { value: "active", label: "Active" },
-  { value: "pending", label: "Pending" },
   { value: "inactive", label: "Inactive" },
+  // Note: "Pending" removed - pending invitations are shown in separate section
 ];
 
 const roleFilters: { value: RoleFilter; label: string }[] = [
@@ -160,6 +165,362 @@ const formatLastActive = (lastLoginAt?: string) => {
   return formatDate(lastLoginAt);
 };
 
+// Get role color based on type
+const getRoleColor = (role: Role) => {
+  if (role.is_system) {
+    switch (role.slug) {
+      case "owner": return "bg-red-500/20 text-red-400";
+      case "admin": return "bg-purple-500/20 text-purple-400";
+      case "member": return "bg-blue-500/20 text-blue-400";
+      case "viewer": return "bg-gray-500/20 text-gray-400";
+      default: return "bg-gray-500/20 text-gray-400";
+    }
+  }
+  return "bg-green-500/20 text-green-400"; // Custom roles
+};
+
+// Component to display user's RBAC roles (compact for table)
+function UserRolesCell({ userId }: { userId: string }) {
+  const { roles, isLoading } = useUserRoles(userId);
+
+  if (isLoading) {
+    return <Skeleton className="h-6 w-20" />;
+  }
+
+  if (!roles || roles.length === 0) {
+    return <span className="text-muted-foreground text-xs">No roles</span>;
+  }
+
+  return (
+    <div className="flex flex-wrap gap-1">
+      {roles.slice(0, 2).map((role) => (
+        <Badge
+          key={role.id}
+          className={`${getRoleColor(role)} border-0 text-xs`}
+        >
+          {role.name}
+        </Badge>
+      ))}
+      {roles.length > 2 && (
+        <Badge variant="secondary" className="text-xs">
+          +{roles.length - 2}
+        </Badge>
+      )}
+    </div>
+  );
+}
+
+// Component to display user's roles with details (for sheet)
+function UserRolesDetailCard({ userId, onManageRoles }: { userId: string; onManageRoles?: () => void }) {
+  const { roles, isLoading } = useUserRoles(userId);
+
+  if (isLoading) {
+    return (
+      <div className="rounded-xl border bg-card p-4">
+        <Skeleton className="h-5 w-32 mb-3" />
+        <div className="space-y-2">
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-12 w-full" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border bg-card p-4">
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="text-sm font-medium">Assigned Roles</h4>
+        {onManageRoles && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 text-xs"
+            onClick={onManageRoles}
+          >
+            <Pencil className="mr-1 h-3 w-3" />
+            Manage
+          </Button>
+        )}
+      </div>
+
+      {!roles || roles.length === 0 ? (
+        <div className="text-center py-4">
+          <Shield className="h-8 w-8 mx-auto text-muted-foreground/30 mb-2" />
+          <p className="text-sm text-muted-foreground">No roles assigned</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {roles.map((role) => (
+            <div
+              key={role.id}
+              className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors"
+            >
+              <div className={`p-1.5 rounded-lg ${getRoleColor(role)}`}>
+                <Shield className="h-4 w-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="font-medium text-sm">{role.name}</p>
+                  {role.is_system && (
+                    <span className="text-[10px] text-muted-foreground px-1.5 py-0.5 rounded bg-muted">System</span>
+                  )}
+                </div>
+                {role.description && (
+                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                    {role.description}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground mt-1">
+                  {role.permission_count} permissions
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Dialog for editing user roles
+function EditUserRolesDialog({
+  member,
+  open,
+  onOpenChange,
+  onSuccess,
+}: {
+  member: MemberWithUser | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess?: () => void;
+}) {
+  const { roles: userRoles, isLoading: userRolesLoading, mutate: mutateUserRoles } = useUserRoles(member?.user_id || null);
+  const { roles: allRoles, isLoading: allRolesLoading } = useRoles();
+  const { setUserRoles, isSetting } = useSetUserRoles(member?.user_id || null);
+  const [selectedRoleIds, setSelectedRoleIds] = useState<string[]>([]);
+
+  // Initialize selected roles when dialog opens
+  useEffect(() => {
+    if (open && userRoles) {
+      setSelectedRoleIds(userRoles.map(r => r.id));
+    }
+  }, [open, userRoles]);
+
+  const handleSave = async () => {
+    try {
+      await setUserRoles({ role_ids: selectedRoleIds });
+      toast.success("Roles updated successfully");
+      mutateUserRoles();
+      onSuccess?.();
+      onOpenChange(false);
+    } catch (error) {
+      toast.error(`Failed to update roles: ${error instanceof Error ? error.message : "Unknown error"}`);
+    }
+  };
+
+  const toggleRole = (roleId: string) => {
+    setSelectedRoleIds(prev =>
+      prev.includes(roleId)
+        ? prev.filter(id => id !== roleId)
+        : [...prev, roleId]
+    );
+  };
+
+  const isLoading = userRolesLoading || allRolesLoading;
+  // Filter out owner role and roles with invalid data
+  const availableRoles = allRoles.filter(r =>
+    r.slug !== "owner" &&
+    r.id &&
+    r.name &&
+    typeof r.name === 'string'
+  );
+
+  // Separate system and custom roles
+  const systemRoles = availableRoles.filter(r => r.is_system);
+  const customRoles = availableRoles.filter(r => !r.is_system);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader className="pb-4 border-b">
+          <DialogTitle className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+              <Shield className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <span className="block">Manage Roles</span>
+              {member && (
+                <span className="block text-sm font-normal text-muted-foreground mt-0.5">
+                  {member.name}
+                </span>
+              )}
+            </div>
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="py-4">
+          {isLoading ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map(i => (
+                <Skeleton key={i} className="h-16 w-full rounded-xl" />
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-1">
+              {/* System Roles */}
+              {systemRoles.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">System Roles</span>
+                    <div className="flex-1 h-px bg-border" />
+                  </div>
+                  <div className="space-y-2">
+                    {systemRoles.map(role => {
+                      const isSelected = selectedRoleIds.includes(role.id);
+                      const roleColor = getRoleColor(role);
+                      return (
+                        <div
+                          key={role.id}
+                          onClick={() => toggleRole(role.id)}
+                          className={`
+                            flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all
+                            ${isSelected
+                              ? "border-primary bg-primary/5 shadow-sm"
+                              : "border-transparent bg-muted/30 hover:bg-muted/50 hover:border-muted"
+                            }
+                          `}
+                        >
+                          <div className="pt-0.5">
+                            <Checkbox checked={isSelected} className="pointer-events-none" />
+                          </div>
+                          <div className={`p-2 rounded-lg ${roleColor}`}>
+                            <Shield className="h-4 w-4" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-sm">{role.name || 'System Role'}</span>
+                            </div>
+                            {role.description && (
+                              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                                {role.description}
+                              </p>
+                            )}
+                            <div className="flex items-center gap-2 mt-2">
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                                {role.permission_count ?? 0} permissions
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Custom Roles */}
+              {customRoles.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Custom Roles</span>
+                    <div className="flex-1 h-px bg-border" />
+                  </div>
+                  <div className="space-y-2">
+                    {customRoles.map(role => {
+                      const isSelected = selectedRoleIds.includes(role.id);
+                      const roleColor = getRoleColor(role);
+                      // Sanitize role name - truncate and remove potentially problematic chars
+                      const displayName = role.name
+                        ? role.name.slice(0, 100).replace(/[<>]/g, '')
+                        : 'Unnamed Role';
+                      const displayDescription = role.description
+                        ? role.description.slice(0, 200).replace(/[<>]/g, '')
+                        : '';
+                      return (
+                        <div
+                          key={role.id}
+                          onClick={() => toggleRole(role.id)}
+                          className={`
+                            flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all
+                            ${isSelected
+                              ? "border-primary bg-primary/5 shadow-sm"
+                              : "border-transparent bg-muted/30 hover:bg-muted/50 hover:border-muted"
+                            }
+                          `}
+                        >
+                          <div className="pt-0.5">
+                            <Checkbox checked={isSelected} className="pointer-events-none" />
+                          </div>
+                          <div className={`p-2 rounded-lg ${roleColor}`}>
+                            <Shield className="h-4 w-4" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-sm truncate max-w-[250px]" title={role.name}>
+                                {displayName}
+                              </span>
+                            </div>
+                            {displayDescription && (
+                              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                                {displayDescription}
+                              </p>
+                            )}
+                            <div className="flex items-center gap-2 mt-2">
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                                {role.permission_count ?? 0} permissions
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {availableRoles.length === 0 && (
+                <div className="text-center py-8">
+                  <Shield className="h-12 w-12 mx-auto text-muted-foreground/30 mb-3" />
+                  <p className="text-sm text-muted-foreground">No roles available</p>
+                  <p className="text-xs text-muted-foreground mt-1">Create roles in Access Control settings</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <DialogFooter className="border-t pt-4 gap-2">
+          <div className="flex-1 text-left">
+            {selectedRoleIds.length > 0 && (
+              <span className="text-xs text-muted-foreground">
+                {selectedRoleIds.length} role{selectedRoleIds.length > 1 ? "s" : ""} selected
+              </span>
+            )}
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isSetting}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={isSetting || isLoading}
+          >
+            {isSetting ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <CheckCircle className="mr-2 h-4 w-4" />
+            )}
+            Save Changes
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function UsersPage() {
   const { currentTenant } = useTenant();
   const tenantSlug = currentTenant?.slug;
@@ -167,12 +528,44 @@ export default function UsersPage() {
   // API Hooks
   const { members, isLoading: membersLoading, isError: membersError, mutate: mutateMembers } = useMembers(tenantSlug);
   const { stats, isLoading: statsLoading, mutate: mutateStats } = useMemberStats(tenantSlug);
-  const { invitations, mutate: mutateInvitations } = useInvitations(tenantSlug);
+  const { invitations: rawInvitations, mutate: mutateInvitations } = useInvitations(tenantSlug);
   const { createInvitation, isCreating } = useCreateInvitation(tenantSlug);
+
+  // Filter out expired invitations (safety net - API should already filter)
+  const invitations = useMemo(() => {
+    const now = new Date();
+    return rawInvitations.filter(inv => new Date(inv.expires_at) > now);
+  }, [rawInvitations]);
 
   // UI State
   const [selectedMember, setSelectedMember] = useState<MemberWithUser | null>(null);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [editRolesMember, setEditRolesMember] = useState<MemberWithUser | null>(null);
+  const [editRolesDialogOpen, setEditRolesDialogOpen] = useState(false);
+  // Track pending roles edit (used when transitioning from sheet to dialog)
+  const [pendingRolesEdit, setPendingRolesEdit] = useState<MemberWithUser | null>(null);
+
+  // Track if sheet is fully closed (after animation completes)
+  const [isSheetAnimating, setIsSheetAnimating] = useState(false);
+
+  // Effect to open roles dialog after sheet closes with delay for animation
+  useEffect(() => {
+    if (pendingRolesEdit && !selectedMember) {
+      setIsSheetAnimating(true);
+      // Wait for sheet close animation to fully complete before opening dialog
+      const timeoutId = setTimeout(() => {
+        setIsSheetAnimating(false);
+        setEditRolesMember(pendingRolesEdit);
+        setEditRolesDialogOpen(true);
+        setPendingRolesEdit(null);
+      }, 400); // Allow extra time for sheet animation to fully complete
+
+      return () => {
+        clearTimeout(timeoutId);
+        setIsSheetAnimating(false);
+      };
+    }
+  }, [pendingRolesEdit, selectedMember]);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -180,8 +573,15 @@ export default function UsersPage() {
   const [rowSelection, setRowSelection] = useState({});
   const [inviteForm, setInviteForm] = useState({
     email: "",
-    role: "member" as MemberRole,
+    roleIds: [] as string[], // RBAC roles to assign when user joins
   });
+
+  // Get available roles for invite dialog
+  const { roles: availableRolesForInvite, isLoading: rolesLoading } = useRoles();
+  const selectableRoles = availableRolesForInvite.filter(r => r.slug !== "owner");
+  // Separate system and custom roles for invite dialog
+  const systemRolesForInvite = selectableRoles.filter(r => r.is_system);
+  const customRolesForInvite = selectableRoles.filter(r => !r.is_system);
 
   // Refresh all data
   const refreshData = useCallback(() => {
@@ -214,6 +614,7 @@ export default function UsersPage() {
     pending: invitations.length,
     inactive: members.filter((m) => m.status === "inactive").length,
   }), [members, invitations]);
+
 
   // Table columns
   const columns: ColumnDef<MemberWithUser>[] = [
@@ -265,14 +666,9 @@ export default function UsersPage() {
     },
     {
       accessorKey: "role",
-      header: "Role",
+      header: "Roles",
       cell: ({ row }) => {
-        const roleDisplay = ROLE_DISPLAY[row.original.role];
-        return (
-          <Badge className={`${roleDisplay?.color || "bg-gray-500/20 text-gray-400"} border-0`}>
-            {roleDisplay?.label || row.original.role}
-          </Badge>
-        );
+        return <UserRolesCell userId={row.original.user_id} />;
       },
     },
     {
@@ -314,25 +710,33 @@ export default function UsersPage() {
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
               <DropdownMenuItem onClick={() => setSelectedMember(member)}>
                 <Eye className="mr-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
               {!isOwner && (
                 <>
-                  <DropdownMenuItem onClick={() => handleEditRole(member)}>
-                    <Pencil className="mr-2 h-4 w-4" />
-                    Change Role
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className="text-red-400"
-                    onClick={() => handleRemoveMember(member)}
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Remove Member
-                  </DropdownMenuItem>
+                  <Can permission={Permission.RolesAssign}>
+                    <DropdownMenuItem onClick={() => {
+                      // Directly open dialog - don't use pending mechanism when sheet is closed
+                      setEditRolesMember(member);
+                      setEditRolesDialogOpen(true);
+                    }}>
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Change Role
+                    </DropdownMenuItem>
+                  </Can>
+                  <Can permission={Permission.MembersManage}>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="text-red-400"
+                      onClick={() => handleRemoveMember(member)}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Remove Member
+                    </DropdownMenuItem>
+                  </Can>
                 </>
               )}
             </DropdownMenuContent>
@@ -360,11 +764,6 @@ export default function UsersPage() {
   });
 
   // Actions
-  const handleEditRole = async (member: MemberWithUser) => {
-    toast.info(`Edit role for: ${member.name}`);
-    // TODO: Open role edit dialog
-  };
-
   const handleRemoveMember = async (member: MemberWithUser) => {
     if (!tenantSlug) return;
 
@@ -385,14 +784,24 @@ export default function UsersPage() {
       return;
     }
 
+    if (inviteForm.roleIds.length === 0) {
+      toast.error("Please select at least one role");
+      return;
+    }
+
     try {
+      // Create invitation with role_ids only
+      // Backend auto-sets membership to "member" - permissions come from RBAC roles
       await createInvitation({
         email: inviteForm.email,
-        role: inviteForm.role,
+        role_ids: inviteForm.roleIds,
       });
-      toast.success(`Invitation sent to ${inviteForm.email}`);
+
+      const rolesCount = inviteForm.roleIds.length;
+      toast.success(`Invitation sent to ${inviteForm.email} with ${rolesCount} role${rolesCount > 1 ? 's' : ''}`);
+
       setInviteDialogOpen(false);
-      setInviteForm({ email: "", role: "member" });
+      setInviteForm({ email: "", roleIds: [] });
       refreshData();
     } catch (error) {
       toast.error(`Failed to send invitation: ${error instanceof Error ? error.message : "Unknown error"}`);
@@ -422,10 +831,12 @@ export default function UsersPage() {
           title="User Management"
           description="Manage team members and access permissions"
         >
-          <Button onClick={() => setInviteDialogOpen(true)}>
-            <UserPlus className="mr-2 h-4 w-4" />
-            Invite User
-          </Button>
+          <Can permission={Permission.MembersInvite} mode="disable">
+            <Button onClick={() => setInviteDialogOpen(true)}>
+              <UserPlus className="mr-2 h-4 w-4" />
+              Invite User
+            </Button>
+          </Can>
         </PageHeader>
 
         {/* Loading State */}
@@ -479,8 +890,11 @@ export default function UsersPage() {
             </CardHeader>
           </Card>
           <Card
-            className={`cursor-pointer hover:border-yellow-500 transition-colors ${statusFilter === "pending" ? "border-yellow-500" : ""}`}
-            onClick={() => setStatusFilter("pending")}
+            className="cursor-pointer hover:border-yellow-500 transition-colors"
+            onClick={() => {
+              // Scroll to Pending Invitations section
+              document.getElementById("pending-invitations")?.scrollIntoView({ behavior: "smooth" });
+            }}
           >
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
@@ -626,33 +1040,35 @@ export default function UsersPage() {
                   </PopoverContent>
                 </Popover>
 
-                {Object.keys(rowSelection).length > 0 && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm">
-                        {Object.keys(rowSelection).length} selected
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => toast.success("Resent invites")}>
-                        <Send className="mr-2 h-4 w-4" />
-                        Resend Invites
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => toast.success("Deactivated users")}>
-                        <Ban className="mr-2 h-4 w-4" />
-                        Deactivate
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        className="text-red-400"
-                        onClick={() => toast.success("Deleted users")}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
+                <Can permission={Permission.MembersManage}>
+                  {Object.keys(rowSelection).length > 0 && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm">
+                          {Object.keys(rowSelection).length} selected
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => toast.success("Resent invites")}>
+                          <Send className="mr-2 h-4 w-4" />
+                          Resend Invites
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => toast.success("Deactivated users")}>
+                          <Ban className="mr-2 h-4 w-4" />
+                          Deactivate
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-red-400"
+                          onClick={() => toast.success("Deleted users")}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </Can>
               </div>
             </div>
 
@@ -770,53 +1186,20 @@ export default function UsersPage() {
           </CardContent>
         </Card>
 
-        {/* Roles & Pending Invitations Section */}
-        <div className="mt-6 grid gap-6 lg:grid-cols-3">
-          {/* Roles */}
-          <Card className="lg:col-span-1">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-base">Roles</CardTitle>
-                  <CardDescription>Permission groups</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {(["owner", "admin", "member", "viewer"] as MemberRole[]).map((role) => {
-                const roleDisplay = ROLE_DISPLAY[role];
-                const count = stats?.role_counts?.[role] ?? 0;
-                return (
-                  <div
-                    key={role}
-                    className="rounded-lg border p-3 cursor-pointer hover:border-primary transition-colors"
-                    onClick={() => setRoleFilter(role)}
-                  >
-                    <div className="flex items-center justify-between">
-                      <Badge className={`${roleDisplay.color} border-0`}>
-                        {roleDisplay.label}
-                      </Badge>
-                      <span className="text-muted-foreground text-xs">{count} users</span>
-                    </div>
-                    <p className="text-muted-foreground mt-2 text-xs">{roleDisplay.description}</p>
-                  </div>
-                );
-              })}
-            </CardContent>
-          </Card>
-
-          {/* Pending Invitations */}
-          <Card className="lg:col-span-2" id="pending-invitations">
+        {/* Pending Invitations Section */}
+        <Card className="mt-6" id="pending-invitations">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-base">Pending Invitations</CardTitle>
                   <CardDescription>Invitations waiting to be accepted</CardDescription>
                 </div>
-                <Button size="sm" variant="outline" onClick={() => setInviteDialogOpen(true)}>
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  Invite
-                </Button>
+                <Can permission={Permission.MembersInvite} mode="disable">
+                  <Button size="sm" variant="outline" onClick={() => setInviteDialogOpen(true)}>
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    Invite
+                  </Button>
+                </Can>
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -827,7 +1210,20 @@ export default function UsersPage() {
                   <p className="text-xs text-muted-foreground mt-1">Invite someone to join your team</p>
                 </div>
               ) : (
-                invitations.map((invitation) => (
+                invitations.map((invitation) => {
+                  // Get role names from role_ids
+                  const invitedRoles = (invitation.role_ids || [])
+                    .map(id => availableRolesForInvite.find(r => r.id === id))
+                    .filter(Boolean);
+
+                  // Check if expiring soon (within 3 days)
+                  const expiresAt = new Date(invitation.expires_at);
+                  const now = new Date();
+                  const daysUntilExpiry = Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                  const isExpiringSoon = daysUntilExpiry <= 3 && daysUntilExpiry > 0;
+                  const isExpired = daysUntilExpiry <= 0;
+
+                  return (
                   <div
                     key={invitation.id}
                     className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50 transition-colors"
@@ -840,12 +1236,37 @@ export default function UsersPage() {
                       </Avatar>
                       <div>
                         <p className="font-medium">{invitation.email}</p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <Badge className={`${ROLE_DISPLAY[invitation.role]?.color || "bg-gray-500/20 text-gray-400"} border-0 text-xs`}>
-                            {ROLE_DISPLAY[invitation.role]?.label || invitation.role}
-                          </Badge>
-                          <span className="text-muted-foreground text-xs">
-                            Expires {formatDate(invitation.expires_at)}
+                        <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                          {invitedRoles.length > 0 ? (
+                            <>
+                              {invitedRoles.slice(0, 2).map(role => role && (
+                                <Badge
+                                  key={role.id}
+                                  className={`${getRoleColor(role)} border-0 text-xs`}
+                                >
+                                  {role.name}
+                                </Badge>
+                              ))}
+                              {invitedRoles.length > 2 && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Badge variant="secondary" className="text-xs cursor-pointer">
+                                      +{invitedRoles.length - 2}
+                                    </Badge>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    {invitedRoles.slice(2).filter((r): r is NonNullable<typeof r> => r != null).map(r => r.name).join(", ")}
+                                  </TooltipContent>
+                                </Tooltip>
+                              )}
+                            </>
+                          ) : (
+                            <Badge className="bg-gray-500/20 text-gray-400 border-0 text-xs">
+                              No roles
+                            </Badge>
+                          )}
+                          <span className={`text-xs ms-1 ${isExpiringSoon ? "text-orange-500" : isExpired ? "text-red-500" : "text-muted-foreground"}`}>
+                            {isExpired ? "Expired" : isExpiringSoon ? `Expires in ${daysUntilExpiry} day${daysUntilExpiry > 1 ? 's' : ''}` : `Expires ${formatDate(invitation.expires_at)}`}
                           </span>
                         </div>
                       </div>
@@ -893,16 +1314,15 @@ export default function UsersPage() {
                       </Button>
                     </div>
                   </div>
-                ))
+                )})
               )}
             </CardContent>
-          </Card>
-        </div>
+        </Card>
         </>
         )}
       </Main>
 
-      {/* User Details Sheet - Redesigned */}
+      {/* User Details Sheet */}
       <Sheet open={!!selectedMember} onOpenChange={() => setSelectedMember(null)}>
         <SheetContent className="sm:max-w-md p-0 overflow-y-auto">
           <VisuallyHidden>
@@ -910,19 +1330,8 @@ export default function UsersPage() {
           </VisuallyHidden>
           {selectedMember && (
             <div className="flex flex-col h-full">
-              {/* Header - Clean Design */}
-              <div className="relative px-6 pt-8 pb-6 bg-gradient-to-b from-muted/50 to-background">
-                {/* Status Indicator */}
-                <div className="absolute top-4 right-4">
-                  <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${STATUS_DISPLAY[selectedMember.status]?.bgColor} ${STATUS_DISPLAY[selectedMember.status]?.color}`}>
-                    <span className={`h-1.5 w-1.5 rounded-full ${
-                      selectedMember.status === "active" ? "bg-green-400" :
-                      selectedMember.status === "pending" ? "bg-yellow-400" : "bg-gray-400"
-                    }`} />
-                    {STATUS_DISPLAY[selectedMember.status]?.label}
-                  </div>
-                </div>
-
+              {/* Header */}
+              <div className="px-6 pt-14 pb-6 bg-gradient-to-b from-muted/50 to-background">
                 {/* Avatar & Basic Info */}
                 <div className="flex flex-col items-center text-center">
                   <div className="relative">
@@ -938,15 +1347,20 @@ export default function UsersPage() {
                   </div>
                   <h2 className="mt-4 text-xl font-semibold">{selectedMember.name}</h2>
                   <p className="text-sm text-muted-foreground">{selectedMember.email}</p>
-                  <Badge className={`mt-3 ${ROLE_DISPLAY[selectedMember.role]?.color || "bg-gray-500/20 text-gray-400"} border-0`}>
-                    {ROLE_DISPLAY[selectedMember.role]?.label || selectedMember.role}
-                  </Badge>
+                  {/* Status Badge */}
+                  <div className={`mt-2 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${STATUS_DISPLAY[selectedMember.status]?.bgColor} ${STATUS_DISPLAY[selectedMember.status]?.color}`}>
+                    <span className={`h-1.5 w-1.5 rounded-full ${
+                      selectedMember.status === "active" ? "bg-green-400" :
+                      selectedMember.status === "pending" ? "bg-yellow-400" : "bg-gray-400"
+                    }`} />
+                    {STATUS_DISPLAY[selectedMember.status]?.label}
+                  </div>
                 </div>
               </div>
 
               {/* Content */}
               <div className="flex-1 px-6 py-6 space-y-6">
-                {/* Quick Stats - 2 Column */}
+                {/* Quick Stats */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="p-3 rounded-xl bg-muted/50 text-center">
                     <Calendar className="h-5 w-5 mx-auto text-muted-foreground mb-1" />
@@ -960,61 +1374,15 @@ export default function UsersPage() {
                   </div>
                 </div>
 
-                {/* Role & Permissions Card */}
-                <div className="rounded-xl border bg-card p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-medium">Role & Permissions</h4>
-                    {selectedMember.role !== "owner" && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 text-xs"
-                        onClick={() => handleEditRole(selectedMember)}
-                      >
-                        <Pencil className="mr-1 h-3 w-3" />
-                        Change
-                      </Button>
-                    )}
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className={`p-2 rounded-lg ${ROLE_DISPLAY[selectedMember.role]?.color || "bg-gray-500/20"}`}>
-                      <Shield className="h-5 w-5" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium">{ROLE_DISPLAY[selectedMember.role]?.label}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {ROLE_DISPLAY[selectedMember.role]?.description}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Permission Pills */}
-                  <div className="flex flex-wrap gap-1.5 mt-4 pt-3 border-t">
-                    {selectedMember.role === "owner" && (
-                      <>
-                        <span className="px-2 py-0.5 text-xs rounded-full bg-primary/10 text-primary">Full Access</span>
-                        <span className="px-2 py-0.5 text-xs rounded-full bg-primary/10 text-primary">Billing</span>
-                        <span className="px-2 py-0.5 text-xs rounded-full bg-primary/10 text-primary">Delete Team</span>
-                      </>
-                    )}
-                    {selectedMember.role === "admin" && (
-                      <>
-                        <span className="px-2 py-0.5 text-xs rounded-full bg-purple-500/10 text-purple-400">Manage Members</span>
-                        <span className="px-2 py-0.5 text-xs rounded-full bg-purple-500/10 text-purple-400">Settings</span>
-                        <span className="px-2 py-0.5 text-xs rounded-full bg-purple-500/10 text-purple-400">Full CRUD</span>
-                      </>
-                    )}
-                    {selectedMember.role === "member" && (
-                      <>
-                        <span className="px-2 py-0.5 text-xs rounded-full bg-blue-500/10 text-blue-400">Read/Write</span>
-                        <span className="px-2 py-0.5 text-xs rounded-full bg-blue-500/10 text-blue-400">Create</span>
-                      </>
-                    )}
-                    {selectedMember.role === "viewer" && (
-                      <span className="px-2 py-0.5 text-xs rounded-full bg-gray-500/10 text-gray-400">Read Only</span>
-                    )}
-                  </div>
-                </div>
+                {/* Assigned Roles */}
+                <UserRolesDetailCard
+                  userId={selectedMember.user_id}
+                  onManageRoles={selectedMember.role !== "owner" ? () => {
+                    // Set pending edit and close sheet - effect will open dialog
+                    setPendingRolesEdit(selectedMember);
+                    setSelectedMember(null);
+                  } : undefined}
+                />
 
                 {/* Member ID */}
                 <div className="flex items-center justify-between px-1">
@@ -1026,22 +1394,24 @@ export default function UsersPage() {
               </div>
 
               {/* Footer Actions */}
-              {selectedMember.role !== "owner" && (
-                <div className="px-6 py-4 border-t bg-muted/30">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full justify-center text-red-500 hover:text-red-600 hover:bg-red-500/10"
-                    onClick={() => {
-                      handleRemoveMember(selectedMember);
-                      setSelectedMember(null);
-                    }}
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Remove from Team
-                  </Button>
-                </div>
-              )}
+              <Can permission={Permission.MembersManage}>
+                {selectedMember.role !== "owner" && (
+                  <div className="px-6 py-4 border-t bg-muted/30">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-center text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                      onClick={() => {
+                        handleRemoveMember(selectedMember);
+                        setSelectedMember(null);
+                      }}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Remove from Team
+                    </Button>
+                  </div>
+                )}
+              </Can>
             </div>
           )}
         </SheetContent>
@@ -1081,54 +1451,150 @@ export default function UsersPage() {
               </div>
             </div>
 
-            {/* Role Selection - Card Style */}
+            {/* Roles Selection */}
             <div className="space-y-3">
-              <Label className="text-sm font-medium">Select Role</Label>
-              <div className="space-y-2">
-                {INVITABLE_ROLES.map((role) => {
-                  const roleDisplay = ROLE_DISPLAY[role];
-                  const isSelected = inviteForm.role === role;
-                  return (
-                    <div
-                      key={role}
-                      onClick={() => setInviteForm({ ...inviteForm, role })}
-                      className={`
-                        relative flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all
-                        ${isSelected
-                          ? "border-primary bg-primary/5"
-                          : "border-border hover:border-muted-foreground/30 hover:bg-muted/50"
-                        }
-                      `}
-                    >
-                      {/* Radio indicator */}
-                      <div className={`
-                        mt-0.5 h-4 w-4 rounded-full border-2 flex items-center justify-center flex-shrink-0
-                        ${isSelected ? "border-primary" : "border-muted-foreground/30"}
-                      `}>
-                        {isSelected && (
-                          <div className="h-2 w-2 rounded-full bg-primary" />
-                        )}
-                      </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-sm font-medium">Assign Roles</Label>
+                  <p className="text-xs text-muted-foreground">Select roles to define permissions for this user</p>
+                </div>
+                {inviteForm.roleIds.length > 0 && (
+                  <Badge variant="secondary" className="text-xs">
+                    {inviteForm.roleIds.length} selected
+                  </Badge>
+                )}
+              </div>
 
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-medium">{roleDisplay.label}</span>
-                          <Badge className={`${roleDisplay.color} border-0 text-xs`}>
-                            {role}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {roleDisplay.description}
-                        </p>
+              {rolesLoading ? (
+                <div className="space-y-2">
+                  {[1, 2, 3].map(i => (
+                    <Skeleton key={i} className="h-14 w-full rounded-lg" />
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-4 max-h-[320px] overflow-y-auto pr-1">
+                  {/* System Roles */}
+                  {systemRolesForInvite.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">System Roles</span>
+                        <div className="flex-1 h-px bg-border" />
+                      </div>
+                      <div className="space-y-2">
+                        {systemRolesForInvite.map((role) => {
+                          const isSelected = inviteForm.roleIds.includes(role.id);
+                          const displayName = role.name?.slice(0, 50) || 'System Role';
+                          return (
+                            <div
+                              key={role.id}
+                              onClick={() => {
+                                setInviteForm(prev => ({
+                                  ...prev,
+                                  roleIds: isSelected
+                                    ? prev.roleIds.filter(id => id !== role.id)
+                                    : [...prev.roleIds, role.id]
+                                }));
+                              }}
+                              className={`
+                                flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all
+                                ${isSelected
+                                  ? "border-primary bg-primary/5 shadow-sm"
+                                  : "border-transparent bg-muted/30 hover:bg-muted/50 hover:border-muted"
+                                }
+                              `}
+                            >
+                              <Checkbox checked={isSelected} className="pointer-events-none" />
+                              <div className={`p-2 rounded-lg ${getRoleColor(role)}`}>
+                                <Shield className="h-4 w-4" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-sm">{displayName}</span>
+                                </div>
+                                {role.description && (
+                                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                                    {role.description}
+                                  </p>
+                                )}
+                                <p className="text-[10px] text-muted-foreground mt-1">
+                                  {role.permission_count ?? 0} permissions
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
-                  );
-                })}
-              </div>
+                  )}
+
+                  {/* Custom Roles */}
+                  {customRolesForInvite.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Custom Roles</span>
+                        <div className="flex-1 h-px bg-border" />
+                      </div>
+                      <div className="space-y-2">
+                        {customRolesForInvite.map((role) => {
+                          const isSelected = inviteForm.roleIds.includes(role.id);
+                          const displayName = role.name?.slice(0, 50).replace(/[<>]/g, '') || 'Custom Role';
+                          return (
+                            <div
+                              key={role.id}
+                              onClick={() => {
+                                setInviteForm(prev => ({
+                                  ...prev,
+                                  roleIds: isSelected
+                                    ? prev.roleIds.filter(id => id !== role.id)
+                                    : [...prev.roleIds, role.id]
+                                }));
+                              }}
+                              className={`
+                                flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all
+                                ${isSelected
+                                  ? "border-primary bg-primary/5 shadow-sm"
+                                  : "border-transparent bg-muted/30 hover:bg-muted/50 hover:border-muted"
+                                }
+                              `}
+                            >
+                              <Checkbox checked={isSelected} className="pointer-events-none" />
+                              <div className={`p-2 rounded-lg ${getRoleColor(role)}`}>
+                                <Shield className="h-4 w-4" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-sm truncate">{displayName}</span>
+                                </div>
+                                {role.description && (
+                                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                                    {role.description.slice(0, 100)}
+                                  </p>
+                                )}
+                                <p className="text-[10px] text-muted-foreground mt-1">
+                                  {role.permission_count ?? 0} permissions
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {selectableRoles.length === 0 && (
+                    <div className="text-center py-6">
+                      <Shield className="h-10 w-10 mx-auto text-muted-foreground/30 mb-2" />
+                      <p className="text-sm text-muted-foreground">No roles available</p>
+                      <p className="text-xs text-muted-foreground mt-1">Create roles in Access Control settings</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
+
           </div>
 
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter className="gap-2">
             <Button
               variant="ghost"
               onClick={() => setInviteDialogOpen(false)}
@@ -1151,6 +1617,19 @@ export default function UsersPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Edit User Roles Dialog - Prevent overlap with sheet animation */}
+      {!isSheetAnimating && (
+        <EditUserRolesDialog
+          member={editRolesMember}
+          open={editRolesDialogOpen && !selectedMember}
+          onOpenChange={(open) => {
+            setEditRolesDialogOpen(open);
+            if (!open) setEditRolesMember(null);
+          }}
+          onSuccess={refreshData}
+        />
+      )}
     </>
   );
 }

@@ -13,6 +13,7 @@ import useSWRMutation from 'swr/mutation'
 import { get, post, put, del } from '@/lib/api/client'
 import { handleApiError } from '@/lib/api/error-handler'
 import { useTenant } from '@/context/tenant-provider'
+import { usePermissions, Permission } from '@/lib/permissions'
 import type {
   ApiComponent,
   ApiComponentListResponse,
@@ -130,8 +131,13 @@ async function fetchComponent(url: string): Promise<ApiComponent> {
  */
 export function useComponentsApi(filters?: ComponentApiFilters, config?: SWRConfiguration) {
   const { currentTenant } = useTenant()
+  const { can } = usePermissions()
+  const canReadComponents = can(Permission.ComponentsRead)
 
-  const key = currentTenant
+  // Only fetch if user has permission
+  const shouldFetch = currentTenant && canReadComponents
+
+  const key = shouldFetch
     ? buildComponentsEndpoint(filters)
     : null
 
@@ -144,11 +150,17 @@ export function useComponentsApi(filters?: ComponentApiFilters, config?: SWRConf
 
 /**
  * Fetch a single component by ID
+ * Only fetches if user has components:read permission
  */
 export function useComponentApi(componentId: string | null, config?: SWRConfiguration) {
   const { currentTenant } = useTenant()
+  const { can } = usePermissions()
+  const canReadComponents = can(Permission.ComponentsRead)
 
-  const key = currentTenant && componentId
+  // Only fetch if user has permission
+  const shouldFetch = currentTenant && componentId && canReadComponents
+
+  const key = shouldFetch
     ? buildComponentEndpoint(componentId)
     : null
 
@@ -161,6 +173,7 @@ export function useComponentApi(componentId: string | null, config?: SWRConfigur
 
 /**
  * Fetch components for a specific asset
+ * Only fetches if user has components:read permission
  */
 export function useAssetComponentsApi(
   assetId: string | null,
@@ -169,8 +182,13 @@ export function useAssetComponentsApi(
   config?: SWRConfiguration
 ) {
   const { currentTenant } = useTenant()
+  const { can } = usePermissions()
+  const canReadComponents = can(Permission.ComponentsRead)
 
-  const key = currentTenant && assetId
+  // Only fetch if user has permission
+  const shouldFetch = currentTenant && assetId && canReadComponents
+
+  const key = shouldFetch
     ? buildAssetComponentsEndpoint(assetId, page, perPage)
     : null
 
@@ -183,12 +201,18 @@ export function useAssetComponentsApi(
 
 /**
  * Fetch component stats for current tenant
+ * Only fetches if user has components:read permission
  */
 export function useComponentStatsApi(config?: SWRConfiguration) {
   const { currentTenant } = useTenant()
+  const { can } = usePermissions()
+  const canReadComponents = can(Permission.ComponentsRead)
+
+  // Only fetch if user has permission
+  const shouldFetch = currentTenant && canReadComponents
 
   return useSWR<ApiComponentStats>(
-    currentTenant ? `/api/v1/components/stats` : null,
+    shouldFetch ? `/api/v1/components/stats` : null,
     (url: string) => get<ApiComponentStats>(url),
     { ...defaultConfig, ...config }
   )
@@ -196,12 +220,18 @@ export function useComponentStatsApi(config?: SWRConfiguration) {
 
 /**
  * Fetch ecosystem stats for current tenant
+ * Only fetches if user has components:read permission
  */
 export function useEcosystemStatsApi(config?: SWRConfiguration) {
   const { currentTenant } = useTenant()
+  const { can } = usePermissions()
+  const canReadComponents = can(Permission.ComponentsRead)
+
+  // Only fetch if user has permission
+  const shouldFetch = currentTenant && canReadComponents
 
   return useSWR<ApiEcosystemStats[]>(
-    currentTenant ? `/api/v1/components/ecosystems` : null,
+    shouldFetch ? `/api/v1/components/ecosystems` : null,
     (url: string) => get<ApiEcosystemStats[]>(url),
     { ...defaultConfig, dedupingInterval: 30000, ...config }
   )
@@ -209,12 +239,18 @@ export function useEcosystemStatsApi(config?: SWRConfiguration) {
 
 /**
  * Fetch vulnerable components for current tenant
+ * Only fetches if user has components:read permission
  */
 export function useVulnerableComponentsApi(limit: number = 10, config?: SWRConfiguration) {
   const { currentTenant } = useTenant()
+  const { can } = usePermissions()
+  const canReadComponents = can(Permission.ComponentsRead)
+
+  // Only fetch if user has permission
+  const shouldFetch = currentTenant && canReadComponents
 
   return useSWR<ApiVulnerableComponent[]>(
-    currentTenant ? `/api/v1/components/vulnerable?limit=${limit}` : null,
+    shouldFetch ? `/api/v1/components/vulnerable?limit=${limit}` : null,
     (url: string) => get<ApiVulnerableComponent[]>(url),
     { ...defaultConfig, ...config }
   )
@@ -222,12 +258,18 @@ export function useVulnerableComponentsApi(limit: number = 10, config?: SWRConfi
 
 /**
  * Fetch license stats for current tenant
+ * Only fetches if user has components:read permission
  */
 export function useLicenseStatsApi(config?: SWRConfiguration) {
   const { currentTenant } = useTenant()
+  const { can } = usePermissions()
+  const canReadComponents = can(Permission.ComponentsRead)
+
+  // Only fetch if user has permission
+  const shouldFetch = currentTenant && canReadComponents
 
   return useSWR<ApiLicenseStats[]>(
-    currentTenant ? `/api/v1/components/licenses` : null,
+    shouldFetch ? `/api/v1/components/licenses` : null,
     (url: string) => get<ApiLicenseStats[]>(url),
     { ...defaultConfig, dedupingInterval: 30000, ...config }
   )

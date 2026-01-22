@@ -8,6 +8,7 @@ import useSWR from 'swr'
 import useSWRMutation from 'swr/mutation'
 import { tenantEndpoints } from '@/lib/api/endpoints'
 import { fetcher, fetcherWithOptions } from '@/lib/api/client'
+import { usePermissions, Permission } from '@/lib/permissions'
 import type {
   MemberListResponse,
   MemberStats,
@@ -24,10 +25,17 @@ import type {
 
 /**
  * Hook to fetch team members with user details
+ * Only fetches if user has members:read permission
  */
 export function useMembers(tenantIdOrSlug: string | undefined) {
+  const { can } = usePermissions()
+  const canReadMembers = can(Permission.MembersRead)
+
+  // Only fetch if user has permission
+  const shouldFetch = tenantIdOrSlug && canReadMembers
+
   const { data, error, isLoading, mutate } = useSWR<MemberListResponse>(
-    tenantIdOrSlug ? `${tenantEndpoints.members(tenantIdOrSlug)}?include=user` : null,
+    shouldFetch ? `${tenantEndpoints.members(tenantIdOrSlug)}?include=user` : null,
     fetcher,
     {
       revalidateOnFocus: false,
@@ -38,7 +46,7 @@ export function useMembers(tenantIdOrSlug: string | undefined) {
   return {
     members: data?.data ?? [],
     total: data?.total ?? 0,
-    isLoading,
+    isLoading: shouldFetch ? isLoading : false,
     isError: !!error,
     error,
     mutate,
@@ -47,10 +55,17 @@ export function useMembers(tenantIdOrSlug: string | undefined) {
 
 /**
  * Hook to fetch member statistics
+ * Only fetches if user has members:read permission
  */
 export function useMemberStats(tenantIdOrSlug: string | undefined) {
+  const { can } = usePermissions()
+  const canReadMembers = can(Permission.MembersRead)
+
+  // Only fetch if user has permission
+  const shouldFetch = tenantIdOrSlug && canReadMembers
+
   const { data, error, isLoading, mutate } = useSWR<MemberStats>(
-    tenantIdOrSlug ? tenantEndpoints.memberStats(tenantIdOrSlug) : null,
+    shouldFetch ? tenantEndpoints.memberStats(tenantIdOrSlug) : null,
     fetcher,
     {
       revalidateOnFocus: false,
@@ -60,7 +75,7 @@ export function useMemberStats(tenantIdOrSlug: string | undefined) {
 
   return {
     stats: data,
-    isLoading,
+    isLoading: shouldFetch ? isLoading : false,
     isError: !!error,
     error,
     mutate,
@@ -129,10 +144,17 @@ export function useRemoveMember(tenantIdOrSlug: string | undefined, memberId: st
 
 /**
  * Hook to fetch pending invitations
+ * Only fetches if user has members:invite or members:manage permission
  */
 export function useInvitations(tenantIdOrSlug: string | undefined) {
+  const { canAny } = usePermissions()
+  const canManageInvitations = canAny(Permission.MembersInvite, Permission.MembersManage)
+
+  // Only fetch if user has permission
+  const shouldFetch = tenantIdOrSlug && canManageInvitations
+
   const { data, error, isLoading, mutate } = useSWR<InvitationListResponse>(
-    tenantIdOrSlug ? tenantEndpoints.invitations(tenantIdOrSlug) : null,
+    shouldFetch ? tenantEndpoints.invitations(tenantIdOrSlug) : null,
     fetcher,
     {
       revalidateOnFocus: false,
@@ -143,7 +165,7 @@ export function useInvitations(tenantIdOrSlug: string | undefined) {
   return {
     invitations: data?.data ?? [],
     total: data?.total ?? 0,
-    isLoading,
+    isLoading: shouldFetch ? isLoading : false,
     isError: !!error,
     error,
     mutate,

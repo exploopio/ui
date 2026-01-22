@@ -703,7 +703,7 @@ docker stats
 ## Support
 
 For deployment issues:
-1. Check [docs/auth/TROUBLESHOOTING.md](./auth/TROUBLESHOOTING.md)
+1. Check [docs/auth/TROUBLESHOOTING.md](../features/auth/TROUBLESHOOTING.md)
 2. Review logs (PM2, Docker, Vercel)
 3. Test in staging environment first
 4. Open issue on GitHub

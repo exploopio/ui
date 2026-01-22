@@ -108,6 +108,7 @@ import {
   ClassificationBadges,
   type Asset
 } from "@/features/assets";
+import { Can, Permission, usePermissions } from "@/lib/permissions";
 import { mockAssetGroups } from "@/features/asset-groups";
 import type { Status } from "@/features/shared/types";
 
@@ -149,6 +150,11 @@ const emptyServiceForm = {
 };
 
 export default function ServicesPage() {
+  // Permission checks
+  const { can } = usePermissions();
+  const canWriteAssets = can(Permission.AssetsWrite);
+  const canDeleteAssets = can(Permission.AssetsDelete);
+
   // Fetch services from API
   const { assets: services, isLoading: _isLoading, isError: _isError, error: _fetchError, mutate } = useAssets({
     types: ['service'],
@@ -372,26 +378,30 @@ export default function ServicesPage() {
                 <Eye className="mr-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenEdit(service); }}>
-                <Pencil className="mr-2 h-4 w-4" />
-                Edit
-              </DropdownMenuItem>
+              <Can permission={Permission.AssetsWrite}>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenEdit(service); }}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Edit
+                </DropdownMenuItem>
+              </Can>
               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleCopyService(service); }}>
                 <Copy className="mr-2 h-4 w-4" />
                 Copy Info
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="text-red-400"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setServiceToDelete(service);
-                  setDeleteDialogOpen(true);
-                }}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
-              </DropdownMenuItem>
+              <Can permission={Permission.AssetsDelete}>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-red-400"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setServiceToDelete(service);
+                    setDeleteDialogOpen(true);
+                  }}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </DropdownMenuItem>
+              </Can>
             </DropdownMenuContent>
           </DropdownMenu>
         );
@@ -565,15 +575,17 @@ export default function ServicesPage() {
               <Download className="mr-2 h-4 w-4" />
               Export
             </Button>
-            <Button
-              onClick={() => {
-                setFormData(emptyServiceForm);
-                setAddDialogOpen(true);
-              }}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add Service
-            </Button>
+            <Can permission={Permission.AssetsWrite}>
+              <Button
+                onClick={() => {
+                  setFormData(emptyServiceForm);
+                  setAddDialogOpen(true);
+                }}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add Service
+              </Button>
+            </Can>
           </div>
         </PageHeader>
 
@@ -701,14 +713,16 @@ export default function ServicesPage() {
                         <RefreshCw className="mr-2 h-4 w-4" />
                         Rescan Selected
                       </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        className="text-red-400"
-                        onClick={handleBulkDelete}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete Selected
-                      </DropdownMenuItem>
+                      <Can permission={Permission.AssetsDelete}>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-red-400"
+                          onClick={handleBulkDelete}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete Selected
+                        </DropdownMenuItem>
+                      </Can>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
@@ -840,6 +854,8 @@ export default function ServicesPage() {
             setSelectedService(null);
           }
         }}
+        canEdit={canWriteAssets}
+        canDelete={canDeleteAssets}
         quickActions={
           selectedService && (
             <Button

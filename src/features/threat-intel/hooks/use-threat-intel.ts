@@ -3,6 +3,7 @@
 import useSWR from 'swr'
 import { get, post, put } from '@/lib/api/client'
 import { threatIntelEndpoints } from '@/lib/api/endpoints'
+import { usePermissions, Permission } from '@/lib/permissions'
 import type {
   SyncStatus,
   EPSSScore,
@@ -24,10 +25,17 @@ import type {
 /**
  * Hook to fetch unified threat intel stats (EPSS + KEV + sync status)
  * This is the recommended hook - single API call for all data
+ * Only fetches if user has vulnerabilities:read permission
  */
 export function useThreatIntelStats(tenantId: string | null) {
+  const { can } = usePermissions()
+  const canReadVulns = can(Permission.VulnerabilitiesRead)
+
+  // Only fetch if user has permission
+  const shouldFetch = tenantId && canReadVulns
+
   const { data, error, isLoading, mutate } = useSWR<ThreatIntelStats>(
-    tenantId ? ['threat-intel-stats', tenantId] : null,
+    shouldFetch ? ['threat-intel-stats', tenantId] : null,
     () => get<ThreatIntelStats>(threatIntelEndpoints.stats()),
     {
       revalidateOnFocus: false,
@@ -53,7 +61,7 @@ export function useThreatIntelStats(tenantId: string | null) {
     epssStats: data?.epss || emptyEPSS,
     kevStats: data?.kev || emptyKEV,
     syncStatuses: data?.sync_statuses || [],
-    isLoading,
+    isLoading: shouldFetch ? isLoading : false,
     error,
     mutate,
   }
@@ -65,10 +73,17 @@ export function useThreatIntelStats(tenantId: string | null) {
 
 /**
  * Hook to fetch all sync statuses
+ * Only fetches if user has vulnerabilities:read permission
  */
 export function useSyncStatuses(tenantId: string | null) {
+  const { can } = usePermissions()
+  const canReadVulns = can(Permission.VulnerabilitiesRead)
+
+  // Only fetch if user has permission
+  const shouldFetch = tenantId && canReadVulns
+
   const { data, error, isLoading, mutate } = useSWR<SyncStatus[]>(
-    tenantId ? ['threat-intel-sync-statuses', tenantId] : null,
+    shouldFetch ? ['threat-intel-sync-statuses', tenantId] : null,
     async () => {
       try {
         return await get<SyncStatus[]>(threatIntelEndpoints.syncStatuses())
@@ -88,7 +103,7 @@ export function useSyncStatuses(tenantId: string | null) {
 
   return {
     statuses: data || [],
-    isLoading,
+    isLoading: shouldFetch ? isLoading : false,
     error,
     mutate,
   }
@@ -96,10 +111,17 @@ export function useSyncStatuses(tenantId: string | null) {
 
 /**
  * Hook to fetch sync status for a specific source
+ * Only fetches if user has vulnerabilities:read permission
  */
 export function useSyncStatus(tenantId: string | null, source: ThreatIntelSource) {
+  const { can } = usePermissions()
+  const canReadVulns = can(Permission.VulnerabilitiesRead)
+
+  // Only fetch if user has permission
+  const shouldFetch = tenantId && canReadVulns
+
   const { data, error, isLoading, mutate } = useSWR<SyncStatus>(
-    tenantId ? ['threat-intel-sync-status', tenantId, source] : null,
+    shouldFetch ? ['threat-intel-sync-status', tenantId, source] : null,
     () => get<SyncStatus>(threatIntelEndpoints.syncStatus(source)),
     {
       revalidateOnFocus: false,
@@ -109,7 +131,7 @@ export function useSyncStatus(tenantId: string | null, source: ThreatIntelSource
 
   return {
     status: data || null,
-    isLoading,
+    isLoading: shouldFetch ? isLoading : false,
     error,
     mutate,
   }
@@ -138,10 +160,17 @@ export async function setSyncEnabled(
 
 /**
  * Hook to fetch EPSS score for a CVE
+ * Only fetches if user has vulnerabilities:read permission
  */
 export function useEPSSScore(tenantId: string | null, cveId: string | null) {
+  const { can } = usePermissions()
+  const canReadVulns = can(Permission.VulnerabilitiesRead)
+
+  // Only fetch if user has permission
+  const shouldFetch = tenantId && cveId && canReadVulns
+
   const { data, error, isLoading, mutate } = useSWR<EPSSScore>(
-    tenantId && cveId ? ['epss-score', tenantId, cveId] : null,
+    shouldFetch ? ['epss-score', tenantId, cveId] : null,
     () => get<EPSSScore>(threatIntelEndpoints.epssScore(cveId!)),
     {
       revalidateOnFocus: false,
@@ -150,7 +179,7 @@ export function useEPSSScore(tenantId: string | null, cveId: string | null) {
 
   return {
     epss: data || null,
-    isLoading,
+    isLoading: shouldFetch ? isLoading : false,
     error,
     mutate,
   }
@@ -158,10 +187,17 @@ export function useEPSSScore(tenantId: string | null, cveId: string | null) {
 
 /**
  * Hook to fetch EPSS statistics
+ * Only fetches if user has vulnerabilities:read permission
  */
 export function useEPSSStats(tenantId: string | null) {
+  const { can } = usePermissions()
+  const canReadVulns = can(Permission.VulnerabilitiesRead)
+
+  // Only fetch if user has permission
+  const shouldFetch = tenantId && canReadVulns
+
   const { data, error, isLoading, mutate } = useSWR<EPSSStats>(
-    tenantId ? ['epss-stats', tenantId] : null,
+    shouldFetch ? ['epss-stats', tenantId] : null,
     () => get<EPSSStats>(threatIntelEndpoints.epssStats()),
     {
       revalidateOnFocus: false,
@@ -177,7 +213,7 @@ export function useEPSSStats(tenantId: string | null) {
 
   return {
     stats: data || emptyStats,
-    isLoading,
+    isLoading: shouldFetch ? isLoading : false,
     error,
     mutate,
   }
@@ -189,10 +225,17 @@ export function useEPSSStats(tenantId: string | null) {
 
 /**
  * Hook to fetch KEV entry for a CVE
+ * Only fetches if user has vulnerabilities:read permission
  */
 export function useKEVEntry(tenantId: string | null, cveId: string | null) {
+  const { can } = usePermissions()
+  const canReadVulns = can(Permission.VulnerabilitiesRead)
+
+  // Only fetch if user has permission
+  const shouldFetch = tenantId && cveId && canReadVulns
+
   const { data, error, isLoading, mutate } = useSWR<KEVEntry>(
-    tenantId && cveId ? ['kev-entry', tenantId, cveId] : null,
+    shouldFetch ? ['kev-entry', tenantId, cveId] : null,
     () => get<KEVEntry>(threatIntelEndpoints.kevEntry(cveId!)),
     {
       revalidateOnFocus: false,
@@ -201,7 +244,7 @@ export function useKEVEntry(tenantId: string | null, cveId: string | null) {
 
   return {
     kev: data || null,
-    isLoading,
+    isLoading: shouldFetch ? isLoading : false,
     error,
     mutate,
   }
@@ -209,10 +252,17 @@ export function useKEVEntry(tenantId: string | null, cveId: string | null) {
 
 /**
  * Hook to fetch KEV statistics
+ * Only fetches if user has vulnerabilities:read permission
  */
 export function useKEVStats(tenantId: string | null) {
+  const { can } = usePermissions()
+  const canReadVulns = can(Permission.VulnerabilitiesRead)
+
+  // Only fetch if user has permission
+  const shouldFetch = tenantId && canReadVulns
+
   const { data, error, isLoading, mutate } = useSWR<KEVStats>(
-    tenantId ? ['kev-stats', tenantId] : null,
+    shouldFetch ? ['kev-stats', tenantId] : null,
     () => get<KEVStats>(threatIntelEndpoints.kevStats()),
     {
       revalidateOnFocus: false,
@@ -229,7 +279,7 @@ export function useKEVStats(tenantId: string | null) {
 
   return {
     stats: data || emptyStats,
-    isLoading,
+    isLoading: shouldFetch ? isLoading : false,
     error,
     mutate,
   }
@@ -261,10 +311,17 @@ export async function enrichCVEs(cveIds: string[]): Promise<BulkEnrichmentRespon
 
 /**
  * Hook to fetch CVE enrichment data (EPSS + KEV)
+ * Only fetches if user has vulnerabilities:read permission
  */
 export function useCVEEnrichment(tenantId: string | null, cveId: string | null) {
+  const { can } = usePermissions()
+  const canReadVulns = can(Permission.VulnerabilitiesRead)
+
+  // Only fetch if user has permission
+  const shouldFetch = tenantId && cveId && canReadVulns
+
   const { data, error, isLoading, mutate } = useSWR<CVEEnrichment>(
-    tenantId && cveId ? ['cve-enrichment', tenantId, cveId] : null,
+    shouldFetch ? ['cve-enrichment', tenantId, cveId] : null,
     () => enrichCVE(cveId!),
     {
       revalidateOnFocus: false,
@@ -275,7 +332,7 @@ export function useCVEEnrichment(tenantId: string | null, cveId: string | null) 
     enrichment: data || null,
     epss: data?.epss || null,
     kev: data?.kev || null,
-    isLoading,
+    isLoading: shouldFetch ? isLoading : false,
     error,
     mutate,
   }

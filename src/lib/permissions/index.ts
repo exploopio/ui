@@ -18,7 +18,15 @@
  */
 
 // Permission exports
-export { Permission, type PermissionString, PermissionGroups, AllPermissions, isValidPermission } from './constants'
+export {
+  Permission,
+  type PermissionString,
+  PermissionGroups,
+  AllPermissions,
+  isValidPermission,
+  PermissionLabels,
+  getPermissionLabel,
+} from './constants'
 
 // Role exports
 export { Role, type RoleString, AllRoles, isValidRole, RoleHierarchy, isRoleAtLeast, RolePermissions } from './constants'
@@ -27,7 +35,7 @@ export { Role, type RoleString, AllRoles, isValidRole, RoleHierarchy, isRoleAtLe
 export { usePermissions, useHasPermission, useHasAnyPermission, useHasAllPermissions } from './hooks'
 
 // Components
-export { Can, Cannot } from './can'
+export { Can, Cannot, type CanProps, type CannotProps, type PermissionMode } from './can'
 
 // Sidebar utilities
 export { useFilteredSidebarData } from './use-filtered-sidebar'

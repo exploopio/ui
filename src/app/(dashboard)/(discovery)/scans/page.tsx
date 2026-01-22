@@ -88,6 +88,7 @@ import {
   Tag,
   Settings,
 } from "lucide-react";
+import { Can, Permission } from "@/lib/permissions";
 import {
   useScanConfigs,
   useScanConfigStats,
@@ -204,10 +205,12 @@ export default function ScansPage() {
               : `${mockStats.totalScans} runs - ${mockStats.activeScans} active`
           }
         >
-          <Button onClick={() => setDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            {mainTab === "configurations" ? "New Configuration" : "New Scan"}
-          </Button>
+          <Can permission={Permission.ScansWrite} mode="disable">
+            <Button onClick={() => setDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              {mainTab === "configurations" ? "New Configuration" : "New Scan"}
+            </Button>
+          </Can>
         </PageHeader>
 
         {/* Main Tabs: Configurations vs Runs */}
@@ -279,14 +282,16 @@ function ConfigActionsCell({ config, onViewDetails, onAction }: ConfigActionsCel
             Resume
           </DropdownMenuItem>
         )}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          className="text-red-400"
-          onClick={() => onAction("delete", config)}
-        >
-          <Trash2 className="mr-2 h-4 w-4" />
-          Delete
-        </DropdownMenuItem>
+        <Can permission={Permission.ScansDelete}>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            className="text-red-400"
+            onClick={() => onAction("delete", config)}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Delete
+          </DropdownMenuItem>
+        </Can>
       </DropdownMenuContent>
     </DropdownMenu>
   );

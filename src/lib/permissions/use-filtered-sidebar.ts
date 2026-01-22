@@ -153,14 +153,29 @@ export function useFilteredSidebarData(sidebarData: SidebarData): SidebarData {
   const { can, canAny, isRole, isAnyRole, tenantRole, permissions } = usePermissions()
 
   return useMemo(() => {
-    // If user has no permissions yet (e.g., old token without permissions),
-    // show all items for backward compatibility
+    // Debug logging in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[Sidebar Filter] tenantRole:', tenantRole, 'permissions:', permissions, 'length:', permissions.length)
+    }
+
+    // Determine if we should filter
+    // - If we have permissions (from JWT or derived from role) → filter
+    // - If no permissions AND no tenantRole → user not loaded yet, show everything (loading state)
+    // - If no permissions BUT has tenantRole → filter (user loaded, just has limited/no access)
     const hasPermissionData = permissions.length > 0 || tenantRole !== undefined
 
     if (!hasPermissionData) {
-      // No permission data available - show everything
+      // No permission data at all - user probably not loaded yet
+      // Show everything temporarily (loading state)
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Sidebar Filter] No auth data yet, showing all items (loading)')
+      }
       return sidebarData
     }
+
+    // If we have tenantRole but no permissions, and tenantRole is NOT a predefined role,
+    // it means user has a custom RBAC role but permissions weren't included in JWT
+    // This is a data issue - for now, filter normally (will show nothing if no permissions match)
 
     const checks: AccessCheckFunctions = {
       can,

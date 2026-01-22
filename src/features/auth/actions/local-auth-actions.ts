@@ -117,6 +117,30 @@ function getBackendUrl(): string {
   return process.env.BACKEND_API_URL || 'http://localhost:8080'
 }
 
+// Cookie name for storing permissions (non-httpOnly for client read)
+const PERMISSIONS_COOKIE = 'app_permissions'
+
+/**
+ * Extract permissions from JWT token
+ * JWT format: header.payload.signature (base64url encoded)
+ */
+function extractPermissionsFromToken(accessToken: string): string[] {
+  try {
+    const parts = accessToken.split('.')
+    if (parts.length !== 3) return []
+
+    // Decode base64url payload
+    const payload = parts[1]
+    const decoded = Buffer.from(payload.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf-8')
+    const parsed = JSON.parse(decoded)
+
+    return parsed.permissions || []
+  } catch (error) {
+    console.error('[Auth] Failed to extract permissions from token:', error)
+    return []
+  }
+}
+
 async function backendFetch<T>(
   endpoint: string,
   options: RequestInit = {}
@@ -341,6 +365,18 @@ export async function loginAction(
         path: '/',
       })
       console.log('[Login] Tenant cookie set:', tokenData.tenant_slug, firstTenant.name)
+
+      // Extract and store permissions from access token
+      const permissions = extractPermissionsFromToken(tokenData.access_token)
+      console.log('[Login] Extracted permissions:', permissions)
+      await setServerCookie(PERMISSIONS_COOKIE, JSON.stringify(permissions), {
+        httpOnly: false, // Client needs to read this for sidebar filtering
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: tokenData.expires_in || 900,
+        path: '/',
+      })
+      console.log('[Login] Permissions cookie set')
     } catch (tokenError) {
       console.error('[Login] Token exchange FAILED:', tokenError)
       throw new Error(`Login succeeded but token exchange failed: ${tokenError instanceof Error ? tokenError.message : 'Unknown error'}`)
@@ -437,6 +473,17 @@ export async function selectTenantAction(
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 7 * 24 * 60 * 60,
+      path: '/',
+    })
+
+    // Extract and store permissions from access token
+    const permissions = extractPermissionsFromToken(tokenData.access_token)
+    console.log('[SelectTenant] Extracted permissions:', permissions)
+    await setServerCookie(PERMISSIONS_COOKIE, JSON.stringify(permissions), {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: tokenData.expires_in || 900,
       path: '/',
     })
 
@@ -570,6 +617,7 @@ export async function localLogoutAction(
     await removeServerCookie(env.cookies.tenant)           // Current tenant info
     await removeServerCookie(env.cookies.userInfo)        // User info for Create Team
     await removeServerCookie(env.cookies.pendingTenants)  // Pending tenant selection
+    await removeServerCookie(PERMISSIONS_COOKIE)          // Permissions for sidebar
 
     console.log('[Logout] All cookies cleared, redirecting to:', redirectTo || '/login')
 
@@ -805,6 +853,17 @@ export async function createFirstTeamAction(
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 7 * 24 * 60 * 60,
+      path: '/',
+    })
+
+    // Extract and store permissions from access token
+    const permissions = extractPermissionsFromToken(data.access_token)
+    console.log('[CreateFirstTeam] Extracted permissions:', permissions)
+    await setServerCookie(PERMISSIONS_COOKIE, JSON.stringify(permissions), {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: data.expires_in || 900,
       path: '/',
     })
 

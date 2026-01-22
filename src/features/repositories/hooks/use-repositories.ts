@@ -12,6 +12,7 @@ import useSWRMutation from "swr/mutation";
 import { get, post, put, del } from "@/lib/api/client";
 import { handleApiError } from "@/lib/api/error-handler";
 import { useTenant } from "@/context/tenant-provider";
+import { usePermissions, Permission } from "@/lib/permissions";
 import type { AssetWithRepository, CreateRepositoryAssetInput, UpdateRepositoryExtensionInput } from "@/features/assets/types/asset.types";
 import type {
   RepositoryListResponse,
@@ -259,8 +260,13 @@ async function fetchImportJob(url: string): Promise<ImportJob> {
  */
 export function useRepositories(filters?: RepositoryFilters, config?: SWRConfiguration) {
   const { currentTenant } = useTenant();
+  const { can } = usePermissions();
+  const canReadAssets = can(Permission.AssetsRead);
 
-  const key = currentTenant ? buildRepositoriesEndpoint(filters) : null;
+  // Only fetch if user has permission (repositories are assets with type=repository)
+  const shouldFetch = currentTenant && canReadAssets;
+
+  const key = shouldFetch ? buildRepositoriesEndpoint(filters) : null;
 
   return useSWR<RepositoryListResponse>(key, fetchRepositories, {
     ...defaultConfig,
@@ -285,8 +291,13 @@ export function useRepositories(filters?: RepositoryFilters, config?: SWRConfigu
  */
 export function useRepository(assetId: string | null, config?: SWRConfiguration) {
   const { currentTenant } = useTenant();
+  const { can } = usePermissions();
+  const canReadAssets = can(Permission.AssetsRead);
 
-  const key = currentTenant && assetId ? buildRepositoryEndpoint(assetId) : null;
+  // Only fetch if user has permission
+  const shouldFetch = currentTenant && assetId && canReadAssets;
+
+  const key = shouldFetch ? buildRepositoryEndpoint(assetId) : null;
 
   return useSWR<AssetWithRepository>(key, fetchRepository, {
     ...defaultConfig,
@@ -296,11 +307,17 @@ export function useRepository(assetId: string | null, config?: SWRConfiguration)
 
 /**
  * Fetch repository statistics
+ * Only fetches if user has assets:read permission
  */
 export function useRepositoryStats(config?: SWRConfiguration) {
   const { currentTenant } = useTenant();
+  const { can } = usePermissions();
+  const canReadAssets = can(Permission.AssetsRead);
 
-  const key = currentTenant ? "/api/v1/assets/stats?type=repository" : null;
+  // Only fetch if user has permission
+  const shouldFetch = currentTenant && canReadAssets;
+
+  const key = shouldFetch ? "/api/v1/assets/stats?type=repository" : null;
 
   return useSWR<RepositoryStats>(key, fetchRepositoryStats, {
     ...defaultConfig,
@@ -310,11 +327,17 @@ export function useRepositoryStats(config?: SWRConfiguration) {
 
 /**
  * Fetch scans for a repository
+ * Only fetches if user has scans:read permission
  */
 export function useRepositoryScans(assetId: string | null, config?: SWRConfiguration) {
   const { currentTenant } = useTenant();
+  const { can } = usePermissions();
+  const canReadScans = can(Permission.ScansRead);
 
-  const key = currentTenant && assetId ? `/api/v1/assets/${assetId}/scans` : null;
+  // Only fetch if user has permission
+  const shouldFetch = currentTenant && assetId && canReadScans;
+
+  const key = shouldFetch ? `/api/v1/assets/${assetId}/scans` : null;
 
   return useSWR<RepositoryScan[]>(key, fetchRepositoryScans, {
     ...defaultConfig,
@@ -324,11 +347,17 @@ export function useRepositoryScans(assetId: string | null, config?: SWRConfigura
 
 /**
  * Fetch branches for a repository
+ * Only fetches if user has assets:read permission
  */
 export function useRepositoryBranches(assetId: string | null, config?: SWRConfiguration) {
   const { currentTenant } = useTenant();
+  const { can } = usePermissions();
+  const canReadAssets = can(Permission.AssetsRead);
 
-  const key = currentTenant && assetId ? `/api/v1/assets/${assetId}/branches` : null;
+  // Only fetch if user has permission
+  const shouldFetch = currentTenant && assetId && canReadAssets;
+
+  const key = shouldFetch ? `/api/v1/assets/${assetId}/branches` : null;
 
   return useSWR<Branch[]>(key, fetchRepositoryBranches, {
     ...defaultConfig,
@@ -513,11 +542,17 @@ export function useArchiveRepository(assetId: string) {
 
 /**
  * Fetch all SCM connections
+ * Only fetches if user has scm-connections:read permission
  */
 export function useSCMConnections(config?: SWRConfiguration) {
   const { currentTenant } = useTenant();
+  const { can } = usePermissions();
+  const canReadScmConnections = can(Permission.ScmConnectionsRead);
 
-  const key = currentTenant ? buildSCMConnectionsEndpoint() : null;
+  // Only fetch if user has permission
+  const shouldFetch = currentTenant && canReadScmConnections;
+
+  const key = shouldFetch ? buildSCMConnectionsEndpoint() : null;
 
   return useSWR<SCMConnection[]>(key, fetchSCMConnections, {
     ...defaultConfig,
@@ -527,11 +562,17 @@ export function useSCMConnections(config?: SWRConfiguration) {
 
 /**
  * Fetch a single SCM connection
+ * Only fetches if user has scm-connections:read permission
  */
 export function useSCMConnection(connectionId: string | null, config?: SWRConfiguration) {
   const { currentTenant } = useTenant();
+  const { can } = usePermissions();
+  const canReadScmConnections = can(Permission.ScmConnectionsRead);
 
-  const key = currentTenant && connectionId ? buildSCMConnectionEndpoint(connectionId) : null;
+  // Only fetch if user has permission
+  const shouldFetch = currentTenant && connectionId && canReadScmConnections;
+
+  const key = shouldFetch ? buildSCMConnectionEndpoint(connectionId) : null;
 
   return useSWR<SCMConnection>(key, fetchSCMConnection, {
     ...defaultConfig,
@@ -682,6 +723,7 @@ async function fetchSCMRepositories(url: string): Promise<SCMRepositoriesRespons
 
 /**
  * Fetch repositories from an SCM connection (from the provider, not yet imported)
+ * Only fetches if user has scm-connections:read permission
  */
 export function useSCMRepositories(
   connectionId: string | null,
@@ -689,8 +731,13 @@ export function useSCMRepositories(
   config?: SWRConfiguration
 ) {
   const { currentTenant } = useTenant();
+  const { can } = usePermissions();
+  const canReadScmConnections = can(Permission.ScmConnectionsRead);
 
-  const key = currentTenant && connectionId
+  // Only fetch if user has permission
+  const shouldFetch = currentTenant && connectionId && canReadScmConnections;
+
+  const key = shouldFetch
     ? buildSCMRepositoriesEndpoint(connectionId, options)
     : null;
 
@@ -734,11 +781,17 @@ export function useStartImport() {
 
 /**
  * Fetch import job status
+ * Only fetches if user has assets:read permission
  */
 export function useImportJob(jobId: string | null, config?: SWRConfiguration) {
   const { currentTenant } = useTenant();
+  const { can } = usePermissions();
+  const canReadAssets = can(Permission.AssetsRead);
 
-  const key = currentTenant && jobId ? buildImportJobEndpoint(jobId) : null;
+  // Only fetch if user has permission
+  const shouldFetch = currentTenant && jobId && canReadAssets;
+
+  const key = shouldFetch ? buildImportJobEndpoint(jobId) : null;
 
   return useSWR<ImportJob>(key, fetchImportJob, {
     ...defaultConfig,

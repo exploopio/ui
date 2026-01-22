@@ -41,7 +41,8 @@ export interface MemberStats {
 export interface Invitation {
   id: string
   email: string
-  role: MemberRole
+  role: MemberRole // Deprecated: always "member", use role_ids instead
+  role_ids: string[] // RBAC role IDs assigned to this invitation
   token?: string
   invited_by: string
   expires_at: string
@@ -51,7 +52,7 @@ export interface Invitation {
 
 export interface CreateInvitationInput {
   email: string
-  role: MemberRole
+  role_ids: string[] // RBAC roles to assign when user accepts invitation (required)
 }
 
 // ============================================
@@ -109,4 +110,7 @@ export const STATUS_DISPLAY: Record<MemberStatus, { label: string; color: string
   inactive: { label: 'Inactive', color: 'text-gray-400', bgColor: 'bg-gray-500/20' },
 }
 
-export const INVITABLE_ROLES: MemberRole[] = ['admin', 'member', 'viewer']
+// Note: Membership level selection removed from UI.
+// All invited users become 'member'. Permissions come from RBAC roles.
+// Only 'owner' is special (cannot be removed, full access).
+export const INVITABLE_ROLES: MemberRole[] = ['member'] // Simplified: only 'member' for invitations

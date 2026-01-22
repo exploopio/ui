@@ -8,6 +8,7 @@ import useSWR from 'swr'
 import useSWRMutation from 'swr/mutation'
 import { tenantEndpoints } from '@/lib/api/endpoints'
 import { fetcher, fetcherWithOptions } from '@/lib/api/client'
+import { usePermissions, Permission } from '@/lib/permissions'
 import type {
   TenantSettings,
   UpdateGeneralSettingsInput,
@@ -77,10 +78,17 @@ export function useUpdateTenant(tenantIdOrSlug: string | undefined) {
 
 /**
  * Hook to fetch tenant settings
+ * Only fetches if user has team:read permission
  */
 export function useTenantSettings(tenantIdOrSlug: string | undefined) {
+  const { can } = usePermissions()
+  const canReadTeam = can(Permission.TeamRead)
+
+  // Only fetch if user has permission
+  const shouldFetch = tenantIdOrSlug && canReadTeam
+
   const { data, error, isLoading, mutate } = useSWR<TenantSettings>(
-    tenantIdOrSlug ? tenantEndpoints.settings(tenantIdOrSlug) : null,
+    shouldFetch ? tenantEndpoints.settings(tenantIdOrSlug) : null,
     fetcher,
     {
       revalidateOnFocus: false,
@@ -90,7 +98,7 @@ export function useTenantSettings(tenantIdOrSlug: string | undefined) {
 
   return {
     settings: data,
-    isLoading,
+    isLoading: shouldFetch ? isLoading : false,
     isError: !!error,
     error,
     mutate,

@@ -3,6 +3,8 @@
 import useSWR from 'swr'
 import { get, post, put, del } from '@/lib/api/client'
 import { endpoints } from '@/lib/api/endpoints'
+import { useTenant } from '@/context/tenant-provider'
+import { usePermissions, Permission } from '@/lib/permissions'
 import type {
   Asset,
   AssetType,
@@ -256,16 +258,24 @@ function buildAssetQueryParams(filters?: AssetSearchFilters): Record<string, str
 
 /**
  * Hook to fetch paginated assets list
+ * Only fetches if user has assets:read permission
  */
 export function useAssets(filters?: AssetSearchFilters) {
+  const { currentTenant } = useTenant()
+  const { can } = usePermissions()
+  const canReadAssets = can(Permission.AssetsRead)
+
   // Build query string from filters
   const queryParams = buildAssetQueryParams(filters)
   const queryString = Object.keys(queryParams).length > 0
     ? '?' + new URLSearchParams(queryParams).toString()
     : ''
 
+  // Only fetch if user has permission and tenant context
+  const shouldFetch = currentTenant && canReadAssets
+
   const { data, error, isLoading, mutate } = useSWR<BackendListResponse<BackendAsset>>(
-    ['assets', filters],
+    shouldFetch ? ['assets', filters] : null,
     () => get<BackendListResponse<BackendAsset>>(`/api/v1/assets${queryString}`),
     {
       revalidateOnFocus: false,
@@ -279,7 +289,7 @@ export function useAssets(filters?: AssetSearchFilters) {
     page: data?.page || 1,
     pageSize: data?.per_page || 20,
     totalPages: data?.total_pages || 1,
-    isLoading,
+    isLoading: shouldFetch ? isLoading : false,
     isError: !!error,
     error,
     mutate,
@@ -288,10 +298,18 @@ export function useAssets(filters?: AssetSearchFilters) {
 
 /**
  * Hook to fetch a single asset by ID
+ * Only fetches if user has assets:read permission
  */
 export function useAsset(assetId: string | null) {
+  const { currentTenant } = useTenant()
+  const { can } = usePermissions()
+  const canReadAssets = can(Permission.AssetsRead)
+
+  // Only fetch if user has permission and tenant context
+  const shouldFetch = assetId && currentTenant && canReadAssets
+
   const { data, error, isLoading, mutate } = useSWR<BackendAsset>(
-    assetId ? ['asset', assetId] : null,
+    shouldFetch ? ['asset', assetId] : null,
     () => get<BackendAsset>(endpoints.assets.get(assetId!)),
     {
       revalidateOnFocus: false,
@@ -300,7 +318,7 @@ export function useAsset(assetId: string | null) {
 
   return {
     asset: data ? transformAsset(data) : null,
-    isLoading,
+    isLoading: shouldFetch ? isLoading : false,
     error,
     mutate,
   }
@@ -382,10 +400,18 @@ export async function bulkDeleteAssets(assetIds: string[]): Promise<void> {
 /**
  * Hook for asset stats (uses global dashboard stats)
  * This provides cached asset statistics
+ * Only fetches if user has dashboard:read or assets:read permission
  */
 export function useAssetStats() {
+  const { currentTenant } = useTenant()
+  const { canAny } = usePermissions()
+  const canReadStats = canAny(Permission.DashboardRead, Permission.AssetsRead)
+
+  // Only fetch if user has permission and tenant context
+  const shouldFetch = currentTenant && canReadStats
+
   const { data, error, isLoading } = useSWR<{ assets: BackendAssetStats }>(
-    'asset-stats',
+    shouldFetch ? 'asset-stats' : null,
     async () => {
       // Fetch from dashboard global stats which includes asset stats
       const response = await get<{ assets: BackendAssetStats }>(endpoints.dashboard.globalStats())
@@ -406,7 +432,7 @@ export function useAssetStats() {
 
   return {
     stats: data?.assets ? transformAssetStats(data.assets) : emptyStats,
-    isLoading,
+    isLoading: shouldFetch ? isLoading : false,
     error,
   }
 }
@@ -417,10 +443,18 @@ export function useAssetStats() {
 
 /**
  * Hook to fetch an asset with its repository extension
+ * Only fetches if user has assets:read permission
  */
 export function useAssetWithRepository(assetId: string | null) {
+  const { currentTenant } = useTenant()
+  const { can } = usePermissions()
+  const canReadAssets = can(Permission.AssetsRead)
+
+  // Only fetch if user has permission and tenant context
+  const shouldFetch = assetId && currentTenant && canReadAssets
+
   const { data, error, isLoading, mutate } = useSWR<BackendAssetWithRepository>(
-    assetId ? ['asset-with-repository', assetId] : null,
+    shouldFetch ? ['asset-with-repository', assetId] : null,
     () => get<BackendAssetWithRepository>(endpoints.assets.getFull(assetId!)),
     {
       revalidateOnFocus: false,
@@ -429,7 +463,7 @@ export function useAssetWithRepository(assetId: string | null) {
 
   return {
     asset: data ? transformAssetWithRepository(data) : null,
-    isLoading,
+    isLoading: shouldFetch ? isLoading : false,
     error,
     mutate,
   }
@@ -437,10 +471,18 @@ export function useAssetWithRepository(assetId: string | null) {
 
 /**
  * Hook to fetch just the repository extension for an asset
+ * Only fetches if user has assets:read permission
  */
 export function useRepositoryExtension(assetId: string | null) {
+  const { currentTenant } = useTenant()
+  const { can } = usePermissions()
+  const canReadAssets = can(Permission.AssetsRead)
+
+  // Only fetch if user has permission and tenant context
+  const shouldFetch = assetId && currentTenant && canReadAssets
+
   const { data, error, isLoading, mutate } = useSWR<BackendRepositoryExtension>(
-    assetId ? ['repository-extension', assetId] : null,
+    shouldFetch ? ['repository-extension', assetId] : null,
     () => get<BackendRepositoryExtension>(endpoints.assets.getRepository(assetId!)),
     {
       revalidateOnFocus: false,
@@ -449,7 +491,7 @@ export function useRepositoryExtension(assetId: string | null) {
 
   return {
     repository: data ? transformRepositoryExtension(data) : null,
-    isLoading,
+    isLoading: shouldFetch ? isLoading : false,
     error,
     mutate,
   }

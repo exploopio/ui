@@ -3,6 +3,8 @@
 import useSWR from 'swr'
 import { get } from '@/lib/api/client'
 import { endpoints } from '@/lib/api/endpoints'
+import { useTenant } from '@/context/tenant-provider'
+import { usePermissions, Permission } from '@/lib/permissions'
 
 // Types matching backend response
 interface AssetStats {
@@ -113,8 +115,14 @@ const emptyStats: DashboardStats = {
  * @param tenantId - The tenant ID or slug
  */
 export function useDashboardStats(tenantId: string | null) {
+  const { can } = usePermissions()
+  const canReadDashboard = can(Permission.DashboardRead)
+
+  // Only fetch if user has permission
+  const shouldFetch = tenantId && canReadDashboard
+
   const { data, error, isLoading, mutate } = useSWR<DashboardStatsResponse>(
-    tenantId ? ['dashboard-stats', tenantId] : null,
+    shouldFetch ? ['dashboard-stats', tenantId] : null,
     () => get<DashboardStatsResponse>(endpoints.dashboard.stats(tenantId!)),
     {
       revalidateOnFocus: false,
@@ -124,7 +132,7 @@ export function useDashboardStats(tenantId: string | null) {
 
   return {
     stats: data ? transformStats(data) : emptyStats,
-    isLoading,
+    isLoading: shouldFetch ? isLoading : false,
     error,
     mutate,
   }
@@ -132,10 +140,18 @@ export function useDashboardStats(tenantId: string | null) {
 
 /**
  * Hook to fetch global dashboard statistics (not tenant-scoped)
+ * Only fetches if user has dashboard:read permission
  */
 export function useGlobalDashboardStats() {
+  const { currentTenant } = useTenant()
+  const { can } = usePermissions()
+  const canReadDashboard = can(Permission.DashboardRead)
+
+  // Only fetch if user has permission and tenant context
+  const shouldFetch = currentTenant && canReadDashboard
+
   const { data, error, isLoading, mutate } = useSWR<DashboardStatsResponse>(
-    'dashboard-global-stats',
+    shouldFetch ? 'dashboard-global-stats' : null,
     () => get<DashboardStatsResponse>(endpoints.dashboard.globalStats()),
     {
       revalidateOnFocus: false,
@@ -145,7 +161,7 @@ export function useGlobalDashboardStats() {
 
   return {
     stats: data ? transformStats(data) : emptyStats,
-    isLoading,
+    isLoading: shouldFetch ? isLoading : false,
     error,
     mutate,
   }

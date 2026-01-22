@@ -13,7 +13,29 @@
 import { useMemo } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
 import { useTenant } from '@/context/tenant-provider'
+import { getCookie } from '@/lib/cookies'
 import { type PermissionString, type RoleString, Role, isRoleAtLeast, RolePermissions } from './constants'
+
+/**
+ * Read permissions from cookie (set during token refresh)
+ * This is used as fallback when auth store doesn't have permissions yet
+ */
+function getPermissionsFromCookie(): string[] {
+  if (typeof window === 'undefined') return []
+
+  try {
+    const permissionsCookie = getCookie('app_permissions')
+    if (permissionsCookie) {
+      const parsed = JSON.parse(permissionsCookie)
+      if (Array.isArray(parsed)) {
+        return parsed
+      }
+    }
+  } catch (error) {
+    console.error('[usePermissions] Failed to parse permissions cookie:', error)
+  }
+  return []
+}
 
 /**
  * Hook to access permissions, roles, and check functions
@@ -43,19 +65,59 @@ export function usePermissions() {
   // (access token is in httpOnly cookie, not directly accessible by JS)
   const tenantRole = user?.tenantRole || currentTenant?.role
 
-  // Get permissions from auth store first, then derive from role if not available
-  // This ensures permissions work even when auth store hasn't been populated yet
+  // Get permissions - priority order:
+  // 1. From JWT token (user.permissions) - most accurate, includes RBAC permissions
+  // 2. From permissions cookie (set during token refresh) - for initial page load
+  // 3. Derive from predefined role (owner/admin/member/viewer) - fallback for old tokens
+  // 4. Empty array - will filter normally, may show nothing if no permissions
   const permissions = useMemo(() => {
-    // If auth store has permissions, use them
+    // Debug logging in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[usePermissions] user:', user ? {
+        permissions: user.permissions,
+        tenantRole: user.tenantRole
+      } : 'null')
+      console.log('[usePermissions] currentTenant?.role:', currentTenant?.role)
+    }
+
+    // Priority 1: Use permissions from JWT token (auth store)
+    // This is the source of truth for RBAC - includes all permissions from assigned roles
     if (user?.permissions && user.permissions.length > 0) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[usePermissions] Using auth store permissions:', user.permissions)
+      }
       return user.permissions
     }
-    // Otherwise, derive permissions from role
+
+    // Priority 2: Read from permissions cookie (set during token refresh)
+    // This handles the case where page loads before auth store is populated
+    const cookiePermissions = getPermissionsFromCookie()
+    if (cookiePermissions.length > 0) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[usePermissions] Using cookie permissions:', cookiePermissions)
+      }
+      return cookiePermissions
+    }
+
+    // Priority 3: Derive from predefined membership role (owner/admin/member/viewer)
+    // This is a fallback for backward compatibility with old tokens without permissions array
+    // Note: tenantRole from JWT might be a custom RBAC role name (e.g., "test"),
+    // which won't be in RolePermissions - that's OK, we'll return empty array
     if (tenantRole && RolePermissions[tenantRole as RoleString]) {
-      return RolePermissions[tenantRole as RoleString]
+      const derivedPermissions = RolePermissions[tenantRole as RoleString]
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[usePermissions] Deriving from predefined role:', tenantRole, derivedPermissions.length, 'permissions')
+      }
+      return derivedPermissions
+    }
+
+    // Priority 4: No permissions available
+    // This happens when user hasn't logged in yet or cookie hasn't been set
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[usePermissions] No permissions available - tenantRole:', tenantRole, '(not in RolePermissions)')
     }
     return []
-  }, [user?.permissions, tenantRole])
+  }, [user, tenantRole, currentTenant?.role])
 
   // ============================================
   // PERMISSION CHECKS

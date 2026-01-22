@@ -96,6 +96,7 @@ import {
 import { useAssets } from "@/features/assets";
 import type { AssetGroup, CreateAssetGroupInput } from "@/features/asset-groups/types";
 import type { AssetGroupApiFilters } from "@/features/asset-groups/api";
+import { Can, Permission } from "@/lib/permissions";
 
 type Environment = "production" | "staging" | "development" | "testing";
 type Criticality = "critical" | "high" | "medium" | "low";
@@ -737,14 +738,16 @@ export default function AssetGroupsPage() {
                 <Link className="mr-2 h-4 w-4" />
                 Copy Link
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="text-red-400"
-                onClick={() => setDeleteGroup(group)}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
-              </DropdownMenuItem>
+              <Can permission={Permission.AssetGroupsDelete}>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-red-400"
+                  onClick={() => setDeleteGroup(group)}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </DropdownMenuItem>
+              </Can>
             </DropdownMenuContent>
           </DropdownMenu>
         );
@@ -926,10 +929,12 @@ export default function AssetGroupsPage() {
               </PopoverContent>
             </Popover>
 
-            <Button size="sm" onClick={() => setIsCreateOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              New Group
-            </Button>
+            <Can permission={Permission.AssetGroupsWrite} mode="disable">
+              <Button size="sm" onClick={() => setIsCreateOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                New Group
+              </Button>
+            </Can>
           </div>
         </PageHeader>
 

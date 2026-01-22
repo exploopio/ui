@@ -13,6 +13,7 @@ import { Search } from "@/components/search";
 import { ThemeSwitch } from "@/components/theme-switch";
 import { ProcessStepper, StatsCard } from "@/features/shared";
 import { ActivityItem, QuickStat, useGlobalDashboardStats } from "@/features/dashboard";
+import { Can, Permission } from "@/lib/permissions";
 import {
   Server,
   AlertTriangle,
@@ -143,30 +144,38 @@ export default function Dashboard() {
               <CardTitle className="text-base">Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <Button asChild className="w-full justify-start" size="sm">
-                <Link href="/discovery/scans">
-                  <Plus className="mr-2 h-4 w-4" />
-                  New Scan
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="w-full justify-start" size="sm">
-                <Link href="/findings">
-                  <FileWarning className="mr-2 h-4 w-4" />
-                  View Findings
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="w-full justify-start" size="sm">
-                <Link href="/mobilization/remediation">
-                  <ListChecks className="mr-2 h-4 w-4" />
-                  Remediation Tasks
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="w-full justify-start" size="sm">
-                <Link href="/reports">
-                  <ArrowRight className="mr-2 h-4 w-4" />
-                  Generate Report
-                </Link>
-              </Button>
+              <Can permission={Permission.ScansWrite} mode="disable" disabledTooltip="You don't have permission to create scans">
+                <Button asChild className="w-full justify-start" size="sm">
+                  <Link href="/discovery/scans">
+                    <Plus className="mr-2 h-4 w-4" />
+                    New Scan
+                  </Link>
+                </Button>
+              </Can>
+              <Can permission={Permission.FindingsRead} mode="disable" disabledTooltip="You don't have permission to view findings">
+                <Button asChild variant="outline" className="w-full justify-start" size="sm">
+                  <Link href="/findings">
+                    <FileWarning className="mr-2 h-4 w-4" />
+                    View Findings
+                  </Link>
+                </Button>
+              </Can>
+              <Can permission={Permission.RemediationRead} mode="disable" disabledTooltip="You don't have permission to view remediation tasks">
+                <Button asChild variant="outline" className="w-full justify-start" size="sm">
+                  <Link href="/mobilization/remediation">
+                    <ListChecks className="mr-2 h-4 w-4" />
+                    Remediation Tasks
+                  </Link>
+                </Button>
+              </Can>
+              <Can permission={Permission.ReportsRead} mode="disable" disabledTooltip="You don't have permission to generate reports">
+                <Button asChild variant="outline" className="w-full justify-start" size="sm">
+                  <Link href="/reports">
+                    <ArrowRight className="mr-2 h-4 w-4" />
+                    Generate Report
+                  </Link>
+                </Button>
+              </Can>
             </CardContent>
           </Card>
 

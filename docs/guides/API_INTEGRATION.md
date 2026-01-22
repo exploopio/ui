@@ -787,9 +787,9 @@ export interface User {
 ---
 
 **See Also:**
-- [Architecture Documentation](./ARCHITECTURE.md)
-- [Auth Usage Guide](./auth/AUTH_USAGE.md)
-- [Troubleshooting](./auth/TROUBLESHOOTING.md)
+- [Architecture Documentation](../ARCHITECTURE.md)
+- [Auth Usage Guide](../features/auth/AUTH_USAGE.md)
+- [Troubleshooting](../features/auth/TROUBLESHOOTING.md)
 
 ---
 

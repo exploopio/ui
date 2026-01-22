@@ -3,6 +3,7 @@
 import useSWR from 'swr'
 import { get, post, del } from '@/lib/api/client'
 import { exposureEndpoints } from '@/lib/api/endpoints'
+import { usePermissions, Permission } from '@/lib/permissions'
 import type {
   ExposureEvent,
   ExposureListFilters,
@@ -18,10 +19,17 @@ import type {
 /**
  * Hook to fetch paginated exposures list
  * Tenant is extracted from JWT token
+ * Only fetches if user has findings:read permission (exposures are security findings)
  */
 export function useExposures(tenantId: string | null, filters?: ExposureListFilters) {
+  const { can } = usePermissions()
+  const canReadFindings = can(Permission.FindingsRead)
+
+  // Only fetch if user has permission
+  const shouldFetch = tenantId && canReadFindings
+
   const { data, error, isLoading, mutate } = useSWR<ExposureListResponse>(
-    tenantId ? ['exposures', tenantId, filters] : null,
+    shouldFetch ? ['exposures', tenantId, filters] : null,
     () => get<ExposureListResponse>(exposureEndpoints.list(filters)),
     {
       revalidateOnFocus: false,
@@ -35,7 +43,7 @@ export function useExposures(tenantId: string | null, filters?: ExposureListFilt
     page: data?.page || 1,
     perPage: data?.per_page || 20,
     totalPages: data?.total_pages || 0,
-    isLoading,
+    isLoading: shouldFetch ? isLoading : false,
     error,
     mutate,
   }
@@ -43,10 +51,17 @@ export function useExposures(tenantId: string | null, filters?: ExposureListFilt
 
 /**
  * Hook to fetch a single exposure by ID
+ * Only fetches if user has findings:read permission
  */
 export function useExposure(tenantId: string | null, exposureId: string | null) {
+  const { can } = usePermissions()
+  const canReadFindings = can(Permission.FindingsRead)
+
+  // Only fetch if user has permission
+  const shouldFetch = tenantId && exposureId && canReadFindings
+
   const { data, error, isLoading, mutate } = useSWR<ExposureEvent>(
-    tenantId && exposureId ? ['exposure', tenantId, exposureId] : null,
+    shouldFetch ? ['exposure', tenantId, exposureId] : null,
     () => get<ExposureEvent>(exposureEndpoints.get(exposureId!)),
     {
       revalidateOnFocus: false,
@@ -55,7 +70,7 @@ export function useExposure(tenantId: string | null, exposureId: string | null) 
 
   return {
     exposure: data || null,
-    isLoading,
+    isLoading: shouldFetch ? isLoading : false,
     error,
     mutate,
   }
@@ -63,10 +78,17 @@ export function useExposure(tenantId: string | null, exposureId: string | null) 
 
 /**
  * Hook to fetch exposure statistics
+ * Only fetches if user has findings:read or dashboard:read permission
  */
 export function useExposureStats(tenantId: string | null) {
+  const { canAny } = usePermissions()
+  const canReadStats = canAny(Permission.FindingsRead, Permission.DashboardRead)
+
+  // Only fetch if user has permission
+  const shouldFetch = tenantId && canReadStats
+
   const { data, error, isLoading, mutate } = useSWR<ExposureStats>(
-    tenantId ? ['exposure-stats', tenantId] : null,
+    shouldFetch ? ['exposure-stats', tenantId] : null,
     () => get<ExposureStats>(exposureEndpoints.stats()),
     {
       revalidateOnFocus: false,
@@ -85,7 +107,7 @@ export function useExposureStats(tenantId: string | null) {
 
   return {
     stats: data || emptyStats,
-    isLoading,
+    isLoading: shouldFetch ? isLoading : false,
     error,
     mutate,
   }
@@ -93,10 +115,17 @@ export function useExposureStats(tenantId: string | null) {
 
 /**
  * Hook to fetch exposure state history
+ * Only fetches if user has findings:read permission
  */
 export function useExposureHistory(tenantId: string | null, exposureId: string | null) {
+  const { can } = usePermissions()
+  const canReadFindings = can(Permission.FindingsRead)
+
+  // Only fetch if user has permission
+  const shouldFetch = tenantId && exposureId && canReadFindings
+
   const { data, error, isLoading, mutate } = useSWR<ExposureStateHistoryResponse>(
-    tenantId && exposureId ? ['exposure-history', tenantId, exposureId] : null,
+    shouldFetch ? ['exposure-history', tenantId, exposureId] : null,
     () => get<ExposureStateHistoryResponse>(exposureEndpoints.history(exposureId!)),
     {
       revalidateOnFocus: false,
@@ -106,7 +135,7 @@ export function useExposureHistory(tenantId: string | null, exposureId: string |
   return {
     history: data?.items || [],
     total: data?.total || 0,
-    isLoading,
+    isLoading: shouldFetch ? isLoading : false,
     error,
     mutate,
   }
