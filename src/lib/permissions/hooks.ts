@@ -13,27 +13,22 @@
 import { useMemo } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
 import { useTenant } from '@/context/tenant-provider'
-import { getCookie } from '@/lib/cookies'
 import { type PermissionString, type RoleString, Role, isRoleAtLeast, RolePermissions } from './constants'
 
 /**
- * Read permissions from cookie (set during token refresh)
- * This is used as fallback when auth store doesn't have permissions yet
+ * Read permissions from cookie (LEGACY - no longer used)
+ *
+ * NOTE: Permissions are no longer stored in cookies due to 4KB browser limit.
+ * - Owner/Admin users: bypass permission checks (have all permissions)
+ * - Other users: permissions derived from RolePermissions or fetched from API
+ *
+ * This function is kept for backward compatibility but will always return empty.
+ * @deprecated No longer used - permissions not stored in cookie
  */
 function getPermissionsFromCookie(): string[] {
-  if (typeof window === 'undefined') return []
-
-  try {
-    const permissionsCookie = getCookie('app_permissions')
-    if (permissionsCookie) {
-      const parsed = JSON.parse(permissionsCookie)
-      if (Array.isArray(parsed)) {
-        return parsed
-      }
-    }
-  } catch (error) {
-    console.error('[usePermissions] Failed to parse permissions cookie:', error)
-  }
+  // Permissions cookie is no longer set (too large, > 4KB limit)
+  // Owner/admin users bypass permission checks
+  // Other users use RolePermissions fallback
   return []
 }
 
@@ -125,22 +120,37 @@ export function usePermissions() {
 
   /**
    * Check if user has a specific permission
+   * Owner and Admin bypass permission checks - they have (almost) all permissions
+   * For owner-only operations (team delete, billing), check isOwner() separately
+   * Member/Viewer/Custom roles use permissions from API
    */
   const can = (permission: PermissionString | string): boolean => {
+    // Owner and admin bypass permission checks
+    if (tenantRole === Role.Owner || tenantRole === Role.Admin) {
+      return true
+    }
     return permissions.includes(permission)
   }
 
   /**
    * Check if user has any of the specified permissions
+   * Owner and Admin bypass (have almost all permissions)
    */
   const canAny = (...perms: (PermissionString | string)[]): boolean => {
+    if (tenantRole === Role.Owner || tenantRole === Role.Admin) {
+      return true
+    }
     return perms.some((p) => permissions.includes(p))
   }
 
   /**
    * Check if user has all of the specified permissions
+   * Owner and Admin bypass (have almost all permissions)
    */
   const canAll = (...perms: (PermissionString | string)[]): boolean => {
+    if (tenantRole === Role.Owner || tenantRole === Role.Admin) {
+      return true
+    }
     return perms.every((p) => permissions.includes(p))
   }
 

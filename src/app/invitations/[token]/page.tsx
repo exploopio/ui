@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { Building2, Check, Loader2, X, LogIn, UserPlus, Clock, AlertTriangle } from 'lucide-react'
+import { Building2, Check, Loader2, X, LogIn, Clock, AlertTriangle } from 'lucide-react'
 import { toast } from 'sonner'
 
 import {
@@ -16,7 +16,6 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
 
 interface InvitationData {
   invitation: {
@@ -35,8 +34,6 @@ interface InvitationData {
   }
 }
 
-type AuthState = 'unknown' | 'authenticated' | 'unauthenticated'
-
 export default function InvitationPage() {
   const router = useRouter()
   const params = useParams()
@@ -46,14 +43,13 @@ export default function InvitationPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [invitation, setInvitation] = useState<InvitationData | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [authState, setAuthState] = useState<AuthState>('unknown')
   const [acceptError, setAcceptError] = useState<string | null>(null)
 
   // Fetch invitation details using public preview endpoint
   useEffect(() => {
     async function fetchInvitation() {
       try {
-        // First try public preview endpoint (no auth required)
+        // Use public preview endpoint (no auth required)
         const previewResponse = await fetch(`/api/v1/invitations/${token}/preview`)
 
         if (!previewResponse.ok) {
@@ -68,22 +64,6 @@ export default function InvitationPage() {
 
         const data = await previewResponse.json()
         setInvitation(data)
-
-        // Check auth status by trying the authenticated endpoint
-        const authResponse = await fetch(`/api/v1/invitations/${token}`, {
-          credentials: 'include',
-        })
-
-        if (authResponse.ok) {
-          setAuthState('authenticated')
-          // Update with full data from authenticated endpoint
-          const authData = await authResponse.json()
-          setInvitation(authData)
-        } else if (authResponse.status === 401) {
-          setAuthState('unauthenticated')
-        } else {
-          setAuthState('authenticated') // Assume authenticated if other errors
-        }
       } catch {
         setError('Failed to load invitation. Please try again.')
       } finally {
@@ -96,36 +76,59 @@ export default function InvitationPage() {
     }
   }, [token])
 
-  // Accept invitation
+  // Accept invitation - tries access token first, then refresh token
   function handleAccept() {
     setAcceptError(null)
     startTransition(async () => {
       try {
+        // First try with access token (for users with tenant)
         const response = await fetch(`/api/v1/invitations/${token}/accept`, {
           method: 'POST',
           credentials: 'include',
         })
 
-        if (!response.ok) {
-          if (response.status === 401) {
-            setAuthState('unauthenticated')
-            toast.info('Please log in to accept the invitation')
-            return
-          }
-          const data = await response.json()
-          const errorMsg = data.message || 'Failed to accept invitation'
-          setAcceptError(errorMsg)
-          throw new Error(errorMsg)
+        if (response.ok) {
+          toast.success('You have joined the team!')
+          window.location.href = '/dashboard'
+          return
         }
 
-        toast.success('You have joined the team!')
-        router.push('/dashboard')
-        router.refresh()
+        // If 401, try with refresh token (for users without tenant)
+        if (response.status === 401) {
+          const refreshResponse = await fetch(`/api/v1/invitations/${token}/accept-with-refresh`, {
+            method: 'POST',
+            credentials: 'include',
+          })
+
+          if (refreshResponse.ok) {
+            toast.success('You have joined the team!')
+            window.location.href = '/dashboard'
+            return
+          }
+
+          if (refreshResponse.status === 401) {
+            // No valid session - redirect to login (use window.location for full page reload)
+            window.location.href = `/login?returnTo=/invitations/${token}&email=${encodeURIComponent(invitation?.invitation.email || '')}`
+            return
+          }
+
+          // Other error from refresh endpoint
+          const refreshData = await refreshResponse.json()
+          const errorMsg = refreshData.message || 'Failed to accept invitation'
+          setAcceptError(errorMsg)
+          toast.error(errorMsg)
+          return
+        }
+
+        // Other error from regular accept
+        const data = await response.json()
+        const errorMsg = data.message || 'Failed to accept invitation'
+        setAcceptError(errorMsg)
+        toast.error(errorMsg)
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to accept invitation'
-        if (!acceptError) {
-          toast.error(message)
-        }
+        setAcceptError(message)
+        toast.error(message)
       }
     })
   }
@@ -318,68 +321,44 @@ export default function InvitationPage() {
             </Alert>
           )}
 
-          {/* Auth State Handling */}
-          {authState === 'unauthenticated' ? (
-            <>
-              <Separator />
-              <div className="space-y-3">
-                <p className="text-sm text-center text-muted-foreground">
-                  Please log in or create an account to accept this invitation
-                </p>
-                <div className="flex flex-col gap-2">
-                  <Button
-                    className="w-full"
-                    size="lg"
-                    onClick={() => router.push(`/login?returnTo=/invitations/${token}&email=${encodeURIComponent(invitation?.invitation.email || '')}`)}
-                  >
-                    <LogIn className="mr-2 h-4 w-4" />
-                    Log In to Accept
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    size="lg"
-                    onClick={() => router.push(`/register?returnTo=/invitations/${token}&email=${encodeURIComponent(invitation?.invitation.email || '')}`)}
-                  >
-                    <UserPlus className="mr-2 h-4 w-4" />
-                    Create Account
-                  </Button>
-                </div>
-                <p className="text-xs text-center text-muted-foreground">
-                  Make sure to use <strong>{invitation?.invitation.email}</strong> when signing up
-                </p>
-              </div>
-            </>
-          ) : (
-            <>
-              {/* Action Buttons for authenticated users */}
-              <div className="flex flex-col gap-2">
-                <Button
-                  className="w-full"
-                  size="lg"
-                  onClick={handleAccept}
-                  disabled={isPending}
-                >
-                  {isPending ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Check className="mr-2 h-4 w-4" />
-                  )}
-                  Accept Invitation
-                </Button>
+          {/* Action Buttons */}
+          <div className="flex flex-col gap-2">
+            <Button
+              className="w-full"
+              size="lg"
+              onClick={handleAccept}
+              disabled={isPending}
+            >
+              {isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Check className="mr-2 h-4 w-4" />
+              )}
+              Accept Invitation
+            </Button>
 
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={handleDecline}
-                  disabled={isPending}
-                >
-                  <X className="mr-2 h-4 w-4" />
-                  Decline
-                </Button>
-              </div>
-            </>
-          )}
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={handleDecline}
+              disabled={isPending}
+            >
+              <X className="mr-2 h-4 w-4" />
+              Decline
+            </Button>
+          </div>
+
+          {/* Switch account link */}
+          <p className="text-xs text-center text-muted-foreground">
+            Not <strong>{invitation?.invitation.email}</strong>?{' '}
+            <button
+              type="button"
+              className="text-primary hover:underline"
+              onClick={() => router.push(`/login?returnTo=/invitations/${token}&email=${encodeURIComponent(invitation?.invitation.email || '')}`)}
+            >
+              Log in with different account
+            </button>
+          </p>
         </CardContent>
       </Card>
     </div>

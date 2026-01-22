@@ -1,20 +1,34 @@
 'use client'
 
 /**
- * Hook to filter sidebar navigation based on user permissions and roles
+ * Hook to filter sidebar navigation based on user permissions, roles, and modules
  *
  * This hook takes the full sidebar data and returns a filtered version
- * that only includes items the current user has permission/role to view.
+ * that only includes items the current user has permission/role/module to view.
  *
- * Supports three types of access control:
- * 1. permission - Granular feature-based access (e.g., 'assets:read')
- * 2. role - Exact role match (e.g., 'owner')
- * 3. minRole - Minimum role level (e.g., 'admin' means admin and owner)
+ * Supports four types of access control:
+ * 1. module - Licensing-based module access (e.g., 'findings', 'scans')
+ * 2. permission - Granular feature-based access (e.g., 'assets:read')
+ * 3. role - Exact role match (e.g., 'owner')
+ * 4. minRole - Minimum role level (e.g., 'admin' means admin and owner)
+ *
+ * Module Mapping:
+ * - dashboard: Dashboard
+ * - assets: Attack Surface, Asset Groups, Scope Config, Asset Inventory
+ * - findings: Exposures, Findings, Threat Intel, Risk Analysis, Business Impact
+ * - scans: Scans, Scan Profiles, Tools, Agents
+ * - reports: Reports
+ * - audit: Audit Log
+ * - components: Components (SBOM)
+ * - pentest: Penetration Testing, Attack Simulation, Control Testing
+ * - credentials: Credential Leaks
+ * - remediation: Remediation Tasks, Workflows
  */
 
 import { useMemo } from 'react'
 import { usePermissions } from './hooks'
 import { isRoleAtLeast, type RoleString } from './constants'
+import { useTenantModules } from '@/features/integrations/api/use-tenant-modules'
 import type { SidebarData, NavGroup, NavItem, NavCollapsible, NavLink } from '@/components/types'
 
 interface AccessCheckFunctions {
@@ -23,23 +37,38 @@ interface AccessCheckFunctions {
   isRole: (role: string) => boolean
   isAnyRole: (...roles: string[]) => boolean
   tenantRole: string | undefined
+  hasModule: (moduleId: string) => boolean
+}
+
+interface FilteredSidebarResult {
+  data: SidebarData
+  isLoading: boolean
+  isModulesLoading: boolean
 }
 
 /**
  * Check if user has access to a nav item
- * Supports permission, role, and minRole checks
+ * Supports module, permission, role, and minRole checks
  */
 function hasItemAccess(
   item: {
+    module?: string
     permission?: string | string[]
     role?: string | string[]
     minRole?: string
   },
   checks: AccessCheckFunctions
 ): boolean {
-  const { can, canAny, isRole, isAnyRole, tenantRole } = checks
+  const { can, canAny, isRole, isAnyRole, tenantRole, hasModule } = checks
 
-  // Check minRole first (role hierarchy)
+  // Check module access first (licensing layer)
+  if (item.module) {
+    if (!hasModule(item.module)) {
+      return false
+    }
+  }
+
+  // Check minRole (role hierarchy)
   if (item.minRole && tenantRole) {
     if (!isRoleAtLeast(tenantRole, item.minRole as RoleString)) {
       return false
@@ -130,14 +159,15 @@ function filterNavGroup(group: NavGroup, checks: AccessCheckFunctions): NavGroup
 /**
  * Hook to get sidebar data filtered by user permissions and roles
  *
- * NOTE: If user has no permissions (empty array), all items are shown
- * for backward compatibility. This allows the system to work before
- * JWT tokens include permissions.
+ * Returns filtered sidebar data along with loading states.
+ * When modules are loading, returns only Dashboard to prevent flash of all content.
  *
  * @example
  * ```tsx
  * function AppSidebar() {
- *   const filteredData = useFilteredSidebarData(sidebarData)
+ *   const { data: filteredData, isLoading } = useFilteredSidebarData(sidebarData)
+ *
+ *   if (isLoading) return <SidebarSkeleton />
  *
  *   return (
  *     <Sidebar>
@@ -149,40 +179,113 @@ function filterNavGroup(group: NavGroup, checks: AccessCheckFunctions): NavGroup
  * }
  * ```
  */
-export function useFilteredSidebarData(sidebarData: SidebarData): SidebarData {
+export function useFilteredSidebarData(sidebarData: SidebarData): FilteredSidebarResult {
   const { can, canAny, isRole, isAnyRole, tenantRole, permissions } = usePermissions()
+  const { moduleIds, isLoading: modulesLoading } = useTenantModules()
 
-  return useMemo(() => {
+  // Create hasModule function
+  // If modules are loading or empty, we need special handling
+  const hasModule = useMemo(() => {
+    return (moduleId: string) => {
+      // Owner and Admin bypass module checks (see all modules even if API fails)
+      // This prevents empty sidebar when modules API returns empty/fails
+      if (tenantRole === 'owner' || tenantRole === 'admin') {
+        return true
+      }
+
+      // If moduleIds has data, use it
+      if (moduleIds.length > 0) {
+        return moduleIds.includes(moduleId)
+      }
+
+      // moduleIds is empty - API failed or loading
+      if (modulesLoading) {
+        return false // Hide while loading
+      }
+
+      // API failed (moduleIds empty, not loading)
+      // If user has a valid tenantRole (authenticated), fail-open
+      // This provides better UX than hiding all features when API has issues
+      // Security note: Backend still enforces proper authorization
+      if (tenantRole) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[Sidebar Filter] Modules API failed, falling back to show all modules for authenticated user')
+        }
+        return true
+      }
+
+      // No tenantRole = not authenticated
+      return false
+    }
+  }, [moduleIds, modulesLoading, tenantRole])
+
+  const result = useMemo(() => {
     // Debug logging in development
     if (process.env.NODE_ENV === 'development') {
-      console.log('[Sidebar Filter] tenantRole:', tenantRole, 'permissions:', permissions, 'length:', permissions.length)
+      console.log('[Sidebar Filter] tenantRole:', tenantRole, 'permissions:', permissions.length, 'modules:', moduleIds.length, 'modulesLoading:', modulesLoading)
     }
 
-    // Determine if we should filter
-    // - If we have permissions (from JWT or derived from role) → filter
-    // - If no permissions AND no tenantRole → user not loaded yet, show everything (loading state)
-    // - If no permissions BUT has tenantRole → filter (user loaded, just has limited/no access)
+    // Check if we have permission data (user is authenticated)
     const hasPermissionData = permissions.length > 0 || tenantRole !== undefined
 
+    // If no permission data, user is not loaded yet
     if (!hasPermissionData) {
-      // No permission data at all - user probably not loaded yet
-      // Show everything temporarily (loading state)
       if (process.env.NODE_ENV === 'development') {
-        console.log('[Sidebar Filter] No auth data yet, showing all items (loading)')
+        console.log('[Sidebar Filter] No auth data yet (loading)')
       }
-      return sidebarData
+      // Return minimal sidebar (just Dashboard) while loading
+      const minimalGroups = sidebarData.navGroups
+        .map((group) => ({
+          ...group,
+          items: group.items.filter((item) => 'url' in item && item.url === '/'),
+        }))
+        .filter((group) => group.items.length > 0)
+
+      return {
+        ...sidebarData,
+        navGroups: minimalGroups,
+      }
     }
 
-    // If we have tenantRole but no permissions, and tenantRole is NOT a predefined role,
-    // it means user has a custom RBAC role but permissions weren't included in JWT
-    // This is a data issue - for now, filter normally (will show nothing if no permissions match)
+    // If modules are still loading, show only items without module restrictions
+    // This prevents flash of all content while modules are being fetched
+    // Exception: Authenticated users (have tenantRole) can see all modules during loading
+    // to provide better UX - backend still enforces authorization
+    if (modulesLoading) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Sidebar Filter] Modules loading, tenantRole:', tenantRole)
+      }
+      // Filter out items with module restrictions while loading
+      // Authenticated users can see all modules even during loading for better UX
+      const isAuthenticated = !!tenantRole
+      const loadingChecks: AccessCheckFunctions = {
+        can,
+        canAny,
+        isRole,
+        isAnyRole,
+        tenantRole,
+        // While loading: authenticated users see all, others hide module-gated items
+        hasModule: isAuthenticated ? () => true : () => false,
+      }
 
+      const filteredNavGroups = sidebarData.navGroups
+        .map((group) => filterNavGroup(group, loadingChecks))
+        .filter((group): group is NavGroup => group !== null)
+
+      return {
+        ...sidebarData,
+        navGroups: filteredNavGroups,
+      }
+    }
+
+    // Normal filtering with all data available
     const checks: AccessCheckFunctions = {
       can,
       canAny,
       isRole,
       isAnyRole,
       tenantRole,
+      hasModule,
     }
 
     const filteredNavGroups = sidebarData.navGroups
@@ -193,5 +296,26 @@ export function useFilteredSidebarData(sidebarData: SidebarData): SidebarData {
       ...sidebarData,
       navGroups: filteredNavGroups,
     }
-  }, [sidebarData, can, canAny, isRole, isAnyRole, tenantRole, permissions])
+  }, [sidebarData, can, canAny, isRole, isAnyRole, tenantRole, permissions, hasModule, moduleIds, modulesLoading])
+
+  // Compute overall loading state
+  const isLoading = useMemo(() => {
+    const hasPermissionData = permissions.length > 0 || tenantRole !== undefined
+    return !hasPermissionData
+  }, [permissions, tenantRole])
+
+  return {
+    data: result,
+    isLoading,
+    isModulesLoading: modulesLoading,
+  }
+}
+
+/**
+ * Legacy hook for backward compatibility
+ * @deprecated Use useFilteredSidebarData and destructure { data } instead
+ */
+export function useFilteredSidebarDataLegacy(sidebarData: SidebarData): SidebarData {
+  const { data } = useFilteredSidebarData(sidebarData)
+  return data
 }

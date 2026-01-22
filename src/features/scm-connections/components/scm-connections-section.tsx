@@ -15,9 +15,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AddConnectionDialog } from "./add-connection-dialog";
 import { SCMConnectionCard } from "./scm-connection-card";
 import {
-  useSCMConnections,
-  invalidateSCMConnectionsCache,
-} from "@/features/repositories/hooks/use-repositories";
+  useSCMIntegrationsApi,
+  invalidateSCMIntegrationsCache,
+} from "@/features/integrations";
 
 interface SCMConnectionsSectionProps {
   onConnectionSelect?: (connectionId: string | null) => void;
@@ -31,15 +31,13 @@ export function SCMConnectionsSection({
   const [isOpen, setIsOpen] = useState(false); // Collapsed by default
   const [addDialogOpen, setAddDialogOpen] = useState(false);
 
-  const { data: connectionsData, error, isLoading, mutate } = useSCMConnections();
+  const { data: connectionsData, error, isLoading, mutate } = useSCMIntegrationsApi();
 
-  // Handle both array and paginated response formats for backwards compatibility
-  const connections = Array.isArray(connectionsData)
-    ? connectionsData
-    : ((connectionsData as unknown as { data?: unknown[] })?.data as typeof connectionsData) ?? [];
+  // Handle the API response format
+  const connections = connectionsData?.data ?? [];
 
   const handleRefresh = async () => {
-    await invalidateSCMConnectionsCache();
+    await invalidateSCMIntegrationsCache();
     await mutate();
   };
 
@@ -137,7 +135,7 @@ export function SCMConnectionsSection({
                 <SCMConnectionCard
                   key={connection.id}
                   connection={connection}
-                  repositoryCount={connection.repositoryCount || 0}
+                  repositoryCount={connection.scm_extension?.repository_count || 0}
                   selected={selectedConnectionId === connection.id}
                   onSelect={() =>
                     onConnectionSelect?.(

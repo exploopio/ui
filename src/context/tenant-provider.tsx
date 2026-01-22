@@ -14,7 +14,7 @@ import { useRouter } from 'next/navigation'
 import { useSWRConfig } from 'swr'
 import { useMyTenants, invalidateMyTenantsCache } from '@/lib/api/user-tenant-hooks'
 import type { TenantMembership, TenantRole } from '@/lib/api/user-tenant-types'
-import { getCookie, setCookie } from '@/lib/cookies'
+import { getCookie, setCookie, removeCookie } from '@/lib/cookies'
 import { env } from '@/lib/env'
 
 // ============================================
@@ -83,7 +83,10 @@ export function TenantProvider({ children }: TenantProviderProps) {
         const parsed = JSON.parse(tenantCookie) as CurrentTenant
         setCurrentTenant(parsed)
       } catch {
-        console.error('[TenantProvider] Failed to parse tenant cookie')
+        // Old cookie format might be just a tenant ID string (not JSON)
+        // Clear the cookie so backend can set a new one with proper format
+        console.warn('[TenantProvider] Invalid tenant cookie format, clearing cookie')
+        removeCookie(TENANT_COOKIE)
       }
     }
   }, [])

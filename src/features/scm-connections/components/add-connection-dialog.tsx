@@ -42,9 +42,9 @@ import {
   DEFAULT_BASE_URLS,
 } from "../schemas/scm-connection.schema";
 import {
-  useCreateSCMConnection,
-  invalidateSCMConnectionsCache,
-} from "@/features/repositories/hooks/use-repositories";
+  useCreateIntegrationApi,
+  invalidateSCMIntegrationsCache,
+} from "@/features/integrations";
 
 interface AddConnectionDialogProps {
   open: boolean;
@@ -82,7 +82,7 @@ export function AddConnectionDialog({
     },
   });
 
-  const { trigger: createConnection, isMutating } = useCreateSCMConnection();
+  const { trigger: createConnection, isMutating } = useCreateIntegrationApi();
 
   const selectedProvider = form.watch("provider");
 
@@ -121,15 +121,16 @@ export function AddConnectionDialog({
     setTestResult(null);
 
     try {
-      const response = await fetch("/api/v1/scm-connections/test-credentials", {
+      const response = await fetch("/api/v1/integrations/test-credentials", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
+          category: "scm",
           provider: values.provider,
           base_url: values.baseUrl || DEFAULT_BASE_URLS[values.provider],
           auth_type: values.authType,
-          access_token: values.accessToken,
+          credentials: values.accessToken,
           scm_organization: values.scmOrganization || undefined,
         }),
       });
@@ -162,15 +163,16 @@ export function AddConnectionDialog({
     try {
       await createConnection({
         name: data.name,
+        category: "scm",
         provider: data.provider,
-        authType: data.authType,
-        baseUrl: data.baseUrl || DEFAULT_BASE_URLS[data.provider],
-        accessToken: data.accessToken,
-        scmOrganization: data.scmOrganization,
+        auth_type: data.authType,
+        base_url: data.baseUrl || DEFAULT_BASE_URLS[data.provider],
+        credentials: data.accessToken,
+        scm_organization: data.scmOrganization,
       });
 
       toast.success(`Connection "${data.name}" created successfully`);
-      await invalidateSCMConnectionsCache();
+      await invalidateSCMIntegrationsCache();
       form.reset();
       setTestStatus("idle");
       setTestError("");

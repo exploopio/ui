@@ -63,6 +63,10 @@ import {
   // Access Control icons
   FolderKey,
   Key,
+  // Integration icons
+  Shield,
+  Bell,
+  CreditCard,
 } from "lucide-react";
 import { type SidebarData } from "@/components/types";
 import { Permission, Role } from "@/lib/permissions";
@@ -107,6 +111,7 @@ export const sidebarData: SidebarData = {
     // ========================================
     // PHASE 1: SCOPING
     // Define attack surface, business context, and objectives
+    // Module: assets (core - available in all plans)
     // ========================================
     {
       title: "Scoping",
@@ -116,18 +121,21 @@ export const sidebarData: SidebarData = {
           url: "/attack-surface",
           icon: Target,
           permission: Permission.AssetsRead,
+          module: "assets",
         },
         {
           title: "Asset Groups",
           url: "/asset-groups",
           icon: FolderKanban,
           permission: Permission.AssetGroupsRead,
+          module: "assets",
         },
         {
           title: "Scope Config",
           url: "/scope-config",
           icon: Settings2,
           permission: Permission.AssetGroupsRead,
+          module: "assets",
         },
       ],
     },
@@ -145,9 +153,11 @@ export const sidebarData: SidebarData = {
           url: "/scans",
           icon: Radar,
           permission: Permission.ScansRead,
+          module: "scans",
         },
         // ----------------------------------------
         // ASSET INVENTORY
+        // Module: assets (core - available in all plans)
         // Note: New CTEM asset types (certificates, ip_address, cloud_account,
         // compute, storage, serverless, network) are documented in docs/ROADMAP.md
         // ----------------------------------------
@@ -155,6 +165,7 @@ export const sidebarData: SidebarData = {
           title: "Asset Inventory",
           icon: Container,
           permission: Permission.AssetsRead,
+          module: "assets",
           items: [
             {
               title: "Domains",
@@ -216,9 +227,11 @@ export const sidebarData: SidebarData = {
           url: "/exposures",
           icon: AlertTriangle,
           permission: Permission.FindingsRead,
+          module: "findings",
         },
         // ----------------------------------------
         // CREDENTIAL LEAKS
+        // Module: findings (security - requires Pro+ plan)
         // ----------------------------------------
         {
           title: "Credential Leaks",
@@ -226,14 +239,18 @@ export const sidebarData: SidebarData = {
           icon: KeyRound,
           // Badge is now dynamic - fetched from API via useDynamicBadges hook
           permission: Permission.CredentialsRead,
+          module: "findings",
         },
         // ----------------------------------------
         // SOFTWARE COMPONENTS (SBOM)
+        // Module: findings (security - requires Pro+ plan)
+        // TODO: Create dedicated 'components' module for more granular control
         // ----------------------------------------
         {
           title: "Components",
           icon: Package,
           permission: Permission.ComponentsRead,
+          module: "findings",
           items: [
             {
               title: "Overview",
@@ -278,6 +295,7 @@ export const sidebarData: SidebarData = {
     // ========================================
     // PHASE 3: PRIORITIZATION
     // Rank risks based on exploitability, impact, and threat intelligence
+    // Module: findings (security - requires Pro+ plan)
     // ========================================
     {
       title: "Prioritization",
@@ -287,18 +305,21 @@ export const sidebarData: SidebarData = {
           url: "/threat-intel",
           icon: TrendingUp,
           permission: Permission.FindingsRead,
+          module: "findings",
         },
         {
           title: "Risk Analysis",
           url: "/risk-analysis",
           icon: BarChart3,
           permission: Permission.FindingsRead,
+          module: "findings",
         },
         {
           title: "Business Impact",
           url: "/business-impact",
           icon: Building2,
           permission: Permission.FindingsRead,
+          module: "findings",
         },
       ],
     },
@@ -306,6 +327,8 @@ export const sidebarData: SidebarData = {
     // ========================================
     // PHASE 4: VALIDATION
     // Verify threats and test security controls effectiveness
+    // Module: findings (security - requires Pro+ plan)
+    // TODO: Create dedicated 'pentest' module for more granular control
     // ========================================
     {
       title: "Validation",
@@ -314,6 +337,7 @@ export const sidebarData: SidebarData = {
           title: "Penetration Testing",
           icon: Crosshair,
           permission: Permission.PentestRead,
+          module: "findings",
           items: [
             {
               title: "Campaigns",
@@ -348,12 +372,14 @@ export const sidebarData: SidebarData = {
           url: "/attack-simulation",
           icon: Swords,
           permission: Permission.PentestRead,
+          module: "findings",
         },
         {
           title: "Control Testing",
           url: "/control-testing",
           icon: ShieldCheck,
           permission: Permission.PentestRead,
+          module: "findings",
         },
       ],
     },
@@ -361,6 +387,8 @@ export const sidebarData: SidebarData = {
     // ========================================
     // PHASE 5: MOBILIZATION
     // Execute remediation and track progress
+    // Module: findings (security - requires Pro+ plan)
+    // TODO: Create dedicated 'remediation' module for more granular control
     // ========================================
     {
       title: "Mobilization",
@@ -371,12 +399,14 @@ export const sidebarData: SidebarData = {
           icon: ListChecks,
           badge: "24",
           permission: Permission.RemediationRead,
+          module: "findings",
         },
         {
           title: "Workflows",
           url: "/workflows",
           icon: Workflow,
           permission: Permission.WorkflowsRead,
+          module: "findings",
         },
       ],
     },
@@ -393,12 +423,14 @@ export const sidebarData: SidebarData = {
           icon: FileWarning,
           // Badge is dynamically fetched from dashboard stats - see useDynamicBadges hook
           permission: Permission.FindingsRead,
+          module: "findings",
         },
         {
           title: "Reports",
           url: "/reports",
           icon: FileText,
           permission: Permission.ReportsRead,
+          module: "reports",
         },
       ],
     },
@@ -413,6 +445,7 @@ export const sidebarData: SidebarData = {
           title: "Scanning",
           icon: Radar,
           permission: Permission.ScansRead,
+          module: "scans",
           items: [
             {
               title: "Agents",
@@ -421,13 +454,13 @@ export const sidebarData: SidebarData = {
               permission: Permission.ScansRead,
             },
             {
-              title: "Scan Profiles",
+              title: "Profiles",
               url: "/scan-profiles",
               icon: FileSliders,
               permission: Permission.ScanProfilesRead,
             },
             {
-              title: "Tool Registry",
+              title: "Tools",
               url: "/tools",
               icon: Wrench,
               permission: Permission.ToolsRead,
@@ -461,7 +494,7 @@ export const sidebarData: SidebarData = {
             },
             {
               title: "Teams",
-              url: "/settings/teams",
+              url: "/settings/access-control/groups",
               icon: FolderKey,
               permission: Permission.GroupsRead,
               minRole: Role.Admin,
@@ -470,27 +503,59 @@ export const sidebarData: SidebarData = {
               title: "Audit Log",
               url: "/settings/audit",
               icon: History,
-              // Audit log is restricted to admin and owner
+              // Audit log is restricted to admin and owner, and requires audit module
               minRole: Role.Admin,
               permission: Permission.AuditRead,
+              module: "audit",
             },
-            // Billing temporarily hidden - coming soon
-            // {
-            //   title: "Billing",
-            //   url: "/settings/billing",
-            //   icon: CreditCard,
-            //   minRole: Role.Admin,
-            //   permission: Permission.BillingRead,
-            // },
+            {
+              title: "Billing",
+              url: "/settings/billing",
+              icon: CreditCard,
+              minRole: Role.Admin,
+              permission: Permission.BillingRead,
+            },
           ],
         },
         {
           title: "Integrations",
-          url: "/settings/integrations",
           icon: Puzzle,
-          // Integrations management requires admin or higher
+          // Integrations management requires admin or higher and integrations module
           minRole: Role.Admin,
           permission: Permission.IntegrationsRead,
+          module: "integrations",
+          items: [
+            {
+              title: "Overview",
+              url: "/settings/integrations",
+              icon: Puzzle,
+            },
+            {
+              title: "SCMs",
+              url: "/settings/integrations/scm",
+              icon: GitBranch,
+            },
+            {
+              title: "Notifications",
+              url: "/settings/integrations/notifications",
+              icon: Bell,
+            },
+            {
+              title: "CI/CD",
+              url: "/settings/integrations/cicd",
+              icon: Workflow,
+            },
+            {
+              title: "Ticketing",
+              url: "/settings/integrations/ticketing",
+              icon: ListChecks,
+            },
+            {
+              title: "SIEM",
+              url: "/settings/integrations/siem",
+              icon: Shield,
+            },
+          ],
         },
       ],
     },

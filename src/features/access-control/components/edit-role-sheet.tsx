@@ -46,7 +46,7 @@ import {
 import { cn } from '@/lib/utils';
 import {
   useUpdateRole,
-  usePermissionModules,
+  useTenantPermissionModules,
   type Role,
   type PermissionModule,
 } from '@/features/access-control';
@@ -73,7 +73,7 @@ function getPermissionType(permissionId: string): string {
 
 export function EditRoleSheet({ role, open, onOpenChange, onSuccess }: EditRoleSheetProps) {
   const { updateRole, isUpdating } = useUpdateRole(role?.id || null);
-  const { modules: permissionModules, isLoading: isLoadingModules } = usePermissionModules();
+  const { modules: permissionModules, isLoading: isLoadingModules } = useTenantPermissionModules();
 
   // Form state
   const [form, setForm] = useState({
@@ -253,7 +253,7 @@ export function EditRoleSheet({ role, open, onOpenChange, onSuccess }: EditRoleS
     return {
       selectedCount,
       total,
-      allSelected: selectedCount === total,
+      allSelected: total > 0 && selectedCount === total,
       someSelected: selectedCount > 0 && selectedCount < total,
     };
   };

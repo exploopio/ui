@@ -4,8 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
     ShieldCheck,
-    Box,
-    Wrench,
+    Users,
     Pencil,
     X,
     Save,
@@ -73,17 +72,13 @@ export function GroupHeader({
                 )}
             </div>
 
-            {/* Group Icon & Info */}
+            {/* Team Icon & Info */}
             <div className="flex flex-col items-center text-center">
                 <div className={`p-4 rounded-xl ${typeConfig?.bgColor}`}>
-                    {groupType === "security_team" && (
+                    {groupType === "security_team" ? (
                         <ShieldCheck className={`h-8 w-8 ${typeConfig?.color}`} />
-                    )}
-                    {groupType === "asset_owner" && (
-                        <Box className={`h-8 w-8 ${typeConfig?.color}`} />
-                    )}
-                    {groupType === "custom" && (
-                        <Wrench className={`h-8 w-8 ${typeConfig?.color}`} />
+                    ) : (
+                        <Users className={`h-8 w-8 ${typeConfig?.color}`} />
                     )}
                 </div>
 

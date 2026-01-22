@@ -4,9 +4,20 @@
  * These constants mirror the backend definitions.
  * Use these for type-safe permission and role checking.
  *
- * Permissions Pattern: resource:action
- * - resource: The entity type (assets, projects, findings, etc.)
- * - action: The operation (read, write, delete)
+ * Permission naming convention follows hierarchical pattern:
+ *   {module}:{subfeature}:{action}
+ *
+ * Examples:
+ *   - integrations:scm:read (read SCM connections)
+ *   - assets:groups:write (manage asset groups)
+ *   - team:roles:assign (assign roles to users)
+ *
+ * For simpler permissions without subfeatures:
+ *   {module}:{action}
+ *
+ * Examples:
+ *   - dashboard:read
+ *   - assets:read
  *
  * Roles: owner, admin, member, viewer
  * - Use roles for high-level access checks (e.g., "is owner")
@@ -60,147 +71,218 @@ export function isRoleAtLeast(userRole: string, requiredRole: RoleString): boole
 }
 
 export const Permission = {
-  // Asset permissions
+  // ===========================================
+  // CORE MODULES
+  // ===========================================
+  DashboardRead: 'dashboard:read',
+  AuditRead: 'audit:read',
+
+  // ===========================================
+  // ASSETS MODULE
+  // ===========================================
   AssetsRead: 'assets:read',
   AssetsWrite: 'assets:write',
   AssetsDelete: 'assets:delete',
 
-  // Project permissions
-  ProjectsRead: 'projects:read',
-  ProjectsWrite: 'projects:write',
-  ProjectsDelete: 'projects:delete',
+  // Asset Groups (assets:groups:*)
+  AssetGroupsRead: 'assets:groups:read',
+  AssetGroupsWrite: 'assets:groups:write',
+  AssetGroupsDelete: 'assets:groups:delete',
 
-  // Component permissions
-  ComponentsRead: 'components:read',
-  ComponentsWrite: 'components:write',
-  ComponentsDelete: 'components:delete',
+  // Repositories (assets:repositories:*)
+  RepositoriesRead: 'assets:repositories:read',
+  RepositoriesWrite: 'assets:repositories:write',
+  RepositoriesDelete: 'assets:repositories:delete',
 
-  // Finding permissions (tenant-scoped vulnerability instances)
+  // Components (assets:components:*)
+  ComponentsRead: 'assets:components:read',
+  ComponentsWrite: 'assets:components:write',
+  ComponentsDelete: 'assets:components:delete',
+
+  // Branches (assets:branches:*)
+  BranchesRead: 'assets:branches:read',
+  BranchesWrite: 'assets:branches:write',
+  BranchesDelete: 'assets:branches:delete',
+
+  // ===========================================
+  // FINDINGS MODULE
+  // ===========================================
   FindingsRead: 'findings:read',
   FindingsWrite: 'findings:write',
   FindingsDelete: 'findings:delete',
 
-  // Vulnerability permissions (global CVE database)
-  VulnerabilitiesRead: 'vulnerabilities:read',
-  VulnerabilitiesWrite: 'vulnerabilities:write',
-  VulnerabilitiesDelete: 'vulnerabilities:delete',
+  // Vulnerabilities (findings:vulnerabilities:*)
+  VulnerabilitiesRead: 'findings:vulnerabilities:read',
+  VulnerabilitiesWrite: 'findings:vulnerabilities:write',
+  VulnerabilitiesDelete: 'findings:vulnerabilities:delete',
 
-  // Dashboard permissions
-  DashboardRead: 'dashboard:read',
+  // Credentials (findings:credentials:*)
+  CredentialsRead: 'findings:credentials:read',
+  CredentialsWrite: 'findings:credentials:write',
 
-  // Scan permissions (binding asset groups + scanners/workflows + schedules)
+  // Remediation (findings:remediation:*)
+  RemediationRead: 'findings:remediation:read',
+  RemediationWrite: 'findings:remediation:write',
+
+  // Workflows (findings:workflows:*)
+  WorkflowsRead: 'findings:workflows:read',
+  WorkflowsWrite: 'findings:workflows:write',
+
+  // Policies (findings:policies:*)
+  PoliciesRead: 'findings:policies:read',
+  PoliciesWrite: 'findings:policies:write',
+  PoliciesDelete: 'findings:policies:delete',
+
+  // ===========================================
+  // SCANS MODULE
+  // ===========================================
   ScansRead: 'scans:read',
   ScansWrite: 'scans:write',
   ScansDelete: 'scans:delete',
+  ScansExecute: 'scans:execute',
 
-  // Scan Profile permissions (reusable scan configurations)
-  ScanProfilesRead: 'scan-profiles:read',
-  ScanProfilesWrite: 'scan-profiles:write',
-  ScanProfilesDelete: 'scan-profiles:delete',
+  // Scan Profiles (scans:profiles:*)
+  ScanProfilesRead: 'scans:profiles:read',
+  ScanProfilesWrite: 'scans:profiles:write',
+  ScanProfilesDelete: 'scans:profiles:delete',
 
-  // Tool Registry permissions (system-wide tool definitions)
-  ToolsRead: 'tools:read',
-  ToolsWrite: 'tools:write',
-  ToolsDelete: 'tools:delete',
+  // Sources (scans:sources:*)
+  SourcesRead: 'scans:sources:read',
+  SourcesWrite: 'scans:sources:write',
+  SourcesDelete: 'scans:sources:delete',
 
-  // Tenant Tool Config permissions (tenant-specific tool configurations)
-  TenantToolsRead: 'tenant-tools:read',
-  TenantToolsWrite: 'tenant-tools:write',
-  TenantToolsDelete: 'tenant-tools:delete',
+  // Tools (scans:tools:*)
+  ToolsRead: 'scans:tools:read',
+  ToolsWrite: 'scans:tools:write',
+  ToolsDelete: 'scans:tools:delete',
 
-  // Credential leak permissions
-  CredentialsRead: 'credentials:read',
-  CredentialsWrite: 'credentials:write',
+  // Tenant Tools (scans:tenant_tools:*)
+  TenantToolsRead: 'scans:tenant_tools:read',
+  TenantToolsWrite: 'scans:tenant_tools:write',
+  TenantToolsDelete: 'scans:tenant_tools:delete',
 
-  // Report permissions
-  ReportsRead: 'reports:read',
-  ReportsWrite: 'reports:write',
-
-  // Pentest permissions
-  PentestRead: 'pentest:read',
-  PentestWrite: 'pentest:write',
-
-  // Remediation permissions
-  RemediationRead: 'remediation:read',
-  RemediationWrite: 'remediation:write',
-
-  // Workflow permissions
-  WorkflowsRead: 'workflows:read',
-  WorkflowsWrite: 'workflows:write',
-
-  // Team/Member management permissions
-  MembersRead: 'members:read',
-  MembersInvite: 'members:invite',
-  MembersManage: 'members:manage',
-
-  // Team settings permissions
-  TeamRead: 'team:read',
-  TeamUpdate: 'team:update',
-  TeamDelete: 'team:delete',
-
-  // Billing permissions
-  BillingRead: 'billing:read',
-  BillingManage: 'billing:manage',
-
-  // Integration permissions
-  IntegrationsRead: 'integrations:read',
-  IntegrationsManage: 'integrations:manage',
-
-  // Audit log permissions
-  AuditRead: 'audit:read',
-
-  // Asset Groups permissions (legacy asset grouping)
-  AssetGroupsRead: 'asset-groups:read',
-  AssetGroupsWrite: 'asset-groups:write',
-  AssetGroupsDelete: 'asset-groups:delete',
-
-  // Groups permissions (access control groups)
-  GroupsRead: 'groups:read',
-  GroupsWrite: 'groups:write',
-  GroupsDelete: 'groups:delete',
-  GroupsMembers: 'groups:members',
-  GroupsPermissions: 'groups:permissions',
-
-  // Permission Sets permissions
-  PermissionSetsRead: 'permission-sets:read',
-  PermissionSetsWrite: 'permission-sets:write',
-  PermissionSetsDelete: 'permission-sets:delete',
-
-  // Roles permissions (database-driven RBAC)
-  RolesRead: 'roles:read',
-  RolesWrite: 'roles:write',
-  RolesDelete: 'roles:delete',
-  RolesAssign: 'roles:assign',
-
-  // Assignment Rules permissions
-  AssignmentRulesRead: 'assignment-rules:read',
-  AssignmentRulesWrite: 'assignment-rules:write',
-  AssignmentRulesDelete: 'assignment-rules:delete',
-
-  // Agents permissions
+  // ===========================================
+  // AGENTS MODULE
+  // ===========================================
   AgentsRead: 'agents:read',
   AgentsWrite: 'agents:write',
   AgentsDelete: 'agents:delete',
 
-  // SCM Connections permissions
-  ScmConnectionsRead: 'scm-connections:read',
-  ScmConnectionsWrite: 'scm-connections:write',
-  ScmConnectionsDelete: 'scm-connections:delete',
+  // Commands (agents:commands:*)
+  CommandsRead: 'agents:commands:read',
+  CommandsWrite: 'agents:commands:write',
+  CommandsDelete: 'agents:commands:delete',
 
-  // Sources permissions (data sources)
-  SourcesRead: 'sources:read',
-  SourcesWrite: 'sources:write',
-  SourcesDelete: 'sources:delete',
+  // ===========================================
+  // TEAM MODULE (Access Control)
+  // ===========================================
+  TeamRead: 'team:read',
+  TeamUpdate: 'team:update',
+  TeamDelete: 'team:delete',
 
-  // Commands permissions
-  CommandsRead: 'commands:read',
-  CommandsWrite: 'commands:write',
-  CommandsDelete: 'commands:delete',
+  // Members (team:members:*)
+  MembersRead: 'team:members:read',
+  MembersInvite: 'team:members:invite',
+  MembersWrite: 'team:members:write',
 
-  // Pipelines permissions
-  PipelinesRead: 'pipelines:read',
-  PipelinesWrite: 'pipelines:write',
-  PipelinesDelete: 'pipelines:delete',
+  // Groups (team:groups:*)
+  GroupsRead: 'team:groups:read',
+  GroupsWrite: 'team:groups:write',
+  GroupsDelete: 'team:groups:delete',
+  GroupsMembers: 'team:groups:members',
+  GroupsAssets: 'team:groups:assets',
+
+  // Roles (team:roles:*)
+  RolesRead: 'team:roles:read',
+  RolesWrite: 'team:roles:write',
+  RolesDelete: 'team:roles:delete',
+  RolesAssign: 'team:roles:assign',
+
+  // Permission Sets (team:permission_sets:*)
+  PermissionSetsRead: 'team:permission_sets:read',
+  PermissionSetsWrite: 'team:permission_sets:write',
+  PermissionSetsDelete: 'team:permission_sets:delete',
+
+  // Assignment Rules (team:assignment_rules:*)
+  AssignmentRulesRead: 'team:assignment_rules:read',
+  AssignmentRulesWrite: 'team:assignment_rules:write',
+  AssignmentRulesDelete: 'team:assignment_rules:delete',
+
+  // ===========================================
+  // INTEGRATIONS MODULE
+  // ===========================================
+  IntegrationsRead: 'integrations:read',
+  IntegrationsManage: 'integrations:manage',
+
+  // SCM Connections (integrations:scm:*)
+  ScmConnectionsRead: 'integrations:scm:read',
+  ScmConnectionsWrite: 'integrations:scm:write',
+  ScmConnectionsDelete: 'integrations:scm:delete',
+
+  // Notifications (integrations:notifications:*)
+  NotificationsRead: 'integrations:notifications:read',
+  NotificationsWrite: 'integrations:notifications:write',
+  NotificationsDelete: 'integrations:notifications:delete',
+
+  // Webhooks (integrations:webhooks:*)
+  WebhooksRead: 'integrations:webhooks:read',
+  WebhooksWrite: 'integrations:webhooks:write',
+  WebhooksDelete: 'integrations:webhooks:delete',
+
+  // API Keys (integrations:api_keys:*)
+  ApiKeysRead: 'integrations:api_keys:read',
+  ApiKeysWrite: 'integrations:api_keys:write',
+  ApiKeysDelete: 'integrations:api_keys:delete',
+
+  // Pipelines (integrations:pipelines:*)
+  PipelinesRead: 'integrations:pipelines:read',
+  PipelinesWrite: 'integrations:pipelines:write',
+  PipelinesDelete: 'integrations:pipelines:delete',
+  PipelinesExecute: 'integrations:pipelines:execute',
+
+  // ===========================================
+  // SETTINGS MODULE
+  // ===========================================
+  BillingRead: 'settings:billing:read',
+  BillingWrite: 'settings:billing:write',
+
+  // SLA (settings:sla:*)
+  SLARead: 'settings:sla:read',
+  SLAWrite: 'settings:sla:write',
+  SLADelete: 'settings:sla:delete',
+
+  // ===========================================
+  // ATTACK SURFACE MODULE (CTEM Scoping)
+  // ===========================================
+  ScopeRead: 'attack_surface:scope:read',
+  ScopeWrite: 'attack_surface:scope:write',
+  ScopeDelete: 'attack_surface:scope:delete',
+
+  // ===========================================
+  // VALIDATION MODULE (CTEM)
+  // ===========================================
+  ValidationRead: 'validation:read',
+  ValidationWrite: 'validation:write',
+
+  // ===========================================
+  // REPORTS MODULE
+  // ===========================================
+  ReportsRead: 'reports:read',
+  ReportsWrite: 'reports:write',
+
+  // ===========================================
+  // LEGACY ALIASES (for backward compatibility)
+  // ===========================================
+  MembersManage: 'team:members:write', // Alias for MembersWrite
+  BillingManage: 'settings:billing:write', // Alias for BillingWrite
+  PentestRead: 'validation:read', // Alias for ValidationRead
+  PentestWrite: 'validation:write', // Alias for ValidationWrite
+  GroupsPermissions: 'team:groups:write', // Alias for GroupsWrite
+
+  // Legacy project permissions (mapped to assets)
+  ProjectsRead: 'assets:read',
+  ProjectsWrite: 'assets:write',
+  ProjectsDelete: 'assets:delete',
 } as const
 
 /**
@@ -226,52 +308,129 @@ export function isValidPermission(value: string): value is PermissionString {
 export const PermissionGroups = {
   // All read permissions
   AllRead: [
+    Permission.DashboardRead,
     Permission.AssetsRead,
-    Permission.ProjectsRead,
+    Permission.AssetGroupsRead,
+    Permission.RepositoriesRead,
     Permission.ComponentsRead,
+    Permission.BranchesRead,
     Permission.FindingsRead,
     Permission.VulnerabilitiesRead,
-    Permission.DashboardRead,
-    Permission.ScansRead,
     Permission.CredentialsRead,
-    Permission.ReportsRead,
-    Permission.PentestRead,
     Permission.RemediationRead,
     Permission.WorkflowsRead,
-    Permission.MembersRead,
+    Permission.ScansRead,
+    Permission.ScanProfilesRead,
+    Permission.SourcesRead,
+    Permission.ToolsRead,
+    Permission.TenantToolsRead,
+    Permission.AgentsRead,
+    Permission.CommandsRead,
     Permission.TeamRead,
+    Permission.MembersRead,
+    Permission.GroupsRead,
+    Permission.RolesRead,
+    Permission.PermissionSetsRead,
+    Permission.AssignmentRulesRead,
     Permission.IntegrationsRead,
+    Permission.ScmConnectionsRead,
+    Permission.NotificationsRead,
+    Permission.WebhooksRead,
+    Permission.ApiKeysRead,
+    Permission.PipelinesRead,
+    Permission.BillingRead,
+    Permission.SLARead,
+    Permission.ScopeRead,
+    Permission.ValidationRead,
+    Permission.ReportsRead,
+    Permission.AuditRead,
   ],
 
   // All write permissions
   AllWrite: [
     Permission.AssetsWrite,
-    Permission.ProjectsWrite,
+    Permission.AssetGroupsWrite,
+    Permission.RepositoriesWrite,
     Permission.ComponentsWrite,
+    Permission.BranchesWrite,
     Permission.FindingsWrite,
-    Permission.ScansWrite,
+    Permission.VulnerabilitiesWrite,
     Permission.CredentialsWrite,
-    Permission.ReportsWrite,
-    Permission.PentestWrite,
     Permission.RemediationWrite,
     Permission.WorkflowsWrite,
+    Permission.PoliciesWrite,
+    Permission.ScansWrite,
+    Permission.ScanProfilesWrite,
+    Permission.SourcesWrite,
+    Permission.ToolsWrite,
+    Permission.TenantToolsWrite,
+    Permission.AgentsWrite,
+    Permission.CommandsWrite,
+    Permission.TeamUpdate,
+    Permission.MembersWrite,
+    Permission.GroupsWrite,
+    Permission.RolesWrite,
+    Permission.PermissionSetsWrite,
+    Permission.AssignmentRulesWrite,
+    Permission.ScmConnectionsWrite,
+    Permission.NotificationsWrite,
+    Permission.WebhooksWrite,
+    Permission.ApiKeysWrite,
+    Permission.PipelinesWrite,
+    Permission.BillingWrite,
+    Permission.SLAWrite,
+    Permission.ScopeWrite,
+    Permission.ValidationWrite,
+    Permission.ReportsWrite,
   ],
 
   // All delete permissions
   AllDelete: [
     Permission.AssetsDelete,
-    Permission.ProjectsDelete,
+    Permission.AssetGroupsDelete,
+    Permission.RepositoriesDelete,
     Permission.ComponentsDelete,
+    Permission.BranchesDelete,
     Permission.FindingsDelete,
+    Permission.VulnerabilitiesDelete,
+    Permission.PoliciesDelete,
+    Permission.ScansDelete,
+    Permission.ScanProfilesDelete,
+    Permission.SourcesDelete,
+    Permission.ToolsDelete,
+    Permission.TenantToolsDelete,
+    Permission.AgentsDelete,
+    Permission.CommandsDelete,
+    Permission.TeamDelete,
+    Permission.GroupsDelete,
+    Permission.RolesDelete,
+    Permission.PermissionSetsDelete,
+    Permission.AssignmentRulesDelete,
+    Permission.ScmConnectionsDelete,
+    Permission.NotificationsDelete,
+    Permission.WebhooksDelete,
+    Permission.ApiKeysDelete,
+    Permission.PipelinesDelete,
+    Permission.SLADelete,
+    Permission.ScopeDelete,
   ],
 
   // Team management permissions
   TeamManagement: [
-    Permission.MembersRead,
-    Permission.MembersInvite,
-    Permission.MembersManage,
     Permission.TeamRead,
     Permission.TeamUpdate,
+    Permission.MembersRead,
+    Permission.MembersInvite,
+    Permission.MembersWrite,
+    Permission.GroupsRead,
+    Permission.GroupsWrite,
+    Permission.GroupsMembers,
+    Permission.GroupsAssets,
+    Permission.RolesRead,
+    Permission.RolesWrite,
+    Permission.RolesAssign,
+    Permission.PermissionSetsRead,
+    Permission.PermissionSetsWrite,
   ],
 
   // Security/vulnerability permissions
@@ -280,9 +439,13 @@ export const PermissionGroups = {
     Permission.FindingsWrite,
     Permission.FindingsDelete,
     Permission.VulnerabilitiesRead,
-    Permission.PentestRead,
-    Permission.PentestWrite,
+    Permission.VulnerabilitiesWrite,
     Permission.CredentialsRead,
+    Permission.CredentialsWrite,
+    Permission.ValidationRead,
+    Permission.ValidationWrite,
+    Permission.ScopeRead,
+    Permission.ScopeWrite,
   ],
 } as const
 
@@ -291,45 +454,55 @@ export const PermissionGroups = {
  * Used in tooltips when user lacks permission
  */
 export const PermissionLabels: Partial<Record<PermissionString, string>> = {
+  // Core
+  [Permission.DashboardRead]: 'View Dashboard',
+  [Permission.AuditRead]: 'View Audit Logs',
+
   // Assets
   [Permission.AssetsRead]: 'View Assets',
   [Permission.AssetsWrite]: 'Edit Assets',
   [Permission.AssetsDelete]: 'Delete Assets',
-
-  // Projects
-  [Permission.ProjectsRead]: 'View Projects',
-  [Permission.ProjectsWrite]: 'Edit Projects',
-  [Permission.ProjectsDelete]: 'Delete Projects',
-
-  // Components
+  [Permission.AssetGroupsRead]: 'View Asset Groups',
+  [Permission.AssetGroupsWrite]: 'Manage Asset Groups',
+  [Permission.AssetGroupsDelete]: 'Delete Asset Groups',
+  [Permission.RepositoriesRead]: 'View Repositories',
+  [Permission.RepositoriesWrite]: 'Manage Repositories',
+  [Permission.RepositoriesDelete]: 'Delete Repositories',
   [Permission.ComponentsRead]: 'View Components',
   [Permission.ComponentsWrite]: 'Edit Components',
   [Permission.ComponentsDelete]: 'Delete Components',
+  [Permission.BranchesRead]: 'View Branches',
+  [Permission.BranchesWrite]: 'Manage Branches',
+  [Permission.BranchesDelete]: 'Delete Branches',
 
   // Findings
   [Permission.FindingsRead]: 'View Findings',
   [Permission.FindingsWrite]: 'Edit Findings',
   [Permission.FindingsDelete]: 'Delete Findings',
-
-  // Vulnerabilities
   [Permission.VulnerabilitiesRead]: 'View Vulnerabilities',
   [Permission.VulnerabilitiesWrite]: 'Edit Vulnerabilities',
   [Permission.VulnerabilitiesDelete]: 'Delete Vulnerabilities',
-
-  // Dashboard
-  [Permission.DashboardRead]: 'View Dashboard',
+  [Permission.CredentialsRead]: 'View Credentials',
+  [Permission.CredentialsWrite]: 'Manage Credentials',
+  [Permission.RemediationRead]: 'View Remediation',
+  [Permission.RemediationWrite]: 'Manage Remediation',
+  [Permission.WorkflowsRead]: 'View Workflows',
+  [Permission.WorkflowsWrite]: 'Manage Workflows',
+  [Permission.PoliciesRead]: 'View Policies',
+  [Permission.PoliciesWrite]: 'Manage Policies',
+  [Permission.PoliciesDelete]: 'Delete Policies',
 
   // Scans
   [Permission.ScansRead]: 'View Scans',
   [Permission.ScansWrite]: 'Manage Scans',
   [Permission.ScansDelete]: 'Delete Scans',
-
-  // Scan Profiles
+  [Permission.ScansExecute]: 'Execute Scans',
   [Permission.ScanProfilesRead]: 'View Scan Profiles',
   [Permission.ScanProfilesWrite]: 'Manage Scan Profiles',
   [Permission.ScanProfilesDelete]: 'Delete Scan Profiles',
-
-  // Tools
+  [Permission.SourcesRead]: 'View Sources',
+  [Permission.SourcesWrite]: 'Manage Sources',
+  [Permission.SourcesDelete]: 'Delete Sources',
   [Permission.ToolsRead]: 'View Tools',
   [Permission.ToolsWrite]: 'Manage Tools',
   [Permission.ToolsDelete]: 'Delete Tools',
@@ -337,99 +510,80 @@ export const PermissionLabels: Partial<Record<PermissionString, string>> = {
   [Permission.TenantToolsWrite]: 'Manage Tool Configs',
   [Permission.TenantToolsDelete]: 'Delete Tool Configs',
 
-  // Credentials
-  [Permission.CredentialsRead]: 'View Credentials',
-  [Permission.CredentialsWrite]: 'Manage Credentials',
-
-  // Reports
-  [Permission.ReportsRead]: 'View Reports',
-  [Permission.ReportsWrite]: 'Create Reports',
-
-  // Pentest
-  [Permission.PentestRead]: 'View Pentests',
-  [Permission.PentestWrite]: 'Manage Pentests',
-
-  // Remediation
-  [Permission.RemediationRead]: 'View Remediation',
-  [Permission.RemediationWrite]: 'Manage Remediation',
-
-  // Workflows
-  [Permission.WorkflowsRead]: 'View Workflows',
-  [Permission.WorkflowsWrite]: 'Manage Workflows',
-
-  // Members
-  [Permission.MembersRead]: 'View Members',
-  [Permission.MembersInvite]: 'Invite Members',
-  [Permission.MembersManage]: 'Manage Members',
+  // Agents
+  [Permission.AgentsRead]: 'View Agents',
+  [Permission.AgentsWrite]: 'Manage Agents',
+  [Permission.AgentsDelete]: 'Delete Agents',
+  [Permission.CommandsRead]: 'View Commands',
+  [Permission.CommandsWrite]: 'Send Commands',
+  [Permission.CommandsDelete]: 'Delete Commands',
 
   // Team
   [Permission.TeamRead]: 'View Team Settings',
   [Permission.TeamUpdate]: 'Update Team Settings',
   [Permission.TeamDelete]: 'Delete Team',
-
-  // Billing
-  [Permission.BillingRead]: 'View Billing',
-  [Permission.BillingManage]: 'Manage Billing',
-
-  // Integrations
-  [Permission.IntegrationsRead]: 'View Integrations',
-  [Permission.IntegrationsManage]: 'Manage Integrations',
-
-  // Audit
-  [Permission.AuditRead]: 'View Audit Logs',
-
-  // Asset Groups
-  [Permission.AssetGroupsRead]: 'View Asset Groups',
-  [Permission.AssetGroupsWrite]: 'Manage Asset Groups',
-  [Permission.AssetGroupsDelete]: 'Delete Asset Groups',
-
-  // Groups (Access Control)
+  [Permission.MembersRead]: 'View Members',
+  [Permission.MembersInvite]: 'Invite Members',
+  [Permission.MembersWrite]: 'Manage Members',
   [Permission.GroupsRead]: 'View Groups',
   [Permission.GroupsWrite]: 'Manage Groups',
   [Permission.GroupsDelete]: 'Delete Groups',
   [Permission.GroupsMembers]: 'Manage Group Members',
-  [Permission.GroupsPermissions]: 'Manage Group Permissions',
-
-  // Permission Sets
-  [Permission.PermissionSetsRead]: 'View Permission Sets',
-  [Permission.PermissionSetsWrite]: 'Manage Permission Sets',
-  [Permission.PermissionSetsDelete]: 'Delete Permission Sets',
-
-  // Roles
+  [Permission.GroupsAssets]: 'Manage Group Assets',
   [Permission.RolesRead]: 'View Roles',
   [Permission.RolesWrite]: 'Manage Roles',
   [Permission.RolesDelete]: 'Delete Roles',
   [Permission.RolesAssign]: 'Assign Roles',
-
-  // Assignment Rules
+  [Permission.PermissionSetsRead]: 'View Permission Sets',
+  [Permission.PermissionSetsWrite]: 'Manage Permission Sets',
+  [Permission.PermissionSetsDelete]: 'Delete Permission Sets',
   [Permission.AssignmentRulesRead]: 'View Assignment Rules',
   [Permission.AssignmentRulesWrite]: 'Manage Assignment Rules',
   [Permission.AssignmentRulesDelete]: 'Delete Assignment Rules',
 
-  // Agents
-  [Permission.AgentsRead]: 'View Agents',
-  [Permission.AgentsWrite]: 'Manage Agents',
-  [Permission.AgentsDelete]: 'Delete Agents',
-
-  // SCM Connections
+  // Integrations
+  [Permission.IntegrationsRead]: 'View Integrations',
+  [Permission.IntegrationsManage]: 'Manage Integrations',
   [Permission.ScmConnectionsRead]: 'View SCM Connections',
   [Permission.ScmConnectionsWrite]: 'Manage SCM Connections',
   [Permission.ScmConnectionsDelete]: 'Delete SCM Connections',
-
-  // Sources
-  [Permission.SourcesRead]: 'View Sources',
-  [Permission.SourcesWrite]: 'Manage Sources',
-  [Permission.SourcesDelete]: 'Delete Sources',
-
-  // Commands
-  [Permission.CommandsRead]: 'View Commands',
-  [Permission.CommandsWrite]: 'Manage Commands',
-  [Permission.CommandsDelete]: 'Delete Commands',
-
-  // Pipelines
+  [Permission.NotificationsRead]: 'View Notifications',
+  [Permission.NotificationsWrite]: 'Manage Notifications',
+  [Permission.NotificationsDelete]: 'Delete Notifications',
+  [Permission.WebhooksRead]: 'View Webhooks',
+  [Permission.WebhooksWrite]: 'Manage Webhooks',
+  [Permission.WebhooksDelete]: 'Delete Webhooks',
+  [Permission.ApiKeysRead]: 'View API Keys',
+  [Permission.ApiKeysWrite]: 'Manage API Keys',
+  [Permission.ApiKeysDelete]: 'Delete API Keys',
   [Permission.PipelinesRead]: 'View Pipelines',
   [Permission.PipelinesWrite]: 'Manage Pipelines',
   [Permission.PipelinesDelete]: 'Delete Pipelines',
+  [Permission.PipelinesExecute]: 'Execute Pipelines',
+
+  // Settings
+  [Permission.BillingRead]: 'View Billing',
+  [Permission.BillingWrite]: 'Manage Billing',
+  [Permission.SLARead]: 'View SLA',
+  [Permission.SLAWrite]: 'Manage SLA',
+  [Permission.SLADelete]: 'Delete SLA',
+
+  // Attack Surface
+  [Permission.ScopeRead]: 'View Scope',
+  [Permission.ScopeWrite]: 'Manage Scope',
+  [Permission.ScopeDelete]: 'Delete Scope',
+
+  // Validation
+  [Permission.ValidationRead]: 'View Validation',
+  [Permission.ValidationWrite]: 'Manage Validation',
+
+  // Reports
+  [Permission.ReportsRead]: 'View Reports',
+  [Permission.ReportsWrite]: 'Create Reports',
+
+  // Note: Legacy aliases (MembersManage, BillingManage, etc.) map to
+  // the same permission IDs as their canonical counterparts, so their
+  // labels are inherited automatically.
 }
 
 /**

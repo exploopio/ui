@@ -130,11 +130,11 @@ function buildRepositoryExtensionEndpoint(assetId: string): string {
 }
 
 function buildSCMConnectionsEndpoint(): string {
-  return "/api/v1/scm-connections";
+  return "/api/v1/integrations/scm";
 }
 
 function buildSCMConnectionEndpoint(connectionId: string): string {
-  return `/api/v1/scm-connections/${connectionId}`;
+  return `/api/v1/integrations/${connectionId}`;
 }
 
 function buildImportEndpoint(): string {
@@ -165,47 +165,68 @@ async function fetchRepositoryStats(url: string): Promise<RepositoryStats> {
   return get<RepositoryStats>(url);
 }
 
-// API response uses snake_case, we transform to camelCase for TypeScript
-interface SCMConnectionAPIResponse {
-  id: string;
-  tenant_id: string;
-  name: string;
-  provider: string;
-  base_url: string;
-  auth_type: string;
+// API response uses Integration format from new integrations API
+interface IntegrationSCMExtension {
   scm_organization?: string;
-  status: string;
-  last_verified_at?: string;
-  verification_error?: string;
   repository_count: number;
-  permissions?: string[];
+  webhook_id?: string;
+  webhook_url?: string;
+  default_branch_pattern?: string;
+  auto_import_repos: boolean;
+  import_private_repos: boolean;
+  import_archived_repos: boolean;
+  include_patterns?: string[];
+  exclude_patterns?: string[];
+  last_repo_sync_at?: string;
+}
+
+interface IntegrationAPIResponse {
+  id: string;
+  tenant_id?: string;
+  name: string;
+  description?: string;
+  provider: string;
+  category: string;
+  status: string;
+  status_message?: string;
+  auth_type: string;
+  base_url?: string;
+  credentials_masked?: string;
+  last_sync_at?: string;
+  next_sync_at?: string;
+  sync_interval_minutes?: number;
+  sync_error?: string;
+  stats?: {
+    total_assets: number;
+    total_findings: number;
+    total_repositories?: number;
+  };
+  config?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
+  scm_extension?: IntegrationSCMExtension;
   created_at: string;
   updated_at: string;
   created_by?: string;
 }
 
-interface SCMConnectionsListResponse {
-  data: SCMConnectionAPIResponse[];
-  total: number;
-  page: number;
-  per_page: number;
-  total_pages: number;
+interface IntegrationsListResponse {
+  data: IntegrationAPIResponse[];
 }
 
-function transformSCMConnection(api: SCMConnectionAPIResponse): SCMConnection {
+function transformSCMConnection(api: IntegrationAPIResponse): SCMConnection {
   return {
     id: api.id,
-    tenantId: api.tenant_id,
+    tenantId: api.tenant_id || "",
     name: api.name,
     provider: api.provider as SCMConnection["provider"],
-    baseUrl: api.base_url,
+    baseUrl: api.base_url || "",
     authType: api.auth_type as SCMConnection["authType"],
-    scmOrganization: api.scm_organization,
+    scmOrganization: api.scm_extension?.scm_organization,
     status: api.status as SCMConnection["status"],
-    lastValidatedAt: api.last_verified_at,
-    errorMessage: api.verification_error,
-    repositoryCount: api.repository_count,
-    permissions: (api.permissions || []) as SCMConnection["permissions"],
+    lastValidatedAt: api.last_sync_at,
+    errorMessage: api.status_message,
+    repositoryCount: api.scm_extension?.repository_count || 0,
+    permissions: [] as SCMConnection["permissions"],
     createdAt: api.created_at,
     updatedAt: api.updated_at,
     createdBy: api.created_by || "",
@@ -213,12 +234,15 @@ function transformSCMConnection(api: SCMConnectionAPIResponse): SCMConnection {
 }
 
 async function fetchSCMConnections(url: string): Promise<SCMConnection[]> {
-  const response = await get<SCMConnectionsListResponse>(url);
-  return response.data.map(transformSCMConnection);
+  const response = await get<IntegrationsListResponse>(url);
+  // Handle both new format { data: [...] } and legacy direct array format
+  const data = Array.isArray(response) ? response : (response.data || []);
+  return data.map(transformSCMConnection);
 }
 
 async function fetchSCMConnection(url: string): Promise<SCMConnection> {
-  return get<SCMConnection>(url);
+  const response = await get<IntegrationAPIResponse>(url);
+  return transformSCMConnection(response);
 }
 
 async function fetchRepositoryScans(url: string): Promise<RepositoryScan[]> {
@@ -635,7 +659,7 @@ export function useUpdateSCMConnection(connectionId: string) {
     currentTenant && connectionId ? buildSCMConnectionEndpoint(connectionId) : null,
     async (url: string, { arg }: { arg: UpdateSCMConnectionInput }) => {
       // Convert camelCase to snake_case for backend
-      const response = await put<SCMConnectionAPIResponse>(url, {
+      const response = await put<IntegrationAPIResponse>(url, {
         name: arg.name,
         access_token: arg.accessToken,
         scm_organization: arg.scmOrganization,
@@ -654,7 +678,7 @@ export function useValidateSCMConnection(connectionId: string) {
   return useSWRMutation(
     currentTenant && connectionId ? `${buildSCMConnectionEndpoint(connectionId)}/test` : null,
     async (url: string) => {
-      const response = await post<SCMConnectionAPIResponse>(url, {});
+      const response = await post<IntegrationAPIResponse>(url, {});
       return transformSCMConnection(response);
     }
   );
@@ -706,7 +730,7 @@ export interface SCMRepositoriesOptions {
 }
 
 function buildSCMRepositoriesEndpoint(connectionId: string, options?: SCMRepositoriesOptions): string {
-  const baseUrl = `/api/v1/scm-connections/${connectionId}/repositories`;
+  const baseUrl = `/api/v1/integrations/${connectionId}/repositories`;
   const params = new URLSearchParams();
 
   if (options?.search) params.set("search", options.search);
@@ -859,7 +883,7 @@ export async function invalidateRepositoriesCache() {
 export async function invalidateSCMConnectionsCache() {
   const { mutate } = await import("swr");
   await mutate(
-    (key) => typeof key === "string" && key.includes("/api/v1/scm-connections"),
+    (key) => typeof key === "string" && key.includes("/api/v1/integrations"),
     undefined,
     { revalidate: true }
   );

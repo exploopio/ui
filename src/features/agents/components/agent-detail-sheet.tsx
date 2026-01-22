@@ -26,6 +26,7 @@ import {
 import type { Agent } from '@/lib/api/agent-types';
 import { AgentTypeIcon, AGENT_TYPE_LABELS, AGENT_TYPE_COLORS } from './agent-type-icon';
 import { AgentAuditLog } from './agent-audit-log';
+import { Can, Permission } from '@/lib/permissions';
 
 interface AgentDetailSheetProps {
   agent: Agent | null;
@@ -167,40 +168,44 @@ export function AgentDetailSheet({
 
           {/* Quick Actions */}
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="secondary" onClick={() => onEdit(agent)}>
-              <Settings className="mr-2 h-4 w-4" />
-              Edit
-            </Button>
+            <Can permission={Permission.AgentsWrite}>
+              <Button size="sm" variant="secondary" onClick={() => onEdit(agent)}>
+                <Settings className="mr-2 h-4 w-4" />
+                Edit
+              </Button>
+            </Can>
             <Button size="sm" variant="outline" onClick={() => onViewConfig(agent)}>
               <FileCode className="mr-2 h-4 w-4" />
               View Config
             </Button>
-            <Button size="sm" variant="outline" onClick={() => onRegenerateKey(agent)}>
-              <KeyRound className="mr-2 h-4 w-4" />
-              Regenerate Key
-            </Button>
-            {(agent.status === 'disabled' || agent.status === 'revoked') && onActivate && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="border-green-500/30 text-green-500 hover:bg-green-500/10"
-                onClick={() => onActivate(agent)}
-              >
-                <Power className="mr-2 h-4 w-4" />
-                Activate
+            <Can permission={Permission.AgentsWrite}>
+              <Button size="sm" variant="outline" onClick={() => onRegenerateKey(agent)}>
+                <KeyRound className="mr-2 h-4 w-4" />
+                Regenerate Key
               </Button>
-            )}
-            {agent.status === 'active' && onDeactivate && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="border-amber-500/30 text-amber-500 hover:bg-amber-500/10"
-                onClick={() => onDeactivate(agent)}
-              >
-                <PowerOff className="mr-2 h-4 w-4" />
-                Deactivate
-              </Button>
-            )}
+              {(agent.status === 'disabled' || agent.status === 'revoked') && onActivate && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-green-500/30 text-green-500 hover:bg-green-500/10"
+                  onClick={() => onActivate(agent)}
+                >
+                  <Power className="mr-2 h-4 w-4" />
+                  Activate
+                </Button>
+              )}
+              {agent.status === 'active' && onDeactivate && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-amber-500/30 text-amber-500 hover:bg-amber-500/10"
+                  onClick={() => onDeactivate(agent)}
+                >
+                  <PowerOff className="mr-2 h-4 w-4" />
+                  Deactivate
+                </Button>
+              )}
+            </Can>
           </div>
         </div>
 
@@ -311,14 +316,16 @@ export function AgentDetailSheet({
                 <code className="rounded bg-muted px-2 py-1 text-xs">
                   {agent.api_key_prefix}...
                 </code>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => onRegenerateKey(agent)}
-                >
-                  <KeyRound className="mr-2 h-3 w-3" />
-                  Regenerate
-                </Button>
+                <Can permission={Permission.AgentsWrite}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => onRegenerateKey(agent)}
+                  >
+                    <KeyRound className="mr-2 h-3 w-3" />
+                    Regenerate
+                  </Button>
+                </Can>
               </div>
             </div>
           </TabsContent>
@@ -382,47 +389,49 @@ export function AgentDetailSheet({
             </div>
 
             {/* Danger Zone */}
-            <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-4">
-              <h4 className="mb-2 text-sm font-medium text-red-500">Danger Zone</h4>
-              <div className="space-y-3">
-                {/* Revoke - only show if not already revoked */}
-                {agent.status !== 'revoked' && onRevoke && (
+            <Can permission={Permission.AgentsDelete}>
+              <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-4">
+                <h4 className="mb-2 text-sm font-medium text-red-500">Danger Zone</h4>
+                <div className="space-y-3">
+                  {/* Revoke - only show if not already revoked */}
+                  {agent.status !== 'revoked' && onRevoke && (
+                    <div>
+                      <p className="mb-2 text-xs text-muted-foreground">
+                        Permanently revoke this agent&apos;s access. The agent will not be able to authenticate.
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full border-red-500/50 text-red-500 hover:bg-red-500/10"
+                        onClick={() => onRevoke(agent)}
+                      >
+                        <AlertCircle className="mr-2 h-4 w-4" />
+                        Revoke Access
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Delete */}
                   <div>
                     <p className="mb-2 text-xs text-muted-foreground">
-                      Permanently revoke this agent&apos;s access. The agent will not be able to authenticate.
+                      Permanently delete this agent and invalidate its API key.
                     </p>
                     <Button
-                      variant="outline"
+                      variant="destructive"
                       size="sm"
-                      className="w-full border-red-500/50 text-red-500 hover:bg-red-500/10"
-                      onClick={() => onRevoke(agent)}
+                      className="w-full"
+                      onClick={() => {
+                        onDelete(agent);
+                        onOpenChange(false);
+                      }}
                     >
-                      <AlertCircle className="mr-2 h-4 w-4" />
-                      Revoke Access
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete Agent
                     </Button>
                   </div>
-                )}
-
-                {/* Delete */}
-                <div>
-                  <p className="mb-2 text-xs text-muted-foreground">
-                    Permanently delete this agent and invalidate its API key.
-                  </p>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="w-full"
-                    onClick={() => {
-                      onDelete(agent);
-                      onOpenChange(false);
-                    }}
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete Agent
-                  </Button>
                 </div>
               </div>
-            </div>
+            </Can>
           </TabsContent>
         </Tabs>
       </SheetContent>

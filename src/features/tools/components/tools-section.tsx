@@ -49,6 +49,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { Can, Permission } from '@/lib/permissions';
 
 import { AddToolDialog } from './add-tool-dialog';
 import { ToolCard } from './tool-card';
@@ -413,24 +414,26 @@ export function ToolsSection({ onToolSelect, selectedToolId }: ToolsSectionProps
                   Export
                 </Button>
                 {/* Add Tool button - always visible but disabled for platform tools */}
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span>
-                      <Button
-                        onClick={() => setAddDialogOpen(true)}
-                        disabled={!isCustomToolsMode}
-                      >
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add Tool
-                      </Button>
-                    </span>
-                  </TooltipTrigger>
-                  {!isCustomToolsMode && (
-                    <TooltipContent>
-                      <p>Switch to Custom Tools tab to add your own tools</p>
-                    </TooltipContent>
-                  )}
-                </Tooltip>
+                <Can permission={Permission.ToolsWrite}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span>
+                        <Button
+                          onClick={() => setAddDialogOpen(true)}
+                          disabled={!isCustomToolsMode}
+                        >
+                          <Plus className="mr-2 h-4 w-4" />
+                          Add Tool
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    {!isCustomToolsMode && (
+                      <TooltipContent>
+                        <p>Switch to Custom Tools tab to add your own tools</p>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </Can>
               </div>
             </div>
           </CardHeader>
@@ -584,10 +587,12 @@ export function ToolsSection({ onToolSelect, selectedToolId }: ToolsSectionProps
                     : 'Add a custom tool to start scanning and collecting data.'}
                 </p>
                 {!searchQuery && categoryFilter === 'all' && !statsFilter && isCustomToolsMode && (
-                  <Button onClick={() => setAddDialogOpen(true)}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Your First Custom Tool
-                  </Button>
+                  <Can permission={Permission.ToolsWrite}>
+                    <Button onClick={() => setAddDialogOpen(true)}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Your First Custom Tool
+                    </Button>
+                  </Can>
                 )}
               </div>
             )}

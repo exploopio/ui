@@ -1197,21 +1197,23 @@ function ConfigDetailSheet({ config, onClose }: ConfigDetailSheetProps) {
           </div>
 
           {/* Danger Zone */}
-          <div className="rounded-xl border border-red-500/30 p-4 bg-red-500/5">
-            <h4 className="text-sm font-medium text-red-500 mb-2">Danger Zone</h4>
-            <p className="text-xs text-muted-foreground mb-3">
-              Permanently delete this configuration and all associated data.
-            </p>
-            <Button
-              variant="destructive"
-              size="sm"
-              className="w-full"
-              onClick={handleDeleteConfig}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete Configuration
-            </Button>
-          </div>
+          <Can permission={Permission.ScansDelete}>
+            <div className="rounded-xl border border-red-500/30 p-4 bg-red-500/5">
+              <h4 className="text-sm font-medium text-red-500 mb-2">Danger Zone</h4>
+              <p className="text-xs text-muted-foreground mb-3">
+                Permanently delete this configuration and all associated data.
+              </p>
+              <Button
+                variant="destructive"
+                size="sm"
+                className="w-full"
+                onClick={handleDeleteConfig}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete Configuration
+              </Button>
+            </div>
+          </Can>
         </TabsContent>
       </Tabs>
     </>
@@ -1264,14 +1266,16 @@ function RunActionsCell({ run, setSelectedRun }: RunActionsCellProps) {
             Retry
           </DropdownMenuItem>
         )}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          className="text-red-400"
-          onClick={() => toast.success(`Deleted: ${run.name}`)}
-        >
-          <Trash2 className="mr-2 h-4 w-4" />
-          Delete
-        </DropdownMenuItem>
+        <Can permission={Permission.ScansDelete}>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            className="text-red-400"
+            onClick={() => toast.success(`Deleted: ${run.name}`)}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Delete
+          </DropdownMenuItem>
+        </Can>
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -2107,21 +2111,23 @@ function RunDetailSheet({ run }: RunDetailSheetProps) {
           </div>
 
           {/* Danger Zone */}
-          <div className="rounded-xl border border-red-500/30 p-4 bg-red-500/5">
-            <h4 className="text-sm font-medium text-red-500 mb-2">Danger Zone</h4>
-            <p className="text-xs text-muted-foreground mb-3">
-              Permanently delete this scan run and all associated data.
-            </p>
-            <Button
-              variant="destructive"
-              size="sm"
-              className="w-full"
-              onClick={() => toast.success("Deleted")}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete Run
-            </Button>
-          </div>
+          <Can permission={Permission.ScansDelete}>
+            <div className="rounded-xl border border-red-500/30 p-4 bg-red-500/5">
+              <h4 className="text-sm font-medium text-red-500 mb-2">Danger Zone</h4>
+              <p className="text-xs text-muted-foreground mb-3">
+                Permanently delete this scan run and all associated data.
+              </p>
+              <Button
+                variant="destructive"
+                size="sm"
+                className="w-full"
+                onClick={() => toast.success("Deleted")}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete Run
+              </Button>
+            </div>
+          </Can>
         </TabsContent>
       </Tabs>
     </>

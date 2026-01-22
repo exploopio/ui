@@ -15,7 +15,7 @@ export const generateSlug = (name: string): string => {
 
 /**
  * Get the group type, handling both group_type and type fields
- * Falls back to 'custom' if type is invalid
+ * Falls back to 'team' if type is invalid
  */
 export const getGroupType = (group: Group): GroupType => {
     const type = group.group_type || group.type;
@@ -23,7 +23,7 @@ export const getGroupType = (group: Group): GroupType => {
     if (type && type in GroupTypeConfig) {
         return type as GroupType;
     }
-    return 'custom';
+    return 'team';
 };
 
 /**

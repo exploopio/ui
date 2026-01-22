@@ -660,6 +660,7 @@ function transformToRepositoryView(asset: ApiAssetResponse): RepositoryView {
 }
 
 import { cn } from "@/lib/utils";
+import { Can, Permission } from "@/lib/permissions";
 
 // ============================================
 // Helper Components
@@ -1704,24 +1705,28 @@ function SettingsTab({ repository }: { repository: Repository }) {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between p-4 rounded-lg border border-red-500/20">
-            <div>
-              <p className="font-medium">Archive Repository</p>
-              <p className="text-sm text-muted-foreground">Archive this repository. It can be restored later.</p>
+          <Can permission={Permission.RepositoriesWrite}>
+            <div className="flex items-center justify-between p-4 rounded-lg border border-red-500/20">
+              <div>
+                <p className="font-medium">Archive Repository</p>
+                <p className="text-sm text-muted-foreground">Archive this repository. It can be restored later.</p>
+              </div>
+              <Button variant="outline" className="text-red-500 border-red-500/50 hover:bg-red-500/10">
+                Archive
+              </Button>
             </div>
-            <Button variant="outline" className="text-red-500 border-red-500/50 hover:bg-red-500/10">
-              Archive
-            </Button>
-          </div>
-          <div className="flex items-center justify-between p-4 rounded-lg border border-red-500/20">
-            <div>
-              <p className="font-medium">Delete Repository</p>
-              <p className="text-sm text-muted-foreground">Permanently delete this repository and all associated data.</p>
+          </Can>
+          <Can permission={Permission.RepositoriesDelete}>
+            <div className="flex items-center justify-between p-4 rounded-lg border border-red-500/20">
+              <div>
+                <p className="font-medium">Delete Repository</p>
+                <p className="text-sm text-muted-foreground">Permanently delete this repository and all associated data.</p>
+              </div>
+              <Button variant="destructive">
+                Delete
+              </Button>
             </div>
-            <Button variant="destructive">
-              Delete
-            </Button>
-          </div>
+          </Can>
         </CardContent>
       </Card>
     </div>
@@ -2055,11 +2060,13 @@ export default function RepositoryDetailPage() {
                     <Copy className="mr-2 h-4 w-4" />
                     Copy URL
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-red-500" onClick={handleDelete}>
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete Repository
-                  </DropdownMenuItem>
+                  <Can permission={Permission.RepositoriesDelete}>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="text-red-500" onClick={handleDelete}>
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete Repository
+                    </DropdownMenuItem>
+                  </Can>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>

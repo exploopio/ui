@@ -231,15 +231,17 @@ function UserRolesDetailCard({ userId, onManageRoles }: { userId: string; onMana
       <div className="flex items-center justify-between mb-3">
         <h4 className="text-sm font-medium">Assigned Roles</h4>
         {onManageRoles && (
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-7 text-xs"
-            onClick={onManageRoles}
-          >
-            <Pencil className="mr-1 h-3 w-3" />
-            Manage
-          </Button>
+          <Can permission={Permission.RolesWrite}>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 text-xs"
+              onClick={onManageRoles}
+            >
+              <Pencil className="mr-1 h-3 w-3" />
+              Manage
+            </Button>
+          </Can>
         )}
       </div>
 

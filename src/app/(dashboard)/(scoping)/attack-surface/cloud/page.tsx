@@ -78,6 +78,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
+import { Can, Permission } from "@/lib/permissions";
 
 type CloudProvider = "aws" | "azure" | "gcp" | "other";
 type ResourceType = "compute" | "storage" | "database" | "network" | "iam" | "serverless";
@@ -665,10 +666,12 @@ export default function CloudSurfacePage() {
               <Download className="mr-2 h-4 w-4" />
               Export
             </Button>
-            <Button size="sm" onClick={() => setIsCreateOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Resource
-            </Button>
+            <Can permission={Permission.ScopeWrite}>
+              <Button size="sm" onClick={() => setIsCreateOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Resource
+              </Button>
+            </Can>
           </div>
         </PageHeader>
 
@@ -882,30 +885,36 @@ export default function CloudSurfacePage() {
                         </span>
                       </TableCell>
                       <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => setViewResource(resource)}>
-                              <Eye className="mr-2 h-4 w-4" />
-                              View Details
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => openEdit(resource)}>
-                              <Pencil className="mr-2 h-4 w-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-red-500"
-                              onClick={() => setDeleteResource(resource)}
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <Can permission={[Permission.ScopeWrite, Permission.ScopeDelete]}>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => setViewResource(resource)}>
+                                <Eye className="mr-2 h-4 w-4" />
+                                View Details
+                              </DropdownMenuItem>
+                              <Can permission={Permission.ScopeWrite}>
+                                <DropdownMenuItem onClick={() => openEdit(resource)}>
+                                  <Pencil className="mr-2 h-4 w-4" />
+                                  Edit
+                                </DropdownMenuItem>
+                              </Can>
+                              <Can permission={Permission.ScopeDelete}>
+                                <DropdownMenuItem
+                                  className="text-red-500"
+                                  onClick={() => setDeleteResource(resource)}
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </Can>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </Can>
                       </TableCell>
                     </TableRow>
                   );

@@ -112,6 +112,8 @@ import {
   Settings,
   Play,
   Loader2,
+  Link2,
+  ArrowRight,
 } from "lucide-react";
 import {
   useRepositories,
@@ -127,7 +129,7 @@ import {
   SCM_PROVIDER_LABELS,
   SYNC_STATUS_LABELS,
 } from "@/features/repositories";
-import { SCMConnectionsSection } from "@/features/scm-connections";
+import { useSCMConnections } from "@/features/repositories/hooks/use-repositories";
 import type { AssetWithRepository } from "@/features/assets/types/asset.types";
 import type { Status } from "@/features/shared/types";
 
@@ -327,7 +329,6 @@ function transformToRepositoryView(asset: ApiAssetResponse): RepositoryView {
 
 type StatusFilter = RepositoryStatus | "all";
 type ProviderFilter = SCMProvider | "all";
-type SCMConnectionFilter = string | "all";
 
 const statusFilters: { value: StatusFilter; label: string }[] = [
   { value: "all", label: "All" },
@@ -461,6 +462,90 @@ function RepositoryStatusBadge({ status }: { status: RepositoryStatus }) {
 }
 
 // ============================================
+// SCM Connections Banner Component
+// ============================================
+
+function SCMConnectionsBanner() {
+  const router = useRouter();
+  const { data: connectionsData, isLoading } = useSCMConnections();
+
+  // Handle both array and paginated response formats
+  const connections = Array.isArray(connectionsData)
+    ? connectionsData
+    : ((connectionsData as unknown as { data?: unknown[] })?.data as typeof connectionsData) ?? [];
+
+  const connectedCount = connections.filter((c) => c.status === "connected").length;
+  const hasConnections = connections.length > 0;
+
+  if (isLoading) {
+    return (
+      <Card className="mt-6 bg-muted/30">
+        <CardContent className="py-4">
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-10 w-10 rounded-lg" />
+            <div className="flex-1">
+              <Skeleton className="h-4 w-48 mb-2" />
+              <Skeleton className="h-3 w-64" />
+            </div>
+            <Skeleton className="h-9 w-32" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className={cn(
+      "mt-6 border",
+      hasConnections && connectedCount > 0
+        ? "bg-green-500/5 border-green-500/20"
+        : "bg-blue-500/5 border-blue-500/20"
+    )}>
+      <CardContent className="py-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4">
+            <div className={cn(
+              "flex h-10 w-10 items-center justify-center rounded-lg",
+              hasConnections && connectedCount > 0
+                ? "bg-green-500/10"
+                : "bg-blue-500/10"
+            )}>
+              <Link2 className={cn(
+                "h-5 w-5",
+                hasConnections && connectedCount > 0 ? "text-green-500" : "text-blue-500"
+              )} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="font-medium">SCM Connections</h4>
+                {hasConnections && (
+                  <Badge variant="secondary" className="text-xs">
+                    {connectedCount} / {connections.length} connected
+                  </Badge>
+                )}
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {hasConnections
+                  ? "Manage your source control connections to import and sync repositories"
+                  : "Connect GitHub, GitLab, or Bitbucket to import repositories automatically"}
+              </p>
+            </div>
+          </div>
+          <Button
+            variant={hasConnections ? "outline" : "default"}
+            onClick={() => router.push("/settings/integrations/scm")}
+            className="shrink-0"
+          >
+            {hasConnections ? "Manage Connections" : "Add Connection"}
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ============================================
 // Main Component
 // ============================================
 
@@ -473,7 +558,6 @@ export default function RepositoriesPage() {
   const [globalFilter, setGlobalFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [providerFilter, setProviderFilter] = useState<ProviderFilter>("all");
-  const [scmConnectionFilter, setSCMConnectionFilter] = useState<SCMConnectionFilter>("all");
   const [rowSelection, setRowSelection] = useState({});
 
   // Dialog states
@@ -528,9 +612,6 @@ export default function RepositoriesPage() {
     await Promise.all([mutateAllRepos(), mutateFilteredRepos()]);
   }, [mutateAllRepos, mutateFilteredRepos]);
 
-  // SCM connections - will be populated when API is available
-  const scmConnections: Array<{ id: string; name: string; provider: SCMProvider; scmOrganization?: string; status: string; baseUrl?: string }> = [];
-
   // Calculate stats from ALL repositories (not filtered)
   const stats = useMemo(() => {
     return {
@@ -573,12 +654,8 @@ export default function RepositoriesPage() {
     if (providerFilter !== "all") {
       data = data.filter((p) => p.scm_provider === providerFilter);
     }
-    if (scmConnectionFilter !== "all") {
-      // Filter by SCM organization since connection_id is not available in RepositoryView
-      data = data.filter((p) => p.scm_organization === scmConnectionFilter);
-    }
     return data;
-  }, [repositories, statusFilter, providerFilter, scmConnectionFilter]);
+  }, [repositories, statusFilter, providerFilter]);
 
   // Table columns
   const columns: ColumnDef<Repository>[] = [
@@ -626,7 +703,6 @@ export default function RepositoriesPage() {
       id: "scm_connection",
       header: "Source",
       cell: ({ row }) => {
-        const connection = scmConnections.find((c) => c.scmOrganization === row.original.scm_organization);
         return (
           <TooltipProvider>
             <Tooltip>
@@ -638,8 +714,10 @@ export default function RepositoriesPage() {
                 </div>
               </TooltipTrigger>
               <TooltipContent>
-                <p className="font-medium">{connection?.name || "Manual"}</p>
-                {connection && <p className="text-xs text-muted-foreground">{connection.baseUrl}</p>}
+                <p className="font-medium">{row.original.scm_organization || "Manual"}</p>
+                {row.original.repository?.webUrl && (
+                  <p className="text-xs text-muted-foreground">{row.original.repository.webUrl}</p>
+                )}
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -1155,7 +1233,7 @@ export default function RepositoriesPage() {
           description={
             isLoading
               ? "Loading repositories..."
-              : `${repositories.length} repositories from ${scmConnections.filter((c) => c.status === "connected").length} SCM connections`
+              : `${repositories.length} repositories tracked for security scanning`
           }
         >
           <div className="flex gap-2">
@@ -1262,13 +1340,8 @@ export default function RepositoriesPage() {
           )}
         </div>
 
-        {/* SCM Connections Section */}
-        <div className="mt-6">
-          <SCMConnectionsSection
-            selectedConnectionId={scmConnectionFilter === "all" ? null : scmConnectionFilter}
-            onConnectionSelect={(id) => setSCMConnectionFilter(id || "all")}
-          />
-        </div>
+        {/* SCM Connections Banner */}
+        <SCMConnectionsBanner />
 
         {/* Table Card */}
         <Card className="mt-6">

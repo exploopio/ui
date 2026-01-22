@@ -146,17 +146,25 @@ export function LoginForm({
           return
         }
 
-        // Case 2: No tenants - redirect to onboarding to create first team
+        // Case 2: No tenants - check if user has a specific destination (e.g., invitation)
         if (result.tenants && result.tenants.length === 0) {
+          // If returnTo is an invitation page, go there first (user can accept and get a tenant)
+          if (redirectTo.includes('/invitations/')) {
+            toast.success('Logged in successfully')
+            window.location.href = redirectTo
+            return
+          }
+          // Otherwise, redirect to onboarding to create first team
           toast.success('Please create your first team to get started')
           window.location.href = '/onboarding/create-team'
           return
         }
 
         // Case 3: Single tenant - proceed to dashboard
+        // IMPORTANT: Use window.location.href for full page navigation
+        // to ensure cookies set by Server Action are picked up properly
         toast.success('Logged in successfully')
-        router.push(redirectTo)
-        router.refresh()
+        window.location.href = redirectTo
       } else {
         toast.error(result.error || 'Login failed')
       }

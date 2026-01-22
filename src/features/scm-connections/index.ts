@@ -1,6 +1,8 @@
 // Components
 export {
   AddConnectionDialog,
+  EditConnectionDialog,
+  SyncRepositoriesDialog,
   SCMConnectionCard,
   SCMConnectionsSection,
   ProviderIcon,

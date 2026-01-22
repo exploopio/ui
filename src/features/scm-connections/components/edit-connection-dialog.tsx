@@ -28,13 +28,13 @@ import {
 import { Input } from "@/components/ui/input";
 
 import { ProviderIcon } from "./provider-icon";
-import type { SCMConnection } from "@/features/repositories/types/repository.types";
+import type { Integration } from "@/features/integrations";
 import { SCM_PROVIDER_LABELS } from "@/features/assets/types/asset.types";
 import {
-  useUpdateSCMConnection,
-  useValidateSCMConnection,
-  invalidateSCMConnectionsCache,
-} from "@/features/repositories/hooks/use-repositories";
+  useUpdateIntegrationApi,
+  useTestIntegrationApi,
+  invalidateSCMIntegrationsCache,
+} from "@/features/integrations";
 
 const editConnectionSchema = z.object({
   name: z
@@ -56,7 +56,7 @@ type EditConnectionFormData = z.infer<typeof editConnectionSchema>;
 interface EditConnectionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  connection: SCMConnection;
+  connection: Integration;
   onSuccess?: () => void;
 }
 
@@ -73,12 +73,12 @@ export function EditConnectionDialog({
     defaultValues: {
       name: connection.name,
       accessToken: "",
-      scmOrganization: connection.scmOrganization || "",
+      scmOrganization: connection.scm_extension?.scm_organization || "",
     },
   });
 
-  const { trigger: updateConnection, isMutating: isUpdating } = useUpdateSCMConnection(connection.id);
-  const { trigger: validateConnection, isMutating: isValidating } = useValidateSCMConnection(connection.id);
+  const { trigger: updateConnection, isMutating: isUpdating } = useUpdateIntegrationApi(connection.id);
+  const { trigger: validateConnection, isMutating: isValidating } = useTestIntegrationApi(connection.id);
 
   // Reset form when dialog opens or connection changes
   useEffect(() => {
@@ -86,7 +86,7 @@ export function EditConnectionDialog({
       form.reset({
         name: connection.name,
         accessToken: "",
-        scmOrganization: connection.scmOrganization || "",
+        scmOrganization: connection.scm_extension?.scm_organization || "",
       });
       setShowToken(false);
     }
@@ -95,16 +95,16 @@ export function EditConnectionDialog({
   const onSubmit = async (data: EditConnectionFormData) => {
     try {
       // Only include fields that have changed
-      const updateData: { name?: string; accessToken?: string; scmOrganization?: string } = {};
+      const updateData: { name?: string; credentials?: string; scm_organization?: string } = {};
 
       if (data.name !== connection.name) {
         updateData.name = data.name;
       }
       if (data.accessToken && data.accessToken.length > 0) {
-        updateData.accessToken = data.accessToken;
+        updateData.credentials = data.accessToken;
       }
-      if (data.scmOrganization !== (connection.scmOrganization || "")) {
-        updateData.scmOrganization = data.scmOrganization || undefined;
+      if (data.scmOrganization !== (connection.scm_extension?.scm_organization || "")) {
+        updateData.scm_organization = data.scmOrganization || undefined;
       }
 
       // Only call API if there are changes
@@ -117,14 +117,14 @@ export function EditConnectionDialog({
       await updateConnection(updateData);
 
       // If token was updated, test the connection
-      if (updateData.accessToken) {
+      if (updateData.credentials) {
         toast.info("Testing updated credentials...");
         try {
           const result = await validateConnection();
           if (result?.status === "connected") {
             toast.success(`Connection "${data.name}" updated and verified successfully`);
           } else {
-            toast.warning(`Connection updated but verification failed: ${result?.errorMessage || "Unknown error"}`);
+            toast.warning(`Connection updated but verification failed: ${result?.status_message || "Unknown error"}`);
           }
         } catch {
           toast.warning("Connection updated but verification failed");
@@ -133,7 +133,7 @@ export function EditConnectionDialog({
         toast.success(`Connection "${data.name}" updated successfully`);
       }
 
-      await invalidateSCMConnectionsCache();
+      await invalidateSCMIntegrationsCache();
       onOpenChange(false);
       onSuccess?.();
     } catch (error) {
@@ -161,7 +161,7 @@ export function EditConnectionDialog({
           </DialogTitle>
           <DialogDescription className="flex items-center gap-2">
             <ProviderIcon provider={connection.provider} className="h-4 w-4" />
-            {SCM_PROVIDER_LABELS[connection.provider]}
+            {SCM_PROVIDER_LABELS[connection.provider as keyof typeof SCM_PROVIDER_LABELS] || connection.provider}
           </DialogDescription>
         </DialogHeader>
 

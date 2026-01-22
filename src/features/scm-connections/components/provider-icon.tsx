@@ -2,7 +2,6 @@
 
 import { Github, Cloud, GitBranch } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { SCMProvider } from "@/features/assets/types/asset.types";
 
 // GitLab custom icon since lucide-react GitlabIcon is just a Cloud
 function GitLabIcon({ className }: { className?: string }) {
@@ -47,7 +46,7 @@ function AzureDevOpsIcon({ className }: { className?: string }) {
 }
 
 interface ProviderIconProps {
-  provider: SCMProvider;
+  provider: string;
   className?: string;
 }
 
@@ -68,7 +67,7 @@ export function ProviderIcon({ provider, className }: ProviderIconProps) {
   }
 }
 
-export const SCM_PROVIDER_COLORS: Record<SCMProvider, string> = {
+export const SCM_PROVIDER_COLORS: Record<string, string> = {
   github: "bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900",
   gitlab: "bg-orange-600 text-white",
   bitbucket: "bg-blue-600 text-white",

@@ -92,6 +92,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { toast } from "sonner";
+import { Can, Permission } from "@/lib/permissions";
 import {
   mockRemediationTasks,
   TASK_STATUS_LABELS,
@@ -516,10 +517,12 @@ export default function RemediationPage() {
                   <Eye className="mr-2 h-4 w-4" />
                   View Details
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleOpenEdit(task)}>
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Edit
-                </DropdownMenuItem>
+                <Can permission={Permission.RemediationWrite}>
+                  <DropdownMenuItem onClick={() => handleOpenEdit(task)}>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Edit
+                  </DropdownMenuItem>
+                </Can>
                 <DropdownMenuItem onClick={() => handleTaskAction("reassign", task)}>
                   <UserPlus className="mr-2 h-4 w-4" />
                   Reassign
@@ -546,14 +549,16 @@ export default function RemediationPage() {
                   <Link className="mr-2 h-4 w-4" />
                   Copy Link
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="text-red-400"
-                  onClick={() => handleTaskAction("delete", task)}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
-                </DropdownMenuItem>
+                <Can permission={Permission.RemediationWrite}>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="text-red-400"
+                    onClick={() => handleTaskAction("delete", task)}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </DropdownMenuItem>
+                </Can>
               </DropdownMenuContent>
             </DropdownMenu>
           );
@@ -1083,28 +1088,30 @@ export default function RemediationPage() {
                 </div>
 
                 {/* Danger Zone */}
-                <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-red-500">Danger Zone</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Delete this task permanently
-                      </p>
+                <Can permission={Permission.RemediationWrite}>
+                  <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-red-500">Danger Zone</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Delete this task permanently
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-red-500/30 text-red-500 hover:bg-red-500/10"
+                        onClick={() => {
+                          setViewTask(null);
+                          setDeleteTask(viewTask);
+                        }}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                      </Button>
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="border-red-500/30 text-red-500 hover:bg-red-500/10"
-                      onClick={() => {
-                        setViewTask(null);
-                        setDeleteTask(viewTask);
-                      }}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete
-                    </Button>
                   </div>
-                </div>
+                </Can>
               </div>
             </>
           )}

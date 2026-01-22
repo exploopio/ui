@@ -18,6 +18,7 @@ import { env } from '@/lib/env'
 // Use 127.0.0.1 instead of localhost to avoid IPv6 resolution issues in Node.js
 const BACKEND_URL = process.env.BACKEND_API_URL?.replace('localhost', '127.0.0.1') || 'http://127.0.0.1:8080'
 const ACCESS_TOKEN_COOKIE = env.auth.cookieName
+const REFRESH_TOKEN_COOKIE = env.auth.refreshCookieName
 
 async function proxyRequest(
   request: NextRequest,
@@ -51,6 +52,14 @@ async function proxyRequest(
     console.log('[Proxy] Authorization header SET with token length:', accessToken.length)
   } else {
     console.warn('[Proxy] No access token - request will likely fail with 401')
+  }
+
+  // Forward refresh token cookie for endpoints that need it
+  // (e.g., accept-with-refresh, create-first-team)
+  const refreshToken = cookieStore.get(REFRESH_TOKEN_COOKIE)?.value
+  if (refreshToken) {
+    headers.set('Cookie', `${REFRESH_TOKEN_COOKIE}=${refreshToken}`)
+    console.log('[Proxy] Refresh token cookie forwarded')
   }
 
   console.log('[Proxy] Backend URL:', backendUrl)
@@ -105,6 +114,16 @@ async function proxyRequest(
         proxyResponse.headers.set(header, value)
       }
     })
+
+    // Forward Set-Cookie headers from backend (important for auth endpoints)
+    // Use getSetCookie() to get all Set-Cookie headers (there can be multiple)
+    const setCookieHeaders = response.headers.getSetCookie()
+    if (setCookieHeaders && setCookieHeaders.length > 0) {
+      console.log('[Proxy] Forwarding', setCookieHeaders.length, 'Set-Cookie headers')
+      setCookieHeaders.forEach((cookie) => {
+        proxyResponse.headers.append('Set-Cookie', cookie)
+      })
+    }
 
     return proxyResponse
   } catch (error) {

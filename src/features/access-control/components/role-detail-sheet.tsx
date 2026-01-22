@@ -57,7 +57,7 @@ import {
 import { cn } from '@/lib/utils';
 import {
   useRoleMembers,
-  usePermissionModules,
+  useTenantPermissionModules,
   type Role,
   type RoleMember,
 } from '@/features/access-control';
@@ -132,7 +132,7 @@ function getInitials(name: string | undefined, email: string): string {
 
 export function RoleDetailSheet({ role, open, onOpenChange, onEdit, onDelete }: RoleDetailSheetProps) {
   const { members: roleMembers, isLoading: isLoadingMembers, mutate: mutateMembers } = useRoleMembers(role?.id || null);
-  const { modules: permissionModules, isLoading: isLoadingModules } = usePermissionModules();
+  const { modules: permissionModules, isLoading: isLoadingModules } = useTenantPermissionModules();
 
   // UI state
   const [searchQuery, setSearchQuery] = useState('');
@@ -218,19 +218,25 @@ export function RoleDetailSheet({ role, open, onOpenChange, onEdit, onDelete }: 
       .filter((module) => module.permissions.length > 0 || module.name.toLowerCase().includes(query));
   }, [groupedPermissions, searchQuery]);
 
-  // Permission stats
-  const permissionStats = useMemo(() => {
-    if (!role) return { read: 0, write: 0, delete: 0 };
+  // Filtered permission count (based on tenant's modules)
+  const filteredPermissionCount = useMemo(() => {
+    return groupedPermissions.reduce((sum, m) => sum + m.permissions.length, 0);
+  }, [groupedPermissions]);
 
-    return role.permissions.reduce(
-      (acc, perm) => {
-        const type = getPermissionType(perm);
-        acc[type as keyof typeof acc]++;
-        return acc;
-      },
-      { read: 0, write: 0, delete: 0 }
-    );
-  }, [role]);
+  // Permission stats (based on filtered permissions)
+  const permissionStats = useMemo(() => {
+    if (!groupedPermissions.length) return { read: 0, write: 0, delete: 0, total: 0 };
+
+    const stats = { read: 0, write: 0, delete: 0, total: 0 };
+    for (const permModule of groupedPermissions) {
+      for (const perm of permModule.permissions) {
+        const type = getPermissionType(perm.id);
+        stats[type as keyof typeof stats]++;
+        stats.total++;
+      }
+    }
+    return stats;
+  }, [groupedPermissions]);
 
   // Toggle module expansion
   const toggleModule = (moduleId: string) => {
@@ -304,7 +310,7 @@ export function RoleDetailSheet({ role, open, onOpenChange, onEdit, onDelete }: 
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
               <Shield className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium">{role.permission_count}</span>
+              <span className="text-sm font-medium">{filteredPermissionCount}</span>
               <span className="text-sm text-muted-foreground">permissions</span>
             </div>
             <Separator orientation="vertical" className="h-4" />
@@ -342,7 +348,7 @@ export function RoleDetailSheet({ role, open, onOpenChange, onEdit, onDelete }: 
                 <Shield className="h-4 w-4" />
                 Permissions
                 <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
-                  {role.permission_count}
+                  {filteredPermissionCount}
                 </Badge>
               </TabsTrigger>
               <TabsTrigger value="members" className="gap-2">

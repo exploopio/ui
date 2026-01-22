@@ -22,28 +22,8 @@ const BACKEND_URL = process.env.BACKEND_API_URL || 'http://localhost:8080'
 const ACCESS_TOKEN_COOKIE = env.auth.cookieName
 const REFRESH_TOKEN_COOKIE = env.auth.refreshCookieName
 const TENANT_COOKIE = env.cookies.tenant
-const PERMISSIONS_COOKIE = 'app_permissions'
-
-/**
- * Extract permissions from JWT token
- * JWT format: header.payload.signature (base64url encoded)
- */
-function extractPermissionsFromToken(accessToken: string): string[] {
-  try {
-    const parts = accessToken.split('.')
-    if (parts.length !== 3) return []
-
-    // Decode base64url payload
-    const payload = parts[1]
-    const decoded = Buffer.from(payload.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf-8')
-    const parsed = JSON.parse(decoded)
-
-    return parsed.permissions || []
-  } catch (error) {
-    console.error('[Refresh] Failed to extract permissions from token:', error)
-    return []
-  }
-}
+// NOTE: Permissions are NOT stored in cookies anymore (too large, > 4KB limit)
+// Frontend fetches permissions via /api/v1/me/permissions API instead
 
 interface BackendRefreshResponse {
   access_token: string
@@ -170,12 +150,15 @@ export async function POST(_request: NextRequest): Promise<NextResponse> {
 
     const data: BackendRefreshResponse = await response.json()
     console.log('[Refresh] Backend success, new access_token:', !!data.access_token)
+    console.log('[Refresh] Access token LENGTH:', data.access_token?.length, 'bytes')
 
-    // Extract permissions from the access token
-    const permissions = extractPermissionsFromToken(data.access_token)
-    console.log('[Refresh] Extracted permissions:', permissions)
+    // Check token size - warn if approaching browser cookie limit
+    if (data.access_token && data.access_token.length > 3500) {
+      console.warn(`[Refresh] WARNING: Token size (${data.access_token.length} bytes) may approach browser cookie limit (4096 bytes)`)
+    }
 
     // Build success response
+    // NOTE: Permissions NOT included here - frontend fetches via /api/v1/me/permissions
     const clientResponse = NextResponse.json({
       success: true,
       data: {
@@ -184,11 +167,15 @@ export async function POST(_request: NextRequest): Promise<NextResponse> {
         tenant_id: data.tenant_id,
         tenant_slug: data.tenant_slug,
         role: data.role,
-        permissions: permissions,
       }
     })
 
     // Update access token cookie
+    // WARNING: Browser cookie limit is ~4096 bytes. Large JWTs will be silently rejected!
+    const tokenLength = data.access_token?.length || 0
+    if (tokenLength > 4000) {
+      console.warn(`[Refresh] WARNING: Token size (${tokenLength} bytes) may exceed browser cookie limit!`)
+    }
     clientResponse.cookies.set(ACCESS_TOKEN_COOKIE, data.access_token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -220,16 +207,7 @@ export async function POST(_request: NextRequest): Promise<NextResponse> {
       maxAge: 7 * 24 * 60 * 60,
       path: '/',
     })
-
-    // Store permissions in a separate cookie (non-httpOnly so client can read)
-    // This allows the sidebar to filter correctly on page load without waiting for API calls
-    clientResponse.cookies.set(PERMISSIONS_COOKIE, JSON.stringify(permissions), {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: data.expires_in || 900, // Same expiry as access token
-      path: '/',
-    })
+    // NOTE: Permissions NOT stored in cookie - frontend fetches via /api/v1/me/permissions
 
     return clientResponse
   } catch (error) {

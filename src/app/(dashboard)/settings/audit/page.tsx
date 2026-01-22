@@ -52,6 +52,7 @@ import {
   CheckCircle,
   XCircle,
   ShieldAlert,
+  ShieldX,
   User,
   Users,
   Settings,
@@ -74,6 +75,7 @@ import {
   formatAction,
   getActionCategory,
 } from "@/features/organization";
+import { Permission, useHasPermission } from "@/lib/permissions";
 
 // Helper functions
 const formatDate = (dateString: string) => {
@@ -142,6 +144,9 @@ const getResultIcon = (result: AuditResult) => {
 };
 
 export default function AuditLogPage() {
+  // Permission check
+  const hasAuditPermission = useHasPermission(Permission.AuditRead);
+
   // Filters state
   const [filters, setFilters] = useState<AuditLogFilters>({
     page: 0,
@@ -157,8 +162,37 @@ export default function AuditLogPage() {
   }), [filters, searchTerm]);
 
   // Fetch data (tenant is extracted from JWT token by backend)
-  const { logs, total, page, totalPages, isLoading, isError, mutate } = useAuditLogs(activeFilters);
+  // Only fetch if user has permission
+  const { logs, total, page, totalPages, isLoading, isError, mutate } = useAuditLogs(
+    hasAuditPermission ? activeFilters : undefined
+  );
   const { stats, isLoading: statsLoading } = useAuditStats();
+
+  // Access denied page
+  if (!hasAuditPermission) {
+    return (
+      <>
+        <Header fixed>
+          <div className="ms-auto flex items-center gap-2 sm:gap-4">
+            <Search />
+            <ThemeSwitch />
+            <ProfileDropdown />
+          </div>
+        </Header>
+        <Main>
+          <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+            <div className="rounded-full bg-red-100 p-4 dark:bg-red-900/20">
+              <ShieldX className="h-12 w-12 text-red-500" />
+            </div>
+            <h2 className="text-xl font-semibold">Access Denied</h2>
+            <p className="text-muted-foreground text-center max-w-md">
+              You don&apos;t have permission to view audit logs. Please contact your administrator to request access.
+            </p>
+          </div>
+        </Main>
+      </>
+    );
+  }
 
   // Filter options
   const resultOptions: AuditResult[] = ["success", "failure", "denied"];

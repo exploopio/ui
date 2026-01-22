@@ -7,6 +7,7 @@ import { ProfileDropdown } from "@/components/profile-dropdown";
 import { Search } from "@/components/search";
 import { ThemeSwitch } from "@/components/theme-switch";
 import { PageHeader, DataTable, DataTableColumnHeader, RiskScoreBadge } from "@/features/shared";
+import { Can, Permission } from "@/lib/permissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -377,31 +378,37 @@ export default function CrownJewelsPage() {
       cell: ({ row }) => {
         const jewel = row.original;
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setViewJewel(jewel)}>
-                <Eye className="mr-2 h-4 w-4" />
-                View Details
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => openEdit(jewel)}>
-                <Pencil className="mr-2 h-4 w-4" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => setDeleteJewel(jewel)}
-                className="text-destructive"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Remove
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Can permission={[Permission.ScopeWrite, Permission.ScopeDelete]}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setViewJewel(jewel)}>
+                  <Eye className="mr-2 h-4 w-4" />
+                  View Details
+                </DropdownMenuItem>
+                <Can permission={Permission.ScopeWrite}>
+                  <DropdownMenuItem onClick={() => openEdit(jewel)}>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Edit
+                  </DropdownMenuItem>
+                </Can>
+                <Can permission={Permission.ScopeDelete}>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => setDeleteJewel(jewel)}
+                    className="text-destructive"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Remove
+                  </DropdownMenuItem>
+                </Can>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </Can>
         );
       },
     },
@@ -563,10 +570,12 @@ export default function CrownJewelsPage() {
             <Download className="mr-2 h-4 w-4" />
             Export
           </Button>
-          <Button size="sm" onClick={() => setIsCreateOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Crown Jewel
-          </Button>
+          <Can permission={Permission.ScopeWrite}>
+            <Button size="sm" onClick={() => setIsCreateOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Crown Jewel
+            </Button>
+          </Can>
         </PageHeader>
 
         {/* Stats Cards */}

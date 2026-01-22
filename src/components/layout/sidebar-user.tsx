@@ -15,7 +15,6 @@ import {
   BadgeCheck,
   Bell,
   ChevronsUpDown,
-  CreditCard,
   LogOut,
 } from "lucide-react";
 import useDialogState from "@/hooks/use-dialog-state";
@@ -140,13 +139,6 @@ export function SidebarUser({ initialUser }: SidebarUserProps) {
                   <Link href="/settings/account" className="flex items-center gap-2">
                     <BadgeCheck className="h-4 w-4" />
                     Account
-                  </Link>
-                </DropdownMenuItem>
-
-                <DropdownMenuItem asChild>
-                  <Link href="/settings/billing" className="flex items-center gap-2">
-                    <CreditCard className="h-4 w-4" />
-                    Billing
                   </Link>
                 </DropdownMenuItem>
 

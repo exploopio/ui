@@ -123,6 +123,7 @@ import {
 } from "@/features/credentials";
 import type { ApiIdentityExposure, ApiCredential } from "@/features/credentials/api/credential-api.types";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Can, Permission } from "@/lib/permissions";
 import {
   Collapsible,
   CollapsibleContent,
@@ -416,25 +417,29 @@ export default function CredentialsPage() {
                 <Eye className="mr-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleOpenEdit(credential)}>
-                <Pencil className="mr-2 h-4 w-4" />
-                Edit
-              </DropdownMenuItem>
+              <Can permission={Permission.CredentialsWrite}>
+                <DropdownMenuItem onClick={() => handleOpenEdit(credential)}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Edit
+                </DropdownMenuItem>
+              </Can>
               <DropdownMenuItem onClick={() => handleCopyCredential(credential)}>
                 <Copy className="mr-2 h-4 w-4" />
                 Copy Name
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="text-destructive"
-                onClick={() => {
-                  setCredentialToDelete(credential);
-                  setDeleteDialogOpen(true);
-                }}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
-              </DropdownMenuItem>
+              <Can permission={Permission.CredentialsWrite}>
+                <DropdownMenuItem
+                  className="text-destructive"
+                  onClick={() => {
+                    setCredentialToDelete(credential);
+                    setDeleteDialogOpen(true);
+                  }}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </DropdownMenuItem>
+              </Can>
             </DropdownMenuContent>
           </DropdownMenu>
         );
@@ -681,35 +686,35 @@ export default function CredentialsPage() {
         <Card className="mt-6">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <KeyRound className="h-5 w-5" />
-                    {viewMode === "list" ? "All Credential Leaks" : "By Identity"}
-                  </CardTitle>
-                  <CardDescription>
-                    {viewMode === "list"
-                      ? `${filteredData.length} of ${credentials.length} credentials`
-                      : `${identitiesResponse?.items?.length || 0} identities with exposures`}
-                  </CardDescription>
-                </div>
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <KeyRound className="h-5 w-5" />
+                  Credential Leaks
+                </CardTitle>
+                <CardDescription>
+                  {viewMode === "list"
+                    ? `${filteredData.length} of ${credentials.length} credentials`
+                    : `${identitiesResponse?.items?.length || 0} identities with exposures`}
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-3">
                 <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "list" | "identity")}>
-                  <TabsList className="h-8">
-                    <TabsTrigger value="list" className="h-7 px-3 text-xs">
-                      <List className="mr-1 h-3 w-3" />
+                  <TabsList>
+                    <TabsTrigger value="list" className="gap-1.5">
+                      <List className="h-4 w-4" />
                       List
                     </TabsTrigger>
-                    <TabsTrigger value="identity" className="h-7 px-3 text-xs">
-                      <Users className="mr-1 h-3 w-3" />
+                    <TabsTrigger value="identity" className="gap-1.5">
+                      <Users className="h-4 w-4" />
                       By Identity
                     </TabsTrigger>
                   </TabsList>
                 </Tabs>
+                <Button variant="outline" size="sm">
+                  <Download className="mr-2 h-4 w-4" />
+                  Export
+                </Button>
               </div>
-              <Button variant="outline" size="sm">
-                <Download className="mr-2 h-4 w-4" />
-                Export
-              </Button>
             </div>
           </CardHeader>
           <CardContent>

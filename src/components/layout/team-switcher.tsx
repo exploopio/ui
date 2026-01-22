@@ -5,6 +5,7 @@
  *
  * Displays current team and allows switching between teams.
  * - Fetches real tenant data from API
+ * - Shows actual plan name from subscription API
  * - Supports keyboard shortcuts (⌘1, ⌘2, etc.)
  * - Shows loading state during switch
  */
@@ -36,6 +37,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useTenant } from "@/context/tenant-provider";
+import { useTenantSubscription } from "@/features/licensing";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -45,13 +47,6 @@ const teamIcons = [Command, AudioWaveform, Building2];
 function getTeamIcon(index: number) {
   return teamIcons[index % teamIcons.length];
 }
-
-// Plan labels
-const planLabels: Record<string, string> = {
-  free: "Free",
-  paid: "Pro",
-  enterprise: "Enterprise",
-};
 
 export function TeamSwitcher() {
   const router = useRouter();
@@ -64,6 +59,9 @@ export function TeamSwitcher() {
     switchTeam,
     error,
   } = useTenant();
+
+  // Fetch actual plan name from subscription API
+  const { plan: subscriptionPlan } = useTenantSubscription();
 
   const [isOpen, setIsOpen] = React.useState(false);
 
@@ -126,9 +124,9 @@ export function TeamSwitcher() {
 
   // Get current tenant display info
   const currentTeamName = currentTenant?.name || currentTenant?.slug || "Select Team";
-  const currentTeamPlan = currentTenant?.plan
-    ? planLabels[currentTenant.plan] || currentTenant.plan
-    : "Team";
+  // Use plan name from subscription API (e.g., "Enterprise", "Pro", "Business")
+  // Fall back to "Team" if subscription not loaded yet
+  const currentTeamPlan = subscriptionPlan?.name || "Team";
   const currentIndex = currentTenant
     ? displayTenants.findIndex(t => t.id === currentTenant.id)
     : 0;

@@ -117,29 +117,8 @@ function getBackendUrl(): string {
   return process.env.BACKEND_API_URL || 'http://localhost:8080'
 }
 
-// Cookie name for storing permissions (non-httpOnly for client read)
-const PERMISSIONS_COOKIE = 'app_permissions'
-
-/**
- * Extract permissions from JWT token
- * JWT format: header.payload.signature (base64url encoded)
- */
-function extractPermissionsFromToken(accessToken: string): string[] {
-  try {
-    const parts = accessToken.split('.')
-    if (parts.length !== 3) return []
-
-    // Decode base64url payload
-    const payload = parts[1]
-    const decoded = Buffer.from(payload.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf-8')
-    const parsed = JSON.parse(decoded)
-
-    return parsed.permissions || []
-  } catch (error) {
-    console.error('[Auth] Failed to extract permissions from token:', error)
-    return []
-  }
-}
+// NOTE: Permissions are NOT stored in cookies anymore (too large, > 4KB limit)
+// Frontend fetches permissions via /api/v1/me/permissions API instead
 
 async function backendFetch<T>(
   endpoint: string,
@@ -365,18 +344,7 @@ export async function loginAction(
         path: '/',
       })
       console.log('[Login] Tenant cookie set:', tokenData.tenant_slug, firstTenant.name)
-
-      // Extract and store permissions from access token
-      const permissions = extractPermissionsFromToken(tokenData.access_token)
-      console.log('[Login] Extracted permissions:', permissions)
-      await setServerCookie(PERMISSIONS_COOKIE, JSON.stringify(permissions), {
-        httpOnly: false, // Client needs to read this for sidebar filtering
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: tokenData.expires_in || 900,
-        path: '/',
-      })
-      console.log('[Login] Permissions cookie set')
+      // NOTE: Permissions fetched via /api/v1/me/permissions API (not stored in cookie)
     } catch (tokenError) {
       console.error('[Login] Token exchange FAILED:', tokenError)
       throw new Error(`Login succeeded but token exchange failed: ${tokenError instanceof Error ? tokenError.message : 'Unknown error'}`)
@@ -441,6 +409,8 @@ export async function selectTenantAction(
       }
     )
     console.log('[SelectTenant] Token exchange successful')
+    console.log('[SelectTenant] access_token length:', tokenData.access_token?.length)
+    console.log('[SelectTenant] expires_in:', tokenData.expires_in)
 
     // Store access token in httpOnly cookie
     await setServerCookie(env.auth.cookieName, tokenData.access_token, {
@@ -475,17 +445,7 @@ export async function selectTenantAction(
       maxAge: 7 * 24 * 60 * 60,
       path: '/',
     })
-
-    // Extract and store permissions from access token
-    const permissions = extractPermissionsFromToken(tokenData.access_token)
-    console.log('[SelectTenant] Extracted permissions:', permissions)
-    await setServerCookie(PERMISSIONS_COOKIE, JSON.stringify(permissions), {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: tokenData.expires_in || 900,
-      path: '/',
-    })
+    // NOTE: Permissions fetched via /api/v1/me/permissions API (not stored in cookie)
 
     // Clear pending tenants cookie
     await removeServerCookie(env.cookies.pendingTenants)
@@ -617,7 +577,7 @@ export async function localLogoutAction(
     await removeServerCookie(env.cookies.tenant)           // Current tenant info
     await removeServerCookie(env.cookies.userInfo)        // User info for Create Team
     await removeServerCookie(env.cookies.pendingTenants)  // Pending tenant selection
-    await removeServerCookie(PERMISSIONS_COOKIE)          // Permissions for sidebar
+    await removeServerCookie('app_permissions')          // Legacy permissions cookie (cleanup)
 
     console.log('[Logout] All cookies cleared, redirecting to:', redirectTo || '/login')
 
@@ -855,17 +815,7 @@ export async function createFirstTeamAction(
       maxAge: 7 * 24 * 60 * 60,
       path: '/',
     })
-
-    // Extract and store permissions from access token
-    const permissions = extractPermissionsFromToken(data.access_token)
-    console.log('[CreateFirstTeam] Extracted permissions:', permissions)
-    await setServerCookie(PERMISSIONS_COOKIE, JSON.stringify(permissions), {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: data.expires_in || 900,
-      path: '/',
-    })
+    // NOTE: Permissions fetched via /api/v1/me/permissions API (not stored in cookie)
 
     // Clear user info cookie (no longer needed after team created)
     await removeServerCookie(env.cookies.userInfo)

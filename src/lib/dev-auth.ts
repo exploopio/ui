@@ -17,24 +17,55 @@ export const DEV_USER: AuthUser = {
   roles: ["admin", "security_analyst"],
   realmRoles: ["admin"],
   clientRoles: { "ui": ["admin", "security_analyst"] },
-  // Permissions for admin role
+  // Permissions for admin role (standardized IDs)
   permissions: [
-    "assets:read", "assets:write", "assets:delete",
-    "projects:read", "projects:write", "projects:delete",
-    "components:read", "components:write", "components:delete",
-    "findings:read", "findings:write", "findings:delete",
-    "vulnerabilities:read",
+    // Core
     "dashboard:read",
-    "scans:read", "scans:write",
-    "credentials:read", "credentials:write",
-    "reports:read", "reports:write",
-    "pentest:read", "pentest:write",
-    "remediation:read", "remediation:write",
-    "workflows:read", "workflows:write",
-    "members:read", "members:invite", "members:manage",
+    "audit:read",
+    // Assets
+    "assets:read", "assets:write", "assets:delete",
+    "assets:groups:read", "assets:groups:write", "assets:groups:delete",
+    "assets:repositories:read", "assets:repositories:write",
+    "assets:components:read", "assets:components:write",
+    "assets:branches:read", "assets:branches:write",
+    // Findings
+    "findings:read", "findings:write", "findings:delete",
+    "findings:vulnerabilities:read",
+    "findings:credentials:read", "findings:credentials:write",
+    "findings:remediation:read", "findings:remediation:write",
+    "findings:workflows:read", "findings:workflows:write",
+    // Scans
+    "scans:read", "scans:write", "scans:delete",
+    "scans:profiles:read", "scans:profiles:write",
+    "scans:sources:read", "scans:sources:write",
+    "scans:tools:read",
+    "scans:tenant_tools:read", "scans:tenant_tools:write",
+    // Agents
+    "agents:read", "agents:write",
+    "agents:commands:read", "agents:commands:write",
+    // Team
     "team:read", "team:update",
-    "billing:read",
+    "team:members:read", "team:members:invite", "team:members:write",
+    "team:groups:read", "team:groups:write", "team:groups:members",
+    "team:roles:read", "team:roles:write", "team:roles:assign",
+    "team:permission_sets:read", "team:permission_sets:write",
+    "team:assignment_rules:read", "team:assignment_rules:write",
+    // Integrations
     "integrations:read", "integrations:manage",
+    "integrations:scm:read", "integrations:scm:write",
+    "integrations:notifications:read", "integrations:notifications:write",
+    "integrations:webhooks:read", "integrations:webhooks:write",
+    "integrations:api_keys:read", "integrations:api_keys:write",
+    "integrations:pipelines:read", "integrations:pipelines:write",
+    // Settings
+    "settings:billing:read",
+    "settings:sla:read", "settings:sla:write",
+    // Attack Surface
+    "attack_surface:scope:read", "attack_surface:scope:write",
+    // Validation
+    "validation:read", "validation:write",
+    // Reports
+    "reports:read", "reports:write",
   ],
   tenantId: "dev-tenant-001",
   tenantRole: "admin",

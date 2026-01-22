@@ -34,19 +34,19 @@ import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 
 import { ProviderIcon } from "./provider-icon";
-import type { SCMConnection } from "@/features/repositories/types/repository.types";
+import type { Integration, SCMRepository } from "@/features/integrations";
+import { useIntegrationRepositoriesApi } from "@/features/integrations";
 import {
-  useSCMRepositories,
   useCreateRepository,
   useRepositories,
   invalidateRepositoriesCache,
-  type SCMRepository,
 } from "@/features/repositories/hooks/use-repositories";
+import type { SCMProvider } from "@/features/assets/types/asset.types";
 
 interface SyncRepositoriesDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  connection: SCMConnection;
+  connection: Integration;
   onSuccess?: () => void;
 }
 
@@ -77,9 +77,9 @@ export function SyncRepositoriesDialog({
     isLoading,
     error,
     mutate: refetch,
-  } = useSCMRepositories(
+  } = useIntegrationRepositoriesApi(
     open ? connection.id : null,
-    { search: searchQuery, page, perPage },
+    { search: searchQuery, page, per_page: perPage },
     { revalidateOnFocus: false }
   );
 
@@ -230,10 +230,10 @@ export function SyncRepositoriesDialog({
           description: repo.description,
           criticality: "medium",
           // SCM connection info
-          provider: connection.provider,
+          provider: connection.provider as SCMProvider,
           externalId: repo.id,
           repoId: repo.id,
-          scmOrganization: connection.scmOrganization,
+          scmOrganization: connection.scm_extension?.scm_organization,
           // URLs
           cloneUrl: repo.clone_url,
           webUrl: repo.html_url,
@@ -345,9 +345,9 @@ export function SyncRepositoriesDialog({
           <DialogDescription className="flex items-center gap-2">
             <ProviderIcon provider={connection.provider} className="h-4 w-4" />
             {connection.name}
-            {connection.scmOrganization && (
+            {connection.scm_extension?.scm_organization && (
               <Badge variant="secondary" className="text-xs">
-                {connection.scmOrganization}
+                {connection.scm_extension.scm_organization}
               </Badge>
             )}
           </DialogDescription>

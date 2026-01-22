@@ -56,6 +56,7 @@ import {
 import { AddScanProfileDialog } from './add-scan-profile-dialog';
 import { EditScanProfileDialog } from './edit-scan-profile-dialog';
 import { CloneScanProfileDialog } from './clone-scan-profile-dialog';
+import { Can, Permission } from '@/lib/permissions';
 import {
   useScanProfiles,
   useDeleteScanProfile,
@@ -214,10 +215,12 @@ export function ScanProfilesSection() {
                     <RefreshCw className="h-4 w-4" />
                   )}
                 </Button>
-                <Button onClick={() => setAddDialogOpen(true)}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create Profile
-                </Button>
+                <Can permission={Permission.ScanProfilesWrite}>
+                  <Button onClick={() => setAddDialogOpen(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create Profile
+                  </Button>
+                </Can>
               </div>
             </div>
           </CardHeader>
@@ -303,44 +306,50 @@ export function ScanProfilesSection() {
                         </span>
                       </TableCell>
                       <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {!profile.is_default && (
-                              <DropdownMenuItem
-                                onClick={() => handleSetDefault(profile)}
-                                disabled={isSettingDefault}
-                              >
-                                <Star className="mr-2 h-4 w-4" />
-                                Set as Default
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem onClick={() => handleEditProfile(profile)}>
-                              <Pencil className="mr-2 h-4 w-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleCloneProfile(profile)}>
-                              <Copy className="mr-2 h-4 w-4" />
-                              Clone
-                            </DropdownMenuItem>
-                            {!profile.is_system && (
-                              <>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  className="text-red-500"
-                                  onClick={() => handleDeleteClick(profile)}
-                                >
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  Delete
+                        <Can permission={[Permission.ScanProfilesWrite, Permission.ScanProfilesDelete]}>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <Can permission={Permission.ScanProfilesWrite}>
+                                {!profile.is_default && (
+                                  <DropdownMenuItem
+                                    onClick={() => handleSetDefault(profile)}
+                                    disabled={isSettingDefault}
+                                  >
+                                    <Star className="mr-2 h-4 w-4" />
+                                    Set as Default
+                                  </DropdownMenuItem>
+                                )}
+                                <DropdownMenuItem onClick={() => handleEditProfile(profile)}>
+                                  <Pencil className="mr-2 h-4 w-4" />
+                                  Edit
                                 </DropdownMenuItem>
-                              </>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                                <DropdownMenuItem onClick={() => handleCloneProfile(profile)}>
+                                  <Copy className="mr-2 h-4 w-4" />
+                                  Clone
+                                </DropdownMenuItem>
+                              </Can>
+                              <Can permission={Permission.ScanProfilesDelete}>
+                                {!profile.is_system && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      className="text-red-500"
+                                      onClick={() => handleDeleteClick(profile)}
+                                    >
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      Delete
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
+                              </Can>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </Can>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -356,10 +365,12 @@ export function ScanProfilesSection() {
                     : 'Create a profile to define reusable scan configurations.'}
                 </p>
                 {!searchQuery && (
-                  <Button onClick={() => setAddDialogOpen(true)}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Create Your First Profile
-                  </Button>
+                  <Can permission={Permission.ScanProfilesWrite}>
+                    <Button onClick={() => setAddDialogOpen(true)}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Create Your First Profile
+                    </Button>
+                  </Can>
                 )}
               </div>
             )}

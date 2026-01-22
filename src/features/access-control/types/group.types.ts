@@ -1,19 +1,20 @@
 /**
  * Group Types for Access Control
  *
- * Groups are used to organize users and manage access to assets.
- * Each group can have members with different roles and assigned permission sets.
+ * Groups (Teams) are used to organize users and control access to assets.
+ * Groups determine which assets' data users can see (data scoping).
+ * Feature permissions come from Roles, not Groups.
  */
 
 /**
- * Group type classification
+ * Group type classification (aligned with backend)
  */
-export type GroupType = 'security_team' | 'asset_owner' | 'team' | 'department' | 'project' | 'external' | 'custom';
+export type GroupType = 'security_team' | 'team' | 'department' | 'project' | 'external';
 
 /**
- * Member role within a group
+ * Member role within a group (aligned with backend)
  */
-export type GroupMemberRole = 'admin' | 'member';
+export type GroupMemberRole = 'owner' | 'lead' | 'member';
 
 /**
  * Group entity
@@ -95,9 +96,13 @@ export interface GroupPermissionSet {
 }
 
 /**
- * Asset ownership by a group
+ * Asset ownership type (aligned with backend)
+ * - primary: Main owner, full access, primary responsibility
+ * - secondary: Co-owner, full access, shared responsibility
+ * - stakeholder: View access, receives critical notifications only
+ * - informed: No direct access, receives summary notifications only
  */
-export type AssetOwnershipType = 'primary' | 'shared';
+export type AssetOwnershipType = 'primary' | 'secondary' | 'stakeholder' | 'informed';
 
 export interface GroupAsset {
   id: string;
@@ -159,7 +164,7 @@ export interface GroupFilters {
 }
 
 /**
- * Group type display configuration
+ * Group type display configuration (aligned with backend)
  */
 export const GroupTypeConfig: Record<GroupType, {
   label: string;
@@ -173,15 +178,9 @@ export const GroupTypeConfig: Record<GroupType, {
     color: 'text-purple-500',
     bgColor: 'bg-purple-500/10',
   },
-  asset_owner: {
-    label: 'Asset Owner',
-    description: 'Groups that own and manage specific assets',
-    color: 'text-green-500',
-    bgColor: 'bg-green-500/10',
-  },
   team: {
-    label: 'Development',
-    description: 'Development teams owning code repositories and applications',
+    label: 'Team',
+    description: 'General teams for organizing users and asset access',
     color: 'text-blue-500',
     bgColor: 'bg-blue-500/10',
   },
@@ -203,16 +202,10 @@ export const GroupTypeConfig: Record<GroupType, {
     color: 'text-amber-500',
     bgColor: 'bg-amber-500/10',
   },
-  custom: {
-    label: 'Custom',
-    description: 'Custom groups for specific use cases',
-    color: 'text-gray-500',
-    bgColor: 'bg-gray-500/10',
-  },
 };
 
 /**
- * Member role display configuration
+ * Member role display configuration (aligned with backend)
  */
 export const MemberRoleConfig: Record<GroupMemberRole, {
   label: string;
@@ -220,15 +213,21 @@ export const MemberRoleConfig: Record<GroupMemberRole, {
   color: string;
   bgColor: string;
 }> = {
-  admin: {
-    label: 'Admin',
-    description: 'Can manage group members and settings',
+  owner: {
+    label: 'Owner',
+    description: 'Can manage team members and settings',
     color: 'text-orange-500',
     bgColor: 'bg-orange-500/20',
   },
+  lead: {
+    label: 'Lead',
+    description: 'Can manage team members',
+    color: 'text-blue-500',
+    bgColor: 'bg-blue-500/20',
+  },
   member: {
     label: 'Member',
-    description: 'Regular group member',
+    description: 'Regular team member',
     color: 'text-gray-500',
     bgColor: 'bg-gray-500/20',
   },

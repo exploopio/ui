@@ -326,6 +326,76 @@ const { hasPermission } = useMyPermissions();
 if (hasPermission('assets:write')) { /* show edit */ }
 ```
 
+## 🔔 Notification System
+
+Multi-channel notification system for security alerts. Supports Slack, Teams, Telegram, Email (SMTP), and custom webhooks.
+
+**Key Files:**
+```
+src/features/notifications/
+├── components/
+│   ├── add-notification-dialog.tsx    # Create new channel
+│   ├── edit-notification-dialog.tsx   # Edit channel settings
+│   └── notification-history.tsx       # View sent notifications
+src/features/integrations/
+├── types/integration.types.ts         # Types & constants
+└── api/use-integrations-api.ts        # API hooks
+src/app/(dashboard)/settings/integrations/notifications/
+├── page.tsx                           # Channel list
+└── history/page.tsx                   # Global history
+```
+
+**Types:**
+```tsx
+// Event types for notification routing
+type NotificationEventType = 'findings' | 'exposures' | 'scans' | 'alerts';
+
+// All known event types (for UI)
+import { ALL_NOTIFICATION_EVENT_TYPES, DEFAULT_ENABLED_EVENT_TYPES } from "@/features/integrations/types/integration.types";
+
+// NotificationExtension from API
+interface NotificationExtension {
+  channel_id?: string;
+  channel_name?: string;
+  notify_on_critical: boolean;        // Severity filters
+  notify_on_high: boolean;
+  notify_on_medium: boolean;
+  notify_on_low: boolean;
+  enabled_event_types?: NotificationEventType[];  // Event routing
+  message_template?: string;          // Custom template
+  include_details: boolean;
+  min_interval_minutes: number;       // Rate limiting
+}
+```
+
+**Hooks:**
+```tsx
+// List notification integrations
+const { data, isLoading, mutate } = useNotificationIntegrationsApi();
+
+// Create notification integration
+const { trigger: create } = useCreateNotificationIntegrationApi();
+await create({
+  name: "Security Alerts",
+  provider: "slack",
+  credentials: "https://hooks.slack.com/...",
+  notify_on_critical: true,
+  enabled_event_types: ["findings", "exposures"],
+});
+
+// Get notification history
+const { data: history } = useNotificationHistoryApi(integrationId, { limit: 20 });
+```
+
+**Template Variables:**
+Custom message templates support these variables:
+- `{title}` - Notification title
+- `{severity}` - Severity level (CRITICAL, HIGH, etc.)
+- `{severity_emoji}` - Emoji for severity
+- `{body}` - Notification body
+- `{url}` - Link to finding/alert
+- `{timestamp}` - When sent
+
 ## 🎨 UI & Theming
 
 ```tsx

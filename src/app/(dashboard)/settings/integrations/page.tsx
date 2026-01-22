@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { Header, Main } from "@/components/layout";
 import { ProfileDropdown } from "@/components/profile-dropdown";
 import { Search } from "@/components/search";
@@ -31,8 +32,57 @@ import {
   Mail,
   Key,
   Webhook,
+  ArrowRight,
+  Workflow,
+  TicketCheck,
 } from "lucide-react";
 import { Can, Permission } from "@/lib/permissions";
+import { useSCMConnections } from "@/features/repositories/hooks/use-repositories";
+import type { SCMConnection } from "@/features/repositories/types/repository.types";
+
+// Integration categories for quick access
+const integrationCategories = [
+  {
+    id: "scm",
+    title: "SCM Connections",
+    description: "Connect GitHub, GitLab, Bitbucket, or Azure DevOps",
+    icon: GitBranch,
+    href: "/settings/integrations/scm",
+    color: "bg-gray-500/10 text-gray-500",
+  },
+  {
+    id: "notifications",
+    title: "Notifications",
+    description: "Slack, Teams, Telegram, and Webhook alerts",
+    icon: MessageSquare,
+    href: "/settings/integrations/notifications",
+    color: "bg-green-500/10 text-green-500",
+  },
+  {
+    id: "cicd",
+    title: "CI/CD Pipelines",
+    description: "Integrate with Jenkins, GitHub Actions, GitLab CI",
+    icon: Workflow,
+    href: "/settings/integrations/cicd",
+    color: "bg-blue-500/10 text-blue-500",
+  },
+  {
+    id: "ticketing",
+    title: "Ticketing Systems",
+    description: "Connect Jira, ServiceNow, or Linear",
+    icon: TicketCheck,
+    href: "/settings/integrations/ticketing",
+    color: "bg-purple-500/10 text-purple-500",
+  },
+  {
+    id: "siem",
+    title: "SIEM & Monitoring",
+    description: "Export to Splunk, Datadog, or Elastic",
+    icon: Shield,
+    href: "/settings/integrations/siem",
+    color: "bg-orange-500/10 text-orange-500",
+  },
+];
 
 // Mock data for integrations
 const integrationStats = {
@@ -226,6 +276,15 @@ const categoryColors: Record<string, string> = {
 };
 
 export default function IntegrationsPage() {
+  const router = useRouter();
+  const { data: scmConnectionsData } = useSCMConnections();
+
+  // Get SCM connections count
+  const scmConnections: SCMConnection[] = Array.isArray(scmConnectionsData)
+    ? scmConnectionsData
+    : ((scmConnectionsData as unknown as { data?: SCMConnection[] })?.data ?? []);
+  const scmConnectedCount = scmConnections.filter((c) => c.status === "connected").length;
+
   return (
     <>
       <Header fixed>
@@ -241,6 +300,38 @@ export default function IntegrationsPage() {
           title="Integrations"
           description="Connect with third-party tools and services"
         />
+
+        {/* Integration Categories */}
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {integrationCategories.map((category) => (
+            <Card
+              key={category.id}
+              className="cursor-pointer hover:border-primary/50 transition-colors"
+              onClick={() => router.push(category.href)}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between">
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${category.color}`}>
+                    <category.icon className="h-5 w-5" />
+                  </div>
+                  {category.id === "scm" && scmConnections.length > 0 && (
+                    <Badge variant="secondary" className="text-xs">
+                      {scmConnectedCount}/{scmConnections.length}
+                    </Badge>
+                  )}
+                </div>
+                <div className="mt-3">
+                  <h4 className="font-medium">{category.title}</h4>
+                  <p className="text-muted-foreground mt-1 text-xs">{category.description}</p>
+                </div>
+                <Button variant="ghost" size="sm" className="mt-3 w-full justify-between">
+                  Manage
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
 
         {/* Stats */}
         <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">

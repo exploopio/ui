@@ -713,22 +713,24 @@ export default function AssetGroupsPage() {
                 <ExternalLink className="mr-2 h-4 w-4" />
                 Open Full Page
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => openEditDialog(group)}>
-                <Pencil className="mr-2 h-4 w-4" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => {
-                setSelectedAssetIds([]);
-                setAssetSearchTerm("");
-                setAddAssetsGroup(group);
-              }}>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Assets
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push(`/asset-groups/${group.id}?tab=assets`)}>
-                <Package className="mr-2 h-4 w-4" />
-                Manage Assets
-              </DropdownMenuItem>
+              <Can permission={Permission.AssetGroupsWrite}>
+                <DropdownMenuItem onClick={() => openEditDialog(group)}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Edit
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => {
+                  setSelectedAssetIds([]);
+                  setAssetSearchTerm("");
+                  setAddAssetsGroup(group);
+                }}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Assets
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push(`/asset-groups/${group.id}?tab=assets`)}>
+                  <Package className="mr-2 h-4 w-4" />
+                  Manage Assets
+                </DropdownMenuItem>
+              </Can>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => handleCopyId(group.id)}>
                 <Copy className="mr-2 h-4 w-4" />
@@ -1290,13 +1292,15 @@ export default function AssetGroupsPage() {
 
                 {/* Action Buttons */}
                 <div className="flex gap-2 pt-2">
-                  <Button className="flex-1" onClick={() => {
-                    setViewGroup(null);
-                    openEditDialog(viewGroup);
-                  }}>
-                    <Pencil className="mr-2 h-4 w-4" />
-                    Edit Group
-                  </Button>
+                  <Can permission={Permission.AssetGroupsWrite}>
+                    <Button className="flex-1" onClick={() => {
+                      setViewGroup(null);
+                      openEditDialog(viewGroup);
+                    }}>
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Edit Group
+                    </Button>
+                  </Can>
                   <Button variant="outline" className="flex-1" onClick={() => {
                     setViewGroup(null);
                     router.push(`/asset-groups/${viewGroup.id}`);
@@ -1307,28 +1311,30 @@ export default function AssetGroupsPage() {
                 </div>
 
                 {/* Danger Zone */}
-                <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-red-500">Danger Zone</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Permanently delete this group and unassign all assets
-                      </p>
+                <Can permission={Permission.AssetGroupsDelete}>
+                  <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-red-500">Danger Zone</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Permanently delete this group and unassign all assets
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-red-500/30 text-red-500 hover:bg-red-500/10"
+                        onClick={() => {
+                          setViewGroup(null);
+                          setDeleteGroup(viewGroup);
+                        }}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                      </Button>
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="border-red-500/30 text-red-500 hover:bg-red-500/10"
-                      onClick={() => {
-                        setViewGroup(null);
-                        setDeleteGroup(viewGroup);
-                      }}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete
-                    </Button>
                   </div>
-                </div>
+                </Can>
               </div>
             </>
           )}

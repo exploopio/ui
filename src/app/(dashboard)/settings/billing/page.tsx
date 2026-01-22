@@ -9,13 +9,12 @@ import { PageHeader } from "@/features/shared";
 import { Button } from "@/components/ui/button";
 import {
   CreditCard,
-  Download,
-  FileText,
   Check,
   Zap,
-  BarChart3,
   ExternalLink,
   AlertCircle,
+  Sparkles,
+  Loader2,
 } from "lucide-react";
 import {
   Card,
@@ -25,102 +24,58 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import {
+  useTenantSubscription,
+  usePlans,
+  LimitIndicator,
+} from "@/features/licensing";
 
-// Mock data
-const currentPlan = {
-  name: "Enterprise",
-  price: 999,
-  currency: "USD",
-  billingCycle: "monthly",
-  status: "active",
-  nextBillingDate: "2025-02-08",
-  features: [
-    { name: "Users", limit: 50, used: 12 },
-    { name: "Assets", limit: 500, used: 303 },
-    { name: "Scans/month", limit: 1000, used: 847 },
-    { name: "Storage", limit: "100GB", used: "45GB" },
-    { name: "API calls/day", limit: 50000, used: 23456 },
-  ],
-};
-
-const invoices = [
-  { id: "INV-2025-001", date: "2025-01-08", amount: 999, status: "paid" },
-  { id: "INV-2024-012", date: "2024-12-08", amount: 999, status: "paid" },
-  { id: "INV-2024-011", date: "2024-11-08", amount: 999, status: "paid" },
-  { id: "INV-2024-010", date: "2024-10-08", amount: 999, status: "paid" },
-  { id: "INV-2024-009", date: "2024-09-08", amount: 999, status: "paid" },
-];
-
-const plans = [
-  {
-    name: "Starter",
-    price: 99,
-    description: "For small teams getting started",
-    features: ["10 Users", "50 Assets", "100 Scans/month", "Email support"],
-    highlighted: false,
-  },
-  {
-    name: "Professional",
-    price: 299,
-    description: "For growing security teams",
-    features: ["25 Users", "200 Assets", "500 Scans/month", "Priority support", "API access"],
-    highlighted: false,
-  },
-  {
-    name: "Enterprise",
-    price: 999,
-    description: "For large organizations",
-    features: ["50 Users", "500 Assets", "1000 Scans/month", "24/7 support", "API access", "SSO", "Custom integrations"],
-    highlighted: true,
-    current: true,
-  },
-];
-
-const paymentMethod = {
-  type: "card",
-  brand: "Visa",
-  last4: "4242",
-  expiry: "12/26",
+// Status badge colors
+const STATUS_COLORS: Record<string, string> = {
+  active: "bg-green-500",
+  trial: "bg-blue-500",
+  past_due: "bg-yellow-500",
+  cancelled: "bg-orange-500",
+  expired: "bg-red-500",
 };
 
 export default function BillingPage() {
-  const [isDownloading, setIsDownloading] = useState<string | null>(null);
-
-  const handleDownloadInvoice = (invoiceId: string) => {
-    setIsDownloading(invoiceId);
-    setTimeout(() => {
-      setIsDownloading(null);
-      toast.success("Invoice downloaded", { description: invoiceId });
-    }, 1000);
-  };
+  const { subscription, plan: currentPlan, isActive, isLoading: subLoading } = useTenantSubscription();
+  const { plans, isLoading: plansLoading } = usePlans();
+  const [upgradingPlan, setUpgradingPlan] = useState<string | null>(null);
 
   const handleUpdatePayment = () => {
     toast.info("Redirecting to payment portal...");
+    // TODO: Implement Stripe customer portal
   };
 
-  const handleChangePlan = (planName: string) => {
-    toast.info(`Contact sales to change to ${planName} plan`);
+  const handleChangePlan = async (planSlug: string) => {
+    setUpgradingPlan(planSlug);
+    // TODO: Implement plan change via Stripe
+    setTimeout(() => {
+      setUpgradingPlan(null);
+      toast.info(`Contact sales to upgrade to ${planSlug} plan`);
+    }, 1000);
   };
 
-  const getUsagePercentage = (used: number | string, limit: number | string) => {
-    if (typeof used === "string" || typeof limit === "string") {
-      const usedNum = parseInt(used.toString());
-      const limitNum = parseInt(limit.toString());
-      return (usedNum / limitNum) * 100;
-    }
-    return (used / limit) * 100;
+  const isCurrentPlan = (planSlug: string) => {
+    return currentPlan?.slug === planSlug;
+  };
+
+  // Format price display
+  const formatPrice = (price: number | null, currency: string = "USD") => {
+    if (price === null) return "Custom";
+    if (price === 0) return "Free";
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency,
+      minimumFractionDigits: 0,
+    }).format(price);
   };
 
   return (
@@ -152,240 +107,281 @@ export default function BillingPage() {
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <Zap className="h-5 w-5 text-yellow-500" />
-                    {currentPlan.name} Plan
+                    {subLoading ? (
+                      <Skeleton className="h-6 w-32" />
+                    ) : (
+                      <>{currentPlan?.name || "No Plan"} Plan</>
+                    )}
                   </CardTitle>
-                  <CardDescription>
-                    Your current subscription
-                  </CardDescription>
+                  <CardDescription>Your current subscription</CardDescription>
                 </div>
-                <Badge className="bg-green-500">Active</Badge>
+                {subLoading ? (
+                  <Skeleton className="h-6 w-16" />
+                ) : (
+                  <Badge className={cn(STATUS_COLORS[subscription?.status || "expired"])}>
+                    {subscription?.status || "Unknown"}
+                  </Badge>
+                )}
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="flex items-baseline gap-1">
-                <span className="text-4xl font-bold">${currentPlan.price}</span>
-                <span className="text-muted-foreground">/{currentPlan.billingCycle}</span>
-              </div>
+              {subLoading ? (
+                <>
+                  <Skeleton className="h-10 w-40" />
+                  <Separator />
+                  <div className="space-y-4">
+                    <Skeleton className="h-4 w-48" />
+                    <Skeleton className="h-2 w-full" />
+                    <Skeleton className="h-2 w-full" />
+                    <Skeleton className="h-2 w-full" />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-4xl font-bold">
+                      {formatPrice(currentPlan?.price_monthly || 0, currentPlan?.currency)}
+                    </span>
+                    <span className="text-muted-foreground">
+                      /{subscription?.billing_cycle || "month"}
+                    </span>
+                  </div>
 
-              <Separator />
+                  <Separator />
 
-              {/* Usage */}
-              <div className="space-y-4">
-                <h4 className="font-medium">Usage this billing period</h4>
-                {currentPlan.features.map((feature) => {
-                  const percentage = getUsagePercentage(feature.used, feature.limit);
-                  const isHigh = percentage > 80;
-                  return (
-                    <div key={feature.name} className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span>{feature.name}</span>
-                        <span className={isHigh ? "text-orange-500 font-medium" : ""}>
-                          {feature.used} / {feature.limit}
+                  {/* Features List */}
+                  {currentPlan?.features && currentPlan.features.length > 0 && (
+                    <div className="space-y-3">
+                      <h4 className="font-medium">Plan Features</h4>
+                      <ul className="grid gap-2 sm:grid-cols-2">
+                        {currentPlan.features.map((feature, idx) => (
+                          <li key={idx} className="flex items-center gap-2 text-sm">
+                            <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
+                            <span>{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  <Separator />
+
+                  {/* Subscription Dates */}
+                  <div className="space-y-2 text-sm">
+                    {subscription?.started_at && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Started</span>
+                        <span className="font-medium">
+                          {new Date(subscription.started_at).toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          })}
                         </span>
                       </div>
-                      <Progress
-                        value={percentage}
-                        className={`h-2 ${isHigh ? "[&>div]:bg-orange-500" : ""}`}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-
-              <Separator />
-
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Next billing date</span>
-                <span className="font-medium">
-                  {new Date(currentPlan.nextBillingDate).toLocaleDateString("en-US", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </span>
-              </div>
+                    )}
+                    {subscription?.expires_at && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Expires</span>
+                        <span className="font-medium">
+                          {new Date(subscription.expires_at).toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          })}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </CardContent>
             <CardFooter>
-              <Button variant="outline" className="w-full">
+              <Button variant="outline" className="w-full" onClick={handleUpdatePayment}>
                 <ExternalLink className="mr-2 h-4 w-4" />
                 Manage Subscription
               </Button>
             </CardFooter>
           </Card>
 
-          {/* Payment Method */}
+          {/* Quick Stats / Limits */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <CreditCard className="h-5 w-5" />
-                Payment Method
+                <AlertCircle className="h-5 w-5" />
+                Usage Limits
               </CardTitle>
-              <CardDescription>
-                Your default payment method
-              </CardDescription>
+              <CardDescription>Your current plan limits</CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="rounded-lg border p-4">
-                <div className="flex items-center gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-500/10">
-                    <CreditCard className="h-6 w-6 text-blue-500" />
-                  </div>
-                  <div>
-                    <p className="font-medium">
-                      {paymentMethod.brand} ending in {paymentMethod.last4}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Expires {paymentMethod.expiry}
-                    </p>
-                  </div>
+            <CardContent className="space-y-4">
+              {subLoading ? (
+                <>
+                  <Skeleton className="h-16 w-full" />
+                  <Skeleton className="h-16 w-full" />
+                </>
+              ) : currentPlan?.modules && currentPlan.modules.length > 0 ? (
+                currentPlan.modules
+                  .filter((pm) => Object.keys(pm.limits).length > 0)
+                  .slice(0, 3)
+                  .map((pm) => (
+                    <div key={pm.module_id} className="space-y-2">
+                      {Object.entries(pm.limits).map(([metric, limit]) => (
+                        <LimitIndicator
+                          key={`${pm.module_id}-${metric}`}
+                          current={0} // TODO: Get actual usage from API
+                          limit={limit}
+                          label={formatMetricLabel(pm.module_id, metric)}
+                          variant="compact"
+                        />
+                      ))}
+                    </div>
+                  ))
+              ) : (
+                <div className="text-center py-6 text-muted-foreground">
+                  <Sparkles className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>Unlimited on your plan</p>
                 </div>
-              </div>
+              )}
             </CardContent>
-            <CardFooter>
-              <Button variant="outline" className="w-full" onClick={handleUpdatePayment}>
-                Update Card
-              </Button>
-            </CardFooter>
           </Card>
         </div>
 
         {/* Available Plans */}
-        <Card className="mt-6">
+        <Card className="mt-6" id="compare">
           <CardHeader>
             <CardTitle>Available Plans</CardTitle>
-            <CardDescription>
-              Choose the plan that best fits your needs
-            </CardDescription>
+            <CardDescription>Choose the plan that best fits your needs</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {plans.map((plan) => (
-                <div
-                  key={plan.name}
-                  className={`relative rounded-lg border p-4 sm:p-6 ${
-                    plan.highlighted ? "border-primary ring-2 ring-primary" : ""
-                  }`}
-                >
-                  {plan.current && (
-                    <Badge className="absolute -top-2 right-4 bg-primary">Current Plan</Badge>
-                  )}
-                  <div className="space-y-4">
-                    <div>
-                      <h3 className="text-lg font-semibold">{plan.name}</h3>
-                      <p className="text-sm text-muted-foreground">{plan.description}</p>
-                    </div>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-3xl font-bold">${plan.price}</span>
-                      <span className="text-muted-foreground">/month</span>
-                    </div>
-                    <ul className="space-y-2">
-                      {plan.features.map((feature) => (
-                        <li key={feature} className="flex items-center gap-2 text-sm">
-                          <Check className="h-4 w-4 text-green-500" />
-                          {feature}
-                        </li>
-                      ))}
-                    </ul>
-                    <Button
-                      className="w-full"
-                      variant={plan.current ? "outline" : "default"}
-                      disabled={plan.current}
-                      onClick={() => handleChangePlan(plan.name)}
-                    >
-                      {plan.current ? "Current Plan" : "Upgrade"}
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Invoice History */}
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Invoice History
-            </CardTitle>
-            <CardDescription>
-              Download your past invoices
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Invoice</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {invoices.map((invoice) => (
-                  <TableRow key={invoice.id}>
-                    <TableCell className="font-medium">{invoice.id}</TableCell>
-                    <TableCell>
-                      {new Date(invoice.date).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>${invoice.amount.toFixed(2)}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="bg-green-500/10 text-green-500">
-                        <Check className="mr-1 h-3 w-3" />
-                        {invoice.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDownloadInvoice(invoice.id)}
-                        disabled={isDownloading === invoice.id}
-                      >
-                        <Download className={`mr-2 h-4 w-4 ${isDownloading === invoice.id ? "animate-bounce" : ""}`} />
-                        Download
-                      </Button>
-                    </TableCell>
-                  </TableRow>
+            {plansLoading ? (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {[1, 2, 3, 4].map((i) => (
+                  <Skeleton key={i} className="h-80 w-full" />
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {plans.map((plan) => {
+                  const isCurrent = isCurrentPlan(plan.slug);
+                  const isPopular = plan.is_popular;
+                  const isUpgrading = upgradingPlan === plan.slug;
+
+                  return (
+                    <div
+                      key={plan.id}
+                      className={cn(
+                        "relative rounded-lg border p-4 sm:p-6 transition-all",
+                        isPopular && "border-primary ring-2 ring-primary",
+                        isCurrent && "bg-muted/50"
+                      )}
+                    >
+                      {plan.badge && (
+                        <Badge
+                          className={cn(
+                            "absolute -top-2 right-4",
+                            plan.badge === "POPULAR" && "bg-primary",
+                            plan.badge === "BEST VALUE" && "bg-green-500"
+                          )}
+                        >
+                          {plan.badge}
+                        </Badge>
+                      )}
+                      {isCurrent && !plan.badge && (
+                        <Badge className="absolute -top-2 right-4" variant="outline">
+                          Current Plan
+                        </Badge>
+                      )}
+                      <div className="space-y-4">
+                        <div>
+                          <h3 className="text-lg font-semibold">{plan.name}</h3>
+                          <p className="text-sm text-muted-foreground line-clamp-2">
+                            {plan.description}
+                          </p>
+                        </div>
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-3xl font-bold">
+                            {formatPrice(plan.price_monthly, plan.currency)}
+                          </span>
+                          {plan.price_monthly !== null && plan.price_monthly > 0 && (
+                            <span className="text-muted-foreground">/month</span>
+                          )}
+                        </div>
+                        <ul className="space-y-2 min-h-[120px]">
+                          {plan.features.slice(0, 5).map((feature) => (
+                            <li key={feature} className="flex items-start gap-2 text-sm">
+                              <Check className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                              <span>{feature}</span>
+                            </li>
+                          ))}
+                          {plan.features.length > 5 && (
+                            <li className="text-sm text-muted-foreground">
+                              +{plan.features.length - 5} more features
+                            </li>
+                          )}
+                        </ul>
+                        <Button
+                          className="w-full"
+                          variant={isCurrent ? "outline" : isPopular ? "default" : "secondary"}
+                          disabled={isCurrent || isUpgrading}
+                          onClick={() => handleChangePlan(plan.slug)}
+                        >
+                          {isUpgrading ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Processing...
+                            </>
+                          ) : isCurrent ? (
+                            "Current Plan"
+                          ) : plan.price_monthly === null ? (
+                            "Contact Sales"
+                          ) : (
+                            "Upgrade"
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        {/* Usage Alerts */}
-        <Card className="mt-6 border-orange-500/50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-orange-500">
-              <AlertCircle className="h-5 w-5" />
-              Usage Alerts
-            </CardTitle>
-            <CardDescription>
-              You are approaching your plan limits
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between rounded-lg border border-orange-500/30 bg-orange-500/5 p-4">
-                <div className="flex items-center gap-3">
-                  <BarChart3 className="h-5 w-5 text-orange-500" />
-                  <div>
-                    <p className="font-medium">Scans usage at 85%</p>
-                    <p className="text-sm text-muted-foreground">
-                      847 of 1000 scans used this month
-                    </p>
-                  </div>
-                </div>
-                <Button variant="outline" size="sm">
-                  Upgrade
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Subscription Inactive Warning */}
+        {!subLoading && !isActive && subscription && (
+          <Card className="mt-6 border-destructive/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-destructive">
+                <AlertCircle className="h-5 w-5" />
+                Subscription {subscription.status === "expired" ? "Expired" : "Inactive"}
+              </CardTitle>
+              <CardDescription>
+                {subscription.status === "cancelled"
+                  ? "Your subscription has been cancelled. You can still access your data until the end of the billing period."
+                  : subscription.status === "past_due"
+                  ? "Your payment is past due. Please update your payment method to continue using the service."
+                  : "Your subscription has expired. Please renew to continue using the service."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={handleUpdatePayment}>
+                <CreditCard className="mr-2 h-4 w-4" />
+                {subscription.status === "past_due" ? "Update Payment" : "Renew Subscription"}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
       </Main>
     </>
   );
+}
+
+// Helper to format metric labels
+function formatMetricLabel(moduleId: string, metric: string): string {
+  const labels: Record<string, Record<string, string>> = {
+    assets: { max_items: "Assets" },
+    team: { max_members: "Team Members" },
+    scans: { max_per_month: "Scans/Month" },
+  };
+  return labels[moduleId]?.[metric] || `${moduleId} ${metric}`;
 }

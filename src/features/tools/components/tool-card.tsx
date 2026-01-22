@@ -29,6 +29,7 @@ import {
   PowerOff,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Can, Permission, useHasPermission } from '@/lib/permissions';
 import type { Tool } from '@/lib/api/tool-types';
 import type { ToolCategory } from '@/lib/api/tool-category-types';
 import { getCategoryNameById, getCategoryDisplayNameById } from '@/lib/api/tool-category-hooks';
@@ -66,6 +67,7 @@ export function ToolCard({
   // Look up category name from category_id
   const categoryName = getCategoryNameById(categories, tool.category_id);
   const categoryDisplayName = getCategoryDisplayNameById(categories, tool.category_id);
+  const canWriteTools = useHasPermission(Permission.ToolsWrite);
   return (
     <Card
       className={cn(
@@ -131,10 +133,12 @@ export function ToolCard({
                 View Details
               </DropdownMenuItem>
               {!readOnly && !tool.is_builtin && onEdit && (
-                <DropdownMenuItem onClick={() => onEdit(tool)}>
-                  <Settings className="mr-2 h-4 w-4" />
-                  Edit
-                </DropdownMenuItem>
+                <Can permission={Permission.ToolsWrite}>
+                  <DropdownMenuItem onClick={() => onEdit(tool)}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    Edit
+                  </DropdownMenuItem>
+                </Can>
               )}
               {tool.has_update && (
                 <DropdownMenuItem onClick={() => onCheckUpdate?.(tool)}>
@@ -168,7 +172,7 @@ export function ToolCard({
               )}
               {/* Only show activate/deactivate for custom tools (not read-only) */}
               {!readOnly && (onActivate || onDeactivate) && (
-                <>
+                <Can permission={Permission.ToolsWrite}>
                   <DropdownMenuSeparator />
                   {tool.is_active ? (
                     onDeactivate && (
@@ -191,16 +195,18 @@ export function ToolCard({
                       </DropdownMenuItem>
                     )
                   )}
-                </>
+                </Can>
               )}
               {!readOnly && !tool.is_builtin && onDelete && (
-                <DropdownMenuItem
-                  onClick={() => onDelete(tool)}
-                  className="text-red-500"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
-                </DropdownMenuItem>
+                <Can permission={Permission.ToolsDelete}>
+                  <DropdownMenuItem
+                    onClick={() => onDelete(tool)}
+                    className="text-red-500"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </DropdownMenuItem>
+                </Can>
               )}
             </DropdownMenuContent>
           </DropdownMenu>
@@ -254,6 +260,7 @@ export function ToolCard({
                   tool.is_active ? onDeactivate?.(tool) : onActivate?.(tool)
                 }
                 onClick={(e) => e.stopPropagation()}
+                disabled={!canWriteTools}
               />
             </div>
           )}

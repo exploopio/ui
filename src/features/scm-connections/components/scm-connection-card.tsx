@@ -40,16 +40,16 @@ import { cn } from "@/lib/utils";
 import { ProviderIcon, SCM_PROVIDER_COLORS } from "./provider-icon";
 import { SyncRepositoriesDialog } from "./sync-repositories-dialog";
 import { EditConnectionDialog } from "./edit-connection-dialog";
-import type { SCMConnection } from "@/features/repositories/types/repository.types";
+import type { Integration } from "@/features/integrations";
 import { SCM_PROVIDER_LABELS } from "@/features/assets/types/asset.types";
 import {
-  useDeleteSCMConnection,
-  useValidateSCMConnection,
-  invalidateSCMConnectionsCache,
-} from "@/features/repositories/hooks/use-repositories";
+  useDeleteIntegrationApi,
+  useTestIntegrationApi,
+  invalidateSCMIntegrationsCache,
+} from "@/features/integrations";
 
 interface SCMConnectionCardProps {
-  connection: SCMConnection;
+  connection: Integration;
   repositoryCount?: number;
   onSelect?: () => void;
   selected?: boolean;
@@ -65,14 +65,14 @@ export function SCMConnectionCard({
   const [syncDialogOpen, setSyncDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
 
-  const { trigger: deleteConnection, isMutating: isDeleting } = useDeleteSCMConnection(connection.id);
-  const { trigger: validateConnection, isMutating: isValidating } = useValidateSCMConnection(connection.id);
+  const { trigger: deleteConnection, isMutating: isDeleting } = useDeleteIntegrationApi(connection.id);
+  const { trigger: validateConnection, isMutating: isValidating } = useTestIntegrationApi(connection.id);
 
   const handleDelete = async () => {
     try {
       await deleteConnection();
       toast.success(`Connection "${connection.name}" deleted`);
-      await invalidateSCMConnectionsCache();
+      await invalidateSCMIntegrationsCache();
       setDeleteDialogOpen(false);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to delete connection");
@@ -82,13 +82,13 @@ export function SCMConnectionCard({
   const handleValidate = async () => {
     try {
       const result = await validateConnection();
-      await invalidateSCMConnectionsCache();
+      await invalidateSCMIntegrationsCache();
 
       // Check if the test actually succeeded by looking at the returned status
       if (result && result.status === "connected") {
         toast.success(`Connection "${connection.name}" validated successfully`);
       } else if (result && result.status === "error") {
-        toast.error(result.errorMessage || `Connection "${connection.name}" test failed`);
+        toast.error(result.status_message || `Connection "${connection.name}" test failed`);
       } else {
         toast.warning(`Connection "${connection.name}" status: ${result?.status || "unknown"}`);
       }
@@ -146,8 +146,8 @@ export function SCMConnectionCard({
               <div>
                 <CardTitle className="text-base">{connection.name}</CardTitle>
                 <CardDescription className="text-xs">
-                  {SCM_PROVIDER_LABELS[connection.provider]}
-                  {connection.scmOrganization && ` / ${connection.scmOrganization}`}
+                  {SCM_PROVIDER_LABELS[connection.provider as keyof typeof SCM_PROVIDER_LABELS] || connection.provider}
+                  {connection.scm_extension?.scm_organization && ` / ${connection.scm_extension.scm_organization}`}
                 </CardDescription>
               </div>
             </div>
@@ -174,21 +174,22 @@ export function SCMConnectionCard({
                   <Settings className="mr-2 h-4 w-4" />
                   Edit Connection
                 </DropdownMenuItem>
-                {connection.baseUrl && (
+                {connection.base_url && (
                   <DropdownMenuItem
                     onClick={() => {
                       // Build the URL to open - include organization if available
-                      let url = connection.baseUrl;
-                      if (connection.scmOrganization) {
+                      let url = connection.base_url;
+                      const org = connection.scm_extension?.scm_organization;
+                      if (org) {
                         // Handle different provider URL structures
                         if (connection.provider === "github") {
-                          url = `${connection.baseUrl}/${connection.scmOrganization}`;
+                          url = `${connection.base_url}/${org}`;
                         } else if (connection.provider === "gitlab") {
-                          url = `${connection.baseUrl}/${connection.scmOrganization}`;
+                          url = `${connection.base_url}/${org}`;
                         } else if (connection.provider === "bitbucket") {
-                          url = `${connection.baseUrl}/${connection.scmOrganization}`;
+                          url = `${connection.base_url}/${org}`;
                         } else if (connection.provider === "azure_devops") {
-                          url = `${connection.baseUrl}/${connection.scmOrganization}`;
+                          url = `${connection.base_url}/${org}`;
                         }
                       }
                       window.open(url, "_blank");
@@ -221,9 +222,9 @@ export function SCMConnectionCard({
                       {status.label}
                     </span>
                   </TooltipTrigger>
-                  {connection.errorMessage && (
+                  {connection.status_message && connection.status === "error" && (
                     <TooltipContent className="max-w-xs">
-                      <p className="text-red-400">{connection.errorMessage}</p>
+                      <p className="text-red-400">{connection.status_message}</p>
                     </TooltipContent>
                   )}
                 </Tooltip>
@@ -232,17 +233,17 @@ export function SCMConnectionCard({
                 {repositoryCount} repos
               </Badge>
             </div>
-            {connection.lastValidatedAt && (
+            {connection.last_sync_at && (
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <span className="flex items-center gap-1 text-xs text-muted-foreground">
                       <Clock className="h-3 w-3" />
-                      {new Date(connection.lastValidatedAt).toLocaleDateString()}
+                      {new Date(connection.last_sync_at).toLocaleDateString()}
                     </span>
                   </TooltipTrigger>
                   <TooltipContent>
-                    Last validated: {new Date(connection.lastValidatedAt).toLocaleString()}
+                    Last validated: {new Date(connection.last_sync_at).toLocaleString()}
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>

@@ -7,6 +7,7 @@ import { ProfileDropdown } from "@/components/profile-dropdown";
 import { Search } from "@/components/search";
 import { ThemeSwitch } from "@/components/theme-switch";
 import { RiskScoreBadge } from "@/features/shared";
+import { Can, Permission } from "@/lib/permissions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -528,10 +529,12 @@ export default function AssetGroupDetailPage({ params }: PageProps) {
               <Copy className="mr-2 h-4 w-4" />
               Copy ID
             </Button>
-            <Button variant="outline" size="sm" onClick={handleEdit}>
-              <Pencil className="mr-2 h-4 w-4" />
-              Edit
-            </Button>
+            <Can permission={Permission.AssetGroupsWrite}>
+              <Button variant="outline" size="sm" onClick={handleEdit}>
+                <Pencil className="mr-2 h-4 w-4" />
+                Edit
+              </Button>
+            </Can>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="icon">
@@ -552,14 +555,16 @@ export default function AssetGroupDetailPage({ params }: PageProps) {
                   <Download className="mr-2 h-4 w-4" />
                   Export as CSV
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="text-red-500"
-                  onClick={() => setDeleteDialogOpen(true)}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete Group
-                </DropdownMenuItem>
+                <Can permission={Permission.AssetGroupsDelete}>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="text-red-500"
+                    onClick={() => setDeleteDialogOpen(true)}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete Group
+                  </DropdownMenuItem>
+                </Can>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

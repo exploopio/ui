@@ -24,8 +24,8 @@ export function CommandMenu() {
   const { setTheme } = useTheme()
   const { open, setOpen } = useSearch()
 
-  // Filter sidebar data based on user permissions
-  const filteredSidebarData = useFilteredSidebarData(sidebarData)
+  // Filter sidebar data based on user permissions and modules
+  const { data: filteredSidebarData } = useFilteredSidebarData(sidebarData)
 
   const runCommand = React.useCallback(
     (command: () => unknown) => {

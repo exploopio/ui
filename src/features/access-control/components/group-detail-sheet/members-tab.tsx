@@ -120,7 +120,10 @@ export function MembersTab({
                                     <Badge
                                         className={`${roleConfig.bgColor} ${roleConfig.color} border-0 text-xs`}
                                     >
-                                        {member.role === "admin" && (
+                                        {member.role === "owner" && (
+                                            <Crown className="h-3 w-3 mr-1" />
+                                        )}
+                                        {member.role === "lead" && (
                                             <Crown className="h-3 w-3 mr-1" />
                                         )}
                                         {member.role === "member" && (

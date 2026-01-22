@@ -46,7 +46,7 @@ import {
 import { cn } from '@/lib/utils';
 import {
   useCreateRole,
-  usePermissionModules,
+  useTenantPermissionModules,
   generateSlug,
   type PermissionModule,
 } from '@/features/access-control';
@@ -72,7 +72,7 @@ function getPermissionType(permissionId: string): string {
 
 export function CreateRoleSheet({ open, onOpenChange, onSuccess }: CreateRoleSheetProps) {
   const { createRole, isCreating } = useCreateRole();
-  const { modules: permissionModules, isLoading: isLoadingModules } = usePermissionModules();
+  const { modules: permissionModules, isLoading: isLoadingModules } = useTenantPermissionModules();
 
   // Form state
   const [form, setForm] = useState({
@@ -222,7 +222,7 @@ export function CreateRoleSheet({ open, onOpenChange, onSuccess }: CreateRoleShe
     return {
       selectedCount,
       total,
-      allSelected: selectedCount === total,
+      allSelected: total > 0 && selectedCount === total,
       someSelected: selectedCount > 0 && selectedCount < total,
     };
   };

@@ -52,6 +52,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { Can, Permission } from "@/lib/permissions";
 import {
   Plus,
   Shield,
@@ -83,7 +84,9 @@ import {
   CreateRoleSheet,
   RoleDetailSheet,
   EditRoleSheet,
+  filterPermissionsByTenantModules,
 } from "@/features/access-control";
+import { useTenantModules } from "@/features/integrations/api/use-tenant-modules";
 
 type TypeFilter = "all" | "system" | "custom";
 
@@ -118,6 +121,13 @@ export default function RolesPage() {
 
   // API Hooks
   const { roles, isLoading, isError, mutate: mutateRoles } = useRoles();
+  const { moduleIds: enabledModuleIds } = useTenantModules();
+
+  // Helper to get filtered permission count based on tenant's modules
+  const getFilteredPermissionCount = useCallback((role: Role) => {
+    if (!enabledModuleIds.length) return role.permission_count;
+    return filterPermissionsByTenantModules(role.permissions, enabledModuleIds).length;
+  }, [enabledModuleIds]);
 
   // UI State
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
@@ -224,7 +234,7 @@ export default function RolesPage() {
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
           <Shield className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm">{row.original.permission_count}</span>
+          <span className="text-sm">{getFilteredPermissionCount(row.original)}</span>
         </div>
       ),
     },
@@ -280,21 +290,25 @@ export default function RolesPage() {
               </DropdownMenuItem>
               {!role.is_system && (
                 <>
-                  <DropdownMenuItem onClick={() => setEditRole(role)}>
-                    <Pencil className="mr-2 h-4 w-4" />
-                    Edit Role
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className="text-red-400"
-                    onClick={() => {
-                      setRoleToDelete(role);
-                      setDeleteDialogOpen(true);
-                    }}
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete Role
-                  </DropdownMenuItem>
+                  <Can permission={Permission.RolesWrite}>
+                    <DropdownMenuItem onClick={() => setEditRole(role)}>
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Edit Role
+                    </DropdownMenuItem>
+                  </Can>
+                  <Can permission={Permission.RolesDelete}>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="text-red-400"
+                      onClick={() => {
+                        setRoleToDelete(role);
+                        setDeleteDialogOpen(true);
+                      }}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete Role
+                    </DropdownMenuItem>
+                  </Can>
                 </>
               )}
             </DropdownMenuContent>

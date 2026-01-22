@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useCallback } from "react";
 import {
   ColumnDef,
   flexRender,
@@ -19,7 +19,6 @@ import { PageHeader } from "@/features/shared";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -52,19 +51,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import {
   Users,
   Plus,
-  Shield,
   MoreHorizontal,
   Trash2,
   ArrowUpDown,
@@ -78,8 +68,6 @@ import {
   Loader2,
   AlertCircle,
   FolderKey,
-  ShieldCheck,
-  Wrench,
   Box,
 } from "lucide-react";
 import { useSWRConfig } from "swr";
@@ -88,22 +76,10 @@ import {
   useCreateGroup,
   useDeleteGroup,
   type Group,
-  type GroupType,
-  GroupTypeConfig,
   generateSlug,
-  getGroupType,
 } from "@/features/access-control";
 import { GroupDetailSheet } from "@/features/access-control/components/group-detail-sheet";
 import { Can, Permission } from "@/lib/permissions";
-
-type TypeFilter = "all" | GroupType;
-
-const typeFilters: { value: TypeFilter; label: string; icon: React.ReactNode }[] = [
-  { value: "all", label: "All Groups", icon: <Users className="h-4 w-4" /> },
-  { value: "security_team", label: "Security Teams", icon: <ShieldCheck className="h-4 w-4" /> },
-  { value: "asset_owner", label: "Asset Owners", icon: <Box className="h-4 w-4" /> },
-  { value: "custom", label: "Custom", icon: <Wrench className="h-4 w-4" /> },
-];
 
 const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString("en-US", {
@@ -112,8 +88,6 @@ const formatDate = (dateString: string) => {
     day: "numeric",
   });
 };
-
-
 
 export default function GroupsPage() {
   const { mutate } = useSWRConfig();
@@ -129,12 +103,10 @@ export default function GroupsPage() {
   const [groupToDelete, setGroupToDelete] = useState<Group | null>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
-  const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [rowSelection, setRowSelection] = useState({});
   const [createForm, setCreateForm] = useState({
     name: "",
     description: "",
-    group_type: "custom" as GroupType,
   });
 
   // Delete hook - need to pass groupId
@@ -145,28 +117,10 @@ export default function GroupsPage() {
     mutateGroups();
   }, [mutateGroups]);
 
-  // Filter data
-  const filteredData = useMemo(() => {
-    let data = [...groups];
-
-    if (typeFilter !== "all") {
-      data = data.filter((group) => getGroupType(group) === typeFilter);
-    }
-
-    return data;
-  }, [groups, typeFilter]);
-
-  // Type counts
-  const typeCounts = useMemo(() => ({
-    all: groups.length,
-    security_team: groups.filter((g) => getGroupType(g) === "security_team").length,
-    asset_owner: groups.filter((g) => getGroupType(g) === "asset_owner").length,
-    team: groups.filter((g) => getGroupType(g) === "team").length,
-    department: groups.filter((g) => getGroupType(g) === "department").length,
-    project: groups.filter((g) => getGroupType(g) === "project").length,
-    external: groups.filter((g) => getGroupType(g) === "external").length,
-    custom: groups.filter((g) => getGroupType(g) === "custom").length,
-  }), [groups]);
+  // Calculate stats
+  const totalGroups = groups.length;
+  const totalMembers = groups.reduce((acc, g) => acc + (g.member_count ?? 0), 0);
+  const totalAssets = groups.reduce((acc, g) => acc + (g.asset_count ?? 0), 0);
 
   // Table columns
   const columns: ColumnDef<Group>[] = [
@@ -200,19 +154,15 @@ export default function GroupsPage() {
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
           className="-ml-4"
         >
-          Group
+          Team
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
       cell: ({ row }) => {
-        const groupType = getGroupType(row.original);
-        const typeConfig = GroupTypeConfig[groupType] || GroupTypeConfig.custom;
         return (
           <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-lg ${typeConfig.bgColor}`}>
-              {groupType === "security_team" && <ShieldCheck className={`h-4 w-4 ${typeConfig.color}`} />}
-              {groupType === "asset_owner" && <Box className={`h-4 w-4 ${typeConfig.color}`} />}
-              {(!groupType || groupType === "custom") && <Wrench className={`h-4 w-4 ${typeConfig.color}`} />}
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Users className="h-4 w-4 text-primary" />
             </div>
             <div>
               <p className="font-medium">{row.original.name}</p>
@@ -225,35 +175,22 @@ export default function GroupsPage() {
       },
     },
     {
-      accessorKey: "group_type",
-      header: "Type",
-      cell: ({ row }) => {
-        const groupType = getGroupType(row.original);
-        const typeConfig = GroupTypeConfig[groupType] || GroupTypeConfig.custom;
-        return (
-          <Badge className={`${typeConfig.bgColor} ${typeConfig.color} border-0`}>
-            {typeConfig.label}
-          </Badge>
-        );
-      },
-    },
-    {
       accessorKey: "member_count",
       header: "Members",
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
           <Users className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm">{row.original.member_count}</span>
+          <span className="text-sm">{row.original.member_count ?? 0}</span>
         </div>
       ),
     },
     {
-      accessorKey: "permission_set_count",
-      header: "Permissions",
+      accessorKey: "asset_count",
+      header: "Assets",
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
-          <Shield className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm">{row.original.permission_set_count}</span>
+          <Box className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm">{row.original.asset_count ?? 0}</span>
         </div>
       ),
     },
@@ -284,7 +221,7 @@ export default function GroupsPage() {
               <Can permission={Permission.GroupsWrite}>
                 <DropdownMenuItem onClick={() => setSelectedGroupId(group.id)}>
                   <Pencil className="mr-2 h-4 w-4" />
-                  Edit Group
+                  Edit Team
                 </DropdownMenuItem>
               </Can>
               <Can permission={Permission.GroupsDelete}>
@@ -297,7 +234,7 @@ export default function GroupsPage() {
                   }}
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
-                  Delete Group
+                  Delete Team
                 </DropdownMenuItem>
               </Can>
             </DropdownMenuContent>
@@ -308,7 +245,7 @@ export default function GroupsPage() {
   ];
 
   const table = useReactTable({
-    data: filteredData,
+    data: groups,
     columns,
     state: {
       sorting,
@@ -327,7 +264,7 @@ export default function GroupsPage() {
   // Actions
   const handleCreateGroup = async () => {
     if (!createForm.name) {
-      toast.error("Please enter a group name");
+      toast.error("Please enter a team name");
       return;
     }
 
@@ -336,14 +273,14 @@ export default function GroupsPage() {
         slug: generateSlug(createForm.name),
         name: createForm.name,
         description: createForm.description || undefined,
-        group_type: createForm.group_type,
+        group_type: "team", // Default type for data scoping groups
       });
-      toast.success(`Group "${createForm.name}" created successfully`);
+      toast.success(`Team "${createForm.name}" created successfully`);
       setCreateDialogOpen(false);
-      setCreateForm({ name: "", description: "", group_type: "custom" });
+      setCreateForm({ name: "", description: "" });
       refreshData();
     } catch (error) {
-      toast.error(`Failed to create group: ${error instanceof Error ? error.message : "Unknown error"}`);
+      toast.error(`Failed to create team: ${error instanceof Error ? error.message : "Unknown error"}`);
     }
   };
 
@@ -352,22 +289,15 @@ export default function GroupsPage() {
 
     try {
       await deleteGroup();
-      toast.success(`Group "${groupToDelete.name}" deleted successfully`);
+      toast.success(`Team "${groupToDelete.name}" deleted successfully`);
       setDeleteDialogOpen(false);
       setGroupToDelete(null);
       // Invalidate all group-related caches
       mutate((key: string) => typeof key === 'string' && key.startsWith('/api/v1/groups'), undefined, { revalidate: true });
       refreshData();
     } catch (error) {
-      toast.error(`Failed to delete group: ${error instanceof Error ? error.message : "Unknown error"}`);
+      toast.error(`Failed to delete team: ${error instanceof Error ? error.message : "Unknown error"}`);
     }
-  };
-
-  // Active filters count
-  const activeFiltersCount = [typeFilter !== "all"].filter(Boolean).length;
-
-  const clearFilters = () => {
-    setTypeFilter("all");
   };
 
   return (
@@ -382,13 +312,13 @@ export default function GroupsPage() {
 
       <Main>
         <PageHeader
-          title="Groups"
-          description="Manage access control groups and their permissions"
+          title="Teams"
+          description="Organize users into teams to control access to assets"
         >
           <Can permission={Permission.GroupsWrite} mode="disable">
             <Button onClick={() => setCreateDialogOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
-              Create Group
+              Create Team
             </Button>
           </Can>
         </PageHeader>
@@ -415,53 +345,32 @@ export default function GroupsPage() {
         {!isLoading && !isError && (
           <>
             {/* Stats */}
-            <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-              <Card
-                className={`cursor-pointer hover:border-primary transition-colors ${typeFilter === "all" ? "border-primary" : ""}`}
-                onClick={() => setTypeFilter("all")}
-              >
+            <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <Card>
                 <CardHeader className="pb-2">
                   <CardDescription className="flex items-center gap-2">
                     <FolderKey className="h-4 w-4" />
-                    Total Groups
+                    Total Teams
                   </CardDescription>
-                  <CardTitle className="text-3xl">{typeCounts.all}</CardTitle>
+                  <CardTitle className="text-3xl">{totalGroups}</CardTitle>
                 </CardHeader>
               </Card>
-              <Card
-                className={`cursor-pointer hover:border-purple-500 transition-colors ${typeFilter === "security_team" ? "border-purple-500" : ""}`}
-                onClick={() => setTypeFilter("security_team")}
-              >
+              <Card>
                 <CardHeader className="pb-2">
                   <CardDescription className="flex items-center gap-2">
-                    <ShieldCheck className="h-4 w-4 text-purple-500" />
-                    Security Teams
+                    <Users className="h-4 w-4" />
+                    Total Members
                   </CardDescription>
-                  <CardTitle className="text-3xl text-purple-500">{typeCounts.security_team}</CardTitle>
+                  <CardTitle className="text-3xl">{totalMembers}</CardTitle>
                 </CardHeader>
               </Card>
-              <Card
-                className={`cursor-pointer hover:border-blue-500 transition-colors ${typeFilter === "asset_owner" ? "border-blue-500" : ""}`}
-                onClick={() => setTypeFilter("asset_owner")}
-              >
+              <Card>
                 <CardHeader className="pb-2">
                   <CardDescription className="flex items-center gap-2">
-                    <Box className="h-4 w-4 text-blue-500" />
-                    Asset Owners
+                    <Box className="h-4 w-4" />
+                    Assigned Assets
                   </CardDescription>
-                  <CardTitle className="text-3xl text-blue-500">{typeCounts.asset_owner}</CardTitle>
-                </CardHeader>
-              </Card>
-              <Card
-                className={`cursor-pointer hover:border-gray-500 transition-colors ${typeFilter === "custom" ? "border-gray-500" : ""}`}
-                onClick={() => setTypeFilter("custom")}
-              >
-                <CardHeader className="pb-2">
-                  <CardDescription className="flex items-center gap-2">
-                    <Wrench className="h-4 w-4" />
-                    Custom Groups
-                  </CardDescription>
-                  <CardTitle className="text-3xl">{typeCounts.custom}</CardTitle>
+                  <CardTitle className="text-3xl">{totalAssets}</CardTitle>
                 </CardHeader>
               </Card>
             </div>
@@ -471,37 +380,18 @@ export default function GroupsPage() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-base">All Groups</CardTitle>
-                    <CardDescription>Manage groups and their members</CardDescription>
+                    <CardTitle className="text-base">All Teams</CardTitle>
+                    <CardDescription>Manage teams and their members</CardDescription>
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
-                {/* Quick Filter Tabs */}
-                <Tabs
-                  value={typeFilter}
-                  onValueChange={(v) => setTypeFilter(v as TypeFilter)}
-                  className="mb-4"
-                >
-                  <TabsList>
-                    {typeFilters.map((filter) => (
-                      <TabsTrigger key={filter.value} value={filter.value} className="gap-1.5">
-                        {filter.icon}
-                        {filter.label}
-                        <Badge variant="secondary" className="h-5 px-1.5 text-xs">
-                          {typeCounts[filter.value]}
-                        </Badge>
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
-                </Tabs>
-
-                {/* Search and Filters */}
+                {/* Search */}
                 <div className="flex flex-col gap-4 mb-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="relative flex-1 max-w-sm">
                     <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                      placeholder="Search groups..."
+                      placeholder="Search teams..."
                       value={globalFilter}
                       onChange={(e) => setGlobalFilter(e.target.value)}
                       className="pl-9"
@@ -509,12 +399,6 @@ export default function GroupsPage() {
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
-                    {activeFiltersCount > 0 && (
-                      <Button variant="ghost" size="sm" onClick={clearFilters}>
-                        Clear filters
-                      </Button>
-                    )}
-
                     {Object.keys(rowSelection).length > 0 && (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -580,18 +464,18 @@ export default function GroupsPage() {
                             {groups.length === 0 ? (
                               <div className="flex flex-col items-center gap-2">
                                 <FolderKey className="h-8 w-8 text-muted-foreground/50" />
-                                <p className="text-muted-foreground">No groups yet</p>
+                                <p className="text-muted-foreground">No teams yet</p>
                                 <Button
                                   variant="outline"
                                   size="sm"
                                   onClick={() => setCreateDialogOpen(true)}
                                 >
                                   <Plus className="mr-2 h-4 w-4" />
-                                  Create your first group
+                                  Create your first team
                                 </Button>
                               </div>
                             ) : (
-                              "No groups found."
+                              "No teams found."
                             )}
                           </TableCell>
                         </TableRow>
@@ -666,17 +550,17 @@ export default function GroupsPage() {
               <div className="rounded-full bg-primary/10 p-2">
                 <Plus className="h-5 w-5 text-primary" />
               </div>
-              Create Group
+              Create Team
             </DialogTitle>
             <DialogDescription>
-              Create a new group to organize team members and assign permissions.
+              Create a new team to organize users and control access to assets.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             {/* Name Input */}
             <div className="space-y-2">
-              <Label htmlFor="group-name">Group Name</Label>
+              <Label htmlFor="group-name">Team Name</Label>
               <Input
                 id="group-name"
                 placeholder="e.g., Security Team, DevOps"
@@ -696,33 +580,6 @@ export default function GroupsPage() {
                 rows={3}
               />
             </div>
-
-            {/* Type Selection */}
-            <div className="space-y-2">
-              <Label>Group Type</Label>
-              <Select
-                value={createForm.group_type}
-                onValueChange={(value: GroupType) => setCreateForm({ ...createForm, group_type: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(GroupTypeConfig).map(([type, config]) => (
-                    <SelectItem key={type} value={type}>
-                      <div className="flex items-center gap-2">
-                        <Badge className={`${config.bgColor} ${config.color} border-0`}>
-                          {config.label}
-                        </Badge>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                {GroupTypeConfig[createForm.group_type].description}
-              </p>
-            </div>
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0">
@@ -741,7 +598,7 @@ export default function GroupsPage() {
               ) : (
                 <Plus className="mr-2 h-4 w-4" />
               )}
-              Create Group
+              Create Team
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -753,11 +610,11 @@ export default function GroupsPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-500">
               <Trash2 className="h-5 w-5" />
-              Delete Group
+              Delete Team
             </DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete the group &quot;{groupToDelete?.name}&quot;?
-              This action cannot be undone. All members will lose their group-based permissions.
+              Are you sure you want to delete the team &quot;{groupToDelete?.name}&quot;?
+              This action cannot be undone. Members will lose access to assets owned by this team.
             </DialogDescription>
           </DialogHeader>
 
@@ -781,7 +638,7 @@ export default function GroupsPage() {
               ) : (
                 <Trash2 className="mr-2 h-4 w-4" />
               )}
-              Delete Group
+              Delete Team
             </Button>
           </DialogFooter>
         </DialogContent>

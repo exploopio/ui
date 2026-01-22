@@ -50,6 +50,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Can, Permission } from '@/lib/permissions';
 
 import type { Agent } from '@/lib/api/agent-types';
 import { AgentTypeIcon, AGENT_TYPE_LABELS, AGENT_TYPE_COLORS } from './agent-type-icon';
@@ -306,40 +307,44 @@ export function AgentTable({
                   <Eye className="mr-2 h-4 w-4" />
                   View Details
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onEditAgent(agent)}>
-                  <Settings className="mr-2 h-4 w-4" />
-                  Edit
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onRegenerateKey(agent)}>
-                  <KeyRound className="mr-2 h-4 w-4" />
-                  Regenerate API Key
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                {agent.status === 'disabled' || agent.status === 'revoked' ? (
-                  <DropdownMenuItem
-                    onClick={() => onActivateAgent(agent)}
-                    className="text-green-500"
-                  >
-                    <Power className="mr-2 h-4 w-4" />
-                    Activate
+                <Can permission={Permission.AgentsWrite}>
+                  <DropdownMenuItem onClick={() => onEditAgent(agent)}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    Edit
                   </DropdownMenuItem>
-                ) : agent.status === 'active' ? (
-                  <DropdownMenuItem
-                    onClick={() => onDeactivateAgent(agent)}
-                    className="text-amber-500"
-                  >
-                    <PowerOff className="mr-2 h-4 w-4" />
-                    Deactivate
+                  <DropdownMenuItem onClick={() => onRegenerateKey(agent)}>
+                    <KeyRound className="mr-2 h-4 w-4" />
+                    Regenerate API Key
                   </DropdownMenuItem>
-                ) : null}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="text-red-500"
-                  onClick={() => onDeleteAgent(agent)}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
-                </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  {agent.status === 'disabled' || agent.status === 'revoked' ? (
+                    <DropdownMenuItem
+                      onClick={() => onActivateAgent(agent)}
+                      className="text-green-500"
+                    >
+                      <Power className="mr-2 h-4 w-4" />
+                      Activate
+                    </DropdownMenuItem>
+                  ) : agent.status === 'active' ? (
+                    <DropdownMenuItem
+                      onClick={() => onDeactivateAgent(agent)}
+                      className="text-amber-500"
+                    >
+                      <PowerOff className="mr-2 h-4 w-4" />
+                      Deactivate
+                    </DropdownMenuItem>
+                  ) : null}
+                </Can>
+                <Can permission={Permission.AgentsDelete}>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="text-red-500"
+                    onClick={() => onDeleteAgent(agent)}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </DropdownMenuItem>
+                </Can>
               </DropdownMenuContent>
             </DropdownMenu>
           );

@@ -21,7 +21,6 @@ import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { toast } from "sonner";
 import {
   Users,
-  Shield,
   Calendar,
   Loader2,
   Trash2,
@@ -30,16 +29,12 @@ import {
 import {
   useGroup,
   useGroupMembers,
-  useGroupPermissionSets,
   useGroupAssets,
   useUpdateGroup,
   useAddGroupMember,
   useRemoveGroupMember,
-  useAssignPermissionSetToGroup,
   useAssignAssetToGroup,
-  useUnassignPermissionSetFromGroup,
   useUnassignAssetFromGroup,
-  usePermissionSets,
   type GroupMemberRole,
   formatDate,
 } from "@/features/access-control";
@@ -50,11 +45,9 @@ import {
   GroupHeader,
   OverviewTab,
   MembersTab,
-  PermissionsTab,
   AssetsTab,
   ErrorDisplay,
   AddMemberDialog,
-  AddPermissionSetDialog,
   AddAssetDialog,
 } from "./group-detail-sheet/index";
 
@@ -77,12 +70,9 @@ export function GroupDetailSheet({
   // API Hooks
   const { group, isLoading: groupLoading, isError: groupError, error: groupErrorDetails, mutate: mutateGroup } = useGroup(groupId);
   const { members, isLoading: membersLoading, mutate: mutateMembers } = useGroupMembers(groupId);
-  const { permissionSets: groupPermissionSets, isLoading: permissionsLoading, mutate: mutatePermissionSets } = useGroupPermissionSets(groupId);
   const { updateGroup, isUpdating } = useUpdateGroup(groupId);
   const { addMember, isAdding: isAddingMember } = useAddGroupMember(groupId);
-  const { permissionSets: allPermissionSets } = usePermissionSets({ limit: 100, is_system: true });
   const { members: tenantMembers } = useMembers(tenantSlug);
-  const { assignPermissionSet, isAssigning } = useAssignPermissionSetToGroup(groupId);
   const { assets, isLoading: assetsLoading, mutate: mutateAssets } = useGroupAssets(groupId);
   const { assignAsset, isAssigning: isAssigningAsset } = useAssignAssetToGroup(groupId);
 
@@ -91,22 +81,15 @@ export function GroupDetailSheet({
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({ name: "", description: "" });
   const [addMemberDialogOpen, setAddMemberDialogOpen] = useState(false);
-  const [addPermissionDialogOpen, setAddPermissionDialogOpen] = useState(false);
   const [addAssetDialogOpen, setAddAssetDialogOpen] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState<{ userId: string; name: string } | null>(null);
-  const [permissionToRemove, setPermissionToRemove] = useState<{ id: string; name: string } | null>(null);
   const [assetToRemove, setAssetToRemove] = useState<{ id: string; name: string } | null>(null);
   const [newMember, setNewMember] = useState({ userId: "", role: "member" as GroupMemberRole });
-  const [newPermissionSetId, setNewPermissionSetId] = useState("");
 
   // Remove hooks
   const { removeMember, isRemoving: isRemovingMember } = useRemoveGroupMember(
     groupId,
     memberToRemove?.userId || null
-  );
-  const { unassignPermissionSet, isUnassigning } = useUnassignPermissionSetFromGroup(
-    groupId,
-    permissionToRemove?.id || null
   );
   const { unassignAsset, isUnassigning: isUnassigningAsset } = useUnassignAssetFromGroup(
     groupId,
@@ -146,7 +129,7 @@ export function GroupDetailSheet({
   // Save changes
   const handleSaveChanges = async () => {
     if (!editForm.name) {
-      toast.error("Group name is required");
+      toast.error("Team name is required");
       return;
     }
 
@@ -155,12 +138,12 @@ export function GroupDetailSheet({
         name: editForm.name,
         description: editForm.description || undefined,
       });
-      toast.success("Group updated successfully");
+      toast.success("Team updated successfully");
       setIsEditing(false);
       mutateGroup();
       onUpdate?.();
     } catch (error) {
-      toast.error(`Failed to update group: ${error instanceof Error ? error.message : "Unknown error"}`);
+      toast.error(`Failed to update team: ${error instanceof Error ? error.message : "Unknown error"}`);
     }
   };
 
@@ -203,46 +186,8 @@ export function GroupDetailSheet({
     }
   };
 
-  // Assign permission set
-  const handleAssignPermissionSet = async () => {
-    if (!newPermissionSetId) {
-      toast.error("Please select a permission set");
-      return;
-    }
-
-    try {
-      await assignPermissionSet({
-        permission_set_id: newPermissionSetId,
-      });
-      toast.success("Permission set assigned successfully");
-      setAddPermissionDialogOpen(false);
-      setNewPermissionSetId("");
-      mutatePermissionSets();
-      mutateGroup();
-      onUpdate?.();
-    } catch (error) {
-      toast.error(`Failed to assign permission set: ${error instanceof Error ? error.message : "Unknown error"}`);
-    }
-  };
-
-  // Unassign permission set
-  const handleUnassignPermissionSet = async () => {
-    if (!permissionToRemove) return;
-
-    try {
-      await unassignPermissionSet();
-      toast.success("Permission set removed successfully");
-      setPermissionToRemove(null);
-      mutatePermissionSets();
-      mutateGroup();
-      onUpdate?.();
-    } catch (error) {
-      toast.error(`Failed to remove permission set: ${error instanceof Error ? error.message : "Unknown error"}`);
-    }
-  };
-
   // Assign Asset
-  const handleAssignAsset = async (assetId: string, ownershipType: "primary" | "shared") => {
+  const handleAssignAsset = async (assetId: string, ownershipType: "primary" | "secondary" | "stakeholder" | "informed") => {
     try {
       await assignAsset({
         asset_id: assetId,
@@ -282,18 +227,12 @@ export function GroupDetailSheet({
     })
   );
 
-  // Get available permission sets (not already assigned)
-  // groupPermissionSets are now full objects, so we compare IDs directly
-  const availablePermissionSets = (allPermissionSets || []).filter(
-    (ps) => !groupPermissionSets.some((gps: { id: string }) => gps.id === ps.id)
-  );
-
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent className="sm:max-w-lg p-0 overflow-y-auto">
           <VisuallyHidden>
-            <SheetTitle>Group Details</SheetTitle>
+            <SheetTitle>Team Details</SheetTitle>
           </VisuallyHidden>
 
           {groupLoading ? (
@@ -327,20 +266,13 @@ export function GroupDetailSheet({
               />
 
               {/* Stats */}
-              <div className="px-6 py-4 grid grid-cols-4 gap-4 border-b">
+              <div className="px-6 py-4 grid grid-cols-3 gap-4 border-b">
                 <div className="text-center">
                   <div className="flex items-center justify-center gap-1 text-muted-foreground">
                     <Users className="h-4 w-4" />
                     <span className="text-xs">Members</span>
                   </div>
                   <p className="text-lg font-semibold">{group.member_count ?? members?.length ?? 0}</p>
-                </div>
-                <div className="text-center">
-                  <div className="flex items-center justify-center gap-1 text-muted-foreground">
-                    <Shield className="h-4 w-4" />
-                    <span className="text-xs">Permissions</span>
-                  </div>
-                  <p className="text-lg font-semibold">{group.permission_set_count ?? groupPermissionSets?.length ?? 0}</p>
                 </div>
                 <div className="text-center">
                   <div className="flex items-center justify-center gap-1 text-muted-foreground">
@@ -364,7 +296,6 @@ export function GroupDetailSheet({
                   <TabsList className="w-full">
                     <TabsTrigger value="overview" className="flex-1">Overview</TabsTrigger>
                     <TabsTrigger value="members" className="flex-1">Members</TabsTrigger>
-                    <TabsTrigger value="permissions" className="flex-1">Permissions</TabsTrigger>
                     <TabsTrigger value="assets" className="flex-1">Assets</TabsTrigger>
                   </TabsList>
 
@@ -378,15 +309,6 @@ export function GroupDetailSheet({
                       isLoading={membersLoading}
                       onAddMember={() => setAddMemberDialogOpen(true)}
                       onRemoveMember={(userId, name) => setMemberToRemove({ userId, name })}
-                    />
-                  </TabsContent>
-
-                  <TabsContent value="permissions">
-                    <PermissionsTab
-                      permissionSets={groupPermissionSets}
-                      isLoading={permissionsLoading}
-                      onAddPermissionSet={() => setAddPermissionDialogOpen(true)}
-                      onRemovePermissionSet={(id, name) => setPermissionToRemove({ id, name })}
                     />
                   </TabsContent>
 
@@ -421,16 +343,6 @@ export function GroupDetailSheet({
         availableMembers={availableMembers}
       />
 
-      <AddPermissionSetDialog
-        open={addPermissionDialogOpen}
-        onOpenChange={setAddPermissionDialogOpen}
-        newPermissionSetId={newPermissionSetId}
-        setNewPermissionSetId={setNewPermissionSetId}
-        isAssigning={isAssigning}
-        onAssign={handleAssignPermissionSet}
-        availablePermissionSets={availablePermissionSets}
-      />
-
       <AddAssetDialog
         open={addAssetDialogOpen}
         onOpenChange={setAddAssetDialogOpen}
@@ -445,8 +357,8 @@ export function GroupDetailSheet({
           <DialogHeader>
             <DialogTitle className="text-red-500">Remove Member</DialogTitle>
             <DialogDescription>
-              Are you sure you want to remove &quot;{memberToRemove?.name}&quot; from this group?
-              They will lose all group-based permissions.
+              Are you sure you want to remove &quot;{memberToRemove?.name}&quot; from this team?
+              They will lose access to assets owned by this team.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -465,40 +377,14 @@ export function GroupDetailSheet({
         </DialogContent>
       </Dialog>
 
-      {/* Remove Permission Set Confirmation */}
-      <Dialog open={!!permissionToRemove} onOpenChange={(open) => !open && setPermissionToRemove(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-red-500">Remove Permission Set</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to remove the &quot;{permissionToRemove?.name}&quot; permission set from this group?
-              All members will lose these permissions.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setPermissionToRemove(null)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleUnassignPermissionSet} disabled={isUnassigning}>
-              {isUnassigning ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Trash2 className="mr-2 h-4 w-4" />
-              )}
-              Remove
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* Remove Asset Confirmation */}
       <Dialog open={!!assetToRemove} onOpenChange={(open) => !open && setAssetToRemove(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-red-500">Remove Asset</DialogTitle>
             <DialogDescription>
-              Are you sure you want to remove the asset &quot;{assetToRemove?.name}&quot; from this group?
-              The group will lose access to this asset.
+              Are you sure you want to remove the asset &quot;{assetToRemove?.name}&quot; from this team?
+              The team will lose access to this asset.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

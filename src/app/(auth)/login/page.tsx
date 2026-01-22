@@ -15,10 +15,14 @@ import { env } from '@/lib/env'
 import { LoginForm } from '@/features/auth/components/login-form'
 
 interface LoginPageProps {
-  searchParams: Promise<{ redirect?: string }>
+  searchParams: Promise<{ redirect?: string; returnTo?: string }>
 }
 
 export default async function SignIn({ searchParams }: LoginPageProps) {
+  // Get redirect URL from search params (support both 'redirect' and 'returnTo')
+  const params = await searchParams
+  const redirectTo = params.returnTo || params.redirect || '/'
+
   // Check if user is already authenticated
   const cookieStore = await cookies()
   const hasAuthToken = cookieStore.get(env.auth.cookieName)?.value
@@ -30,21 +34,21 @@ export default async function SignIn({ searchParams }: LoginPageProps) {
     const hasPendingTenants = cookieStore.get(env.cookies.pendingTenants)?.value
 
     if (hasTenant) {
-      // User has selected a team - redirect to dashboard
-      redirect('/')
+      // User has selected a team - redirect to dashboard or specified URL
+      redirect(redirectTo)
     } else if (hasPendingTenants) {
       // User has multiple teams but hasn't selected one - redirect to select-tenant
       redirect('/select-tenant')
     } else {
-      // User has no teams - redirect to onboarding to create first team
-      // This preserves the original behavior for new users
+      // User has no teams but has a specific destination (e.g., invitation)
+      // Let them go there first - they can accept invitation and get a tenant
+      if (redirectTo.includes('/invitations/')) {
+        redirect(redirectTo)
+      }
+      // Otherwise, redirect to onboarding to create first team
       redirect('/onboarding/create-team')
     }
   }
-
-  // Get redirect URL from search params
-  const params = await searchParams
-  const redirectTo = params.redirect || '/'
 
   return (
     <Card className='gap-4'>

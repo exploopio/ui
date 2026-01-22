@@ -52,7 +52,7 @@ export function AddAssetDialog({
     }, [search]);
 
     const [selectedAssetId, setSelectedAssetId] = useState("");
-    const [ownershipType, setOwnershipType] = useState<AssetOwnershipType>("shared");
+    const [ownershipType, setOwnershipType] = useState<AssetOwnershipType>("secondary");
 
     const { assets, isLoading } = useAssets({
         search: debouncedSearch,
@@ -65,7 +65,7 @@ export function AddAssetDialog({
         if (!open) {
             setSearch("");
             setSelectedAssetId("");
-            setOwnershipType("shared");
+            setOwnershipType("secondary");
         }
     }, [open]);
 
@@ -84,7 +84,7 @@ export function AddAssetDialog({
                 <DialogHeader>
                     <DialogTitle>Assign Asset</DialogTitle>
                     <DialogDescription>
-                        Assign an asset to this group to grant access or ownership.
+                        Assign an asset to this team to grant access or ownership.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -162,14 +162,26 @@ export function AddAssetDialog({
                             <SelectContent>
                                 <SelectItem value="primary">
                                     <div className="flex flex-col">
-                                        <span className="font-medium">Primary Owner</span>
-                                        <span className="text-xs text-muted-foreground">Responsible for the asset lifecycle</span>
+                                        <span className="font-medium">Primary</span>
+                                        <span className="text-xs text-muted-foreground">Main owner with full access and responsibility</span>
                                     </div>
                                 </SelectItem>
-                                <SelectItem value="shared">
+                                <SelectItem value="secondary">
                                     <div className="flex flex-col">
-                                        <span className="font-medium">Shared Access</span>
-                                        <span className="text-xs text-muted-foreground">Has access but not primary responsibility</span>
+                                        <span className="font-medium">Secondary</span>
+                                        <span className="text-xs text-muted-foreground">Co-owner with full access and shared responsibility</span>
+                                    </div>
+                                </SelectItem>
+                                <SelectItem value="stakeholder">
+                                    <div className="flex flex-col">
+                                        <span className="font-medium">Stakeholder</span>
+                                        <span className="text-xs text-muted-foreground">View access, receives critical notifications</span>
+                                    </div>
+                                </SelectItem>
+                                <SelectItem value="informed">
+                                    <div className="flex flex-col">
+                                        <span className="font-medium">Informed</span>
+                                        <span className="text-xs text-muted-foreground">No direct access, receives summary notifications</span>
                                     </div>
                                 </SelectItem>
                             </SelectContent>

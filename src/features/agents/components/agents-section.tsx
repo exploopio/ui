@@ -56,6 +56,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Can, Permission } from '@/lib/permissions';
 
 import { AddAgentDialog } from './add-agent-dialog';
 import { EditAgentDialog } from './edit-agent-dialog';
@@ -517,10 +518,12 @@ export function AgentsSection({ typeFilter }: AgentsSectionProps) {
                   <Download className="mr-2 h-4 w-4" />
                   Export
                 </Button>
-                <Button onClick={() => setAddDialogOpen(true)}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Agent
-                </Button>
+                <Can permission={Permission.AgentsWrite}>
+                  <Button onClick={() => setAddDialogOpen(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Agent
+                  </Button>
+                </Can>
               </div>
             </div>
           </CardHeader>
@@ -626,22 +629,24 @@ export function AgentsSection({ typeFilter }: AgentsSectionProps) {
 
               {/* Bulk Actions */}
               {Object.keys(rowSelection).filter((k) => rowSelection[k]).length > 0 && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      {Object.keys(rowSelection).filter((k) => rowSelection[k]).length} selected
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      className="text-red-500"
-                      onClick={() => setBulkDeleteDialogOpen(true)}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete Selected
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <Can permission={Permission.AgentsDelete}>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        {Object.keys(rowSelection).filter((k) => rowSelection[k]).length} selected
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        className="text-red-500"
+                        onClick={() => setBulkDeleteDialogOpen(true)}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete Selected
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </Can>
               )}
             </div>
 
@@ -685,10 +690,12 @@ export function AgentsSection({ typeFilter }: AgentsSectionProps) {
                     : 'Create an agent to start scanning and collecting data.'}
                 </p>
                 {!searchQuery && (
-                  <Button onClick={() => setAddDialogOpen(true)}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Your First Agent
-                  </Button>
+                  <Can permission={Permission.AgentsWrite}>
+                    <Button onClick={() => setAddDialogOpen(true)}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Your First Agent
+                    </Button>
+                  </Can>
                 )}
               </div>
             )}

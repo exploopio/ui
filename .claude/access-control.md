@@ -1,18 +1,63 @@
 # Access Control Architecture
 
-> Comprehensive guide to the RBAC (Role-Based Access Control) system in Rediver.io
+> Comprehensive guide to the 3-layer access control system in Rediver.io
 
 ## Overview
 
-Rediver.io implements a **dual-path permission model** that separates:
-1. **Feature Access** (what you can DO) - managed via Roles
-2. **Data Scope** (what you can SEE) - managed via Groups
+Rediver.io implements a **3-layer access control** architecture:
 
 ```
-User
-├── Roles → Feature Permissions (assets:read, findings:write, etc.)
-└── Groups → Data Scope (which assets/findings user can access)
+┌─────────────────────────────────────────────────────────────────┐
+│                    LAYER 1: LICENSING (Tenant)                   │
+├─────────────────────────────────────────────────────────────────┤
+│  Tenant → Plan → Modules                                        │
+│  "What modules can this tenant access?"                         │
+│  Determined by: Subscription plan (Free, Pro, Business, etc.)   │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│                    LAYER 2: RBAC (User)                          │
+├─────────────────────────────────────────────────────────────────┤
+│  User → Roles → Permissions                                      │
+│  "What can this user do within allowed modules?"                 │
+│  Note: Can only use permissions from modules tenant has          │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│                    LAYER 3: DATA SCOPE (Groups)                  │
+├─────────────────────────────────────────────────────────────────┤
+│  User → Groups → Assets/Data                                     │
+│  "What data can this user see?"                                  │
+│  Determined by: Group membership and asset ownership             │
+└─────────────────────────────────────────────────────────────────┘
 ```
+
+## Layer 1: Licensing (Module Access)
+
+### Hook: useTenantModules
+
+```typescript
+import { useTenantModules } from '@/features/integrations/api/use-tenant-modules';
+
+const { moduleIds, modules, eventTypes, isLoading } = useTenantModules();
+
+// Check if tenant has a module
+const hasFindings = moduleIds.includes('findings');
+
+// Available event types for notifications (filtered by modules)
+// e.g., ['new_finding', 'scan_completed'] based on tenant's plan
+```
+
+### Available Plans
+
+| Plan | Modules |
+|------|---------|
+| Free | Core (dashboard, assets, team) |
+| Pro | Core + Security (findings, scans) |
+| Business | Core + Security + Platform + Compliance |
+| Enterprise | All modules |
+
+## Layer 2: RBAC (Feature Permissions)
 
 ## Core Concepts
 
@@ -20,18 +65,29 @@ User
 
 Determines user's organizational status within a tenant.
 
-| Level | Description |
-|-------|-------------|
-| **Owner** | Full access, cannot be removed. One per tenant. Created automatically when tenant is created. |
-| **Member** | Standard user. Permissions come from RBAC roles. All invited users are members. |
+| Level | isAdmin JWT | Permissions in JWT | Description |
+|-------|-------------|-------------------|-------------|
+| **Owner** | ✅ true | nil | Full access including owner-only operations. Cannot be removed. |
+| **Admin** | ✅ true | nil | Almost full access. Cannot do owner-only operations. |
+| **Member** | ❌ false | ~42 permissions | Standard read/write access. Permissions from RBAC roles. |
+| **Viewer** | ❌ false | ~25 permissions | Read-only access. Permissions from RBAC roles. |
 
 **Key Points:**
-- Owner is protected - cannot be removed or demoted
-- **All invited users automatically become "member"**
-- There is no role selection during invitation - membership level is always "member"
-- Actual permissions are controlled by RBAC roles, NOT membership level
+- **Owner** has ALL permissions - bypass all permission checks
+- **Admin** has almost all permissions - bypass general permission checks, but NOT owner-only operations
+- **Member/Viewer** - permissions checked from JWT (included in token)
+- All invited users start as "member" with permissions from assigned RBAC roles
 
-### 2. RBAC Roles (Feature Permissions)
+**Owner-only Operations** (Admin cannot do):
+| Permission | Description |
+|------------|-------------|
+| `TeamDelete` | Delete the tenant |
+| `BillingManage` | Manage billing settings |
+| `GroupsDelete` | Delete access control groups |
+| `PermissionSetsDelete` | Delete permission sets |
+| `AssignmentRulesDelete` | Delete assignment rules |
+
+### 2. RBAC Roles (Layer 2 - Feature Permissions)
 
 Define what actions users can perform. Users can have multiple roles.
 **This is the ONLY source of permissions** (except Owner who has full access).
@@ -70,7 +126,7 @@ User's permissions = Union of selected role permissions
 
 **Note:** There is NO membership level selection in the invite UI. All invited users are "member". Permissions are determined entirely by RBAC roles.
 
-### 3. Groups (Data Scope)
+### 3. Groups (Layer 3 - Data Scope)
 
 Organize users and control access to **data** (assets, findings).
 
@@ -90,19 +146,41 @@ Organize users and control access to **data** (assets, findings).
 - **Assets**: Assets owned by the group (primary, shared ownership)
 - **Data Scope**: Members can only see data related to group's assets
 
+## Permission Naming Convention
+
+Permissions follow a hierarchical naming pattern:
+
+```
+{module}:{subfeature}:{action}
+```
+
+Examples:
+- `integrations:scm:read` - View SCM connections
+- `assets:groups:write` - Manage asset groups
+- `team:roles:assign` - Assign roles to users
+
+For simpler permissions:
+```
+{module}:{action}
+```
+
+Examples:
+- `dashboard:read`, `assets:read`, `findings:write`
+
 ## Permission Categories
 
 The system has 150+ granular permissions organized in modules:
 
 | Module | Permissions | Description |
 |--------|-------------|-------------|
-| **Assets** | `assets:read`, `assets:write`, `assets:delete` | Asset management |
-| **Findings** | `findings:read`, `findings:write`, `findings:assign` | Vulnerability management |
-| **Scans** | `scans:read`, `scans:create`, `scans:manage` | Security scanning |
-| **Reports** | `reports:read`, `reports:create`, `reports:export` | Reporting |
-| **Team** | `team:read`, `team:invite`, `team:manage` | Team management |
-| **Roles** | `roles:read`, `roles:write`, `roles:assign` | RBAC management |
-| **Groups** | `groups:read`, `groups:write`, `groups:members` | Group management |
+| **Assets** | `assets:read`, `assets:groups:write`, `assets:repositories:read` | Asset management |
+| **Findings** | `findings:read`, `findings:vulnerabilities:write`, `findings:remediation:read` | Vulnerability management |
+| **Scans** | `scans:read`, `scans:profiles:write`, `scans:execute` | Security scanning |
+| **Team** | `team:read`, `team:members:invite`, `team:groups:members` | Team management |
+| **Integrations** | `integrations:scm:read`, `integrations:notifications:write` | External integrations |
+| **Settings** | `settings:billing:read`, `settings:sla:write` | Tenant settings |
+| **Reports** | `reports:read`, `reports:write` | Reporting |
+| **Agents** | `agents:read`, `agents:commands:write` | Agent management |
 | **Audit** | `audit:read` | Audit log access |
 | **Settings** | `settings:read`, `settings:write` | Tenant settings |
 
@@ -191,31 +269,37 @@ GET    /api/v1/me/assets                # Get current user's accessible assets
 
 ## Frontend Integration
 
-### Permission Storage (Cookie-based)
+### Permission Storage (JWT-based)
 
-Permissions are stored in cookies for efficient client-side access without API calls:
+Permissions are handled differently based on role to keep JWT under 4KB browser cookie limit:
 
-| Cookie | Purpose | Set By |
-|--------|---------|--------|
-| `app_permissions` | User's permissions array (JSON) | Server after token exchange |
+| Role | JWT Size | Permission Source |
+|------|----------|-------------------|
+| Owner/Admin | ~500B | Bypass all checks (isAdmin=true in JWT) |
+| Member | ~1.5KB | Permissions array in JWT (~42 permissions) |
+| Viewer | ~1KB | Permissions array in JWT (~25 permissions) |
 
 **Flow:**
 ```
-Login → Token Exchange → Extract permissions from JWT
-    → Store in app_permissions cookie → Client reads cookie
+Login → Token Exchange → JWT contains:
+    - isAdmin: true (for owner/admin) OR
+    - permissions: [...] (for member/viewer)
+    → Client extracts from JWT via auth store
 ```
+
+**Note:** The `app_permissions` cookie is no longer used. Permissions come directly from JWT.
 
 ### Hooks
 
 ```typescript
 // ============================================
-// PERMISSION CHECKING (Primary - from cookie)
+// PERMISSION CHECKING (from JWT)
 // ============================================
 import { usePermissions, Permission, Can } from '@/lib/permissions';
 
-const { can, canAny, canAll, permissions } = usePermissions();
+const { can, canAny, canAll, permissions, isOwner, isAdmin } = usePermissions();
 
-// Single permission check
+// Single permission check (Owner/Admin bypass automatically)
 if (can(Permission.AssetsWrite)) {
   // Show edit button
 }
@@ -228,6 +312,20 @@ if (canAny(Permission.FindingsRead, Permission.DashboardRead)) {
 // All permissions required
 if (canAll(Permission.AssetsWrite, Permission.AssetsDelete)) {
   // Show bulk actions
+}
+
+// ============================================
+// OWNER-ONLY CHECKS (for sensitive operations)
+// ============================================
+
+// Check if user is owner (for owner-only operations)
+if (isOwner()) {
+  // Show delete tenant button, billing management, etc.
+}
+
+// Check if user is admin or higher
+if (isAdmin()) {
+  // Show admin panel
 }
 
 // ============================================
@@ -282,14 +380,14 @@ export function useAssets(tenantId: string | null, filters?: AssetSearchFilters)
 | `useAssets`, `useAssetStats` | `assets:read` |
 | `useFindings`, `useFindingStats` | `findings:read` |
 | `useExposures`, `useExposureStats` | `findings:read` |
-| `useComponents`, `useComponentStats` | `components:read` |
-| `useAssetGroups`, `useGroupAssets` | `asset-groups:read` |
-| `useThreatIntelStats`, `useKEVStats` | `vulnerabilities:read` |
+| `useComponents`, `useComponentStats` | `assets:components:read` |
+| `useAssetGroups`, `useGroupAssets` | `assets:groups:read` |
+| `useThreatIntelStats`, `useKEVStats` | `findings:vulnerabilities:read` |
 | `useDashboardStats` | `dashboard:read` |
-| `useMembers`, `useMemberStats` | `members:read` |
+| `useMembers`, `useMemberStats` | `team:members:read` |
 | `useTenantSettings` | `team:read` |
-| `useRepositories` | `assets:read` |
-| `useSCMConnections` | `scm-connections:read` |
+| `useRepositories` | `assets:repositories:read` |
+| `useSCMConnections` | `integrations:scm:read` |
 
 ### Permission Guard Components
 

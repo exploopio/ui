@@ -6,6 +6,7 @@ import { ProfileDropdown } from "@/components/profile-dropdown";
 import { Search } from "@/components/search";
 import { ThemeSwitch } from "@/components/theme-switch";
 import { PageHeader } from "@/features/shared";
+import { Can, Permission, useHasPermission } from "@/lib/permissions";
 import {
   Card,
   CardContent,
@@ -224,6 +225,9 @@ function TableSkeleton() {
 }
 
 export default function ScopeConfigPage() {
+  // Permission check for write operations
+  const canWriteScope = useHasPermission(Permission.ScopeWrite);
+
   // Search & filter states
   const [targetSearch, setTargetSearch] = useState("");
   const [targetTypeFilter, setTargetTypeFilter] = useState<string>("all");
@@ -977,10 +981,12 @@ export default function ScopeConfigPage() {
                       Assets and patterns included in security assessments
                     </CardDescription>
                   </div>
-                  <Button size="sm" onClick={() => setIsAddTargetOpen(true)}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Target
-                  </Button>
+                  <Can permission={Permission.ScopeWrite}>
+                    <Button size="sm" onClick={() => setIsAddTargetOpen(true)}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Target
+                    </Button>
+                  </Can>
                 </div>
                 {/* Search & Filter */}
                 <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -1065,6 +1071,7 @@ export default function ScopeConfigPage() {
                               <Switch
                                 checked={target.status === "active"}
                                 onCheckedChange={() => toggleTargetStatus(target)}
+                                disabled={!canWriteScope}
                               />
                               <span className={`text-xs ${target.status === "active" ? "text-green-400" : "text-gray-400"}`}>
                                 {target.status}
@@ -1075,26 +1082,32 @@ export default function ScopeConfigPage() {
                             {target.created_by}
                           </TableCell>
                           <TableCell>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => openEditTarget(target)}>
-                                  <Pencil className="mr-2 h-4 w-4" />
-                                  Edit
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  className="text-red-400"
-                                  onClick={() => setDeleteTarget(target)}
-                                >
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  Remove
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            <Can permission={[Permission.ScopeWrite, Permission.ScopeDelete]}>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <Can permission={Permission.ScopeWrite}>
+                                    <DropdownMenuItem onClick={() => openEditTarget(target)}>
+                                      <Pencil className="mr-2 h-4 w-4" />
+                                      Edit
+                                    </DropdownMenuItem>
+                                  </Can>
+                                  <Can permission={Permission.ScopeDelete}>
+                                    <DropdownMenuItem
+                                      className="text-red-400"
+                                      onClick={() => setDeleteTarget(target)}
+                                    >
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      Remove
+                                    </DropdownMenuItem>
+                                  </Can>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </Can>
                           </TableCell>
                         </TableRow>
                       ))
@@ -1116,10 +1129,12 @@ export default function ScopeConfigPage() {
                       Assets and patterns excluded from security assessments
                     </CardDescription>
                   </div>
-                  <Button size="sm" onClick={() => setIsAddExclusionOpen(true)}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Exclusion
-                  </Button>
+                  <Can permission={Permission.ScopeWrite}>
+                    <Button size="sm" onClick={() => setIsAddExclusionOpen(true)}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Exclusion
+                    </Button>
+                  </Can>
                 </div>
                 {/* Search & Filter */}
                 <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -1204,6 +1219,7 @@ export default function ScopeConfigPage() {
                               <Switch
                                 checked={exclusion.status === "active"}
                                 onCheckedChange={() => toggleExclusionStatus(exclusion)}
+                                disabled={!canWriteScope}
                               />
                               <span className={`text-xs ${exclusion.status === "active" ? "text-orange-400" : "text-gray-400"}`}>
                                 {exclusion.status === "active" ? "Excluded" : "Inactive"}
@@ -1214,26 +1230,32 @@ export default function ScopeConfigPage() {
                             {exclusion.created_by}
                           </TableCell>
                           <TableCell>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => openEditExclusion(exclusion)}>
-                                  <Pencil className="mr-2 h-4 w-4" />
-                                  Edit
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  className="text-red-400"
-                                  onClick={() => setDeleteExclusion(exclusion)}
-                                >
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  Remove
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            <Can permission={[Permission.ScopeWrite, Permission.ScopeDelete]}>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <Can permission={Permission.ScopeWrite}>
+                                    <DropdownMenuItem onClick={() => openEditExclusion(exclusion)}>
+                                      <Pencil className="mr-2 h-4 w-4" />
+                                      Edit
+                                    </DropdownMenuItem>
+                                  </Can>
+                                  <Can permission={Permission.ScopeDelete}>
+                                    <DropdownMenuItem
+                                      className="text-red-400"
+                                      onClick={() => setDeleteExclusion(exclusion)}
+                                    >
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      Remove
+                                    </DropdownMenuItem>
+                                  </Can>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </Can>
                           </TableCell>
                         </TableRow>
                       ))
@@ -1255,10 +1277,12 @@ export default function ScopeConfigPage() {
                       Automated scan configurations and schedules
                     </CardDescription>
                   </div>
-                  <Button size="sm" onClick={() => setIsAddScheduleOpen(true)}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Create Schedule
-                  </Button>
+                  <Can permission={Permission.ScopeWrite}>
+                    <Button size="sm" onClick={() => setIsAddScheduleOpen(true)}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Create Schedule
+                    </Button>
+                  </Can>
                 </div>
                 {/* Search & Filter */}
                 <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -1345,35 +1369,44 @@ export default function ScopeConfigPage() {
                                 <Switch
                                   checked={schedule.enabled}
                                   onCheckedChange={() => toggleScheduleStatus(schedule)}
+                                  disabled={!canWriteScope}
                                 />
                                 <span className="text-xs capitalize">{schedule.enabled ? "Active" : "Paused"}</span>
                               </div>
                             </TableCell>
                             <TableCell>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => handleRunNow(schedule)}>
-                                    <Play className="mr-2 h-4 w-4" />
-                                    Run Now
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => openEditSchedule(schedule)}>
-                                    <Pencil className="mr-2 h-4 w-4" />
-                                    Edit
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    className="text-red-400"
-                                    onClick={() => setDeleteSchedule(schedule)}
-                                  >
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Delete
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
+                              <Can permission={[Permission.ScansExecute, Permission.ScopeWrite, Permission.ScopeDelete]}>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                      <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <Can permission={Permission.ScansExecute}>
+                                      <DropdownMenuItem onClick={() => handleRunNow(schedule)}>
+                                        <Play className="mr-2 h-4 w-4" />
+                                        Run Now
+                                      </DropdownMenuItem>
+                                    </Can>
+                                    <Can permission={Permission.ScopeWrite}>
+                                      <DropdownMenuItem onClick={() => openEditSchedule(schedule)}>
+                                        <Pencil className="mr-2 h-4 w-4" />
+                                        Edit
+                                      </DropdownMenuItem>
+                                    </Can>
+                                    <Can permission={Permission.ScopeDelete}>
+                                      <DropdownMenuItem
+                                        className="text-red-400"
+                                        onClick={() => setDeleteSchedule(schedule)}
+                                      >
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        Delete
+                                      </DropdownMenuItem>
+                                    </Can>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </Can>
                             </TableCell>
                           </TableRow>
                         );

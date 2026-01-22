@@ -35,6 +35,12 @@ type BaseNavItem = {
    * Example: 'admin' means admin and owner can see it
    */
   minRole?: string;
+  /**
+   * Module required to view this item (licensing-based).
+   * If tenant's plan doesn't include this module, item is hidden.
+   * Example: 'findings', 'scans', 'compliance'
+   */
+  module?: string;
 };
 
 // ✅ Nav item là 1 link trực tiếp (không có submenu)
