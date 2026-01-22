@@ -1,6 +1,6 @@
 {
   "name": "ui",
-  "version": "0.4.0-staging",
+  "version": "0.5.0-staging",
   "private": true,
   "scripts": {
     "dev": "next dev",
