@@ -34,7 +34,6 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { toast } from 'sonner'
-import { useTenant } from '@/context/tenant-provider'
 import { useCreateTenant } from '../api'
 import {
   createTenantSchema,
@@ -159,7 +158,6 @@ function CreateFirstTeamFormInner({ showCancel, suggestedName }: { showCancel: b
 
 function CreateAdditionalTeamFormInner({ showCancel, suggestedName }: { showCancel: boolean; suggestedName: string }) {
   const router = useRouter()
-  const { refreshTenants, switchTeam } = useTenant()
   const { trigger, isMutating } = useCreateTenant()
   const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -206,17 +204,28 @@ function CreateAdditionalTeamFormInner({ showCancel, suggestedName }: { showCanc
           description: `Welcome to ${result.name}!`,
         })
 
-        // Refresh tenants list
-        await refreshTenants()
-
-        // Switch to the new team
+        // Call switch-team API directly to set cookies, then reload
+        // This avoids race condition with refreshTenants/switchTeam
         try {
-          await switchTeam(result.id)
-          router.push('/')
-        } catch {
-          // If switch fails, just redirect to dashboard
-          router.push('/')
+          const switchResponse = await fetch('/api/auth/switch-team', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              tenant_id: result.id,
+              tenant_name: result.name,
+            }),
+          })
+
+          if (!switchResponse.ok) {
+            console.error('[CreateTeamForm] Failed to switch to new team')
+          }
+        } catch (switchError) {
+          console.error('[CreateTeamForm] Switch team error:', switchError)
         }
+
+        // Force full page reload to pick up new cookies and refresh all state
+        window.location.href = '/'
       }
     } catch (error) {
       console.error('Failed to create team:', error)
