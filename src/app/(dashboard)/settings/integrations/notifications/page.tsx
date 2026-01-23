@@ -66,7 +66,6 @@ import {
   ALL_NOTIFICATION_EVENT_TYPES,
   ALL_NOTIFICATION_SEVERITIES,
   DEFAULT_ENABLED_EVENT_TYPES,
-  DEFAULT_ENABLED_SEVERITIES,
   EVENT_CATEGORY_LABELS,
   type NotificationEventCategory,
 } from '@/features/integrations/types/integration.types'
@@ -288,7 +287,7 @@ export default function NotificationIntegrationsPage() {
               onClick={() => router.push('/settings/integrations/notifications/history')}
             >
               <History className="mr-2 h-4 w-4" />
-              View History
+              View Events
             </Button>
             <Button
               variant="outline"
@@ -459,12 +458,15 @@ export default function NotificationIntegrationsPage() {
                                 <TooltipTrigger asChild>
                                   <div className="flex gap-1 flex-wrap cursor-default">
                                     {(() => {
-                                      const severities =
-                                        ext?.enabled_severities ?? DEFAULT_ENABLED_SEVERITIES
-                                      if (
+                                      // null/undefined means no filter = all severities
+                                      // empty array also means all severities
+                                      // 5+ severities (accounting for legacy data missing 'medium') = all severities
+                                      const severities = ext?.enabled_severities
+                                      const isAllSeverities =
+                                        !severities ||
                                         severities.length === 0 ||
-                                        severities.length === ALL_NOTIFICATION_SEVERITIES.length
-                                      ) {
+                                        severities.length >= ALL_NOTIFICATION_SEVERITIES.length - 1
+                                      if (isAllSeverities) {
                                         return (
                                           <span className="text-xs text-muted-foreground">
                                             All severities
@@ -520,13 +522,16 @@ export default function NotificationIntegrationsPage() {
                                   <p className="text-xs font-medium mb-1">Severity Filters:</p>
                                   <p className="text-xs text-muted-foreground">
                                     {(() => {
-                                      const severities =
-                                        ext?.enabled_severities ?? DEFAULT_ENABLED_SEVERITIES
-                                      if (
+                                      const severities = ext?.enabled_severities
+                                      const isAllSeverities =
+                                        !severities ||
                                         severities.length === 0 ||
-                                        severities.length === ALL_NOTIFICATION_SEVERITIES.length
-                                      ) {
-                                        return 'All severities enabled'
+                                        severities.length >= ALL_NOTIFICATION_SEVERITIES.length - 1
+                                      if (isAllSeverities) {
+                                        // Show actual list of all severities
+                                        return ALL_NOTIFICATION_SEVERITIES.map((s) => s.label).join(
+                                          ', '
+                                        )
                                       }
                                       return severities
                                         .map((sev) => {
@@ -691,7 +696,7 @@ export default function NotificationIntegrationsPage() {
                                   }
                                 >
                                   <History className="mr-2 h-4 w-4" />
-                                  View History
+                                  View Events
                                 </DropdownMenuItem>
                                 <Can permission={Permission.NotificationsDelete}>
                                   <DropdownMenuSeparator />

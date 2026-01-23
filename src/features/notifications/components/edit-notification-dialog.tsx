@@ -25,7 +25,7 @@ import {
   Webhook,
   ChevronDown,
   Settings2,
-  History,
+  Mail,
 } from 'lucide-react'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Slider } from '@/components/ui/slider'
@@ -45,7 +45,6 @@ import {
 } from '@/features/integrations/types/integration.types'
 import { useTenantEventTypes } from '@/features/integrations/api/use-event-types'
 import { cn } from '@/lib/utils'
-import { NotificationHistory } from './notification-history'
 
 // Template presets for different use cases
 const TEMPLATE_PRESETS = [
@@ -106,6 +105,16 @@ const formSchema = z.object({
   message_template: z.string().max(2000).optional(),
   include_details: z.boolean(),
   min_interval_minutes: z.number().min(0).max(60),
+  // Email-specific fields
+  smtp_host: z.string().optional(),
+  smtp_port: z.number().optional(),
+  smtp_username: z.string().optional(),
+  smtp_password: z.string().optional(),
+  from_email: z.string().email().optional().or(z.literal('')),
+  from_name: z.string().optional(),
+  to_emails: z.string().optional(),
+  use_tls: z.boolean().optional(),
+  use_starttls: z.boolean().optional(),
 })
 
 type FormValues = z.infer<typeof formSchema>
@@ -139,6 +148,12 @@ const PROVIDER_CONFIG: Record<
     bgColor: 'bg-[#0088cc]/10',
     credentialLabel: 'Bot Token',
   },
+  email: {
+    icon: Mail,
+    color: 'text-blue-600',
+    bgColor: 'bg-blue-100',
+    credentialLabel: 'SMTP Password',
+  },
   webhook: {
     icon: Webhook,
     color: 'text-gray-600',
@@ -151,6 +166,7 @@ const PROVIDER_LABELS: Record<string, string> = {
   slack: 'Slack',
   teams: 'Microsoft Teams',
   telegram: 'Telegram',
+  email: 'Email (SMTP)',
   webhook: 'Custom Webhook',
 }
 
@@ -228,18 +244,32 @@ export function EditNotificationDialog({
       message_template: ext?.message_template || '',
       include_details: ext?.include_details ?? true,
       min_interval_minutes: ext?.min_interval_minutes ?? 0,
+      // Email defaults (leave empty - user must re-enter for security)
+      smtp_host: '',
+      smtp_port: 587,
+      smtp_username: '',
+      smtp_password: '',
+      from_email: '',
+      from_name: 'Rediver.io',
+      to_emails: '',
+      use_tls: false,
+      use_starttls: true,
     },
   })
 
   // Reset form when integration changes
   useEffect(() => {
     if (open) {
+      // Get metadata from integration (non-sensitive config is now stored here)
+      const metadata = integration.metadata || {}
+
       reset({
         name: integration.name,
         description: integration.description || '',
         credentials: '',
-        channel_id: ext?.channel_id || '',
-        channel_name: ext?.channel_name || '',
+        // Read chat_id and channel_name from metadata (new location)
+        channel_id: (metadata.chat_id as string) || '',
+        channel_name: (metadata.channel_name as string) || '',
         // Severity defaults
         enabled_severities: ext?.enabled_severities ?? [...DEFAULT_ENABLED_SEVERITIES],
         // Event type defaults - use filtered defaults based on enabled modules
@@ -248,6 +278,18 @@ export function EditNotificationDialog({
         message_template: ext?.message_template || '',
         include_details: ext?.include_details ?? true,
         min_interval_minutes: ext?.min_interval_minutes ?? 0,
+        // Email config from metadata (non-sensitive fields)
+        smtp_host: (metadata.smtp_host as string) || '',
+        smtp_port: (metadata.smtp_port as number) || 587,
+        smtp_username: '', // Sensitive - leave empty
+        smtp_password: '', // Sensitive - leave empty
+        from_email: (metadata.from_email as string) || '',
+        from_name: (metadata.from_name as string) || 'Rediver.io',
+        to_emails: Array.isArray(metadata.to_emails)
+          ? (metadata.to_emails as string[]).join(', ')
+          : '',
+        use_tls: (metadata.use_tls as boolean) || false,
+        use_starttls: (metadata.use_starttls as boolean) ?? true,
       })
       // Open advanced section if any advanced settings are configured
       setAdvancedOpen(!!(ext?.message_template || ext?.min_interval_minutes))
@@ -260,13 +302,46 @@ export function EditNotificationDialog({
 
   const onSubmit = async (data: FormValues) => {
     try {
+      // Build credentials based on provider
+      let credentials: string | undefined = data.credentials || undefined
+
+      // For email provider, build JSON credentials only if any email field is filled
+      if (integration.provider === 'email') {
+        const hasEmailChanges =
+          data.smtp_host ||
+          data.smtp_username ||
+          data.smtp_password ||
+          data.from_email ||
+          data.to_emails
+
+        if (hasEmailChanges) {
+          const toEmailsList = (data.to_emails || '')
+            .split(',')
+            .map((e) => e.trim())
+            .filter((e) => e.length > 0)
+
+          credentials = JSON.stringify({
+            smtp_host: data.smtp_host,
+            smtp_port: data.smtp_port,
+            username: data.smtp_username,
+            password: data.smtp_password,
+            from_email: data.from_email,
+            from_name: data.from_name,
+            to_emails: toEmailsList.length > 0 ? toEmailsList : undefined,
+            use_tls: data.use_tls,
+            use_starttls: data.use_starttls,
+            skip_verify: false,
+          })
+        }
+      }
+
       const response = await fetch(`/api/v1/integrations/${integration.id}/notification`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: data.name,
           description: data.description,
-          credentials: data.credentials || undefined,
+          credentials,
           channel_id: data.channel_id,
           channel_name: data.channel_name,
           // Severity filters (dynamic JSONB array)
@@ -324,17 +399,124 @@ export function EditNotificationDialog({
               {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="credentials">
-                {providerConfig.credentialLabel} (leave empty to keep current)
-              </Label>
-              <Input
-                id="credentials"
-                type="password"
-                placeholder="Enter new value to update..."
-                {...register('credentials')}
-              />
-            </div>
+            {/* Non-email providers: single credential field */}
+            {integration.provider !== 'email' && (
+              <div className="space-y-2">
+                <Label htmlFor="credentials">
+                  {providerConfig.credentialLabel} (leave empty to keep current)
+                </Label>
+                <Input
+                  id="credentials"
+                  type="password"
+                  placeholder="Enter new value to update..."
+                  {...register('credentials')}
+                />
+              </div>
+            )}
+
+            {/* Email provider: SMTP configuration fields */}
+            {integration.provider === 'email' && (
+              <div className="space-y-4 rounded-lg border p-4 bg-muted/30">
+                <p className="text-sm font-medium">
+                  SMTP Configuration (leave empty to keep current)
+                </p>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit_smtp_host">SMTP Host</Label>
+                    <Input
+                      id="edit_smtp_host"
+                      placeholder="smtp.gmail.com"
+                      {...register('smtp_host')}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit_smtp_port">Port</Label>
+                    <Input
+                      id="edit_smtp_port"
+                      type="number"
+                      placeholder="587"
+                      {...register('smtp_port', { valueAsNumber: true })}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit_smtp_username">Username</Label>
+                    <Input
+                      id="edit_smtp_username"
+                      placeholder="your@email.com"
+                      {...register('smtp_username')}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit_smtp_password">Password</Label>
+                    <Input
+                      id="edit_smtp_password"
+                      type="password"
+                      placeholder="App password"
+                      {...register('smtp_password')}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit_from_email">From Email</Label>
+                    <Input
+                      id="edit_from_email"
+                      type="email"
+                      placeholder="alerts@company.com"
+                      {...register('from_email')}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit_from_name">From Name</Label>
+                    <Input
+                      id="edit_from_name"
+                      placeholder="Rediver.io"
+                      {...register('from_name')}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit_to_emails">Recipients</Label>
+                  <Input
+                    id="edit_to_emails"
+                    placeholder="security@company.com, admin@company.com"
+                    {...register('to_emails')}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Comma-separated list of email addresses
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-6">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="edit_use_starttls"
+                      checked={watch('use_starttls')}
+                      onCheckedChange={(checked) => setValue('use_starttls', !!checked)}
+                    />
+                    <label htmlFor="edit_use_starttls" className="text-sm cursor-pointer">
+                      STARTTLS (Port 587)
+                    </label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="edit_use_tls"
+                      checked={watch('use_tls')}
+                      onCheckedChange={(checked) => setValue('use_tls', !!checked)}
+                    />
+                    <label htmlFor="edit_use_tls" className="text-sm cursor-pointer">
+                      Direct TLS (Port 465)
+                    </label>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {integration.provider === 'telegram' && (
               <div className="space-y-2">
@@ -573,15 +755,6 @@ export function EditNotificationDialog({
                 </div>
               </CollapsibleContent>
             </Collapsible>
-
-            {/* Notification History Section */}
-            <div className="pt-2 border-t">
-              <div className="flex items-center gap-2 mb-3">
-                <History className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium">Recent Notifications</span>
-              </div>
-              <NotificationHistory integrationId={integration.id} limit={5} />
-            </div>
           </div>
 
           {/* Fixed footer with buttons */}

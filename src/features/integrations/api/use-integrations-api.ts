@@ -25,7 +25,7 @@ import type {
   CreateNotificationIntegrationRequest,
   TestNotificationResponse,
   SendNotificationRequest,
-  NotificationHistoryResponse,
+  NotificationEventsResponse,
 } from '../types/integration.types'
 
 // ============================================
@@ -334,7 +334,9 @@ export function useIntegrationRepositoriesApi(
 // NOTIFICATION HOOKS
 // ============================================
 
-async function fetchNotificationIntegrations(url: string): Promise<NotificationIntegrationsResponse> {
+async function fetchNotificationIntegrations(
+  url: string
+): Promise<NotificationIntegrationsResponse> {
   return get<NotificationIntegrationsResponse>(url)
 }
 
@@ -395,9 +397,9 @@ export function useSendNotificationApi(integrationId: string) {
 }
 
 /**
- * Fetch notification history for an integration
+ * Fetch notification events for an integration (audit trail)
  */
-export function useNotificationHistoryApi(
+export function useNotificationEventsApi(
   integrationId: string | null,
   options?: { limit?: number; offset?: number },
   config?: SWRConfiguration
@@ -405,7 +407,7 @@ export function useNotificationHistoryApi(
   const { currentTenant } = useTenant()
 
   // Build URL with query params
-  let url = integrationId ? `${BASE_URL}/${integrationId}/notification-history` : null
+  let url = integrationId ? `${BASE_URL}/${integrationId}/notification-events` : null
   if (url) {
     const params = new URLSearchParams()
     if (options?.limit) params.set('limit', options.limit.toString())
@@ -416,19 +418,24 @@ export function useNotificationHistoryApi(
 
   const key = currentTenant && integrationId ? url : null
 
-  return useSWR<NotificationHistoryResponse>(key, (u: string) => get<NotificationHistoryResponse>(u), {
-    ...defaultConfig,
-    ...config,
-  })
+  return useSWR<NotificationEventsResponse>(
+    key,
+    (u: string) => get<NotificationEventsResponse>(u),
+    {
+      ...defaultConfig,
+      ...config,
+    }
+  )
 }
 
 /**
- * Invalidate notification history cache
+ * Invalidate notification events cache
  */
-export async function invalidateNotificationHistoryCache(integrationId: string) {
+export async function invalidateNotificationEventsCache(integrationId: string) {
   const { mutate } = await import('swr')
   await mutate(
-    (key) => typeof key === 'string' && key.includes(`/integrations/${integrationId}/notification-history`),
+    (key) =>
+      typeof key === 'string' && key.includes(`/integrations/${integrationId}/notification-events`),
     undefined,
     { revalidate: true }
   )

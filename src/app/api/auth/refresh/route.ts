@@ -38,6 +38,7 @@ interface BackendRefreshResponse {
 interface TenantInfo {
   id: string
   slug: string
+  name?: string
   role: string
 }
 
@@ -60,11 +61,13 @@ export async function POST(_request: NextRequest): Promise<NextResponse> {
     const tenantCookie = cookieStore.get(TENANT_COOKIE)?.value
     console.log('[Refresh] Tenant cookie:', tenantCookie ? 'present' : 'MISSING')
     let tenantId: string | undefined
+    let existingTenantName: string | undefined
 
     if (tenantCookie) {
       try {
         const tenantInfo: TenantInfo = JSON.parse(tenantCookie)
         tenantId = tenantInfo.id
+        existingTenantName = tenantInfo.name // Preserve existing name
         console.log('[Refresh] Tenant ID:', tenantId)
       } catch {
         console.error('[Refresh] Failed to parse tenant cookie')
@@ -101,8 +104,8 @@ export async function POST(_request: NextRequest): Promise<NextResponse> {
           success: false,
           error: {
             code: errorData.code || 'REFRESH_FAILED',
-            message: errorData.message || 'Token refresh failed'
-          }
+            message: errorData.message || 'Token refresh failed',
+          },
         },
         { status: response.status }
       )
@@ -154,7 +157,9 @@ export async function POST(_request: NextRequest): Promise<NextResponse> {
 
     // Check token size - warn if approaching browser cookie limit
     if (data.access_token && data.access_token.length > 3500) {
-      console.warn(`[Refresh] WARNING: Token size (${data.access_token.length} bytes) may approach browser cookie limit (4096 bytes)`)
+      console.warn(
+        `[Refresh] WARNING: Token size (${data.access_token.length} bytes) may approach browser cookie limit (4096 bytes)`
+      )
     }
 
     // Build success response
@@ -167,14 +172,16 @@ export async function POST(_request: NextRequest): Promise<NextResponse> {
         tenant_id: data.tenant_id,
         tenant_slug: data.tenant_slug,
         role: data.role,
-      }
+      },
     })
 
     // Update access token cookie
     // WARNING: Browser cookie limit is ~4096 bytes. Large JWTs will be silently rejected!
     const tokenLength = data.access_token?.length || 0
     if (tokenLength > 4000) {
-      console.warn(`[Refresh] WARNING: Token size (${tokenLength} bytes) may exceed browser cookie limit!`)
+      console.warn(
+        `[Refresh] WARNING: Token size (${tokenLength} bytes) may exceed browser cookie limit!`
+      )
     }
     clientResponse.cookies.set(ACCESS_TOKEN_COOKIE, data.access_token, {
       httpOnly: true,
@@ -195,18 +202,23 @@ export async function POST(_request: NextRequest): Promise<NextResponse> {
       })
     }
 
-    // Update tenant info cookie
-    clientResponse.cookies.set(TENANT_COOKIE, JSON.stringify({
-      id: data.tenant_id,
-      slug: data.tenant_slug,
-      role: data.role,
-    }), {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60,
-      path: '/',
-    })
+    // Update tenant info cookie (preserve existing name if available)
+    clientResponse.cookies.set(
+      TENANT_COOKIE,
+      JSON.stringify({
+        id: data.tenant_id,
+        slug: data.tenant_slug,
+        name: existingTenantName || data.tenant_slug, // Preserve name or fallback to slug
+        role: data.role,
+      }),
+      {
+        httpOnly: false,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60,
+        path: '/',
+      }
+    )
     // NOTE: Permissions NOT stored in cookie - frontend fetches via /api/v1/me/permissions
 
     return clientResponse
@@ -217,8 +229,8 @@ export async function POST(_request: NextRequest): Promise<NextResponse> {
         success: false,
         error: {
           code: 'REFRESH_FAILED',
-          message: 'Failed to refresh token'
-        }
+          message: 'Failed to refresh token',
+        },
       },
       { status: 500 }
     )

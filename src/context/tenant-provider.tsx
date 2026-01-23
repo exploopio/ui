@@ -115,7 +115,7 @@ export function TenantProvider({ children }: TenantProviderProps) {
         return
       }
 
-      const fullTenant = tenants.find(t => t.id === currentTenant.id)
+      const fullTenant = tenants.find((t) => t.id === currentTenant.id)
       if (fullTenant && (!currentTenant.name || currentTenant.name !== fullTenant.name)) {
         lastUpdatedTenantId.current = currentTenant.id
         setCurrentTenant({
@@ -128,81 +128,89 @@ export function TenantProvider({ children }: TenantProviderProps) {
   }, [currentTenant, tenants])
 
   // Switch to a different team
-  const switchTeam = React.useCallback(async (tenantId: string) => {
-    if (isSwitching) return
+  const switchTeam = React.useCallback(
+    async (tenantId: string) => {
+      if (isSwitching) return
 
-    // Find the target tenant
-    const targetTenant = tenants.find(t => t.id === tenantId)
-    if (!targetTenant) {
-      console.error('[TenantProvider] Tenant not found:', tenantId)
-      return
-    }
-
-    // Don't switch if already on this tenant
-    if (currentTenant?.id === tenantId) {
-      return
-    }
-
-    setIsSwitching(true)
-
-    try {
-      // Call the switch team API endpoint
-      const response = await fetch('/api/auth/switch-team', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          tenant_id: tenantId,
-          tenant_name: targetTenant.name, // Include name for cookie storage
-        }),
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.message || 'Failed to switch team')
+      // Find the target tenant
+      const targetTenant = tenants.find((t) => t.id === tenantId)
+      if (!targetTenant) {
+        console.error('[TenantProvider] Tenant not found:', tenantId)
+        return
       }
 
-      const data = await response.json()
-
-      // Update current tenant
-      const newTenant: CurrentTenant = {
-        id: data.data.tenant_id,
-        slug: data.data.tenant_slug,
-        name: targetTenant.name,
-        role: data.data.role as TenantRole,
-        plan: targetTenant.plan,
+      // Don't switch if already on this tenant
+      if (currentTenant?.id === tenantId) {
+        return
       }
 
-      setCurrentTenant(newTenant)
+      setIsSwitching(true)
 
-      // Update cookie (non-httpOnly for client read)
-      setCookie(TENANT_COOKIE, JSON.stringify({
-        id: newTenant.id,
-        slug: newTenant.slug,
-        role: newTenant.role,
-      }), { path: '/', maxAge: 7 * 24 * 60 * 60 })
+      try {
+        // Call the switch team API endpoint
+        const response = await fetch('/api/auth/switch-team', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            tenant_id: tenantId,
+            tenant_name: targetTenant.name, // Include name for cookie storage
+          }),
+        })
 
-      // Clear all SWR caches to force refetch with new tenant context
-      // This invalidates all cached data so components will refetch
-      await globalMutate(
-        () => true, // Match all keys
-        undefined,  // Clear data
-        { revalidate: true } // Trigger revalidation
-      )
+        if (!response.ok) {
+          const error = await response.json()
+          throw new Error(error.message || 'Failed to switch team')
+        }
 
-      // Also refresh server components
-      router.refresh()
+        const data = await response.json()
 
-      console.log('[TenantProvider] Switched to team:', newTenant.name)
-    } catch (error) {
-      console.error('[TenantProvider] Failed to switch team:', error)
-      throw error
-    } finally {
-      setIsSwitching(false)
-    }
-  }, [currentTenant, tenants, isSwitching, router, globalMutate])
+        // Update current tenant
+        const newTenant: CurrentTenant = {
+          id: data.data.tenant_id,
+          slug: data.data.tenant_slug,
+          name: targetTenant.name,
+          role: data.data.role as TenantRole,
+          plan: targetTenant.plan,
+        }
+
+        setCurrentTenant(newTenant)
+
+        // Update cookie (non-httpOnly for client read)
+        setCookie(
+          TENANT_COOKIE,
+          JSON.stringify({
+            id: newTenant.id,
+            slug: newTenant.slug,
+            name: newTenant.name,
+            role: newTenant.role,
+          }),
+          { path: '/', maxAge: 7 * 24 * 60 * 60 }
+        )
+
+        // Clear all SWR caches to force refetch with new tenant context
+        // This invalidates all cached data so components will refetch
+        await globalMutate(
+          () => true, // Match all keys
+          undefined, // Clear data
+          { revalidate: true } // Trigger revalidation
+        )
+
+        // Also refresh server components
+        router.refresh()
+
+        console.log('[TenantProvider] Switched to team:', newTenant.name)
+      } catch (error) {
+        console.error('[TenantProvider] Failed to switch team:', error)
+        throw error
+      } finally {
+        setIsSwitching(false)
+      }
+    },
+    [currentTenant, tenants, isSwitching, router, globalMutate]
+  )
 
   // Refresh tenants
   const refreshTenants = React.useCallback(async () => {
@@ -211,23 +219,31 @@ export function TenantProvider({ children }: TenantProviderProps) {
   }, [mutate])
 
   // Update current tenant info (name, slug) without full reload
-  const updateCurrentTenant = React.useCallback((updates: Partial<Pick<CurrentTenant, 'name' | 'slug'>>) => {
-    if (!currentTenant) return
+  const updateCurrentTenant = React.useCallback(
+    (updates: Partial<Pick<CurrentTenant, 'name' | 'slug'>>) => {
+      if (!currentTenant) return
 
-    const updatedTenant: CurrentTenant = {
-      ...currentTenant,
-      ...updates,
-    }
+      const updatedTenant: CurrentTenant = {
+        ...currentTenant,
+        ...updates,
+      }
 
-    setCurrentTenant(updatedTenant)
+      setCurrentTenant(updatedTenant)
 
-    // Update cookie with new info
-    setCookie(TENANT_COOKIE, JSON.stringify({
-      id: updatedTenant.id,
-      slug: updatedTenant.slug,
-      role: updatedTenant.role,
-    }), { path: '/', maxAge: 7 * 24 * 60 * 60 })
-  }, [currentTenant])
+      // Update cookie with new info
+      setCookie(
+        TENANT_COOKIE,
+        JSON.stringify({
+          id: updatedTenant.id,
+          slug: updatedTenant.slug,
+          name: updatedTenant.name,
+          role: updatedTenant.role,
+        }),
+        { path: '/', maxAge: 7 * 24 * 60 * 60 }
+      )
+    },
+    [currentTenant]
+  )
 
   // Load tenants on demand (for dropdown)
   const loadTenants = React.useCallback(() => {
@@ -236,23 +252,32 @@ export function TenantProvider({ children }: TenantProviderProps) {
     }
   }, [shouldEagerFetch])
 
-  const value = React.useMemo<TenantContextValue>(() => ({
-    currentTenant,
-    tenants,
-    isLoading,
-    error: error || null,
-    switchTeam,
-    isSwitching,
-    refreshTenants,
-    updateCurrentTenant,
-    loadTenants,
-  }), [currentTenant, tenants, isLoading, error, switchTeam, isSwitching, refreshTenants, updateCurrentTenant, loadTenants])
-
-  return (
-    <TenantContext.Provider value={value}>
-      {children}
-    </TenantContext.Provider>
+  const value = React.useMemo<TenantContextValue>(
+    () => ({
+      currentTenant,
+      tenants,
+      isLoading,
+      error: error || null,
+      switchTeam,
+      isSwitching,
+      refreshTenants,
+      updateCurrentTenant,
+      loadTenants,
+    }),
+    [
+      currentTenant,
+      tenants,
+      isLoading,
+      error,
+      switchTeam,
+      isSwitching,
+      refreshTenants,
+      updateCurrentTenant,
+      loadTenants,
+    ]
   )
+
+  return <TenantContext.Provider value={value}>{children}</TenantContext.Provider>
 }
 
 // ============================================

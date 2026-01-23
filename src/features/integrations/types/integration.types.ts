@@ -808,34 +808,57 @@ export const INTEGRATION_CATEGORIES: Record<
   },
 }
 
-/**
- * Notification status
- */
-export type NotificationHistoryStatus = 'pending' | 'success' | 'failed'
+// =============================================================================
+// Notification Events (audit trail)
+// =============================================================================
 
 /**
- * Notification history entry
+ * Notification event status (final processing status)
  */
-export interface NotificationHistoryEntry {
-  id: string
+export type NotificationEventStatus = 'completed' | 'failed' | 'skipped'
+
+/**
+ * Send result for a single integration
+ */
+export interface NotificationEventSendResult {
   integration_id: string
+  name: string
+  provider: string
+  status: 'success' | 'failed'
+  message_id?: string
+  error?: string
+  sent_at: string
+}
+
+/**
+ * Notification event entry (from notification_events table)
+ */
+export interface NotificationEventEntry {
+  id: string
+  event_type: string
+  aggregate_type?: string
+  aggregate_id?: string
   title: string
   body?: string
   severity: string
   url?: string
-  status: NotificationHistoryStatus
-  message_id?: string
-  error_message?: string
-  metadata?: Record<string, unknown>
-  sent_at: string
+  status: NotificationEventStatus
+  integrations_total: number
+  integrations_matched: number
+  integrations_succeeded: number
+  integrations_failed: number
+  send_results: NotificationEventSendResult[]
+  last_error?: string
+  retry_count: number
   created_at: string
+  processed_at: string
 }
 
 /**
- * Notification history response with pagination
+ * Notification events response with pagination
  */
-export interface NotificationHistoryResponse {
-  data: NotificationHistoryEntry[]
+export interface NotificationEventsResponse {
+  data: NotificationEventEntry[]
   total: number
   limit: number
   offset: number

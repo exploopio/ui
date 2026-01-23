@@ -4,53 +4,61 @@ import { formatDistanceToNow } from 'date-fns'
 import {
   CheckCircle2,
   XCircle,
-  Clock,
   AlertCircle,
   AlertTriangle,
   Info,
   ChevronDown,
   ExternalLink,
   RefreshCw,
+  MinusCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible'
-import { useNotificationHistoryApi, invalidateNotificationHistoryCache } from '@/features/integrations/api/use-integrations-api'
-import type { NotificationHistoryEntry, NotificationHistoryStatus } from '@/features/integrations/types/integration.types'
+  useNotificationEventsApi,
+  invalidateNotificationEventsCache,
+} from '@/features/integrations/api/use-integrations-api'
+import type {
+  NotificationEventEntry,
+  NotificationEventStatus,
+} from '@/features/integrations/types/integration.types'
 
-interface NotificationHistoryProps {
+interface NotificationEventsProps {
   integrationId: string
   limit?: number
 }
 
 const STATUS_CONFIG: Record<
-  NotificationHistoryStatus,
-  { icon: typeof CheckCircle2; color: string; label: string }
+  NotificationEventStatus,
+  { icon: typeof CheckCircle2; color: string; bgColor: string; label: string }
 > = {
-  success: {
+  completed: {
     icon: CheckCircle2,
-    color: 'text-green-500',
+    color: 'text-green-600 dark:text-green-400',
+    bgColor: 'bg-green-100 dark:bg-green-900/30',
     label: 'Sent',
   },
   failed: {
     icon: XCircle,
-    color: 'text-red-500',
+    color: 'text-red-600 dark:text-red-400',
+    bgColor: 'bg-red-100 dark:bg-red-900/30',
     label: 'Failed',
   },
-  pending: {
-    icon: Clock,
-    color: 'text-yellow-500',
-    label: 'Pending',
+  skipped: {
+    icon: MinusCircle,
+    color: 'text-gray-600 dark:text-gray-400',
+    bgColor: 'bg-gray-100 dark:bg-gray-900/30',
+    label: 'Skipped',
   },
 }
 
-const SEVERITY_CONFIG: Record<string, { icon: typeof AlertCircle; color: string; bgColor: string }> = {
+const SEVERITY_CONFIG: Record<
+  string,
+  { icon: typeof AlertCircle; color: string; bgColor: string }
+> = {
   critical: {
     icon: AlertCircle,
     color: 'text-red-700 dark:text-red-400',
@@ -73,8 +81,20 @@ const SEVERITY_CONFIG: Record<string, { icon: typeof AlertCircle; color: string;
   },
 }
 
-function NotificationHistoryItem({ entry }: { entry: NotificationHistoryEntry }) {
-  const statusConfig = STATUS_CONFIG[entry.status]
+function NotificationEventItem({ entry }: { entry: NotificationEventEntry }) {
+  // Get the first send result for this integration (already filtered by backend)
+  const sendResult = entry.send_results?.[0]
+
+  // Use the send result status if available (success/failed), otherwise fall back to event status
+  const integrationStatus =
+    sendResult?.status === 'success'
+      ? 'completed'
+      : sendResult?.status === 'failed'
+        ? 'failed'
+        : entry.status
+
+  const statusConfig =
+    STATUS_CONFIG[integrationStatus as NotificationEventStatus] || STATUS_CONFIG.completed
   const severityConfig = SEVERITY_CONFIG[entry.severity] || SEVERITY_CONFIG.medium
   const StatusIcon = statusConfig.icon
   const SeverityIcon = severityConfig.icon
@@ -88,7 +108,7 @@ function NotificationHistoryItem({ entry }: { entry: NotificationHistoryEntry })
 
       {/* Content */}
       <div className="flex-1 min-w-0 space-y-1">
-        {/* Title and Severity */}
+        {/* Title, Severity and Status */}
         <div className="flex items-start gap-2">
           <span className="font-medium text-sm truncate flex-1">{entry.title}</span>
           <Badge
@@ -98,23 +118,27 @@ function NotificationHistoryItem({ entry }: { entry: NotificationHistoryEntry })
             <SeverityIcon className="h-3 w-3 mr-1" />
             {entry.severity}
           </Badge>
+          <Badge
+            variant="outline"
+            className={cn('text-xs flex-shrink-0', statusConfig.color, statusConfig.bgColor)}
+          >
+            {statusConfig.label}
+          </Badge>
         </div>
 
         {/* Body preview */}
-        {entry.body && (
-          <p className="text-xs text-muted-foreground line-clamp-2">{entry.body}</p>
-        )}
+        {entry.body && <p className="text-xs text-muted-foreground line-clamp-2">{entry.body}</p>}
 
         {/* Error message if failed */}
-        {entry.status === 'failed' && entry.error_message && (
-          <p className="text-xs text-red-500 line-clamp-2">
-            Error: {entry.error_message}
-          </p>
+        {sendResult?.status === 'failed' && sendResult?.error && (
+          <div className="text-xs text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30 rounded px-2 py-1">
+            <span className="font-semibold">Error:</span> {sendResult.error}
+          </div>
         )}
 
         {/* Footer: time and URL */}
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span>{formatDistanceToNow(new Date(entry.sent_at), { addSuffix: true })}</span>
+          <span>{formatDistanceToNow(new Date(entry.processed_at), { addSuffix: true })}</span>
           {entry.url && (
             <>
               <span>|</span>
@@ -129,10 +153,12 @@ function NotificationHistoryItem({ entry }: { entry: NotificationHistoryEntry })
               </a>
             </>
           )}
-          {entry.message_id && (
+          {sendResult?.message_id && (
             <>
               <span>|</span>
-              <span className="font-mono text-xs opacity-60">ID: {entry.message_id.slice(0, 8)}...</span>
+              <span className="font-mono text-xs opacity-60">
+                ID: {sendResult.message_id.slice(0, 8)}...
+              </span>
             </>
           )}
         </div>
@@ -141,11 +167,11 @@ function NotificationHistoryItem({ entry }: { entry: NotificationHistoryEntry })
   )
 }
 
-export function NotificationHistory({ integrationId, limit = 10 }: NotificationHistoryProps) {
-  const { data, error, isLoading, mutate } = useNotificationHistoryApi(integrationId, { limit })
+export function NotificationEvents({ integrationId, limit = 10 }: NotificationEventsProps) {
+  const { data, error, isLoading, mutate } = useNotificationEventsApi(integrationId, { limit })
 
   const handleRefresh = async () => {
-    await invalidateNotificationHistoryCache(integrationId)
+    await invalidateNotificationEventsCache(integrationId)
     mutate()
   }
 
@@ -157,7 +183,7 @@ export function NotificationHistory({ integrationId, limit = 10 }: NotificationH
         <CollapsibleTrigger asChild>
           <Button variant="ghost" size="sm" className="gap-2 p-0 h-auto font-medium">
             <ChevronDown className="h-4 w-4 transition-transform duration-200 [&[data-state=open]>svg]:rotate-180" />
-            Notification History
+            Recent Notifications
             {history.length > 0 && (
               <Badge variant="secondary" className="ml-1">
                 {history.length}
@@ -182,13 +208,9 @@ export function NotificationHistory({ integrationId, limit = 10 }: NotificationH
       <CollapsibleContent className="space-y-2">
         <div className="border rounded-md">
           {isLoading ? (
-            <div className="p-4 text-center text-sm text-muted-foreground">
-              Loading history...
-            </div>
+            <div className="p-4 text-center text-sm text-muted-foreground">Loading...</div>
           ) : error ? (
-            <div className="p-4 text-center text-sm text-red-500">
-              Failed to load history
-            </div>
+            <div className="p-4 text-center text-sm text-red-500">Failed to load notifications</div>
           ) : history.length === 0 ? (
             <div className="p-4 text-center text-sm text-muted-foreground">
               No notifications sent yet
@@ -197,7 +219,7 @@ export function NotificationHistory({ integrationId, limit = 10 }: NotificationH
             <ScrollArea className="h-[200px]">
               <div className="p-2">
                 {history.map((entry) => (
-                  <NotificationHistoryItem key={entry.id} entry={entry} />
+                  <NotificationEventItem key={entry.id} entry={entry} />
                 ))}
               </div>
             </ScrollArea>

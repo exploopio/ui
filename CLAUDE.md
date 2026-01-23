@@ -366,13 +366,14 @@ src/features/notifications/
 ├── components/
 │   ├── add-notification-dialog.tsx    # Create new channel
 │   ├── edit-notification-dialog.tsx   # Edit channel settings
-│   └── notification-history.tsx       # View sent notifications
+│   └── notification-events.tsx        # View sent notifications
 src/features/integrations/
 ├── types/integration.types.ts         # Types & constants
 └── api/use-integrations-api.ts        # API hooks
 src/app/(dashboard)/settings/integrations/notifications/
 ├── page.tsx                           # Channel list
-└── history/page.tsx                   # Global history
+├── history/page.tsx                   # Notification events history
+└── outbox/page.tsx                    # Queue management
 ```
 
 **Types:**
@@ -389,17 +390,14 @@ import {
 
 // NotificationExtension from API
 interface NotificationExtension {
-  channel_id?: string
-  channel_name?: string
-  notify_on_critical: boolean // Severity filters
-  notify_on_high: boolean
-  notify_on_medium: boolean
-  notify_on_low: boolean
+  enabled_severities?: NotificationSeverity[] // Severity filters
   enabled_event_types?: NotificationEventType[] // Event routing
   message_template?: string // Custom template
   include_details: boolean
   min_interval_minutes: number // Rate limiting
 }
+// Note: Provider-specific config (chat_id, channel_name, smtp_host) is stored
+// in Integration.metadata (non-sensitive) and credentials (sensitive)
 ```
 
 **Hooks:**
@@ -418,8 +416,8 @@ await create({
   enabled_event_types: ['findings', 'exposures'],
 })
 
-// Get notification history
-const { data: history } = useNotificationHistoryApi(integrationId, { limit: 20 })
+// Get notification events (audit trail)
+const { data: events } = useNotificationEventsApi(integrationId, { limit: 20 })
 ```
 
 **Template Variables:**
@@ -726,4 +724,4 @@ export const config = {
 
 **Note**: Keep under 12KB. For patterns, examples, troubleshooting → see `.claude/`
 
-**Last Updated**: 2026-01-22
+**Last Updated**: 2026-01-24
