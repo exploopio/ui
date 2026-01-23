@@ -7,7 +7,7 @@ on:
     branches: [main, develop]
   schedule:
     # Run every Monday at 00:00 UTC
-    - cron: "0 0 * * 1"
+    - cron: '0 0 * * 1'
 
 permissions:
   contents: read
@@ -34,8 +34,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
-          cache: "npm"
+          node-version: '20'
+          cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
@@ -48,7 +48,7 @@ jobs:
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
         with:
-          category: "/language:javascript-typescript"
+          category: '/language:javascript-typescript'
 
   # ============================================
   # npm audit - Dependency Vulnerability Check
@@ -63,8 +63,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
-          cache: "npm"
+          node-version: '20'
+          cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
@@ -96,17 +96,17 @@ jobs:
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
-          scan-type: "fs"
-          scan-ref: "."
-          format: "sarif"
-          output: "trivy-results.sarif"
-          severity: "CRITICAL,HIGH,MEDIUM"
-          scanners: "vuln,secret,misconfig"
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+          scanners: 'vuln,secret,misconfig'
 
       - name: Upload Trivy scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: "trivy-results.sarif"
+          sarif_file: 'trivy-results.sarif'
 
   # ============================================
   # ESLint Security Rules
@@ -121,8 +121,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
-          cache: "npm"
+          node-version: '20'
+          cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
@@ -139,11 +139,15 @@ jobs:
         continue-on-error: true
 
   # ============================================
-  # Secret Scanning with Gitleaks
+  # Secret Scanning with Gitleaks (Optional)
   # ============================================
+  # Requires GITLEAKS_LICENSE secret for organizations
+  # Enable by setting repository variable ENABLE_GITLEAKS=true
+  # Note: Trivy also scans for secrets as a backup
   gitleaks:
     name: Secret Scanning
     runs-on: ubuntu-latest
+    if: ${{ vars.ENABLE_GITLEAKS == 'true' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -170,8 +174,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
-          cache: "npm"
+          node-version: '20'
+          cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
@@ -211,12 +215,12 @@ jobs:
       - name: Run Trivy vulnerability scanner on Docker image
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: "ui:scan"
-          format: "sarif"
-          output: "trivy-docker-results.sarif"
-          severity: "CRITICAL,HIGH"
+          image-ref: 'ui:scan'
+          format: 'sarif'
+          output: 'trivy-docker-results.sarif'
+          severity: 'CRITICAL,HIGH'
 
       - name: Upload Trivy Docker scan results
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: "trivy-docker-results.sarif"
+          sarif_file: 'trivy-docker-results.sarif'
