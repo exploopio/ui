@@ -308,10 +308,12 @@ export default function NotificationIntegrationsPage() {
               )}
               Refresh
             </Button>
-            <Button onClick={() => setAddDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Channel
-            </Button>
+            <Can permission={Permission.NotificationsWrite}>
+              <Button onClick={() => setAddDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Channel
+              </Button>
+            </Can>
           </div>
         </PageHeader>
 
@@ -385,10 +387,12 @@ export default function NotificationIntegrationsPage() {
                   Add Slack, Microsoft Teams, Telegram, or webhook integrations to receive security
                   alerts.
                 </p>
-                <Button onClick={() => setAddDialogOpen(true)}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Your First Channel
-                </Button>
+                <Can permission={Permission.NotificationsWrite}>
+                  <Button onClick={() => setAddDialogOpen(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Your First Channel
+                  </Button>
+                </Can>
               </div>
             ) : (
               <div className="rounded-md border">

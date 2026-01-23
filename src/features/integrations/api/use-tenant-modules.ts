@@ -26,6 +26,16 @@ import type { NotificationEventType } from '../types/integration.types'
 export type ReleaseStatus = 'released' | 'coming_soon' | 'beta' | 'deprecated'
 
 /**
+ * Permission belonging to a module
+ */
+export interface ModulePermission {
+  id: string // Permission ID like "iocs:read", "threat_intel:write"
+  module_id: string // Module ID like "threat_intel", "assets"
+  name: string // Human-readable name
+  description?: string
+}
+
+/**
  * Licensing module from backend
  */
 export interface LicensingModule {
@@ -39,6 +49,8 @@ export interface LicensingModule {
   is_active: boolean
   release_status: ReleaseStatus
   event_types?: string[]
+  /** Permissions that belong to this module - used for access control */
+  permissions?: ModulePermission[]
 }
 
 /**

@@ -16,6 +16,8 @@ import { useMyTenants, invalidateMyTenantsCache } from '@/lib/api/user-tenant-ho
 import type { TenantMembership, TenantRole } from '@/lib/api/user-tenant-types'
 import { getCookie, setCookie, removeCookie } from '@/lib/cookies'
 import { env } from '@/lib/env'
+import { removeStoredPermissions } from '@/lib/permission-storage'
+import { clearAllLogoCaches, clearTenantLogoCache } from '@/lib/logo-storage'
 
 // ============================================
 // TYPES
@@ -166,6 +168,15 @@ export function TenantProvider({ children }: TenantProviderProps) {
         }
 
         const data = await response.json()
+
+        // Clear cached data of old tenant from localStorage
+        if (currentTenant?.id) {
+          removeStoredPermissions(currentTenant.id)
+          clearTenantLogoCache(currentTenant.id)
+        }
+
+        // Clear all logo caches to ensure fresh logo for new tenant
+        clearAllLogoCaches()
 
         // Update current tenant
         const newTenant: CurrentTenant = {

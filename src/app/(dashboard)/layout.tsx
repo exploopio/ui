@@ -6,6 +6,7 @@ import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { AppSidebar, TenantGate } from '@/components/layout'
 import { SkipToMain } from '@/components/skip-to-main'
 import { DashboardProviders } from '@/components/layout/dashboard-providers'
+import { RouteGuard } from '@/components/route-guard'
 
 type SiteLayoutProps = {
   children?: React.ReactNode
@@ -35,10 +36,12 @@ export default function SiteLayout({ children }: SiteLayoutProps) {
 
                   // If layout is fixed and sidebar is inset,
                   // set the height to 100svh - spacing (total margins) to prevent overflow
-                  'peer-data-[variant=floating]:has-[[data-layout=fixed]]:h-[calc(100svh-(var(--spacing)*4))]',
+                  'peer-data-[variant=floating]:has-[[data-layout=fixed]]:h-[calc(100svh-(var(--spacing)*4))]'
                 )}
               >
-                {children}
+                {/* RouteGuard checks if user has permission to access current route */}
+                {/* Shows "Access Denied" page if user doesn't have required permission */}
+                <RouteGuard>{children}</RouteGuard>
               </SidebarInset>
             </SidebarProvider>
           </TenantGate>

@@ -24,6 +24,8 @@ import {
   type AuthUser,
   type AuthStatus,
 } from '@/lib/keycloak'
+import { clearAllStoredPermissions } from '@/lib/permission-storage'
+import { clearAllLogoCaches } from '@/lib/logo-storage'
 
 // ============================================
 // TYPES
@@ -137,6 +139,10 @@ export const useAuthStore = create<AuthState>()(
           error: null,
         })
 
+        // Clear stored permissions and logo caches from localStorage
+        clearAllStoredPermissions()
+        clearAllLogoCaches()
+
         // Redirect to Keycloak logout
         // This will also clear the HttpOnly refresh token cookie
         redirectToLogout({
@@ -192,6 +198,10 @@ export const useAuthStore = create<AuthState>()(
           expiresAt: null,
           error: null,
         })
+
+        // Clear stored permissions and logo caches from localStorage
+        clearAllStoredPermissions()
+        clearAllLogoCaches()
       },
 
       /**
@@ -320,7 +330,10 @@ function setupTokenRefresh(expiresIn: number): void {
           useAuthStore.getState().updateToken(data.data.access_token)
         } else {
           // Refresh failed permanently - set flag and redirect
-          console.warn('[Auth] Token refresh failed permanently:', data.error?.message || 'Unknown error')
+          console.warn(
+            '[Auth] Token refresh failed permanently:',
+            data.error?.message || 'Unknown error'
+          )
           authPermanentlyFailed = true
           useAuthStore.getState().clearAuth()
           redirectToLogin()
@@ -365,8 +378,7 @@ export const useAuthStatus = () => useAuthStore((state) => state.status)
 /**
  * Select only if authenticated (computed)
  */
-export const useIsAuthenticated = () =>
-  useAuthStore((state) => state.isAuthenticated())
+export const useIsAuthenticated = () => useAuthStore((state) => state.isAuthenticated())
 
 /**
  * Select user roles

@@ -4,7 +4,7 @@
  * Permission & Role Hooks
  *
  * React hooks for checking user permissions and roles in components.
- * Permissions and roles are extracted from the user's JWT token.
+ * Permissions are now fetched from the PermissionProvider (real-time sync).
  *
  * Use permissions for granular feature access (e.g., "can write assets")
  * Use roles for high-level access checks (e.g., "is owner or admin")
@@ -13,24 +13,16 @@
 import { useMemo } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
 import { useTenant } from '@/context/tenant-provider'
-import { type PermissionString, type RoleString, Role, isRoleAtLeast, RolePermissions } from './constants'
+import { usePermissionsSafe } from '@/context/permission-provider'
+import {
+  type PermissionString,
+  type RoleString,
+  Role,
+  isRoleAtLeast,
+  RolePermissions,
+} from './constants'
 
-/**
- * Read permissions from cookie (LEGACY - no longer used)
- *
- * NOTE: Permissions are no longer stored in cookies due to 4KB browser limit.
- * - Owner/Admin users: bypass permission checks (have all permissions)
- * - Other users: permissions derived from RolePermissions or fetched from API
- *
- * This function is kept for backward compatibility but will always return empty.
- * @deprecated No longer used - permissions not stored in cookie
- */
-function getPermissionsFromCookie(): string[] {
-  // Permissions cookie is no longer set (too large, > 4KB limit)
-  // Owner/admin users bypass permission checks
-  // Other users use RolePermissions fallback
-  return []
-}
+// Cookie-based permissions removed - now using PermissionProvider for real-time sync
 
 /**
  * Hook to access permissions, roles, and check functions
@@ -55,42 +47,55 @@ export function usePermissions() {
   const user = useAuthStore((state) => state.user)
   const { currentTenant } = useTenant()
 
+  // Get permissions from the new PermissionProvider (real-time sync)
+  // usePermissionsSafe returns empty array when outside PermissionProvider
+  const { permissions: providerPermissions, isLoading: permissionsLoading } = usePermissionsSafe()
+
   // Get tenant role from auth store first, then fall back to tenant context
   // This is needed because the auth store may be empty when the page first loads
   // (access token is in httpOnly cookie, not directly accessible by JS)
   const tenantRole = user?.tenantRole || currentTenant?.role
 
   // Get permissions - priority order:
-  // 1. From JWT token (user.permissions) - most accurate, includes RBAC permissions
-  // 2. From permissions cookie (set during token refresh) - for initial page load
-  // 3. Derive from predefined role (owner/admin/member/viewer) - fallback for old tokens
-  // 4. Empty array - will filter normally, may show nothing if no permissions
+  // 1. From PermissionProvider (real-time sync from API) - THE SOURCE OF TRUTH
+  // 2. From JWT token (user.permissions) - only if PermissionProvider not available
+  // 3. Empty array - no fallback to RolePermissions to avoid showing stale UI
+  //
+  // IMPORTANT: We removed the RolePermissions fallback because:
+  // - It caused stale UI when user's RBAC permissions were revoked
+  // - The predefined RolePermissions for 'member' had many permissions by default
+  // - PermissionProvider should be the only source of truth for RBAC
   const permissions = useMemo(() => {
-    // Priority 1: Use permissions from JWT token (auth store)
-    // This is the source of truth for RBAC - includes all permissions from assigned roles
+    // Priority 1: Use permissions from PermissionProvider (real-time sync)
+    // This is the source of truth for RBAC - synced from Redis cache
+    // Even if empty, trust it (user might have no permissions assigned)
+    if (providerPermissions.length > 0) {
+      return providerPermissions
+    }
+
+    // If PermissionProvider is done loading but returned empty,
+    // that means user truly has no permissions - don't fallback
+    if (!permissionsLoading && providerPermissions.length === 0) {
+      // Check if we're inside PermissionProvider context
+      // If permissionsLoading was ever set, we're inside the provider
+      // Return empty to respect the API response
+      return []
+    }
+
+    // Priority 2: Use permissions from JWT token (auth store)
+    // Only used when PermissionProvider is still loading or not available
     if (user?.permissions && user.permissions.length > 0) {
       return user.permissions
     }
 
-    // Priority 2: Read from permissions cookie (set during token refresh)
-    // This handles the case where page loads before auth store is populated
-    const cookiePermissions = getPermissionsFromCookie()
-    if (cookiePermissions.length > 0) {
-      return cookiePermissions
-    }
-
-    // Priority 3: Derive from predefined membership role (owner/admin/member/viewer)
-    // This is a fallback for backward compatibility with old tokens without permissions array
-    // Note: tenantRole from JWT might be a custom RBAC role name (e.g., "test"),
-    // which won't be in RolePermissions - that's OK, we'll return empty array
-    if (tenantRole && RolePermissions[tenantRole as RoleString]) {
-      return RolePermissions[tenantRole as RoleString]
-    }
-
-    // Priority 4: No permissions available
-    // This happens when user hasn't logged in yet or cookie hasn't been set
+    // Priority 3: No permissions available
+    // This happens when:
+    // - User hasn't logged in yet
+    // - PermissionProvider is still loading
+    // - No permissions in JWT token
+    // We intentionally do NOT fallback to RolePermissions anymore
     return []
-  }, [user, tenantRole])
+  }, [providerPermissions, user, permissionsLoading])
 
   // ============================================
   // PERMISSION CHECKS
@@ -98,37 +103,29 @@ export function usePermissions() {
 
   /**
    * Check if user has a specific permission
-   * Owner and Admin bypass permission checks - they have (almost) all permissions
-   * For owner-only operations (team delete, billing), check isOwner() separately
-   * Member/Viewer/Custom roles use permissions from API
+   *
+   * IMPORTANT: No longer bypasses for Owner/Admin!
+   * Permissions are now the source of truth from the API.
+   * Owner role has 215 permissions, Admin has 213 - they don't need bypass.
+   * This ensures RBAC is properly enforced and custom roles work correctly.
+   *
+   * For owner-only operations (team delete, billing), check isOwner() separately.
    */
   const can = (permission: PermissionString | string): boolean => {
-    // Owner and admin bypass permission checks
-    if (tenantRole === Role.Owner || tenantRole === Role.Admin) {
-      return true
-    }
     return permissions.includes(permission)
   }
 
   /**
    * Check if user has any of the specified permissions
-   * Owner and Admin bypass (have almost all permissions)
    */
   const canAny = (...perms: (PermissionString | string)[]): boolean => {
-    if (tenantRole === Role.Owner || tenantRole === Role.Admin) {
-      return true
-    }
     return perms.some((p) => permissions.includes(p))
   }
 
   /**
    * Check if user has all of the specified permissions
-   * Owner and Admin bypass (have almost all permissions)
    */
   const canAll = (...perms: (PermissionString | string)[]): boolean => {
-    if (tenantRole === Role.Owner || tenantRole === Role.Admin) {
-      return true
-    }
     return perms.every((p) => permissions.includes(p))
   }
 
@@ -204,6 +201,9 @@ export function usePermissions() {
     permissions,
     tenantId: user?.tenantId || currentTenant?.id,
     tenantRole,
+
+    // Loading state - true when permissions are still being fetched
+    isLoading: permissionsLoading,
 
     // Permission checks
     can,

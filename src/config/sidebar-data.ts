@@ -473,8 +473,8 @@ export const sidebarData: SidebarData = {
               title: 'General',
               url: '/settings/tenant',
               icon: Building,
-              // Only admin and owner can modify tenant settings
-              minRole: Role.Admin,
+              // Requires team:update permission to modify tenant settings
+              permission: Permission.TeamUpdate,
             },
             {
               title: 'Members',
@@ -486,22 +486,21 @@ export const sidebarData: SidebarData = {
               title: 'Roles',
               url: '/settings/roles',
               icon: Key,
+              // Requires roles:read permission (RBAC-based access)
               permission: Permission.RolesRead,
-              minRole: Role.Admin,
             },
             {
               title: 'Teams',
               url: '/settings/access-control/groups',
               icon: FolderKey,
+              // Requires groups:read permission (RBAC-based access)
               permission: Permission.GroupsRead,
-              minRole: Role.Admin,
             },
             {
               title: 'Audit Log',
               url: '/settings/audit',
               icon: History,
-              // Audit log is restricted to admin and owner, and requires audit module
-              minRole: Role.Admin,
+              // Requires audit:read permission and audit module
               permission: Permission.AuditRead,
               module: 'audit',
             },
@@ -509,7 +508,7 @@ export const sidebarData: SidebarData = {
               title: 'Billing',
               url: '/settings/billing',
               icon: CreditCard,
-              minRole: Role.Admin,
+              // Requires billing:read permission
               permission: Permission.BillingRead,
             },
           ],
@@ -517,8 +516,8 @@ export const sidebarData: SidebarData = {
         {
           title: 'Integrations',
           icon: Puzzle,
-          // Integrations management requires admin or higher and integrations module
-          minRole: Role.Admin,
+          // Integrations management requires integrations:read permission and integrations module
+          // RBAC-based access - no minRole restriction
           permission: Permission.IntegrationsRead,
           module: 'integrations',
           items: [

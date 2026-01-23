@@ -37,20 +37,10 @@
  * ```
  */
 
-import {
-  type ReactNode,
-  type ReactElement,
-  cloneElement,
-  isValidElement,
-  Children,
-} from 'react'
+import { type ReactNode, type ReactElement, cloneElement, isValidElement, Children } from 'react'
 import { usePermissions } from './hooks'
 import { type PermissionString, getPermissionLabel } from './constants'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 // ============================================
 // TYPES
@@ -120,9 +110,7 @@ type CanProps = CanHideModeProps | CanDisableModeProps
 function isDisableableElement(element: ReactElement): boolean {
   // Check if it's a native HTML element that supports disabled
   if (typeof element.type === 'string') {
-    return ['button', 'input', 'select', 'textarea', 'fieldset'].includes(
-      element.type
-    )
+    return ['button', 'input', 'select', 'textarea', 'fieldset'].includes(element.type)
   }
   // For custom components, we assume they accept disabled prop
   return true
@@ -222,7 +210,20 @@ function DisabledWrapper({ children, tooltip }: DisabledWrapperProps) {
  */
 export function Can(props: CanProps): ReactNode {
   const { permission, requireAll = false, children, mode = 'hide' } = props
-  const { can, canAny, canAll } = usePermissions()
+  const { can, canAny, canAll, isLoading, tenantRole } = usePermissions()
+
+  // While permissions are loading, hide content by default
+  // Exception: owner/admin bypass (they always have access)
+  const isOwnerOrAdmin = tenantRole === 'owner' || tenantRole === 'admin'
+  if (isLoading && !isOwnerOrAdmin) {
+    // For disable mode, show disabled state while loading
+    if (mode === 'disable') {
+      const tooltip = 'Loading permissions...'
+      return <DisabledWrapper tooltip={tooltip}>{children}</DisabledWrapper>
+    }
+    // For hide mode, don't render anything while loading
+    return (props as CanHideModeProps).fallback ?? null
+  }
 
   // Check permission
   let hasPermission: boolean

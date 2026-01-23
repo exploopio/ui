@@ -1,6 +1,6 @@
-"use client";
+'use client'
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback } from 'react'
 import {
   ColumnDef,
   flexRender,
@@ -10,23 +10,17 @@ import {
   getSortedRowModel,
   SortingState,
   useReactTable,
-} from "@tanstack/react-table";
-import { Header, Main } from "@/components/layout";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { PageHeader } from "@/features/shared";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+} from '@tanstack/react-table'
+import { Header, Main } from '@/components/layout'
+import { ProfileDropdown } from '@/components/profile-dropdown'
+import { Search } from '@/components/search'
+import { ThemeSwitch } from '@/components/theme-switch'
+import { PageHeader } from '@/features/shared'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -34,7 +28,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from '@/components/ui/table'
 import {
   Dialog,
   DialogContent,
@@ -42,17 +36,17 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "sonner";
-import { Can, Permission } from "@/lib/permissions";
+} from '@/components/ui/dropdown-menu'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { toast } from 'sonner'
+import { Can, Permission } from '@/lib/permissions'
 import {
   Plus,
   Shield,
@@ -74,8 +68,8 @@ import {
   Lock,
   Key,
   Database,
-} from "lucide-react";
-import { useSWRConfig } from "swr";
+} from 'lucide-react'
+import { useSWRConfig } from 'swr'
 import {
   useRoles,
   useDeleteRole,
@@ -85,98 +79,109 @@ import {
   RoleDetailSheet,
   EditRoleSheet,
   filterPermissionsByTenantModules,
-} from "@/features/access-control";
-import { useTenantModules } from "@/features/integrations/api/use-tenant-modules";
+} from '@/features/access-control'
+import { useTenantModules } from '@/features/integrations/api/use-tenant-modules'
 
-type TypeFilter = "all" | "system" | "custom";
+type TypeFilter = 'all' | 'system' | 'custom'
 
 const typeFilters: { value: TypeFilter; label: string; icon: React.ReactNode }[] = [
-  { value: "all", label: "All Roles", icon: <Shield className="h-4 w-4" /> },
-  { value: "system", label: "System", icon: <Lock className="h-4 w-4" /> },
-  { value: "custom", label: "Custom", icon: <Key className="h-4 w-4" /> },
-];
+  { value: 'all', label: 'All Roles', icon: <Shield className="h-4 w-4" /> },
+  { value: 'system', label: 'System', icon: <Lock className="h-4 w-4" /> },
+  { value: 'custom', label: 'Custom', icon: <Key className="h-4 w-4" /> },
+]
 
 const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-};
+  return new Date(dateString).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
+}
 
 // Get icon for role based on slug
 const getRoleIcon = (slug: string, isSystem: boolean) => {
-  if (!isSystem) return Key;
+  if (!isSystem) return Key
   switch (slug) {
-    case "owner": return Crown;
-    case "admin": return ShieldCheck;
-    case "member": return User;
-    case "viewer": return Eye;
-    default: return Shield;
+    case 'owner':
+      return Crown
+    case 'admin':
+      return ShieldCheck
+    case 'member':
+      return User
+    case 'viewer':
+      return Eye
+    default:
+      return Shield
   }
-};
+}
 
 export default function RolesPage() {
-  const { mutate } = useSWRConfig();
+  const { mutate } = useSWRConfig()
 
   // API Hooks
-  const { roles, isLoading, isError, mutate: mutateRoles } = useRoles();
-  const { moduleIds: enabledModuleIds } = useTenantModules();
+  const { roles, isLoading, isError, mutate: mutateRoles } = useRoles()
+  const { moduleIds: enabledModuleIds } = useTenantModules()
 
   // Helper to get filtered permission count based on tenant's modules
-  const getFilteredPermissionCount = useCallback((role: Role) => {
-    if (!enabledModuleIds.length) return role.permission_count;
-    return filterPermissionsByTenantModules(role.permissions, enabledModuleIds).length;
-  }, [enabledModuleIds]);
+  const getFilteredPermissionCount = useCallback(
+    (role: Role) => {
+      if (!enabledModuleIds.length) return role.permission_count
+      return filterPermissionsByTenantModules(role.permissions, enabledModuleIds).length
+    },
+    [enabledModuleIds]
+  )
 
   // UI State
-  const [selectedRole, setSelectedRole] = useState<Role | null>(null);
-  const [createSheetOpen, setCreateSheetOpen] = useState(false);
-  const [editRole, setEditRole] = useState<Role | null>(null);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [roleToDelete, setRoleToDelete] = useState<Role | null>(null);
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [globalFilter, setGlobalFilter] = useState("");
-  const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
-  const [rowSelection, setRowSelection] = useState({});
+  const [selectedRole, setSelectedRole] = useState<Role | null>(null)
+  const [createSheetOpen, setCreateSheetOpen] = useState(false)
+  const [editRole, setEditRole] = useState<Role | null>(null)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [roleToDelete, setRoleToDelete] = useState<Role | null>(null)
+  const [sorting, setSorting] = useState<SortingState>([])
+  const [globalFilter, setGlobalFilter] = useState('')
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
+  const [rowSelection, setRowSelection] = useState({})
 
   // Delete hook
-  const { deleteRole, isDeleting } = useDeleteRole(roleToDelete?.id || null);
+  const { deleteRole, isDeleting } = useDeleteRole(roleToDelete?.id || null)
 
   // Refresh data
   const refreshData = useCallback(() => {
-    mutateRoles();
-  }, [mutateRoles]);
+    mutateRoles()
+  }, [mutateRoles])
 
   // Filter data
   const filteredData = useMemo(() => {
-    let data = [...roles];
+    let data = [...roles]
 
-    if (typeFilter === "system") {
-      data = data.filter((role) => role.is_system);
-    } else if (typeFilter === "custom") {
-      data = data.filter((role) => !role.is_system);
+    if (typeFilter === 'system') {
+      data = data.filter((role) => role.is_system)
+    } else if (typeFilter === 'custom') {
+      data = data.filter((role) => !role.is_system)
     }
 
-    return data;
-  }, [roles, typeFilter]);
+    return data
+  }, [roles, typeFilter])
 
   // Type counts
-  const typeCounts = useMemo(() => ({
-    all: roles.length,
-    system: roles.filter((r) => r.is_system).length,
-    custom: roles.filter((r) => !r.is_system).length,
-  }), [roles]);
+  const typeCounts = useMemo(
+    () => ({
+      all: roles.length,
+      system: roles.filter((r) => r.is_system).length,
+      custom: roles.filter((r) => !r.is_system).length,
+    }),
+    [roles]
+  )
 
   // Table columns
   const columns: ColumnDef<Role>[] = [
     {
-      id: "select",
+      id: 'select',
       header: ({ table }) => (
         <Checkbox
           checked={
             table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && "indeterminate")
+            (table.getIsSomePageRowsSelected() && 'indeterminate')
           }
           onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
           aria-label="Select all"
@@ -194,11 +199,11 @@ export default function RolesPage() {
       enableHiding: false,
     },
     {
-      accessorKey: "name",
+      accessorKey: 'name',
       header: ({ column }) => (
         <Button
           variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           className="-ml-4"
         >
           Role
@@ -206,8 +211,8 @@ export default function RolesPage() {
         </Button>
       ),
       cell: ({ row }) => {
-        const config = getRoleConfig(row.original.slug, row.original.is_system);
-        const Icon = getRoleIcon(row.original.slug, row.original.is_system);
+        const config = getRoleConfig(row.original.slug, row.original.is_system)
+        const Icon = getRoleIcon(row.original.slug, row.original.is_system)
         return (
           <div className="flex items-center gap-3">
             <div className={`p-2 rounded-lg ${config.bgColor}`}>
@@ -217,20 +222,24 @@ export default function RolesPage() {
               <div className="flex items-center gap-2">
                 <p className="font-medium">{row.original.name}</p>
                 {row.original.is_system && (
-                  <Badge variant="outline" className="text-xs">System</Badge>
+                  <Badge variant="outline" className="text-xs">
+                    System
+                  </Badge>
                 )}
               </div>
               {row.original.description && (
-                <p className="text-muted-foreground text-xs line-clamp-1">{row.original.description}</p>
+                <p className="text-muted-foreground text-xs line-clamp-1">
+                  {row.original.description}
+                </p>
               )}
             </div>
           </div>
-        );
+        )
       },
     },
     {
-      accessorKey: "permission_count",
-      header: "Permissions",
+      accessorKey: 'permission_count',
+      header: 'Permissions',
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
           <Shield className="h-4 w-4 text-muted-foreground" />
@@ -239,11 +248,11 @@ export default function RolesPage() {
       ),
     },
     {
-      accessorKey: "has_full_data_access",
-      header: "Data Access",
+      accessorKey: 'has_full_data_access',
+      header: 'Data Access',
       cell: ({ row }) => (
         <Badge
-          variant={row.original.has_full_data_access ? "default" : "secondary"}
+          variant={row.original.has_full_data_access ? 'default' : 'secondary'}
           className="text-xs"
         >
           {row.original.has_full_data_access ? (
@@ -252,29 +261,29 @@ export default function RolesPage() {
               Full Access
             </>
           ) : (
-            "Group-based"
+            'Group-based'
           )}
         </Badge>
       ),
     },
     {
-      accessorKey: "hierarchy_level",
-      header: "Level",
+      accessorKey: 'hierarchy_level',
+      header: 'Level',
       cell: ({ row }) => (
         <span className="text-muted-foreground text-sm">{row.original.hierarchy_level}</span>
       ),
     },
     {
-      accessorKey: "created_at",
-      header: "Created",
+      accessorKey: 'created_at',
+      header: 'Created',
       cell: ({ row }) => (
         <span className="text-muted-foreground text-sm">{formatDate(row.original.created_at)}</span>
       ),
     },
     {
-      id: "actions",
+      id: 'actions',
       cell: ({ row }) => {
-        const role = row.original;
+        const role = row.original
 
         return (
           <DropdownMenu>
@@ -301,8 +310,8 @@ export default function RolesPage() {
                     <DropdownMenuItem
                       className="text-red-400"
                       onClick={() => {
-                        setRoleToDelete(role);
-                        setDeleteDialogOpen(true);
+                        setRoleToDelete(role)
+                        setDeleteDialogOpen(true)
                       }}
                     >
                       <Trash2 className="mr-2 h-4 w-4" />
@@ -313,10 +322,10 @@ export default function RolesPage() {
               )}
             </DropdownMenuContent>
           </DropdownMenu>
-        );
+        )
       },
     },
-  ];
+  ]
 
   const table = useReactTable({
     data: filteredData,
@@ -333,30 +342,36 @@ export default function RolesPage() {
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-  });
+  })
 
   // Actions
   const handleDeleteRole = async () => {
-    if (!roleToDelete) return;
+    if (!roleToDelete) return
 
     try {
-      await deleteRole();
-      toast.success(`Role "${roleToDelete.name}" deleted successfully`);
-      setDeleteDialogOpen(false);
-      setRoleToDelete(null);
-      mutate((key: string) => typeof key === 'string' && key.startsWith('/api/v1/roles'), undefined, { revalidate: true });
-      refreshData();
+      await deleteRole()
+      toast.success(`Role "${roleToDelete.name}" deleted successfully`)
+      setDeleteDialogOpen(false)
+      setRoleToDelete(null)
+      mutate(
+        (key: string) => typeof key === 'string' && key.startsWith('/api/v1/roles'),
+        undefined,
+        { revalidate: true }
+      )
+      refreshData()
     } catch (error) {
-      toast.error(`Failed to delete role: ${error instanceof Error ? error.message : "Unknown error"}`);
+      toast.error(
+        `Failed to delete role: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
     }
-  };
+  }
 
   // Active filters count
-  const activeFiltersCount = [typeFilter !== "all"].filter(Boolean).length;
+  const activeFiltersCount = [typeFilter !== 'all'].filter(Boolean).length
 
   const clearFilters = () => {
-    setTypeFilter("all");
-  };
+    setTypeFilter('all')
+  }
 
   return (
     <>
@@ -373,10 +388,12 @@ export default function RolesPage() {
           title="Roles"
           description="Manage roles and their permissions. Users can have multiple roles."
         >
-          <Button onClick={() => setCreateSheetOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Create Role
-          </Button>
+          <Can permission={Permission.RolesWrite}>
+            <Button onClick={() => setCreateSheetOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Create Role
+            </Button>
+          </Can>
         </PageHeader>
 
         {/* Loading State */}
@@ -403,8 +420,8 @@ export default function RolesPage() {
             {/* Stats */}
             <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
               <Card
-                className={`cursor-pointer hover:border-primary transition-colors ${typeFilter === "all" ? "border-primary" : ""}`}
-                onClick={() => setTypeFilter("all")}
+                className={`cursor-pointer hover:border-primary transition-colors ${typeFilter === 'all' ? 'border-primary' : ''}`}
+                onClick={() => setTypeFilter('all')}
               >
                 <CardHeader className="pb-2">
                   <CardDescription className="flex items-center gap-2">
@@ -415,8 +432,8 @@ export default function RolesPage() {
                 </CardHeader>
               </Card>
               <Card
-                className={`cursor-pointer hover:border-blue-500 transition-colors ${typeFilter === "system" ? "border-blue-500" : ""}`}
-                onClick={() => setTypeFilter("system")}
+                className={`cursor-pointer hover:border-blue-500 transition-colors ${typeFilter === 'system' ? 'border-blue-500' : ''}`}
+                onClick={() => setTypeFilter('system')}
               >
                 <CardHeader className="pb-2">
                   <CardDescription className="flex items-center gap-2">
@@ -427,8 +444,8 @@ export default function RolesPage() {
                 </CardHeader>
               </Card>
               <Card
-                className={`cursor-pointer hover:border-purple-500 transition-colors ${typeFilter === "custom" ? "border-purple-500" : ""}`}
-                onClick={() => setTypeFilter("custom")}
+                className={`cursor-pointer hover:border-purple-500 transition-colors ${typeFilter === 'custom' ? 'border-purple-500' : ''}`}
+                onClick={() => setTypeFilter('custom')}
               >
                 <CardHeader className="pb-2">
                   <CardDescription className="flex items-center gap-2">
@@ -499,7 +516,7 @@ export default function RolesPage() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
                             className="text-red-400"
-                            onClick={() => toast.info("Bulk delete not implemented yet")}
+                            onClick={() => toast.info('Bulk delete not implemented yet')}
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
                             Delete Selected
@@ -531,14 +548,16 @@ export default function RolesPage() {
                         table.getRowModel().rows.map((row) => (
                           <TableRow
                             key={row.id}
-                            data-state={row.getIsSelected() && "selected"}
+                            data-state={row.getIsSelected() && 'selected'}
                             className="cursor-pointer"
                             onClick={(e) => {
-                              if ((e.target as HTMLElement).closest('[role="checkbox"]') ||
-                                (e.target as HTMLElement).closest('button')) {
-                                return;
+                              if (
+                                (e.target as HTMLElement).closest('[role="checkbox"]') ||
+                                (e.target as HTMLElement).closest('button')
+                              ) {
+                                return
                               }
-                              setSelectedRole(row.original);
+                              setSelectedRole(row.original)
                             }}
                           >
                             {row.getVisibleCells().map((cell) => (
@@ -555,17 +574,19 @@ export default function RolesPage() {
                               <div className="flex flex-col items-center gap-2">
                                 <Shield className="h-8 w-8 text-muted-foreground/50" />
                                 <p className="text-muted-foreground">No roles yet</p>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => setCreateSheetOpen(true)}
-                                >
-                                  <Plus className="mr-2 h-4 w-4" />
-                                  Create your first role
-                                </Button>
+                                <Can permission={Permission.RolesWrite}>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setCreateSheetOpen(true)}
+                                  >
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    Create your first role
+                                  </Button>
+                                </Can>
                               </div>
                             ) : (
-                              "No roles found."
+                              'No roles found.'
                             )}
                           </TableCell>
                         </TableRow>
@@ -577,7 +598,7 @@ export default function RolesPage() {
                 {/* Pagination */}
                 <div className="flex items-center justify-between mt-4">
                   <p className="text-sm text-muted-foreground">
-                    {table.getFilteredSelectedRowModel().rows.length} of{" "}
+                    {table.getFilteredSelectedRowModel().rows.length} of{' '}
                     {table.getFilteredRowModel().rows.length} row(s) selected
                   </p>
                   <div className="flex flex-wrap items-center gap-2">
@@ -598,7 +619,8 @@ export default function RolesPage() {
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
                     <span className="text-sm">
-                      Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount() || 1}
+                      Page {table.getState().pagination.pageIndex + 1} of{' '}
+                      {table.getPageCount() || 1}
                     </span>
                     <Button
                       variant="outline"
@@ -637,13 +659,13 @@ export default function RolesPage() {
         open={!!selectedRole}
         onOpenChange={(open) => !open && setSelectedRole(null)}
         onEdit={(role) => {
-          setSelectedRole(null);
-          setEditRole(role);
+          setSelectedRole(null)
+          setEditRole(role)
         }}
         onDelete={(role) => {
-          setRoleToDelete(role);
-          setDeleteDialogOpen(true);
-          setSelectedRole(null);
+          setRoleToDelete(role)
+          setDeleteDialogOpen(true)
+          setSelectedRole(null)
         }}
       />
 
@@ -653,8 +675,8 @@ export default function RolesPage() {
         open={!!editRole}
         onOpenChange={(open) => !open && setEditRole(null)}
         onSuccess={() => {
-          setEditRole(null);
-          refreshData();
+          setEditRole(null)
+          refreshData()
         }}
       />
 
@@ -667,8 +689,8 @@ export default function RolesPage() {
               Delete Role
             </DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete the role &quot;{roleToDelete?.name}&quot;?
-              This action cannot be undone. Users with this role will lose its permissions.
+              Are you sure you want to delete the role &quot;{roleToDelete?.name}&quot;? This action
+              cannot be undone. Users with this role will lose its permissions.
             </DialogDescription>
           </DialogHeader>
 
@@ -676,17 +698,13 @@ export default function RolesPage() {
             <Button
               variant="ghost"
               onClick={() => {
-                setDeleteDialogOpen(false);
-                setRoleToDelete(null);
+                setDeleteDialogOpen(false)
+                setRoleToDelete(null)
               }}
             >
               Cancel
             </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDeleteRole}
-              disabled={isDeleting}
-            >
+            <Button variant="destructive" onClick={handleDeleteRole} disabled={isDeleting}>
               {isDeleting ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
@@ -698,5 +716,5 @@ export default function RolesPage() {
         </DialogContent>
       </Dialog>
     </>
-  );
+  )
 }

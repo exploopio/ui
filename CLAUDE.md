@@ -355,6 +355,33 @@ if (hasPermission('assets:write')) {
 }
 ```
 
+### Permission Real-time Sync
+
+**Important:** Permissions sync in real-time when admin revokes/grants access (no logout/login required).
+
+See [`docs/architecture/permission-realtime-sync.md`](../docs/architecture/permission-realtime-sync.md) for complete implementation guide.
+
+**Key Points:**
+
+- Permissions cached in localStorage for instant UI render
+- `X-Permission-Stale` header triggers automatic refresh
+- Multiple refresh triggers: stale header, 403 error, tab focus, 2-min polling
+- PermissionProvider manages cache + version tracking
+
+**Usage:**
+
+```tsx
+// PermissionProvider wraps app (auto-handles sync)
+const { permissions, hasPermission, isLoading } = usePermissions()
+
+// PermissionGate for UI visibility
+<PermissionGate permission="assets:write">
+  <EditButton />
+</PermissionGate>
+
+// API Client intercepts X-Permission-Stale header automatically
+```
+
 ## 🔔 Notification System
 
 Multi-channel notification system for security alerts. Supports Slack, Teams, Telegram, Email (SMTP), and custom webhooks.

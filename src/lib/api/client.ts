@@ -8,6 +8,7 @@
 import { useAuthStore } from '@/stores/auth-store'
 import type { ApiError, ApiRequestOptions, ApiResponse } from './types'
 import { ApiClientError } from './error-handler'
+import { dispatchPermissionStaleEvent } from '@/context/permission-provider'
 
 // ============================================
 // CONFIGURATION
@@ -39,9 +40,7 @@ export function getApiBaseUrl(): string {
   if (!baseUrl) {
     // Return default in development, throw in production
     if (process.env.NODE_ENV === 'production') {
-      throw new Error(
-        'BACKEND_API_URL is not defined. Please set it in environment variables.'
-      )
+      throw new Error('BACKEND_API_URL is not defined. Please set it in environment variables.')
     }
     return 'http://localhost:8080'
   }
@@ -243,6 +242,15 @@ export async function apiClient<T = unknown>(
 
     clearTimeout(timeoutId)
 
+    // Check for stale permission header (before handling response status)
+    const permissionStale = response.headers.get('x-permission-stale')
+    if (permissionStale === 'true') {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[API Client] Permission stale header detected, triggering refresh')
+      }
+      dispatchPermissionStaleEvent()
+    }
+
     // Handle non-ok responses
     if (!response.ok) {
       // Handle 401 Unauthorized - try to refresh token
@@ -271,11 +279,13 @@ export async function apiClient<T = unknown>(
       // 1. 403 means "authenticated but not authorized" - user identity is valid
       // 2. Refreshing token won't help unless admin changed permissions
       // 3. Auto-retry would cause unnecessary API calls and noise
-      // Instead, we just log it and let the component handle the error gracefully
+      // Instead, we trigger a permission refresh and let the component handle the error
       if (response.status === 403) {
         if (process.env.NODE_ENV === 'development') {
           console.log('[API Client] 403 Forbidden - user lacks permission for:', endpoint)
         }
+        // Trigger permission refresh in case permissions were revoked
+        dispatchPermissionStaleEvent()
         // Don't retry - just throw the error for the component to handle
       }
 
@@ -294,7 +304,14 @@ export async function apiClient<T = unknown>(
 
     // Log response for debugging (only in development)
     if (process.env.NODE_ENV === 'development') {
-      console.log('[API Client] Response:', response.status, 'Content-Type:', contentType, 'Body length:', responseText.length)
+      console.log(
+        '[API Client] Response:',
+        response.status,
+        'Content-Type:',
+        contentType,
+        'Body length:',
+        responseText.length
+      )
     }
 
     // Handle empty response body
@@ -345,22 +362,14 @@ export async function apiClient<T = unknown>(
 
     // Handle timeout
     if (error instanceof Error && error.name === 'AbortError') {
-      throw new ApiClientError(
-        'Request timeout',
-        'TIMEOUT',
-        408,
-        { timeout, url }
-      )
+      throw new ApiClientError('Request timeout', 'TIMEOUT', 408, { timeout, url })
     }
 
     // Handle network errors
     if (error instanceof TypeError) {
-      throw new ApiClientError(
-        'Network error - please check your connection',
-        'NETWORK_ERROR',
-        0,
-        { originalError: error.message }
-      )
+      throw new ApiClientError('Network error - please check your connection', 'NETWORK_ERROR', 0, {
+        originalError: error.message,
+      })
     }
 
     // Re-throw ApiClientError
@@ -370,12 +379,7 @@ export async function apiClient<T = unknown>(
 
     // Handle unknown errors - preserve original error message if available
     const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred'
-    throw new ApiClientError(
-      errorMessage,
-      'UNKNOWN_ERROR',
-      500,
-      { originalError: error }
-    )
+    throw new ApiClientError(errorMessage, 'UNKNOWN_ERROR', 500, { originalError: error })
   }
 }
 
@@ -449,10 +453,7 @@ function isApiResponse<T>(data: unknown): data is ApiResponse<T> {
 /**
  * GET request
  */
-export async function get<T = unknown>(
-  endpoint: string,
-  options?: ApiRequestOptions
-): Promise<T> {
+export async function get<T = unknown>(endpoint: string, options?: ApiRequestOptions): Promise<T> {
   return apiClient<T>(endpoint, {
     ...options,
     method: 'GET',
@@ -587,22 +588,17 @@ export async function uploadFile<T = unknown>(
           resolve(xhr.responseText as T)
         }
       } else {
-        reject(new ApiClientError(
-          'File upload failed',
-          'UPLOAD_FAILED',
-          xhr.status,
-          { statusText: xhr.statusText }
-        ))
+        reject(
+          new ApiClientError('File upload failed', 'UPLOAD_FAILED', xhr.status, {
+            statusText: xhr.statusText,
+          })
+        )
       }
     })
 
     // Error handler
     xhr.addEventListener('error', () => {
-      reject(new ApiClientError(
-        'Network error during upload',
-        'NETWORK_ERROR',
-        0
-      ))
+      reject(new ApiClientError('Network error during upload', 'NETWORK_ERROR', 0))
     })
 
     // Send request

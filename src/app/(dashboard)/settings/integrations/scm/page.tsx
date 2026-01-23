@@ -1,21 +1,15 @@
-"use client";
+'use client'
 
-import { useState, useMemo, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import { Header, Main } from "@/components/layout";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { PageHeader } from "@/features/shared";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { useState, useMemo, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
+import { Header, Main } from '@/components/layout'
+import { ProfileDropdown } from '@/components/profile-dropdown'
+import { Search } from '@/components/search'
+import { ThemeSwitch } from '@/components/theme-switch'
+import { PageHeader } from '@/features/shared'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -23,14 +17,14 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from '@/components/ui/table'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,10 +34,10 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Skeleton } from "@/components/ui/skeleton";
-import { toast } from "sonner";
-import { Can, Permission } from "@/lib/permissions";
+} from '@/components/ui/alert-dialog'
+import { Skeleton } from '@/components/ui/skeleton'
+import { toast } from 'sonner'
+import { Can, Permission } from '@/lib/permissions'
 import {
   Plus,
   Link2,
@@ -60,145 +54,148 @@ import {
   ArrowLeft,
   ExternalLink,
   Clock,
-} from "lucide-react";
+} from 'lucide-react'
 import {
   AddConnectionDialog,
   EditConnectionDialog,
   SyncRepositoriesDialog,
   ProviderIcon,
   SCM_PROVIDER_COLORS,
-} from "@/features/scm-connections";
-import {
-  useSCMIntegrationsApi,
-  invalidateSCMIntegrationsCache,
-} from "@/features/integrations";
-import type { Integration } from "@/features/integrations";
-import { cn } from "@/lib/utils";
+} from '@/features/scm-connections'
+import { useSCMIntegrationsApi, invalidateSCMIntegrationsCache } from '@/features/integrations'
+import type { Integration } from '@/features/integrations'
+import { cn } from '@/lib/utils'
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
   connected: {
-    label: "Connected",
-    color: "bg-green-500/10 text-green-500 border-green-500/20",
+    label: 'Connected',
+    color: 'bg-green-500/10 text-green-500 border-green-500/20',
     icon: <CheckCircle className="h-3.5 w-3.5" />,
   },
   disconnected: {
-    label: "Disconnected",
-    color: "bg-gray-500/10 text-gray-500 border-gray-500/20",
+    label: 'Disconnected',
+    color: 'bg-gray-500/10 text-gray-500 border-gray-500/20',
     icon: <XCircle className="h-3.5 w-3.5" />,
   },
   error: {
-    label: "Error",
-    color: "bg-red-500/10 text-red-500 border-red-500/20",
+    label: 'Error',
+    color: 'bg-red-500/10 text-red-500 border-red-500/20',
     icon: <AlertCircle className="h-3.5 w-3.5" />,
   },
   pending: {
-    label: "Pending",
-    color: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
+    label: 'Pending',
+    color: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
     icon: <Clock className="h-3.5 w-3.5" />,
   },
-};
+}
 
 const PROVIDER_LABELS: Record<string, string> = {
-  github: "GitHub",
-  gitlab: "GitLab",
-  bitbucket: "Bitbucket",
-  azure_devops: "Azure DevOps",
-};
+  github: 'GitHub',
+  gitlab: 'GitLab',
+  bitbucket: 'Bitbucket',
+  azure_devops: 'Azure DevOps',
+}
 
 export default function SCMConnectionsPage() {
-  const router = useRouter();
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [syncDialogOpen, setSyncDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [selectedConnection, setSelectedConnection] = useState<Integration | null>(null);
-  const [actionInProgress, setActionInProgress] = useState<string | null>(null);
+  const router = useRouter()
+  const [addDialogOpen, setAddDialogOpen] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [syncDialogOpen, setSyncDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [selectedConnection, setSelectedConnection] = useState<Integration | null>(null)
+  const [actionInProgress, setActionInProgress] = useState<string | null>(null)
 
-  const { data: connectionsData, error, isLoading, mutate } = useSCMIntegrationsApi();
+  const { data: connectionsData, error, isLoading, mutate } = useSCMIntegrationsApi()
 
   // Handle the API response format
   const connections = useMemo(() => {
-    if (!connectionsData) return [];
-    return connectionsData.data ?? [];
-  }, [connectionsData]);
+    if (!connectionsData) return []
+    return connectionsData.data ?? []
+  }, [connectionsData])
 
   // Calculate stats
   const stats = useMemo(() => {
-    const total = connections.length;
-    const connected = connections.filter((c) => c.status === "connected").length;
-    const errorCount = connections.filter((c) => c.status === "error").length;
-    const totalRepos = connections.reduce((sum, c) => sum + (c.scm_extension?.repository_count || 0), 0);
-    return { total, connected, error: errorCount, totalRepos };
-  }, [connections]);
+    const total = connections.length
+    const connected = connections.filter((c) => c.status === 'connected').length
+    const errorCount = connections.filter((c) => c.status === 'error').length
+    const totalRepos = connections.reduce(
+      (sum, c) => sum + (c.scm_extension?.repository_count || 0),
+      0
+    )
+    return { total, connected, error: errorCount, totalRepos }
+  }, [connections])
 
   const handleRefresh = useCallback(async () => {
-    setActionInProgress("refresh");
+    setActionInProgress('refresh')
     try {
-      await invalidateSCMIntegrationsCache();
-      await mutate();
-      toast.success("Connections refreshed");
+      await invalidateSCMIntegrationsCache()
+      await mutate()
+      toast.success('Connections refreshed')
     } catch {
-      toast.error("Failed to refresh connections");
+      toast.error('Failed to refresh connections')
     } finally {
-      setActionInProgress(null);
+      setActionInProgress(null)
     }
-  }, [mutate]);
+  }, [mutate])
 
-  const handleTestConnection = useCallback(async (connection: Integration) => {
-    setActionInProgress(connection.id);
-    try {
-      const response = await fetch(`/api/v1/integrations/${connection.id}/test`, {
-        method: "POST",
-      });
-      if (!response.ok) throw new Error("Test failed");
-      const result = await response.json();
-      if (result.status === "connected") {
-        toast.success(`Connection "${connection.name}" is working`);
-      } else {
-        toast.error(result.status_message || "Connection test failed");
+  const handleTestConnection = useCallback(
+    async (connection: Integration) => {
+      setActionInProgress(connection.id)
+      try {
+        const response = await fetch(`/api/v1/integrations/${connection.id}/test`, {
+          method: 'POST',
+        })
+        if (!response.ok) throw new Error('Test failed')
+        const result = await response.json()
+        if (result.status === 'connected') {
+          toast.success(`Connection "${connection.name}" is working`)
+        } else {
+          toast.error(result.status_message || 'Connection test failed')
+        }
+        await mutate()
+      } catch {
+        toast.error('Failed to test connection')
+      } finally {
+        setActionInProgress(null)
       }
-      await mutate();
-    } catch {
-      toast.error("Failed to test connection");
-    } finally {
-      setActionInProgress(null);
-    }
-  }, [mutate]);
+    },
+    [mutate]
+  )
 
   const handleDelete = useCallback(async () => {
-    if (!selectedConnection) return;
-    setActionInProgress(selectedConnection.id);
+    if (!selectedConnection) return
+    setActionInProgress(selectedConnection.id)
     try {
       const response = await fetch(`/api/v1/integrations/${selectedConnection.id}`, {
-        method: "DELETE",
-      });
-      if (!response.ok) throw new Error("Delete failed");
-      toast.success(`Connection "${selectedConnection.name}" deleted`);
-      await invalidateSCMIntegrationsCache();
-      await mutate();
+        method: 'DELETE',
+      })
+      if (!response.ok) throw new Error('Delete failed')
+      toast.success(`Connection "${selectedConnection.name}" deleted`)
+      await invalidateSCMIntegrationsCache()
+      await mutate()
     } catch {
-      toast.error("Failed to delete connection");
+      toast.error('Failed to delete connection')
     } finally {
-      setDeleteDialogOpen(false);
-      setSelectedConnection(null);
-      setActionInProgress(null);
+      setDeleteDialogOpen(false)
+      setSelectedConnection(null)
+      setActionInProgress(null)
     }
-  }, [selectedConnection, mutate]);
+  }, [selectedConnection, mutate])
 
   const handleEditClick = (connection: Integration) => {
-    setSelectedConnection(connection);
-    setEditDialogOpen(true);
-  };
+    setSelectedConnection(connection)
+    setEditDialogOpen(true)
+  }
 
   const handleSyncClick = (connection: Integration) => {
-    setSelectedConnection(connection);
-    setSyncDialogOpen(true);
-  };
+    setSelectedConnection(connection)
+    setSyncDialogOpen(true)
+  }
 
   const handleDeleteClick = (connection: Integration) => {
-    setSelectedConnection(connection);
-    setDeleteDialogOpen(true);
-  };
+    setSelectedConnection(connection)
+    setDeleteDialogOpen(true)
+  }
 
   // Error state
   if (error) {
@@ -215,7 +212,9 @@ export default function SCMConnectionsPage() {
           <div className="flex flex-col items-center justify-center py-20">
             <AlertCircle className="h-12 w-12 text-destructive mb-4" />
             <h2 className="text-lg font-semibold mb-2">Failed to load SCM connections</h2>
-            <p className="text-muted-foreground mb-4">{error?.message || "An unexpected error occurred"}</p>
+            <p className="text-muted-foreground mb-4">
+              {error?.message || 'An unexpected error occurred'}
+            </p>
             <Button onClick={() => mutate()}>
               <RefreshCw className="mr-2 h-4 w-4" />
               Retry
@@ -223,7 +222,7 @@ export default function SCMConnectionsPage() {
           </div>
         </Main>
       </>
-    );
+    )
   }
 
   return (
@@ -243,7 +242,7 @@ export default function SCMConnectionsPage() {
             variant="ghost"
             size="sm"
             className="gap-2 -ml-2 text-muted-foreground hover:text-foreground"
-            onClick={() => router.push("/settings/integrations")}
+            onClick={() => router.push('/settings/integrations')}
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Integrations
@@ -258,19 +257,21 @@ export default function SCMConnectionsPage() {
             <Button
               variant="outline"
               onClick={handleRefresh}
-              disabled={actionInProgress === "refresh"}
+              disabled={actionInProgress === 'refresh'}
             >
-              {actionInProgress === "refresh" ? (
+              {actionInProgress === 'refresh' ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
                 <RefreshCw className="mr-2 h-4 w-4" />
               )}
               Refresh
             </Button>
-            <Button onClick={() => setAddDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Connection
-            </Button>
+            <Can permission={Permission.ScmConnectionsWrite}>
+              <Button onClick={() => setAddDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Connection
+              </Button>
+            </Can>
           </div>
         </PageHeader>
 
@@ -352,12 +353,15 @@ export default function SCMConnectionsPage() {
                 <Link2 className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                 <h3 className="text-lg font-semibold mb-2">No SCM Connections</h3>
                 <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                  Connect your GitHub, GitLab, Bitbucket, or Azure DevOps account to import and scan repositories.
+                  Connect your GitHub, GitLab, Bitbucket, or Azure DevOps account to import and scan
+                  repositories.
                 </p>
-                <Button onClick={() => setAddDialogOpen(true)}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Your First Connection
-                </Button>
+                <Can permission={Permission.ScmConnectionsWrite}>
+                  <Button onClick={() => setAddDialogOpen(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Your First Connection
+                  </Button>
+                </Can>
               </div>
             ) : (
               <div className="rounded-md border">
@@ -375,15 +379,17 @@ export default function SCMConnectionsPage() {
                   </TableHeader>
                   <TableBody>
                     {connections.map((connection) => {
-                      const statusConfig = STATUS_CONFIG[connection.status] || STATUS_CONFIG.pending;
+                      const statusConfig = STATUS_CONFIG[connection.status] || STATUS_CONFIG.pending
                       return (
                         <TableRow key={connection.id}>
                           <TableCell>
                             <div className="flex items-center gap-3">
-                              <div className={cn(
-                                "flex h-10 w-10 items-center justify-center rounded-lg",
-                                SCM_PROVIDER_COLORS[connection.provider] || "bg-gray-100"
-                              )}>
+                              <div
+                                className={cn(
+                                  'flex h-10 w-10 items-center justify-center rounded-lg',
+                                  SCM_PROVIDER_COLORS[connection.provider] || 'bg-gray-100'
+                                )}
+                              >
                                 <ProviderIcon provider={connection.provider} className="h-5 w-5" />
                               </div>
                               <div>
@@ -401,15 +407,15 @@ export default function SCMConnectionsPage() {
                           </TableCell>
                           <TableCell>
                             <span className="text-sm">
-                              {connection.scm_extension?.scm_organization || "-"}
+                              {connection.scm_extension?.scm_organization || '-'}
                             </span>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline" className={cn("gap-1", statusConfig.color)}>
+                            <Badge variant="outline" className={cn('gap-1', statusConfig.color)}>
                               {statusConfig.icon}
                               {statusConfig.label}
                             </Badge>
-                            {connection.status_message && connection.status === "error" && (
+                            {connection.status_message && connection.status === 'error' && (
                               <p className="text-xs text-red-500 mt-1 max-w-[200px] truncate">
                                 {connection.status_message}
                               </p>
@@ -430,7 +436,7 @@ export default function SCMConnectionsPage() {
                             <span className="text-sm text-muted-foreground">
                               {connection.last_sync_at
                                 ? new Date(connection.last_sync_at).toLocaleDateString()
-                                : "Never"}
+                                : 'Never'}
                             </span>
                           </TableCell>
                           <TableCell>
@@ -478,7 +484,7 @@ export default function SCMConnectionsPage() {
                             </DropdownMenu>
                           </TableCell>
                         </TableRow>
-                      );
+                      )
                     })}
                   </TableBody>
                 </Table>
@@ -499,14 +505,14 @@ export default function SCMConnectionsPage() {
               <div>
                 <h4 className="font-semibold text-blue-500 mb-1">Import Repositories</h4>
                 <p className="text-sm text-muted-foreground">
-                  After adding a connection, go to{" "}
+                  After adding a connection, go to{' '}
                   <Button
                     variant="link"
                     className="h-auto p-0 text-blue-500"
-                    onClick={() => router.push("/assets/repositories")}
+                    onClick={() => router.push('/assets/repositories')}
                   >
                     Discovery &gt; Repositories
-                  </Button>{" "}
+                  </Button>{' '}
                   to import and manage your repositories for security scanning.
                 </p>
               </div>
@@ -520,8 +526,8 @@ export default function SCMConnectionsPage() {
         open={addDialogOpen}
         onOpenChange={setAddDialogOpen}
         onSuccess={async () => {
-          await invalidateSCMIntegrationsCache();
-          await mutate();
+          await invalidateSCMIntegrationsCache()
+          await mutate()
         }}
       />
 
@@ -532,9 +538,9 @@ export default function SCMConnectionsPage() {
             onOpenChange={setEditDialogOpen}
             connection={selectedConnection}
             onSuccess={async () => {
-              await invalidateSCMIntegrationsCache();
-              await mutate();
-              setSelectedConnection(null);
+              await invalidateSCMIntegrationsCache()
+              await mutate()
+              setSelectedConnection(null)
             }}
           />
 
@@ -543,7 +549,7 @@ export default function SCMConnectionsPage() {
             onOpenChange={setSyncDialogOpen}
             connection={selectedConnection}
             onSuccess={async () => {
-              await mutate();
+              await mutate()
             }}
           />
         </>
@@ -555,21 +561,18 @@ export default function SCMConnectionsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete SCM Connection</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete <strong>{selectedConnection?.name}</strong>?
-              This will not delete the imported repositories, but you won&apos;t be able to sync them anymore.
+              Are you sure you want to delete <strong>{selectedConnection?.name}</strong>? This will
+              not delete the imported repositories, but you won&apos;t be able to sync them anymore.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-red-500 hover:bg-red-600"
-              onClick={handleDelete}
-            >
+            <AlertDialogAction className="bg-red-500 hover:bg-red-600" onClick={handleDelete}>
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </>
-  );
+  )
 }

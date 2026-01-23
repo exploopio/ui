@@ -37,6 +37,7 @@ import {
   TrendingUp,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Can, Permission } from '@/lib/permissions'
 import {
   useNotificationIntegrationsApi,
   useNotificationEventsApi,
@@ -488,13 +489,15 @@ function HistoryContent() {
           {loadingIntegrations ? (
             <Skeleton className="h-9 w-[200px]" />
           ) : integrations.length === 0 ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => router.push('/settings/integrations/notifications')}
-            >
-              Add Channel
-            </Button>
+            <Can permission={Permission.NotificationsWrite}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => router.push('/settings/integrations/notifications')}
+              >
+                Add Channel
+              </Button>
+            </Can>
           ) : (
             <Select value={selectedId} onValueChange={setSelectedId}>
               <SelectTrigger className="w-[220px]">
