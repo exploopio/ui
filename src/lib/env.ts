@@ -121,6 +121,13 @@ export const env = {
      * Affected badges: Findings, Credential Leaks, Asset Groups
      */
     sidebarBadges: getEnvVar('NEXT_PUBLIC_ENABLE_SIDEBAR_BADGES', 'false') === 'true',
+
+    /**
+     * Use real API data instead of mock data
+     * Default: true (use real API)
+     * Set to 'false' to use mock data for development without backend
+     */
+    useRealApi: getEnvVar('NEXT_PUBLIC_USE_REAL_API', 'true') !== 'false',
   },
 } as const
 
@@ -180,11 +187,11 @@ export function validateEnv() {
       'NEXT_PUBLIC_KEYCLOAK_CLIENT_ID',
     ]
 
-    const missingKeycloak = requiredKeycloakVars.filter(key => !process.env[key])
+    const missingKeycloak = requiredKeycloakVars.filter((key) => !process.env[key])
     if (missingKeycloak.length > 0) {
       warnings.push(
         `Missing Keycloak configuration (required for ${authProvider} auth):\n` +
-        missingKeycloak.map(k => `   - ${k}`).join('\n')
+          missingKeycloak.map((k) => `   - ${k}`).join('\n')
       )
     }
 
@@ -201,7 +208,7 @@ export function validateEnv() {
   } else if (csrfSecret.length < 32) {
     warnings.push(
       `CSRF_SECRET should be at least 32 characters (current: ${csrfSecret.length})\n` +
-      `   Generate with: openssl rand -base64 32`
+        `   Generate with: openssl rand -base64 32`
     )
   }
 
@@ -209,10 +216,10 @@ export function validateEnv() {
   if (warnings.length > 0) {
     console.warn(
       `\n${'─'.repeat(60)}\n` +
-      `⚠️  Environment Configuration Warnings\n` +
-      `${'─'.repeat(60)}\n\n` +
-      warnings.map((w, i) => `${i + 1}. ${w}`).join('\n\n') +
-      `\n\n${'─'.repeat(60)}\n`
+        `⚠️  Environment Configuration Warnings\n` +
+        `${'─'.repeat(60)}\n\n` +
+        warnings.map((w, i) => `${i + 1}. ${w}`).join('\n\n') +
+        `\n\n${'─'.repeat(60)}\n`
     )
   } else {
     console.log('✅ Environment variables validated successfully')
@@ -236,7 +243,8 @@ export const isServer = () => typeof window === 'undefined'
 export const isClient = () => typeof window !== 'undefined'
 
 /** Check if local auth is enabled */
-export const isLocalAuthEnabled = () => env.authProvider === 'local' || env.authProvider === 'hybrid'
+export const isLocalAuthEnabled = () =>
+  env.authProvider === 'local' || env.authProvider === 'hybrid'
 
 /** Check if OIDC (Keycloak) auth is enabled */
 export const isOidcAuthEnabled = () => env.authProvider === 'oidc' || env.authProvider === 'hybrid'

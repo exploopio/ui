@@ -9,6 +9,7 @@
 
 import { useMemo } from 'react'
 import { toast } from 'sonner'
+import { env } from '@/lib/env'
 import {
   useAssetGroupsApi,
   useAssetGroupApi,
@@ -48,10 +49,10 @@ import type { AssetGroupApiFilters, GroupAssetsApiFilters } from '../api'
 // ============================================
 
 /**
- * Set to true to use real API, false to use mock data
- * This can be controlled via environment variable
+ * Use real API by default, unless explicitly disabled via environment variable
+ * Set NEXT_PUBLIC_USE_REAL_API=false to use mock data (for development without backend)
  */
-const USE_REAL_API = process.env.NEXT_PUBLIC_USE_REAL_API === 'true'
+const USE_REAL_API = env.features.useRealApi
 
 // ============================================
 // LIST HOOK
@@ -79,10 +80,9 @@ export function useAssetGroups(options: UseAssetGroupsOptions = {}): UseAssetGro
   const { filters, enabled = true } = options
 
   // API call (only if USE_REAL_API is true)
-  const apiResult = useAssetGroupsApi(
-    USE_REAL_API && enabled ? filters : undefined,
-    { revalidateOnFocus: false }
-  )
+  const apiResult = useAssetGroupsApi(USE_REAL_API && enabled ? filters : undefined, {
+    revalidateOnFocus: false,
+  })
 
   // Transform API data or use mock data
   const result = useMemo(() => {
@@ -103,36 +103,36 @@ export function useAssetGroups(options: UseAssetGroupsOptions = {}): UseAssetGro
     // Apply filters to mock data
     if (filters) {
       if (filters.environments?.length) {
-        data = data.filter(g => filters.environments!.includes(g.environment))
+        data = data.filter((g) => filters.environments!.includes(g.environment))
       }
       if (filters.criticalities?.length) {
-        data = data.filter(g => filters.criticalities!.includes(g.criticality))
+        data = data.filter((g) => filters.criticalities!.includes(g.criticality))
       }
       if (filters.business_unit) {
-        data = data.filter(g => g.businessUnit?.toLowerCase().includes(filters.business_unit!.toLowerCase()))
+        data = data.filter((g) =>
+          g.businessUnit?.toLowerCase().includes(filters.business_unit!.toLowerCase())
+        )
       }
       if (filters.has_findings === true) {
-        data = data.filter(g => g.findingCount > 0)
+        data = data.filter((g) => g.findingCount > 0)
       } else if (filters.has_findings === false) {
-        data = data.filter(g => g.findingCount === 0)
+        data = data.filter((g) => g.findingCount === 0)
       }
       if (filters.min_risk_score !== undefined) {
-        data = data.filter(g => g.riskScore >= filters.min_risk_score!)
+        data = data.filter((g) => g.riskScore >= filters.min_risk_score!)
       }
       if (filters.max_risk_score !== undefined) {
-        data = data.filter(g => g.riskScore <= filters.max_risk_score!)
+        data = data.filter((g) => g.riskScore <= filters.max_risk_score!)
       }
       if (filters.search) {
         const search = filters.search.toLowerCase()
-        data = data.filter(g =>
-          g.name.toLowerCase().includes(search) ||
-          g.description?.toLowerCase().includes(search)
+        data = data.filter(
+          (g) =>
+            g.name.toLowerCase().includes(search) || g.description?.toLowerCase().includes(search)
         )
       }
       if (filters.tags?.length) {
-        data = data.filter(g =>
-          g.tags?.some(tag => filters.tags!.includes(tag))
-        )
+        data = data.filter((g) => g.tags?.some((tag) => filters.tags!.includes(tag)))
       }
     }
 
@@ -142,7 +142,7 @@ export function useAssetGroups(options: UseAssetGroupsOptions = {}): UseAssetGro
       isLoading: false,
       isError: false,
       error: null,
-      mutate: () => { },
+      mutate: () => {},
     }
   }, [apiResult.data, apiResult.isLoading, apiResult.error, apiResult.mutate, filters, enabled])
 
@@ -185,7 +185,7 @@ export function useAssetGroup(groupId: string | null): UseAssetGroupReturn {
       isLoading: false,
       isError: false,
       error: null,
-      mutate: () => { },
+      mutate: () => {},
     }
   }, [apiResult.data, apiResult.isLoading, apiResult.error, apiResult.mutate, groupId])
 
@@ -228,7 +228,7 @@ export function useGroupAssets(
       total: mockData.length,
       isLoading: false,
       isError: false,
-      mutate: () => { },
+      mutate: () => {},
     }
   }, [apiResult.data, apiResult.isLoading, apiResult.error, apiResult.mutate, groupId])
 
@@ -272,7 +272,7 @@ export function useGroupFindings(
       total: mockData.length,
       isLoading: false,
       isError: false,
-      mutate: () => { },
+      mutate: () => {},
     }
   }, [apiResult.data, apiResult.isLoading, apiResult.error, apiResult.mutate, groupId])
 
@@ -298,14 +298,16 @@ export function useAssetGroupStats(): UseAssetGroupStatsReturn {
       // Transform API stats to match mock data format
       const apiStats = apiResult.data
       return {
-        data: apiStats ? {
-          total: apiStats.total,
-          byEnvironment: apiStats.by_environment,
-          byCriticality: apiStats.by_criticality,
-          totalAssets: apiStats.total_assets,
-          totalFindings: apiStats.total_findings,
-          averageRiskScore: apiStats.average_risk_score,
-        } : getMockStats(),
+        data: apiStats
+          ? {
+              total: apiStats.total,
+              byEnvironment: apiStats.by_environment,
+              byCriticality: apiStats.by_criticality,
+              totalAssets: apiStats.total_assets,
+              totalFindings: apiStats.total_findings,
+              averageRiskScore: apiStats.average_risk_score,
+            }
+          : getMockStats(),
         isLoading: apiResult.isLoading,
         isError: !!apiResult.error,
         mutate: apiResult.mutate,
@@ -317,7 +319,7 @@ export function useAssetGroupStats(): UseAssetGroupStatsReturn {
       data: getMockStats(),
       isLoading: false,
       isError: false,
-      mutate: () => { },
+      mutate: () => {},
     }
   }, [apiResult.data, apiResult.isLoading, apiResult.error, apiResult.mutate])
 
@@ -519,7 +521,12 @@ export function useBulkAssetGroupOperations() {
         await bulkUpdateMutation.trigger({
           group_ids: groupIds,
           update: {
-            environment: update.environment as 'production' | 'staging' | 'development' | 'testing' | undefined,
+            environment: update.environment as
+              | 'production'
+              | 'staging'
+              | 'development'
+              | 'testing'
+              | undefined,
             criticality: update.criticality as 'critical' | 'high' | 'medium' | 'low' | undefined,
           },
         })
