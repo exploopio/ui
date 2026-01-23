@@ -11,12 +11,14 @@ Modern Next.js 16 with internationalization (en/vi/ar), RTL support, Zustand aut
 ## 🛠️ Tech Stack
 
 **Core:**
+
 - Next.js 16 (App Router, Turbopack, Server Components) • [Docs](https://nextjs.org/docs)
 - React 19 with Server Components • [Docs](https://react.dev)
 - TypeScript (strict mode)
 - Node.js 20+
 
 **UI & Styling:**
+
 - shadcn/ui - Radix UI-based components • [Docs](https://ui.shadcn.com)
 - Tailwind CSS with CSS Variables • [Docs](https://tailwindcss.com)
 - CVA (class-variance-authority) for variants
@@ -24,18 +26,21 @@ Modern Next.js 16 with internationalization (en/vi/ar), RTL support, Zustand aut
 - Geist & Geist Mono fonts
 
 **i18n:**
+
 - Custom proxy (Next.js 16): locale detection
 - Locales: `en`, `vi`, `ar`
 - RTL: ar, he, fa, ur
 - Cookie + header injection
 
 **State & Forms:**
+
 - Zustand → Global state (auth)
 - React Context → UI state (theme, direction, layout, search)
 - React Hook Form + Zod validation
 - Server Actions for mutations
 
 **Dev:**
+
 - ESLint + Prettier
 - Path alias: `@/*` → `./src/*`
 
@@ -85,21 +90,24 @@ project/
 ## ⚡ Core Conventions
 
 ### 1. Import Paths
+
 ```tsx
 // ✅ Always use @/* alias
-import { Button } from "@/components/ui/button"
-import { createUser } from "@/features/users/actions/user-actions"
+import { Button } from '@/components/ui/button'
+import { createUser } from '@/features/users/actions/user-actions'
 
 // ❌ Never relative from src/
-import { Button } from "../../components/ui/button"
+import { Button } from '../../components/ui/button'
 ```
 
 ### 2. Feature Organization
+
 - **Rule**: One feature = one folder in `src/features/`
 - Structure: `components/`, `actions/`, `schemas/`, `types/`, `hooks/`, `lib/`
 - **If used ONLY in one feature** → put in that feature
 
 ### 3. File Naming
+
 ```
 Components:     user-card.tsx      (kebab-case)
 Actions:        user-actions.ts    (suffix: -actions)
@@ -109,6 +117,7 @@ Hooks:          use-user.ts        (prefix: use-)
 ```
 
 ### 4. Component Types
+
 ```tsx
 // Default: Server Component (no directive)
 export default async function Page() {
@@ -131,6 +140,7 @@ export async function create(formData: FormData) {
 ```
 
 ### 5. App Router Files
+
 - `page.tsx` - Route content
 - `layout.tsx` - Shared UI (persistent)
 - `loading.tsx` - Loading state
@@ -139,6 +149,7 @@ export async function create(formData: FormData) {
 - `route.ts` - API endpoint
 
 ### 6. Styling
+
 ```tsx
 import { cn } from "@/lib/utils"
 
@@ -158,6 +169,7 @@ import { cn } from "@/lib/utils"
 ```
 
 No Emoji Rule:
+
 ```tsx
 // ❌ WRONG - No emoji in UI
 <Button>Save 💾</Button>
@@ -173,6 +185,7 @@ import { Save } from "lucide-react"
 ```
 
 ### 7. State Management
+
 ```tsx
 // ✅ Zustand for GLOBAL (auth)
 const { user, accessToken, logout } = useAuthStore()
@@ -183,9 +196,10 @@ const { direction } = useDirection()
 ```
 
 ### 8. i18n
+
 ```tsx
 // Server Component
-const locale = (await headers()).get("x-locale") || "en"
+const locale = (await headers()).get('x-locale') || 'en'
 
 // Client Component (if context created)
 const { locale } = useLocale()
@@ -195,6 +209,7 @@ const { locale } = useLocale()
 ```
 
 ### 9. Data Fetching
+
 ```tsx
 // ✅ Server Components (default)
 async function getData() {
@@ -214,6 +229,7 @@ const { data } = useSWR('/api/data')
 ```
 
 ### 10. Validation & Errors
+
 - ✅ Always validate server-side (Zod)
 - ✅ Server Actions return: `{ success: boolean, error?: string, data?: T }`
 - ✅ Every route group needs `error.tsx`
@@ -222,12 +238,14 @@ const { data } = useSWR('/api/data')
 ## 🎯 When to Create Feature
 
 **✅ Create Feature When:**
+
 - 2+ related components
 - Distinct business domain
 - Could be independent module
 - Examples: auth, users, products, orders
 
 **❌ Don't Create Feature:**
+
 - 1-2 simple components → `components/`
 - Pure UI → `components/ui/`
 - Utils → `lib/`
@@ -236,12 +254,14 @@ const { data } = useSWR('/api/data')
 ## 🌍 Internationalization
 
 **Flow:**
+
 ```
 Request → Proxy → Cookie/Header → x-locale injection
 → Root layout → dir="ltr|rtl" → Components
 ```
 
 **Implementation:**
+
 ```tsx
 // proxy.ts (Next.js 16 - replaces middleware.ts)
 export function proxy(request: NextRequest) {
@@ -264,6 +284,7 @@ const dir = ["ar","he","fa","ur"].includes(locale) ? "rtl" : "ltr"
 Multi-tenant auth with local, social, and OIDC support. See [auth.md](.claude/auth.md) for complete guide.
 
 **Auth Flow:**
+
 ```
 Unauthenticated → /login
     ↓ login
@@ -273,6 +294,7 @@ Has Tenant → / (Dashboard)
 ```
 
 **Key Files:**
+
 ```
 src/features/auth/actions/     # Server actions (login, register, etc.)
 src/lib/middleware/auth.ts     # Route protection
@@ -287,6 +309,7 @@ proxy.ts                       # Next.js 16 middleware
 Simplified permission model. See [access-control.md](.claude/access-control.md) for complete guide.
 
 **Architecture:**
+
 ```
 User → Membership (owner | member)
      → Roles → Feature Permissions (what can you DO)
@@ -294,16 +317,19 @@ User → Membership (owner | member)
 ```
 
 **Key Concepts:**
+
 - **Membership**: Owner (protected, full access) | Member (permissions from roles)
 - **RBAC Roles**: Feature permissions (system + custom roles with 150+ permissions)
 - **Groups**: Data scoping (teams, departments, projects)
 
 **Invitation Flow:**
+
 ```
 Invite user → Select RBAC roles → User accepts → Becomes "member" + roles applied
 ```
 
 **Key Files:**
+
 ```
 src/features/access-control/        # RBAC feature
 src/features/access-control/api/    # Role & Group hooks
@@ -311,19 +337,22 @@ src/features/access-control/types/  # Type definitions
 ```
 
 **Hooks:**
+
 ```tsx
 // Roles
-const { roles } = useRoles();                    // All available roles
-const { roles } = useUserRoles(userId);          // User's assigned roles
-const { setUserRoles } = useSetUserRoles(userId); // Assign roles
+const { roles } = useRoles() // All available roles
+const { roles } = useUserRoles(userId) // User's assigned roles
+const { setUserRoles } = useSetUserRoles(userId) // Assign roles
 
 // Groups
-const { groups } = useGroups();
-const { members } = useGroupMembers(groupId);
+const { groups } = useGroups()
+const { members } = useGroupMembers(groupId)
 
 // Permissions
-const { hasPermission } = useMyPermissions();
-if (hasPermission('assets:write')) { /* show edit */ }
+const { hasPermission } = useMyPermissions()
+if (hasPermission('assets:write')) {
+  /* show edit */
+}
 ```
 
 ## 🔔 Notification System
@@ -331,6 +360,7 @@ if (hasPermission('assets:write')) { /* show edit */ }
 Multi-channel notification system for security alerts. Supports Slack, Teams, Telegram, Email (SMTP), and custom webhooks.
 
 **Key Files:**
+
 ```
 src/features/notifications/
 ├── components/
@@ -346,49 +376,55 @@ src/app/(dashboard)/settings/integrations/notifications/
 ```
 
 **Types:**
+
 ```tsx
 // Event types for notification routing
-type NotificationEventType = 'findings' | 'exposures' | 'scans' | 'alerts';
+type NotificationEventType = 'findings' | 'exposures' | 'scans' | 'alerts'
 
 // All known event types (for UI)
-import { ALL_NOTIFICATION_EVENT_TYPES, DEFAULT_ENABLED_EVENT_TYPES } from "@/features/integrations/types/integration.types";
+import {
+  ALL_NOTIFICATION_EVENT_TYPES,
+  DEFAULT_ENABLED_EVENT_TYPES,
+} from '@/features/integrations/types/integration.types'
 
 // NotificationExtension from API
 interface NotificationExtension {
-  channel_id?: string;
-  channel_name?: string;
-  notify_on_critical: boolean;        // Severity filters
-  notify_on_high: boolean;
-  notify_on_medium: boolean;
-  notify_on_low: boolean;
-  enabled_event_types?: NotificationEventType[];  // Event routing
-  message_template?: string;          // Custom template
-  include_details: boolean;
-  min_interval_minutes: number;       // Rate limiting
+  channel_id?: string
+  channel_name?: string
+  notify_on_critical: boolean // Severity filters
+  notify_on_high: boolean
+  notify_on_medium: boolean
+  notify_on_low: boolean
+  enabled_event_types?: NotificationEventType[] // Event routing
+  message_template?: string // Custom template
+  include_details: boolean
+  min_interval_minutes: number // Rate limiting
 }
 ```
 
 **Hooks:**
+
 ```tsx
 // List notification integrations
-const { data, isLoading, mutate } = useNotificationIntegrationsApi();
+const { data, isLoading, mutate } = useNotificationIntegrationsApi()
 
 // Create notification integration
-const { trigger: create } = useCreateNotificationIntegrationApi();
+const { trigger: create } = useCreateNotificationIntegrationApi()
 await create({
-  name: "Security Alerts",
-  provider: "slack",
-  credentials: "https://hooks.slack.com/...",
+  name: 'Security Alerts',
+  provider: 'slack',
+  credentials: 'https://hooks.slack.com/...',
   notify_on_critical: true,
-  enabled_event_types: ["findings", "exposures"],
-});
+  enabled_event_types: ['findings', 'exposures'],
+})
 
 // Get notification history
-const { data: history } = useNotificationHistoryApi(integrationId, { limit: 20 });
+const { data: history } = useNotificationHistoryApi(integrationId, { limit: 20 })
 ```
 
 **Template Variables:**
 Custom message templates support these variables:
+
 - `{title}` - Notification title
 - `{severity}` - Severity level (CRITICAL, HIGH, etc.)
 - `{severity_emoji}` - Emoji for severity
@@ -396,35 +432,104 @@ Custom message templates support these variables:
 - `{url}` - Link to finding/alert
 - `{timestamp}` - When sent
 
+### Notification Outbox (Queue Management)
+
+The notification outbox allows tenants to monitor and manage their notification delivery queue.
+
+**Key Files:**
+
+```
+src/features/notifications/
+├── api/use-notification-outbox-api.ts     # API hooks
+├── types/notification-outbox.types.ts     # Types & status configs
+src/app/(dashboard)/settings/integrations/notifications/
+└── outbox/page.tsx                        # Queue management page
+```
+
+**Types:**
+
+```tsx
+type OutboxStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'dead'
+
+interface OutboxEntry {
+  id: string
+  event_type: string
+  aggregate_type: string
+  title: string
+  severity: OutboxSeverity
+  status: OutboxStatus
+  retry_count: number
+  max_retries: number
+  last_error?: string
+  scheduled_at: string
+}
+
+interface OutboxStats {
+  pending: number
+  processing: number
+  completed: number
+  failed: number
+  dead: number
+  total: number
+}
+```
+
+**Hooks:**
+
+```tsx
+// List outbox entries (tenant-scoped)
+const { data, isLoading } = useNotificationOutboxApi({ status: 'failed', page: 1 })
+
+// Get outbox statistics
+const { data: stats } = useNotificationOutboxStatsApi()
+
+// Retry failed entry
+const { trigger: retry } = useRetryOutboxEntryApi(entryId)
+await retry()
+
+// Delete entry
+const { trigger: del } = useDeleteOutboxEntryApi(entryId)
+await del()
+```
+
+**Permissions Required:**
+
+- `integrations:notifications:read` for viewing
+- `integrations:notifications:write` for retry
+- `integrations:notifications:delete` for delete
+
 ## 🎨 UI & Theming
 
 ```tsx
 // Theme
 const { theme, setTheme } = useTheme() // "light"|"dark"|"system"
 
-// Direction  
+// Direction
 const { direction } = useDirection() // "ltr"|"rtl"
 
 // Components
-import { Button, Dialog, Input } from "@/components/ui/..."
+import { Button, Dialog, Input } from '@/components/ui/...'
 
 // Toasts
-import { toast } from "sonner"
-toast.success("Done!")
-toast.error("Failed!")
+import { toast } from 'sonner'
+toast.success('Done!')
+toast.error('Failed!')
 ```
 
 ## 🔧 Project-Specific
 
 **React Compiler:**
+
 - Enabled in `next.config.ts`
 - Auto-optimizes → No manual memoization needed
 
 **Providers:**
+
 - Wrapped in `src/app/providers.tsx`
 - Order: Theme → Direction → Layout → Search
 
 **TypeScript:**
+
 - Strict mode • Explicit return types
 - No `any` (use `unknown`)
 - Generate types from DB schema
@@ -432,6 +537,7 @@ toast.error("Failed!")
 ## 📚 Documentation
 
 **Guides:**
+
 - [architecture.md](.claude/architecture.md) - Structure deep dive
 - [auth.md](.claude/auth.md) - Authentication & multi-tenant flow
 - [access-control.md](.claude/access-control.md) - RBAC & permissions system
@@ -440,6 +546,7 @@ toast.error("Failed!")
 - [troubleshooting.md](.claude/troubleshooting.md) - Common issues
 
 **External:**
+
 - [Next.js 16](https://nextjs.org/docs) • [shadcn/ui](https://ui.shadcn.com)
 - [Zustand](https://zustand-demo.pmnd.rs/) • [Tailwind](https://tailwindcss.com/docs)
 
@@ -471,17 +578,18 @@ npm run build
 ### Pre-commit Hook (Automatic)
 
 This project uses **Husky + lint-staged** to automatically check code before commits:
+
 - TypeScript type checking runs on all staged files
 - ESLint auto-fixes staged `.ts` and `.tsx` files
 
 ### Common Issues to Avoid
 
-| Issue | Problem | Solution |
-|-------|---------|----------|
-| **Unused imports** | Lint warning | Remove or prefix with `_` |
-| **Missing type imports** | Build error | Import all types used in interfaces |
-| **Property mismatch** | Build error | Check type definitions before accessing |
-| **Snake vs Camel case** | Runtime error | UI uses `snake_case`, backend uses `camelCase` |
+| Issue                    | Problem       | Solution                                       |
+| ------------------------ | ------------- | ---------------------------------------------- |
+| **Unused imports**       | Lint warning  | Remove or prefix with `_`                      |
+| **Missing type imports** | Build error   | Import all types used in interfaces            |
+| **Property mismatch**    | Build error   | Check type definitions before accessing        |
+| **Snake vs Camel case**  | Runtime error | UI uses `snake_case`, backend uses `camelCase` |
 
 ### Naming Convention for Unused Variables
 
@@ -513,38 +621,42 @@ selectedItem?.property
 ## 🔄 CI/CD Workflows
 
 ### PR to main/develop
+
 ```
 ├── quality (type-check + lint + prettier)  ─┐
 └── test                                     ─┴── Done (no build)
 ```
 
 ### Push to main/develop
+
 ```
 ├── quality ─┐
 └── test    ─┴── build ── Done
 ```
 
-### Tag Release (v*)
+### Tag Release (v\*)
+
 ```
 prepare ── build (amd64) ─┐
          ── build (arm64) ─┴── merge ── Push to Docker Hub
 ```
 
 **Notes:**
+
 - PRs skip build to save time (quality + test is enough for review)
 - Docker builds run in parallel for amd64/arm64
 - All builds use GitHub Actions cache for faster subsequent runs
 
 ## 🚀 Claude Code Usage
 
-| Task | Prompt | Result |
-|------|--------|--------|
-| **New feature** | "Create feature [name] following structure" | `src/features/[name]/{...}` |
-| **i18n component** | "Create localized [X] with locale detection" | Includes header reading |
-| **Auth page** | "Create protected [X] checking auth" | Includes Zustand check |
-| **Themed component** | "Create [X] with theme support" | Uses useTheme hook |
-| **Pattern help** | "Show CRUD pattern" | Links to patterns.md |
-| **RTL help** | "How to handle RTL?" | Links to i18n.md |
+| Task                 | Prompt                                       | Result                      |
+| -------------------- | -------------------------------------------- | --------------------------- |
+| **New feature**      | "Create feature [name] following structure"  | `src/features/[name]/{...}` |
+| **i18n component**   | "Create localized [X] with locale detection" | Includes header reading     |
+| **Auth page**        | "Create protected [X] checking auth"         | Includes Zustand check      |
+| **Themed component** | "Create [X] with theme support"              | Uses useTheme hook          |
+| **Pattern help**     | "Show CRUD pattern"                          | Links to patterns.md        |
+| **RTL help**         | "How to handle RTL?"                         | Links to i18n.md            |
 
 ## 📝 Commits
 
@@ -567,13 +679,14 @@ chore: update dependencies
 
 **IMPORTANT**: Next.js 16 deprecated `middleware.ts` in favor of `proxy.ts`.
 
-| Next.js 15 | Next.js 16 |
-|------------|------------|
-| `middleware.ts` | `proxy.ts` |
+| Next.js 15                     | Next.js 16                |
+| ------------------------------ | ------------------------- |
+| `middleware.ts`                | `proxy.ts`                |
 | `export function middleware()` | `export function proxy()` |
-| Edge Runtime | Node.js Runtime |
+| Edge Runtime                   | Node.js Runtime           |
 
 **Migration:**
+
 ```bash
 # Rename file
 mv middleware.ts proxy.ts
@@ -590,17 +703,22 @@ export function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/', '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)'],
+  matcher: [
+    '/',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+  ],
 }
 ```
 
 **Best Practices (Next.js 16):**
+
 - Keep `proxy.ts` lightweight - only routing/coarse checks
 - NO database calls or JWT verification in proxy
 - Detailed auth should be in Server Components/Actions
 - Use Node.js compatible libraries (not Edge-only)
 
 **References:**
+
 - [Next.js 16 Blog](https://nextjs.org/blog/next-16)
 - [Auth0: What's New in Next.js 16](https://auth0.com/blog/whats-new-nextjs-16/)
 

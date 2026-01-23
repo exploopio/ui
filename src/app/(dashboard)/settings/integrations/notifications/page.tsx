@@ -1,21 +1,15 @@
-"use client";
+'use client'
 
-import { useState, useMemo, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import { Header, Main } from "@/components/layout";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { PageHeader } from "@/features/shared";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { useState, useMemo, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
+import { Header, Main } from '@/components/layout'
+import { ProfileDropdown } from '@/components/profile-dropdown'
+import { Search } from '@/components/search'
+import { ThemeSwitch } from '@/components/theme-switch'
+import { PageHeader } from '@/features/shared'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -23,14 +17,14 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from '@/components/ui/table'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,16 +34,11 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { toast } from "sonner";
-import { Can, Permission } from "@/lib/permissions";
+} from '@/components/ui/alert-dialog'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { toast } from 'sonner'
+import { Can, Permission } from '@/lib/permissions'
 import {
   Plus,
   Bell,
@@ -66,12 +55,13 @@ import {
   Clock,
   MessageSquare,
   History,
-} from "lucide-react";
+  Inbox,
+} from 'lucide-react'
 import {
   useNotificationIntegrationsApi,
   invalidateNotificationIntegrationsCache,
-} from "@/features/integrations";
-import type { Integration } from "@/features/integrations";
+} from '@/features/integrations'
+import type { Integration } from '@/features/integrations'
 import {
   ALL_NOTIFICATION_EVENT_TYPES,
   ALL_NOTIFICATION_SEVERITIES,
@@ -79,162 +69,162 @@ import {
   DEFAULT_ENABLED_SEVERITIES,
   EVENT_CATEGORY_LABELS,
   type NotificationEventCategory,
-} from "@/features/integrations/types/integration.types";
-import { cn } from "@/lib/utils";
-import { AddNotificationDialog } from "@/features/notifications/components/add-notification-dialog";
-import { EditNotificationDialog } from "@/features/notifications/components/edit-notification-dialog";
+} from '@/features/integrations/types/integration.types'
+import { cn } from '@/lib/utils'
+import { AddNotificationDialog } from '@/features/notifications/components/add-notification-dialog'
+import { EditNotificationDialog } from '@/features/notifications/components/edit-notification-dialog'
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
   connected: {
-    label: "Connected",
-    color: "bg-green-500/10 text-green-500 border-green-500/20",
+    label: 'Connected',
+    color: 'bg-green-500/10 text-green-500 border-green-500/20',
     icon: <CheckCircle className="h-3.5 w-3.5" />,
   },
   disconnected: {
-    label: "Disconnected",
-    color: "bg-gray-500/10 text-gray-500 border-gray-500/20",
+    label: 'Disconnected',
+    color: 'bg-gray-500/10 text-gray-500 border-gray-500/20',
     icon: <XCircle className="h-3.5 w-3.5" />,
   },
   error: {
-    label: "Error",
-    color: "bg-red-500/10 text-red-500 border-red-500/20",
+    label: 'Error',
+    color: 'bg-red-500/10 text-red-500 border-red-500/20',
     icon: <AlertCircle className="h-3.5 w-3.5" />,
   },
   pending: {
-    label: "Pending",
-    color: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
+    label: 'Pending',
+    color: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
     icon: <Clock className="h-3.5 w-3.5" />,
   },
-};
+}
 
 const PROVIDER_LABELS: Record<string, string> = {
-  slack: "Slack",
-  teams: "Microsoft Teams",
-  telegram: "Telegram",
-  webhook: "Webhook",
-  email: "Email",
-};
+  slack: 'Slack',
+  teams: 'Microsoft Teams',
+  telegram: 'Telegram',
+  webhook: 'Webhook',
+  email: 'Email',
+}
 
 const PROVIDER_COLORS: Record<string, string> = {
-  slack: "bg-[#4A154B]/10",
-  teams: "bg-[#6264A7]/10",
-  telegram: "bg-[#0088cc]/10",
-  webhook: "bg-gray-500/10",
-  email: "bg-blue-500/10",
-};
+  slack: 'bg-[#4A154B]/10',
+  teams: 'bg-[#6264A7]/10',
+  telegram: 'bg-[#0088cc]/10',
+  webhook: 'bg-gray-500/10',
+  email: 'bg-blue-500/10',
+}
 
 function ProviderIcon({ provider, className }: { provider: string; className?: string }) {
   switch (provider) {
-    case "slack":
-      return <MessageSquare className={cn("text-[#4A154B]", className)} />;
-    case "teams":
-      return <MessageSquare className={cn("text-[#6264A7]", className)} />;
-    case "telegram":
-      return <Send className={cn("text-[#0088cc]", className)} />;
-    case "webhook":
-      return <Bell className={cn("text-gray-500", className)} />;
-    case "email":
-      return <Bell className={cn("text-blue-500", className)} />;
+    case 'slack':
+      return <MessageSquare className={cn('text-[#4A154B]', className)} />
+    case 'teams':
+      return <MessageSquare className={cn('text-[#6264A7]', className)} />
+    case 'telegram':
+      return <Send className={cn('text-[#0088cc]', className)} />
+    case 'webhook':
+      return <Bell className={cn('text-gray-500', className)} />
+    case 'email':
+      return <Bell className={cn('text-blue-500', className)} />
     default:
-      return <Bell className={className} />;
+      return <Bell className={className} />
   }
 }
 
 export default function NotificationIntegrationsPage() {
-  const router = useRouter();
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [selectedIntegration, setSelectedIntegration] = useState<Integration | null>(null);
-  const [actionInProgress, setActionInProgress] = useState<string | null>(null);
+  const router = useRouter()
+  const [addDialogOpen, setAddDialogOpen] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [selectedIntegration, setSelectedIntegration] = useState<Integration | null>(null)
+  const [actionInProgress, setActionInProgress] = useState<string | null>(null)
 
-  const { data: integrationsData, error, isLoading, mutate } = useNotificationIntegrationsApi();
+  const { data: integrationsData, error, isLoading, mutate } = useNotificationIntegrationsApi()
 
   // Handle the API response format
   const integrations = useMemo(() => {
-    if (!integrationsData) return [];
-    return integrationsData.data ?? [];
-  }, [integrationsData]);
+    if (!integrationsData) return []
+    return integrationsData.data ?? []
+  }, [integrationsData])
 
   // Calculate stats
   const stats = useMemo(() => {
-    const total = integrations.length;
-    const connected = integrations.filter((i) => i.status === "connected").length;
-    const errorCount = integrations.filter((i) => i.status === "error").length;
-    return { total, connected, error: errorCount };
-  }, [integrations]);
+    const total = integrations.length
+    const connected = integrations.filter((i) => i.status === 'connected').length
+    const errorCount = integrations.filter((i) => i.status === 'error').length
+    return { total, connected, error: errorCount }
+  }, [integrations])
 
   const handleRefresh = useCallback(async () => {
-    setActionInProgress("refresh");
+    setActionInProgress('refresh')
     try {
-      await invalidateNotificationIntegrationsCache();
-      await mutate();
-      toast.success("Integrations refreshed");
+      await invalidateNotificationIntegrationsCache()
+      await mutate()
+      toast.success('Integrations refreshed')
     } catch {
-      toast.error("Failed to refresh integrations");
+      toast.error('Failed to refresh integrations')
     } finally {
-      setActionInProgress(null);
+      setActionInProgress(null)
     }
-  }, [mutate]);
+  }, [mutate])
 
   const handleTestNotification = useCallback(async (integration: Integration) => {
-    setActionInProgress(integration.id);
+    setActionInProgress(integration.id)
     try {
       const response = await fetch(`/api/v1/integrations/${integration.id}/test-notification`, {
-        method: "POST",
-      });
+        method: 'POST',
+      })
 
       // Handle rate limit (429)
       if (response.status === 429) {
-        const retryAfter = response.headers.get("Retry-After");
-        const seconds = retryAfter ? parseInt(retryAfter, 10) : 60;
-        toast.error(`Rate limit exceeded. Please wait ${seconds} seconds before trying again.`);
-        return;
+        const retryAfter = response.headers.get('Retry-After')
+        const seconds = retryAfter ? parseInt(retryAfter, 10) : 60
+        toast.error(`Rate limit exceeded. Please wait ${seconds} seconds before trying again.`)
+        return
       }
 
-      if (!response.ok) throw new Error("Test failed");
-      const result = await response.json();
+      if (!response.ok) throw new Error('Test failed')
+      const result = await response.json()
       if (result.success) {
-        toast.success(`Test notification sent to "${integration.name}"`);
+        toast.success(`Test notification sent to "${integration.name}"`)
       } else {
-        toast.error(result.error || "Test notification failed");
+        toast.error(result.error || 'Test notification failed')
       }
     } catch {
-      toast.error("Failed to send test notification");
+      toast.error('Failed to send test notification')
     } finally {
-      setActionInProgress(null);
+      setActionInProgress(null)
     }
-  }, []);
+  }, [])
 
   const handleDelete = useCallback(async () => {
-    if (!selectedIntegration) return;
-    setActionInProgress(selectedIntegration.id);
+    if (!selectedIntegration) return
+    setActionInProgress(selectedIntegration.id)
     try {
       const response = await fetch(`/api/v1/integrations/${selectedIntegration.id}`, {
-        method: "DELETE",
-      });
-      if (!response.ok) throw new Error("Delete failed");
-      toast.success(`Integration "${selectedIntegration.name}" deleted`);
-      await invalidateNotificationIntegrationsCache();
-      await mutate();
+        method: 'DELETE',
+      })
+      if (!response.ok) throw new Error('Delete failed')
+      toast.success(`Integration "${selectedIntegration.name}" deleted`)
+      await invalidateNotificationIntegrationsCache()
+      await mutate()
     } catch {
-      toast.error("Failed to delete integration");
+      toast.error('Failed to delete integration')
     } finally {
-      setDeleteDialogOpen(false);
-      setSelectedIntegration(null);
-      setActionInProgress(null);
+      setDeleteDialogOpen(false)
+      setSelectedIntegration(null)
+      setActionInProgress(null)
     }
-  }, [selectedIntegration, mutate]);
+  }, [selectedIntegration, mutate])
 
   const handleDeleteClick = (integration: Integration) => {
-    setSelectedIntegration(integration);
-    setDeleteDialogOpen(true);
-  };
+    setSelectedIntegration(integration)
+    setDeleteDialogOpen(true)
+  }
 
   const handleEditClick = (integration: Integration) => {
-    setSelectedIntegration(integration);
-    setEditDialogOpen(true);
-  };
+    setSelectedIntegration(integration)
+    setEditDialogOpen(true)
+  }
 
   // Error state
   if (error) {
@@ -251,7 +241,9 @@ export default function NotificationIntegrationsPage() {
           <div className="flex flex-col items-center justify-center py-20">
             <AlertCircle className="h-12 w-12 text-destructive mb-4" />
             <h2 className="text-lg font-semibold mb-2">Failed to load notification integrations</h2>
-            <p className="text-muted-foreground mb-4">{error?.message || "An unexpected error occurred"}</p>
+            <p className="text-muted-foreground mb-4">
+              {error?.message || 'An unexpected error occurred'}
+            </p>
             <Button onClick={() => mutate()}>
               <RefreshCw className="mr-2 h-4 w-4" />
               Retry
@@ -259,7 +251,7 @@ export default function NotificationIntegrationsPage() {
           </div>
         </Main>
       </>
-    );
+    )
   }
 
   return (
@@ -279,7 +271,7 @@ export default function NotificationIntegrationsPage() {
             variant="ghost"
             size="sm"
             className="gap-2 -ml-2 text-muted-foreground hover:text-foreground"
-            onClick={() => router.push("/settings/integrations")}
+            onClick={() => router.push('/settings/integrations')}
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Integrations
@@ -293,17 +285,24 @@ export default function NotificationIntegrationsPage() {
           <div className="flex gap-2">
             <Button
               variant="outline"
-              onClick={() => router.push("/settings/integrations/notifications/history")}
+              onClick={() => router.push('/settings/integrations/notifications/history')}
             >
               <History className="mr-2 h-4 w-4" />
               View History
             </Button>
             <Button
               variant="outline"
-              onClick={handleRefresh}
-              disabled={actionInProgress === "refresh"}
+              onClick={() => router.push('/settings/integrations/notifications/outbox')}
             >
-              {actionInProgress === "refresh" ? (
+              <Inbox className="mr-2 h-4 w-4" />
+              Queue
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleRefresh}
+              disabled={actionInProgress === 'refresh'}
+            >
+              {actionInProgress === 'refresh' ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
                 <RefreshCw className="mr-2 h-4 w-4" />
@@ -384,7 +383,8 @@ export default function NotificationIntegrationsPage() {
                 <Bell className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                 <h3 className="text-lg font-semibold mb-2">No Notification Channels</h3>
                 <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                  Add Slack, Microsoft Teams, Telegram, or webhook integrations to receive security alerts.
+                  Add Slack, Microsoft Teams, Telegram, or webhook integrations to receive security
+                  alerts.
                 </p>
                 <Button onClick={() => setAddDialogOpen(true)}>
                   <Plus className="mr-2 h-4 w-4" />
@@ -407,16 +407,19 @@ export default function NotificationIntegrationsPage() {
                   </TableHeader>
                   <TableBody>
                     {integrations.map((integration) => {
-                      const statusConfig = STATUS_CONFIG[integration.status] || STATUS_CONFIG.pending;
-                      const ext = integration.notification_extension;
+                      const statusConfig =
+                        STATUS_CONFIG[integration.status] || STATUS_CONFIG.pending
+                      const ext = integration.notification_extension
                       return (
                         <TableRow key={integration.id}>
                           <TableCell>
                             <div className="flex items-center gap-3">
-                              <div className={cn(
-                                "flex h-10 w-10 items-center justify-center rounded-lg",
-                                PROVIDER_COLORS[integration.provider] || "bg-gray-100"
-                              )}>
+                              <div
+                                className={cn(
+                                  'flex h-10 w-10 items-center justify-center rounded-lg',
+                                  PROVIDER_COLORS[integration.provider] || 'bg-gray-100'
+                                )}
+                              >
                                 <ProviderIcon provider={integration.provider} className="h-5 w-5" />
                               </div>
                               <div>
@@ -436,12 +439,15 @@ export default function NotificationIntegrationsPage() {
                           </TableCell>
                           <TableCell>
                             <div className="space-y-1">
-                              <Badge variant="outline" className={cn("gap-1", statusConfig.color)}>
+                              <Badge variant="outline" className={cn('gap-1', statusConfig.color)}>
                                 {statusConfig.icon}
                                 {statusConfig.label}
                               </Badge>
-                              {integration.status_message && integration.status === "error" && (
-                                <p className="text-xs text-red-500 max-w-[250px]" title={integration.status_message}>
+                              {integration.status_message && integration.status === 'error' && (
+                                <p
+                                  className="text-xs text-red-500 max-w-[250px]"
+                                  title={integration.status_message}
+                                >
                                   {integration.status_message}
                                 </p>
                               )}
@@ -453,39 +459,60 @@ export default function NotificationIntegrationsPage() {
                                 <TooltipTrigger asChild>
                                   <div className="flex gap-1 flex-wrap cursor-default">
                                     {(() => {
-                                      const severities = ext?.enabled_severities ?? DEFAULT_ENABLED_SEVERITIES;
-                                      if (severities.length === 0 || severities.length === ALL_NOTIFICATION_SEVERITIES.length) {
-                                        return <span className="text-xs text-muted-foreground">All severities</span>;
+                                      const severities =
+                                        ext?.enabled_severities ?? DEFAULT_ENABLED_SEVERITIES
+                                      if (
+                                        severities.length === 0 ||
+                                        severities.length === ALL_NOTIFICATION_SEVERITIES.length
+                                      ) {
+                                        return (
+                                          <span className="text-xs text-muted-foreground">
+                                            All severities
+                                          </span>
+                                        )
                                       }
                                       // Show max 3 severity badges, then "+N more"
-                                      const maxShow = 3;
-                                      const shown = severities.slice(0, maxShow);
-                                      const remaining = severities.length - maxShow;
+                                      const maxShow = 3
+                                      const shown = severities.slice(0, maxShow)
+                                      const remaining = severities.length - maxShow
                                       return (
                                         <>
                                           {shown.map((sev) => {
-                                            const colorClass = {
-                                              critical: "bg-red-500/10 text-red-600 border-red-200",
-                                              high: "bg-orange-500/10 text-orange-600 border-orange-200",
-                                              medium: "bg-yellow-500/10 text-yellow-600 border-yellow-200",
-                                              low: "bg-blue-500/10 text-blue-600 border-blue-200",
-                                              info: "bg-gray-500/10 text-gray-600 border-gray-200",
-                                              none: "bg-gray-200/10 text-gray-400 border-gray-200",
-                                            }[sev] || "bg-gray-500/10 text-gray-600 border-gray-200";
-                                            const config = ALL_NOTIFICATION_SEVERITIES.find((s) => s.value === sev);
+                                            const colorClass =
+                                              {
+                                                critical:
+                                                  'bg-red-500/10 text-red-600 border-red-200',
+                                                high: 'bg-orange-500/10 text-orange-600 border-orange-200',
+                                                medium:
+                                                  'bg-yellow-500/10 text-yellow-600 border-yellow-200',
+                                                low: 'bg-blue-500/10 text-blue-600 border-blue-200',
+                                                info: 'bg-gray-500/10 text-gray-600 border-gray-200',
+                                                none: 'bg-gray-200/10 text-gray-400 border-gray-200',
+                                              }[sev] ||
+                                              'bg-gray-500/10 text-gray-600 border-gray-200'
+                                            const config = ALL_NOTIFICATION_SEVERITIES.find(
+                                              (s) => s.value === sev
+                                            )
                                             return (
-                                              <Badge key={sev} variant="outline" className={cn("text-xs", colorClass)}>
+                                              <Badge
+                                                key={sev}
+                                                variant="outline"
+                                                className={cn('text-xs', colorClass)}
+                                              >
                                                 {config?.label || sev}
                                               </Badge>
-                                            );
+                                            )
                                           })}
                                           {remaining > 0 && (
-                                            <Badge variant="outline" className="text-xs bg-gray-100 text-gray-600 border-gray-200">
+                                            <Badge
+                                              variant="outline"
+                                              className="text-xs bg-gray-100 text-gray-600 border-gray-200"
+                                            >
                                               +{remaining}
                                             </Badge>
                                           )}
                                         </>
-                                      );
+                                      )
                                     })()}
                                   </div>
                                 </TooltipTrigger>
@@ -493,14 +520,22 @@ export default function NotificationIntegrationsPage() {
                                   <p className="text-xs font-medium mb-1">Severity Filters:</p>
                                   <p className="text-xs text-muted-foreground">
                                     {(() => {
-                                      const severities = ext?.enabled_severities ?? DEFAULT_ENABLED_SEVERITIES;
-                                      if (severities.length === 0 || severities.length === ALL_NOTIFICATION_SEVERITIES.length) {
-                                        return "All severities enabled";
+                                      const severities =
+                                        ext?.enabled_severities ?? DEFAULT_ENABLED_SEVERITIES
+                                      if (
+                                        severities.length === 0 ||
+                                        severities.length === ALL_NOTIFICATION_SEVERITIES.length
+                                      ) {
+                                        return 'All severities enabled'
                                       }
-                                      return severities.map((sev) => {
-                                        const config = ALL_NOTIFICATION_SEVERITIES.find((s) => s.value === sev);
-                                        return config?.label || sev;
-                                      }).join(", ");
+                                      return severities
+                                        .map((sev) => {
+                                          const config = ALL_NOTIFICATION_SEVERITIES.find(
+                                            (s) => s.value === sev
+                                          )
+                                          return config?.label || sev
+                                        })
+                                        .join(', ')
                                     })()}
                                   </p>
                                 </TooltipContent>
@@ -513,62 +548,100 @@ export default function NotificationIntegrationsPage() {
                                 <TooltipTrigger asChild>
                                   <div className="flex gap-1 flex-wrap cursor-default">
                                     {(() => {
-                                      const eventTypes = ext?.enabled_event_types ?? DEFAULT_ENABLED_EVENT_TYPES;
-                                      if (eventTypes.length === 0 || eventTypes.length === ALL_NOTIFICATION_EVENT_TYPES.length) {
-                                        return <span className="text-xs text-muted-foreground">All events</span>;
+                                      const eventTypes =
+                                        ext?.enabled_event_types ?? DEFAULT_ENABLED_EVENT_TYPES
+                                      if (
+                                        eventTypes.length === 0 ||
+                                        eventTypes.length === ALL_NOTIFICATION_EVENT_TYPES.length
+                                      ) {
+                                        return (
+                                          <span className="text-xs text-muted-foreground">
+                                            All events
+                                          </span>
+                                        )
                                       }
                                       // Group by category and show summary
-                                      const byCategory = new Map<NotificationEventCategory, string[]>();
+                                      const byCategory = new Map<
+                                        NotificationEventCategory,
+                                        string[]
+                                      >()
                                       eventTypes.forEach((et) => {
-                                        const config = ALL_NOTIFICATION_EVENT_TYPES.find((t) => t.value === et);
+                                        const config = ALL_NOTIFICATION_EVENT_TYPES.find(
+                                          (t) => t.value === et
+                                        )
                                         if (config) {
-                                          const cat = config.category;
-                                          if (!byCategory.has(cat)) byCategory.set(cat, []);
-                                          byCategory.get(cat)!.push(config.label);
+                                          const cat = config.category
+                                          if (!byCategory.has(cat)) byCategory.set(cat, [])
+                                          byCategory.get(cat)!.push(config.label)
                                         }
-                                      });
+                                      })
                                       // Show category badges with count
-                                      const categories = Array.from(byCategory.entries());
+                                      const categories = Array.from(byCategory.entries())
                                       if (categories.length <= 2) {
                                         // Show category names with count
                                         return categories.map(([cat, items]) => (
-                                          <Badge key={cat} variant="outline" className="text-xs bg-purple-500/10 text-purple-600 border-purple-200">
-                                            {EVENT_CATEGORY_LABELS[cat].replace(" Events", "")} ({items.length})
+                                          <Badge
+                                            key={cat}
+                                            variant="outline"
+                                            className="text-xs bg-purple-500/10 text-purple-600 border-purple-200"
+                                          >
+                                            {EVENT_CATEGORY_LABELS[cat].replace(' Events', '')} (
+                                            {items.length})
                                           </Badge>
-                                        ));
+                                        ))
                                       }
                                       // Show total count
                                       return (
-                                        <Badge variant="outline" className="text-xs bg-purple-500/10 text-purple-600 border-purple-200">
+                                        <Badge
+                                          variant="outline"
+                                          className="text-xs bg-purple-500/10 text-purple-600 border-purple-200"
+                                        >
                                           {eventTypes.length} event types
                                         </Badge>
-                                      );
+                                      )
                                     })()}
                                   </div>
                                 </TooltipTrigger>
                                 <TooltipContent side="bottom" className="max-w-[280px]">
                                   <p className="text-xs font-medium mb-1">Event Types:</p>
                                   {(() => {
-                                    const eventTypes = ext?.enabled_event_types ?? DEFAULT_ENABLED_EVENT_TYPES;
-                                    if (eventTypes.length === 0 || eventTypes.length === ALL_NOTIFICATION_EVENT_TYPES.length) {
-                                      return <p className="text-xs text-muted-foreground">All event types enabled</p>;
+                                    const eventTypes =
+                                      ext?.enabled_event_types ?? DEFAULT_ENABLED_EVENT_TYPES
+                                    if (
+                                      eventTypes.length === 0 ||
+                                      eventTypes.length === ALL_NOTIFICATION_EVENT_TYPES.length
+                                    ) {
+                                      return (
+                                        <p className="text-xs text-muted-foreground">
+                                          All event types enabled
+                                        </p>
+                                      )
                                     }
                                     // Group by category for tooltip
-                                    const byCategory = new Map<NotificationEventCategory, string[]>();
+                                    const byCategory = new Map<
+                                      NotificationEventCategory,
+                                      string[]
+                                    >()
                                     eventTypes.forEach((et) => {
-                                      const config = ALL_NOTIFICATION_EVENT_TYPES.find((t) => t.value === et);
+                                      const config = ALL_NOTIFICATION_EVENT_TYPES.find(
+                                        (t) => t.value === et
+                                      )
                                       if (config) {
-                                        const cat = config.category;
-                                        if (!byCategory.has(cat)) byCategory.set(cat, []);
-                                        byCategory.get(cat)!.push(config.label);
+                                        const cat = config.category
+                                        if (!byCategory.has(cat)) byCategory.set(cat, [])
+                                        byCategory.get(cat)!.push(config.label)
                                       }
-                                    });
+                                    })
                                     return Array.from(byCategory.entries()).map(([cat, items]) => (
                                       <div key={cat} className="mb-1 last:mb-0">
-                                        <span className="text-xs font-medium">{EVENT_CATEGORY_LABELS[cat]}:</span>
-                                        <span className="text-xs text-muted-foreground ml-1">{items.join(", ")}</span>
+                                        <span className="text-xs font-medium">
+                                          {EVENT_CATEGORY_LABELS[cat]}:
+                                        </span>
+                                        <span className="text-xs text-muted-foreground ml-1">
+                                          {items.join(', ')}
+                                        </span>
                                       </div>
-                                    ));
+                                    ))
                                   })()}
                                 </TooltipContent>
                               </Tooltip>
@@ -578,7 +651,7 @@ export default function NotificationIntegrationsPage() {
                             <span className="text-sm text-muted-foreground">
                               {integration.last_sync_at
                                 ? new Date(integration.last_sync_at).toLocaleDateString()
-                                : "Never"}
+                                : 'Never'}
                             </span>
                           </TableCell>
                           <TableCell>
@@ -598,7 +671,9 @@ export default function NotificationIntegrationsPage() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleTestNotification(integration)}>
+                                <DropdownMenuItem
+                                  onClick={() => handleTestNotification(integration)}
+                                >
                                   <Send className="mr-2 h-4 w-4" />
                                   Send Test
                                 </DropdownMenuItem>
@@ -609,7 +684,11 @@ export default function NotificationIntegrationsPage() {
                                   </DropdownMenuItem>
                                 </Can>
                                 <DropdownMenuItem
-                                  onClick={() => router.push(`/settings/integrations/notifications/history?integration=${integration.id}`)}
+                                  onClick={() =>
+                                    router.push(
+                                      `/settings/integrations/notifications/history?integration=${integration.id}`
+                                    )
+                                  }
                                 >
                                   <History className="mr-2 h-4 w-4" />
                                   View History
@@ -628,7 +707,7 @@ export default function NotificationIntegrationsPage() {
                             </DropdownMenu>
                           </TableCell>
                         </TableRow>
-                      );
+                      )
                     })}
                   </TableBody>
                 </Table>
@@ -649,8 +728,8 @@ export default function NotificationIntegrationsPage() {
               <div>
                 <h4 className="font-semibold text-blue-500 mb-1">Real-time Alerts</h4>
                 <p className="text-sm text-muted-foreground">
-                  Configure notification channels to receive instant alerts when critical vulnerabilities
-                  are discovered or when security findings need immediate attention.
+                  Configure notification channels to receive instant alerts when critical
+                  vulnerabilities are discovered or when security findings need immediate attention.
                 </p>
               </div>
             </div>
@@ -663,8 +742,8 @@ export default function NotificationIntegrationsPage() {
         open={addDialogOpen}
         onOpenChange={setAddDialogOpen}
         onSuccess={async () => {
-          await invalidateNotificationIntegrationsCache();
-          await mutate();
+          await invalidateNotificationIntegrationsCache()
+          await mutate()
         }}
       />
 
@@ -674,8 +753,8 @@ export default function NotificationIntegrationsPage() {
           onOpenChange={setEditDialogOpen}
           integration={selectedIntegration}
           onSuccess={async () => {
-            await invalidateNotificationIntegrationsCache();
-            await mutate();
+            await invalidateNotificationIntegrationsCache()
+            await mutate()
           }}
         />
       )}
@@ -686,21 +765,18 @@ export default function NotificationIntegrationsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Notification Channel</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete <strong>{selectedIntegration?.name}</strong>?
-              You will no longer receive notifications through this channel.
+              Are you sure you want to delete <strong>{selectedIntegration?.name}</strong>? You will
+              no longer receive notifications through this channel.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-red-500 hover:bg-red-600"
-              onClick={handleDelete}
-            >
+            <AlertDialogAction className="bg-red-500 hover:bg-red-600" onClick={handleDelete}>
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </>
-  );
+  )
 }
