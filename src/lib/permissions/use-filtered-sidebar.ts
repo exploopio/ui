@@ -29,7 +29,14 @@ import { useMemo } from 'react'
 import { usePermissions } from './hooks'
 import { isRoleAtLeast, type RoleString } from './constants'
 import { useTenantModules } from '@/features/integrations/api/use-tenant-modules'
-import type { SidebarData, NavGroup, NavItem, NavCollapsible, NavLink } from '@/components/types'
+import type {
+  SidebarData,
+  NavGroup,
+  NavItem,
+  NavCollapsible,
+  NavLink,
+  ReleaseStatus,
+} from '@/components/types'
 
 interface AccessCheckFunctions {
   can: (perm: string) => boolean
@@ -38,6 +45,8 @@ interface AccessCheckFunctions {
   isAnyRole: (...roles: string[]) => boolean
   tenantRole: string | undefined
   hasModule: (moduleId: string) => boolean
+  getModuleReleaseStatus: (moduleId: string) => ReleaseStatus | undefined
+  isModuleActive: (moduleId: string) => boolean
 }
 
 interface FilteredSidebarResult {
@@ -49,6 +58,8 @@ interface FilteredSidebarResult {
 /**
  * Check if user has access to a nav item
  * Supports module, permission, role, and minRole checks
+ *
+ * Note: Coming soon modules are NOT filtered out - they're shown with releaseStatus
  */
 function hasItemAccess(
   item: {
@@ -59,10 +70,32 @@ function hasItemAccess(
   },
   checks: AccessCheckFunctions
 ): boolean {
-  const { can, canAny, isRole, isAnyRole, tenantRole, hasModule } = checks
+  const {
+    can,
+    canAny,
+    isRole,
+    isAnyRole,
+    tenantRole,
+    hasModule,
+    getModuleReleaseStatus,
+    isModuleActive,
+  } = checks
 
-  // Check module access first (licensing layer)
+  // Check module access (licensing layer)
   if (item.module) {
+    const releaseStatus = getModuleReleaseStatus(item.module)
+
+    // If module is coming_soon or beta, always show it (will be marked in UI)
+    if (releaseStatus === 'coming_soon' || releaseStatus === 'beta') {
+      return true
+    }
+
+    // If module is not active (admin disabled), hide it
+    if (!isModuleActive(item.module)) {
+      return false
+    }
+
+    // If module is not in tenant's plan, hide it
     if (!hasModule(item.module)) {
       return false
     }
@@ -110,6 +143,7 @@ function hasItemAccess(
 /**
  * Filter a single nav item based on access rules
  * Returns null if item should be hidden
+ * Sets releaseStatus based on module status from backend
  */
 function filterNavItem(item: NavItem, checks: AccessCheckFunctions): NavItem | null {
   // Check if user has access to this item
@@ -117,9 +151,20 @@ function filterNavItem(item: NavItem, checks: AccessCheckFunctions): NavItem | n
     return null
   }
 
+  // Get release status for this item's module
+  const releaseStatus = item.module ? checks.getModuleReleaseStatus(item.module) : undefined
+
   // If it's a collapsible item with sub-items, filter those too
   if ('items' in item) {
-    const filteredSubItems = item.items.filter((subItem) => hasItemAccess(subItem, checks))
+    const filteredSubItems = item.items
+      .filter((subItem) => hasItemAccess(subItem, checks))
+      .map((subItem) => ({
+        ...subItem,
+        // Inherit parent's releaseStatus if sub-item doesn't have its own module
+        releaseStatus: subItem.module
+          ? checks.getModuleReleaseStatus(subItem.module)
+          : releaseStatus,
+      }))
 
     // If no sub-items remain after filtering, hide the parent
     if (filteredSubItems.length === 0) {
@@ -128,12 +173,16 @@ function filterNavItem(item: NavItem, checks: AccessCheckFunctions): NavItem | n
 
     return {
       ...item,
+      releaseStatus,
       items: filteredSubItems,
     } as NavCollapsible
   }
 
   // It's a regular link item
-  return item as NavLink
+  return {
+    ...item,
+    releaseStatus,
+  } as NavLink
 }
 
 /**
@@ -181,35 +230,52 @@ function filterNavGroup(group: NavGroup, checks: AccessCheckFunctions): NavGroup
  */
 export function useFilteredSidebarData(sidebarData: SidebarData): FilteredSidebarResult {
   const { can, canAny, isRole, isAnyRole, tenantRole, permissions } = usePermissions()
-  const { moduleIds, isLoading: modulesLoading } = useTenantModules()
+  const { moduleIds, modules, isLoading: modulesLoading } = useTenantModules()
 
-  // Create hasModule function
-  // If modules are loading or empty, we need special handling
-  const hasModule = useMemo(() => {
-    return (moduleId: string) => {
-      // Owner and Admin bypass module checks (see all modules even if API fails)
-      // This prevents empty sidebar when modules API returns empty/fails
-      if (tenantRole === 'owner' || tenantRole === 'admin') {
-        return true
-      }
+  // Create helper functions for module access
+  const moduleHelpers = useMemo(() => {
+    // Get module by ID from the modules array
+    const getModule = (moduleId: string) =>
+      modules.find((m) => m.id === moduleId || m.slug === moduleId)
 
-      // If moduleIds has data, use it
+    // Get release status for a module
+    const getModuleReleaseStatus = (moduleId: string): ReleaseStatus | undefined => {
+      const mod = getModule(moduleId)
+      return mod?.release_status
+    }
+
+    // Check if module is active (admin toggle)
+    const isModuleActive = (moduleId: string): boolean => {
+      const mod = getModule(moduleId)
+      // If module not found, assume active (fail-open)
+      return mod?.is_active ?? true
+    }
+
+    // Check if tenant has access to module (based on plan)
+    const hasModule = (moduleId: string): boolean => {
+      // If moduleIds has data, use it (this is the source of truth from API)
       if (moduleIds.length > 0) {
         return moduleIds.includes(moduleId)
       }
 
-      // moduleIds is empty - API failed or loading
+      // moduleIds is empty - API failed or still loading
       if (modulesLoading) {
         return false // Hide while loading
       }
 
-      // API failed (moduleIds empty, not loading)
-      // If user has a valid tenantRole (authenticated), fail-open
-      // This provides better UX than hiding all features when API has issues
+      // API returned empty (failed or no modules)
+      // Owner and Admin get fail-open to prevent empty sidebar when API has issues
+      // Regular users see nothing (more secure default)
       // Security note: Backend still enforces proper authorization
-      return !!tenantRole
+      if (tenantRole === 'owner' || tenantRole === 'admin') {
+        return true
+      }
+
+      return false
     }
-  }, [moduleIds, modulesLoading, tenantRole])
+
+    return { hasModule, getModuleReleaseStatus, isModuleActive }
+  }, [modules, moduleIds, modulesLoading, tenantRole])
 
   const result = useMemo(() => {
     // Check if we have permission data (user is authenticated)
@@ -247,6 +313,9 @@ export function useFilteredSidebarData(sidebarData: SidebarData): FilteredSideba
         tenantRole,
         // While loading: authenticated users see all, others hide module-gated items
         hasModule: isAuthenticated ? () => true : () => false,
+        // During loading, assume all modules are active and released
+        getModuleReleaseStatus: () => undefined,
+        isModuleActive: () => true,
       }
 
       const filteredNavGroups = sidebarData.navGroups
@@ -266,7 +335,9 @@ export function useFilteredSidebarData(sidebarData: SidebarData): FilteredSideba
       isRole,
       isAnyRole,
       tenantRole,
-      hasModule,
+      hasModule: moduleHelpers.hasModule,
+      getModuleReleaseStatus: moduleHelpers.getModuleReleaseStatus,
+      isModuleActive: moduleHelpers.isModuleActive,
     }
 
     const filteredNavGroups = sidebarData.navGroups
@@ -277,7 +348,17 @@ export function useFilteredSidebarData(sidebarData: SidebarData): FilteredSideba
       ...sidebarData,
       navGroups: filteredNavGroups,
     }
-  }, [sidebarData, can, canAny, isRole, isAnyRole, tenantRole, permissions, hasModule, moduleIds, modulesLoading])
+  }, [
+    sidebarData,
+    can,
+    canAny,
+    isRole,
+    isAnyRole,
+    tenantRole,
+    permissions,
+    moduleHelpers,
+    modulesLoading,
+  ])
 
   // Compute overall loading state
   const isLoading = useMemo(() => {

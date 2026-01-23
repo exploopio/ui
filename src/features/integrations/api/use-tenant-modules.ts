@@ -9,40 +9,47 @@
  * the event types that map to each module.
  */
 
-'use client';
+'use client'
 
-import useSWR, { type SWRConfiguration } from 'swr';
-import { get } from '@/lib/api/client';
-import { handleApiError } from '@/lib/api/error-handler';
-import type { NotificationEventType } from '../types/integration.types';
+import useSWR, { type SWRConfiguration } from 'swr'
+import { get } from '@/lib/api/client'
+import { handleApiError } from '@/lib/api/error-handler'
+import type { NotificationEventType } from '../types/integration.types'
 
 // ============================================
 // TYPES
 // ============================================
 
 /**
+ * Release status for a module
+ */
+export type ReleaseStatus = 'released' | 'coming_soon' | 'beta' | 'deprecated'
+
+/**
  * Licensing module from backend
  */
 export interface LicensingModule {
-  id: string;
-  slug: string;
-  name: string;
-  description?: string;
-  icon?: string;
-  category: string;
-  display_order: number;
-  is_core: boolean;
-  is_active: boolean;
-  event_types?: string[];
+  id: string
+  slug: string
+  name: string
+  description?: string
+  icon?: string
+  category: string
+  display_order: number
+  is_active: boolean
+  release_status: ReleaseStatus
+  event_types?: string[]
 }
 
 /**
  * Response from tenant modules endpoint
  */
 export interface TenantModulesResponse {
-  module_ids: string[];
-  modules: LicensingModule[];
-  event_types?: NotificationEventType[];
+  module_ids: string[]
+  modules: LicensingModule[]
+  event_types?: NotificationEventType[]
+  coming_soon_module_ids?: string[]
+  beta_module_ids?: string[]
 }
 
 // ============================================
@@ -57,9 +64,9 @@ const defaultConfig: SWRConfiguration = {
     handleApiError(error, {
       showToast: false, // Silently fail - modules will default to empty
       logError: true,
-    });
+    })
   },
-};
+}
 
 // ============================================
 // HOOK
@@ -83,7 +90,7 @@ export function useTenantModules() {
     '/api/v1/me/modules',
     async (url: string) => {
       try {
-        return await get<TenantModulesResponse>(url);
+        return await get<TenantModulesResponse>(url)
       } catch {
         // Return empty data if endpoint not available
         // This allows the UI to gracefully degrade
@@ -91,11 +98,11 @@ export function useTenantModules() {
           module_ids: [],
           modules: [],
           event_types: [],
-        };
+        }
       }
     },
     defaultConfig
-  );
+  )
 
   return {
     /** Array of enabled module IDs (e.g., ['dashboard', 'assets', 'findings']) */
@@ -104,13 +111,17 @@ export function useTenantModules() {
     modules: data?.modules || [],
     /** Pre-computed available event types for this tenant */
     eventTypes: data?.event_types || [],
+    /** Module IDs that are coming soon */
+    comingSoonModuleIds: data?.coming_soon_module_ids || [],
+    /** Module IDs that are in beta */
+    betaModuleIds: data?.beta_module_ids || [],
     /** Loading state */
     isLoading,
     /** Error object if request failed */
     error,
     /** Refetch function */
     mutate,
-  };
+  }
 }
 
 /**
@@ -128,10 +139,10 @@ export function useTenantModules() {
  * ```
  */
 export function useHasModule(moduleId: string) {
-  const { moduleIds, isLoading } = useTenantModules();
+  const { moduleIds, isLoading } = useTenantModules()
 
   return {
     hasModule: moduleIds.includes(moduleId),
     isLoading,
-  };
+  }
 }

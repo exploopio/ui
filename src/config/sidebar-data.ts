@@ -67,29 +67,29 @@ import {
   Shield,
   Bell,
   CreditCard,
-} from "lucide-react";
-import { type SidebarData } from "@/components/types";
-import { Permission, Role } from "@/lib/permissions";
+} from 'lucide-react'
+import { type SidebarData } from '@/components/types'
+import { Permission, Role } from '@/lib/permissions'
 
 // Re-export Permission and Role for convenience
-export { Permission, Role };
+export { Permission, Role }
 
 export const sidebarData: SidebarData = {
   user: {
-    name: "Nguyen Van An",
-    email: "an.nguyen@company.vn",
-    avatar: "",
+    name: 'Nguyen Van An',
+    email: 'an.nguyen@company.vn',
+    avatar: '',
   },
   teams: [
     {
-      name: "Security Platform",
+      name: 'Security Platform',
       logo: Command,
-      plan: "Enterprise",
+      plan: 'Enterprise',
     },
     {
-      name: "Security Ops",
+      name: 'Security Ops',
       logo: AudioWaveform,
-      plan: "Team",
+      plan: 'Team',
     },
   ],
   navGroups: [
@@ -97,11 +97,11 @@ export const sidebarData: SidebarData = {
     // DASHBOARD - Overview & Quick Access
     // ========================================
     {
-      title: "",
+      title: '',
       items: [
         {
-          title: "Dashboard",
-          url: "/",
+          title: 'Dashboard',
+          url: '/',
           icon: LayoutDashboard,
           permission: Permission.DashboardRead,
         },
@@ -114,28 +114,28 @@ export const sidebarData: SidebarData = {
     // Module: assets (core - available in all plans)
     // ========================================
     {
-      title: "Scoping",
+      title: 'Scoping',
       items: [
         {
-          title: "Attack Surface",
-          url: "/attack-surface",
+          title: 'Attack Surface',
+          url: '/attack-surface',
           icon: Target,
           permission: Permission.AssetsRead,
-          module: "assets",
+          module: 'assets',
         },
         {
-          title: "Asset Groups",
-          url: "/asset-groups",
+          title: 'Asset Groups',
+          url: '/asset-groups',
           icon: FolderKanban,
           permission: Permission.AssetGroupsRead,
-          module: "assets",
+          module: 'assets',
         },
         {
-          title: "Scope Config",
-          url: "/scope-config",
+          title: 'Scope Config',
+          url: '/scope-config',
           icon: Settings2,
           permission: Permission.AssetGroupsRead,
-          module: "assets",
+          module: 'assets',
         },
       ],
     },
@@ -146,14 +146,14 @@ export const sidebarData: SidebarData = {
     // Three pillars: Assets, Components (SBOM), Identities
     // ========================================
     {
-      title: "Discovery",
+      title: 'Discovery',
       items: [
         {
-          title: "Scans",
-          url: "/scans",
+          title: 'Scans',
+          url: '/scans',
           icon: Radar,
           permission: Permission.ScansRead,
-          module: "scans",
+          module: 'scans',
         },
         // ----------------------------------------
         // ASSET INVENTORY
@@ -162,59 +162,59 @@ export const sidebarData: SidebarData = {
         // compute, storage, serverless, network) are documented in docs/ROADMAP.md
         // ----------------------------------------
         {
-          title: "Asset Inventory",
+          title: 'Asset Inventory',
           icon: Container,
           permission: Permission.AssetsRead,
-          module: "assets",
+          module: 'assets',
           items: [
             {
-              title: "Domains",
-              url: "/assets/domains",
+              title: 'Domains',
+              url: '/assets/domains',
               icon: Globe,
             },
             {
-              title: "Websites",
-              url: "/assets/websites",
+              title: 'Websites',
+              url: '/assets/websites',
               icon: MonitorSmartphone,
             },
             {
-              title: "Services",
-              url: "/assets/services",
+              title: 'Services',
+              url: '/assets/services',
               icon: Zap,
             },
             {
-              title: "Repositories",
-              url: "/assets/repositories",
+              title: 'Repositories',
+              url: '/assets/repositories',
               icon: GitBranch,
             },
             {
-              title: "Cloud",
-              url: "/assets/cloud",
+              title: 'Cloud',
+              url: '/assets/cloud',
               icon: Cloud,
             },
             {
-              title: "Hosts",
-              url: "/assets/hosts",
+              title: 'Hosts',
+              url: '/assets/hosts',
               icon: Server,
             },
             {
-              title: "Kubernetes",
-              url: "/assets/containers",
+              title: 'Kubernetes',
+              url: '/assets/containers',
               icon: Boxes,
             },
             {
-              title: "Databases",
-              url: "/assets/databases",
+              title: 'Databases',
+              url: '/assets/databases',
               icon: Database,
             },
             {
-              title: "Mobile Apps",
-              url: "/assets/mobile",
+              title: 'Mobile Apps',
+              url: '/assets/mobile',
               icon: Smartphone,
             },
             {
-              title: "APIs",
-              url: "/assets/apis",
+              title: 'APIs',
+              url: '/assets/apis',
               icon: Zap,
             },
           ],
@@ -223,64 +223,63 @@ export const sidebarData: SidebarData = {
         // EXPOSURES (Non-CVE security issues)
         // ----------------------------------------
         {
-          title: "Exposures",
-          url: "/exposures",
+          title: 'Exposures',
+          url: '/exposures',
           icon: AlertTriangle,
           permission: Permission.FindingsRead,
-          module: "findings",
+          module: 'findings',
         },
         // ----------------------------------------
         // CREDENTIAL LEAKS
-        // Module: findings (security - requires Pro+ plan)
+        // Module: credentials (requires Team+ plan)
         // ----------------------------------------
         {
-          title: "Credential Leaks",
-          url: "/credentials",
+          title: 'Credential Leaks',
+          url: '/credentials',
           icon: KeyRound,
           // Badge is now dynamic - fetched from API via useDynamicBadges hook
           permission: Permission.CredentialsRead,
-          module: "findings",
+          module: 'credentials',
         },
         // ----------------------------------------
         // SOFTWARE COMPONENTS (SBOM)
-        // Module: findings (security - requires Pro+ plan)
-        // TODO: Create dedicated 'components' module for more granular control
+        // Module: components (requires Team+ plan)
         // ----------------------------------------
         {
-          title: "Components",
+          title: 'Components',
           icon: Package,
           permission: Permission.ComponentsRead,
-          module: "findings",
+          module: 'components',
           items: [
             {
-              title: "Overview",
-              url: "/components",
+              title: 'Overview',
+              url: '/components',
               icon: Package,
             },
             {
-              title: "All Components",
-              url: "/components/all",
+              title: 'All Components',
+              url: '/components/all',
               icon: Package,
             },
             {
-              title: "Vulnerable",
-              url: "/components/vulnerable",
+              title: 'Vulnerable',
+              url: '/components/vulnerable',
               icon: ShieldAlert,
-              badge: "4",
+              badge: '4',
             },
             {
-              title: "Ecosystems",
-              url: "/components/ecosystems",
+              title: 'Ecosystems',
+              url: '/components/ecosystems',
               icon: Boxes,
             },
             {
-              title: "Licenses",
-              url: "/components/licenses",
+              title: 'Licenses',
+              url: '/components/licenses',
               icon: Scale,
             },
             {
-              title: "SBOM Export",
-              url: "/components/sbom-export",
+              title: 'SBOM Export',
+              url: '/components/sbom-export',
               icon: Download,
             },
           ],
@@ -295,31 +294,31 @@ export const sidebarData: SidebarData = {
     // ========================================
     // PHASE 3: PRIORITIZATION
     // Rank risks based on exploitability, impact, and threat intelligence
-    // Module: findings (security - requires Pro+ plan)
+    // Module: threat_intel (requires Business+ plan)
     // ========================================
     {
-      title: "Prioritization",
+      title: 'Prioritization',
       items: [
         {
-          title: "Threat Intel",
-          url: "/threat-intel",
+          title: 'Threat Intel',
+          url: '/threat-intel',
           icon: TrendingUp,
           permission: Permission.FindingsRead,
-          module: "findings",
+          module: 'threat_intel',
         },
         {
-          title: "Risk Analysis",
-          url: "/risk-analysis",
+          title: 'Risk Analysis',
+          url: '/risk-analysis',
           icon: BarChart3,
           permission: Permission.FindingsRead,
-          module: "findings",
+          module: 'threat_intel',
         },
         {
-          title: "Business Impact",
-          url: "/business-impact",
+          title: 'Business Impact',
+          url: '/business-impact',
           icon: Building2,
           permission: Permission.FindingsRead,
-          module: "findings",
+          module: 'threat_intel',
         },
       ],
     },
@@ -327,59 +326,58 @@ export const sidebarData: SidebarData = {
     // ========================================
     // PHASE 4: VALIDATION
     // Verify threats and test security controls effectiveness
-    // Module: findings (security - requires Pro+ plan)
-    // TODO: Create dedicated 'pentest' module for more granular control
+    // Module: pentest (requires Business+ plan)
     // ========================================
     {
-      title: "Validation",
+      title: 'Validation',
       items: [
         {
-          title: "Penetration Testing",
+          title: 'Penetration Testing',
           icon: Crosshair,
           permission: Permission.PentestRead,
-          module: "findings",
+          module: 'pentest',
           items: [
             {
-              title: "Campaigns",
-              url: "/pentest/campaigns",
+              title: 'Campaigns',
+              url: '/pentest/campaigns',
               icon: ClipboardList,
             },
             {
-              title: "Findings",
-              url: "/pentest/findings",
+              title: 'Findings',
+              url: '/pentest/findings',
               icon: Bug,
-              badge: "12",
+              badge: '12',
             },
             {
-              title: "Retests",
-              url: "/pentest/retests",
+              title: 'Retests',
+              url: '/pentest/retests',
               icon: RotateCcw,
             },
             {
-              title: "Reports",
-              url: "/pentest/reports",
+              title: 'Reports',
+              url: '/pentest/reports',
               icon: FileText,
             },
             {
-              title: "Templates",
-              url: "/pentest/templates",
+              title: 'Templates',
+              url: '/pentest/templates',
               icon: BookTemplate,
             },
           ],
         },
         {
-          title: "Attack Simulation",
-          url: "/attack-simulation",
+          title: 'Attack Simulation',
+          url: '/attack-simulation',
           icon: Swords,
           permission: Permission.PentestRead,
-          module: "findings",
+          module: 'pentest',
         },
         {
-          title: "Control Testing",
-          url: "/control-testing",
+          title: 'Control Testing',
+          url: '/control-testing',
           icon: ShieldCheck,
           permission: Permission.PentestRead,
-          module: "findings",
+          module: 'pentest',
         },
       ],
     },
@@ -387,26 +385,25 @@ export const sidebarData: SidebarData = {
     // ========================================
     // PHASE 5: MOBILIZATION
     // Execute remediation and track progress
-    // Module: findings (security - requires Pro+ plan)
-    // TODO: Create dedicated 'remediation' module for more granular control
+    // Module: remediation (requires Business+ plan)
     // ========================================
     {
-      title: "Mobilization",
+      title: 'Mobilization',
       items: [
         {
-          title: "Remediation Tasks",
-          url: "/remediation",
+          title: 'Remediation Tasks',
+          url: '/remediation',
           icon: ListChecks,
-          badge: "24",
+          badge: '24',
           permission: Permission.RemediationRead,
-          module: "findings",
+          module: 'remediation',
         },
         {
-          title: "Workflows",
-          url: "/workflows",
+          title: 'Workflows',
+          url: '/workflows',
           icon: Workflow,
           permission: Permission.WorkflowsRead,
-          module: "findings",
+          module: 'remediation',
         },
       ],
     },
@@ -415,22 +412,22 @@ export const sidebarData: SidebarData = {
     // INSIGHTS - Cross-cutting analytics and reporting
     // ========================================
     {
-      title: "Insights",
+      title: 'Insights',
       items: [
         {
-          title: "Findings",
-          url: "/findings",
+          title: 'Findings',
+          url: '/findings',
           icon: FileWarning,
           // Badge is dynamically fetched from dashboard stats - see useDynamicBadges hook
           permission: Permission.FindingsRead,
-          module: "findings",
+          module: 'findings',
         },
         {
-          title: "Reports",
-          url: "/reports",
+          title: 'Reports',
+          url: '/reports',
           icon: FileText,
           permission: Permission.ReportsRead,
-          module: "reports",
+          module: 'reports',
         },
       ],
     },
@@ -439,78 +436,78 @@ export const sidebarData: SidebarData = {
     // SETTINGS - System configuration
     // ========================================
     {
-      title: "Settings",
+      title: 'Settings',
       items: [
         {
-          title: "Scanning",
+          title: 'Scanning',
           icon: Radar,
           permission: Permission.ScansRead,
-          module: "scans",
+          module: 'scans',
           items: [
             {
-              title: "Agents",
-              url: "/agents",
+              title: 'Agents',
+              url: '/agents',
               icon: Bot,
               permission: Permission.ScansRead,
             },
             {
-              title: "Profiles",
-              url: "/scan-profiles",
+              title: 'Profiles',
+              url: '/scan-profiles',
               icon: FileSliders,
               permission: Permission.ScanProfilesRead,
             },
             {
-              title: "Tools",
-              url: "/tools",
+              title: 'Tools',
+              url: '/tools',
               icon: Wrench,
               permission: Permission.ToolsRead,
             },
           ],
         },
         {
-          title: "Organization",
+          title: 'Organization',
           icon: Building,
           permission: Permission.TeamRead,
           items: [
             {
-              title: "General",
-              url: "/settings/tenant",
+              title: 'General',
+              url: '/settings/tenant',
               icon: Building,
               // Only admin and owner can modify tenant settings
               minRole: Role.Admin,
             },
             {
-              title: "Members",
-              url: "/settings/users",
+              title: 'Members',
+              url: '/settings/users',
               icon: Users,
               permission: Permission.MembersRead,
             },
             {
-              title: "Roles",
-              url: "/settings/roles",
+              title: 'Roles',
+              url: '/settings/roles',
               icon: Key,
               permission: Permission.RolesRead,
               minRole: Role.Admin,
             },
             {
-              title: "Teams",
-              url: "/settings/access-control/groups",
+              title: 'Teams',
+              url: '/settings/access-control/groups',
               icon: FolderKey,
               permission: Permission.GroupsRead,
               minRole: Role.Admin,
             },
             {
-              title: "Audit Log",
-              url: "/settings/audit",
+              title: 'Audit Log',
+              url: '/settings/audit',
               icon: History,
               // Audit log is restricted to admin and owner, and requires audit module
               minRole: Role.Admin,
               permission: Permission.AuditRead,
-              module: "audit",
+              module: 'audit',
             },
             {
-              title: "Billing",
-              url: "/settings/billing",
+              title: 'Billing',
+              url: '/settings/billing',
               icon: CreditCard,
               minRole: Role.Admin,
               permission: Permission.BillingRead,
@@ -518,41 +515,41 @@ export const sidebarData: SidebarData = {
           ],
         },
         {
-          title: "Integrations",
+          title: 'Integrations',
           icon: Puzzle,
           // Integrations management requires admin or higher and integrations module
           minRole: Role.Admin,
           permission: Permission.IntegrationsRead,
-          module: "integrations",
+          module: 'integrations',
           items: [
             {
-              title: "Overview",
-              url: "/settings/integrations",
+              title: 'Overview',
+              url: '/settings/integrations',
               icon: Puzzle,
             },
             {
-              title: "SCMs",
-              url: "/settings/integrations/scm",
+              title: 'SCMs',
+              url: '/settings/integrations/scm',
               icon: GitBranch,
             },
             {
-              title: "Notifications",
-              url: "/settings/integrations/notifications",
+              title: 'Notifications',
+              url: '/settings/integrations/notifications',
               icon: Bell,
             },
             {
-              title: "CI/CD",
-              url: "/settings/integrations/cicd",
+              title: 'CI/CD',
+              url: '/settings/integrations/cicd',
               icon: Workflow,
             },
             {
-              title: "Ticketing",
-              url: "/settings/integrations/ticketing",
+              title: 'Ticketing',
+              url: '/settings/integrations/ticketing',
               icon: ListChecks,
             },
             {
-              title: "SIEM",
-              url: "/settings/integrations/siem",
+              title: 'SIEM',
+              url: '/settings/integrations/siem',
               icon: Shield,
             },
           ],
@@ -560,4 +557,4 @@ export const sidebarData: SidebarData = {
       ],
     },
   ],
-};
+}

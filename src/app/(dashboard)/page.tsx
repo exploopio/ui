@@ -1,19 +1,13 @@
-"use client";
+'use client'
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Header, Main } from "@/components/layout";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { ProcessStepper, StatsCard } from "@/features/shared";
-import { ActivityItem, QuickStat, useGlobalDashboardStats } from "@/features/dashboard";
-import { Can, Permission } from "@/lib/permissions";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Header, Main } from '@/components/layout'
+import { ProfileDropdown } from '@/components/profile-dropdown'
+import { Search } from '@/components/search'
+import { ThemeSwitch } from '@/components/theme-switch'
+import { ProcessStepper, StatsCard } from '@/features/shared'
+import { ActivityItem, QuickStat, useGlobalDashboardStats } from '@/features/dashboard'
+import { Can, Permission } from '@/lib/permissions'
 import {
   Server,
   AlertTriangle,
@@ -22,9 +16,9 @@ import {
   Plus,
   FileWarning,
   ArrowRight,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
+} from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import Link from 'next/link'
 import {
   Area,
   AreaChart,
@@ -38,28 +32,28 @@ import {
   Cell,
   PieChart,
   Pie,
-} from "@/components/charts";
-import { Skeleton } from "@/components/ui/skeleton";
+} from '@/components/charts'
+import { Skeleton } from '@/components/ui/skeleton'
 
 // Severity colors for charts
 const SEVERITY_COLORS: Record<string, string> = {
-  critical: "#ef4444",
-  high: "#f97316",
-  medium: "#eab308",
-  low: "#3b82f6",
-  info: "#6b7280",
-};
+  critical: '#ef4444',
+  high: '#f97316',
+  medium: '#eab308',
+  low: '#3b82f6',
+  info: '#6b7280',
+}
 
 // TODO: Replace with real API data when endpoint is available
 // API endpoint needed: GET /api/v1/analytics/finding-trend?period=6m
 const MOCK_FINDING_TRENDS = [
-  { date: "Jul", critical: 4, high: 12, medium: 18, low: 25 },
-  { date: "Aug", critical: 3, high: 15, medium: 22, low: 28 },
-  { date: "Sep", critical: 5, high: 14, medium: 20, low: 24 },
-  { date: "Oct", critical: 6, high: 18, medium: 25, low: 30 },
-  { date: "Nov", critical: 4, high: 16, medium: 23, low: 27 },
-  { date: "Dec", critical: 3, high: 12, medium: 19, low: 22 },
-];
+  { date: 'Jul', critical: 4, high: 12, medium: 18, low: 25 },
+  { date: 'Aug', critical: 3, high: 15, medium: 22, low: 28 },
+  { date: 'Sep', critical: 5, high: 14, medium: 20, low: 24 },
+  { date: 'Oct', critical: 6, high: 18, medium: 25, low: 30 },
+  { date: 'Nov', critical: 4, high: 16, medium: 23, low: 27 },
+  { date: 'Dec', critical: 3, high: 12, medium: 19, low: 22 },
+]
 
 function DashboardSkeleton() {
   return (
@@ -101,29 +95,29 @@ function DashboardSkeleton() {
         </Card>
       </section>
     </>
-  );
+  )
 }
 
 export default function Dashboard() {
-  const { stats, isLoading, error } = useGlobalDashboardStats();
+  const { stats, isLoading, error } = useGlobalDashboardStats()
 
   // Calculate active findings count
   const activeFindings = Object.entries(stats.findings.byStatus)
-    .filter(([status]) => !["resolved", "closed", "false_positive"].includes(status))
-    .reduce((sum, [, count]) => sum + count, 0);
+    .filter(([status]) => !['resolved', 'closed', 'false_positive'].includes(status))
+    .reduce((sum, [, count]) => sum + count, 0)
 
   // Prepare severity distribution for pie chart
   const severityData = Object.entries(stats.findings.bySeverity).map(([name, value]) => ({
     name: name.charAt(0).toUpperCase() + name.slice(1),
     value,
-    color: SEVERITY_COLORS[name.toLowerCase()] || "#6b7280",
-  }));
+    color: SEVERITY_COLORS[name.toLowerCase()] || '#6b7280',
+  }))
 
   // Prepare asset distribution for bar chart
   const assetDistribution = Object.entries(stats.assets.byType).map(([name, count]) => ({
-    name: name.charAt(0).toUpperCase() + name.slice(1).replace(/_/g, " "),
+    name: name.charAt(0).toUpperCase() + name.slice(1).replace(/_/g, ' '),
     count,
-  }));
+  }))
 
   return (
     <>
@@ -144,15 +138,23 @@ export default function Dashboard() {
               <CardTitle className="text-base">Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <Can permission={Permission.ScansWrite} mode="disable" disabledTooltip="You don't have permission to create scans">
+              <Can
+                permission={Permission.ScansWrite}
+                mode="disable"
+                disabledTooltip="You don't have permission to create scans"
+              >
                 <Button asChild className="w-full justify-start" size="sm">
-                  <Link href="/discovery/scans">
+                  <Link href="/scans">
                     <Plus className="mr-2 h-4 w-4" />
                     New Scan
                   </Link>
                 </Button>
               </Can>
-              <Can permission={Permission.FindingsRead} mode="disable" disabledTooltip="You don't have permission to view findings">
+              <Can
+                permission={Permission.FindingsRead}
+                mode="disable"
+                disabledTooltip="You don't have permission to view findings"
+              >
                 <Button asChild variant="outline" className="w-full justify-start" size="sm">
                   <Link href="/findings">
                     <FileWarning className="mr-2 h-4 w-4" />
@@ -160,15 +162,23 @@ export default function Dashboard() {
                   </Link>
                 </Button>
               </Can>
-              <Can permission={Permission.RemediationRead} mode="disable" disabledTooltip="You don't have permission to view remediation tasks">
+              <Can
+                permission={Permission.RemediationRead}
+                mode="disable"
+                disabledTooltip="You don't have permission to view remediation tasks"
+              >
                 <Button asChild variant="outline" className="w-full justify-start" size="sm">
-                  <Link href="/mobilization/remediation">
+                  <Link href="/remediation">
                     <ListChecks className="mr-2 h-4 w-4" />
                     Remediation Tasks
                   </Link>
                 </Button>
               </Can>
-              <Can permission={Permission.ReportsRead} mode="disable" disabledTooltip="You don't have permission to generate reports">
+              <Can
+                permission={Permission.ReportsRead}
+                mode="disable"
+                disabledTooltip="You don't have permission to generate reports"
+              >
                 <Button asChild variant="outline" className="w-full justify-start" size="sm">
                   <Link href="/reports">
                     <ArrowRight className="mr-2 h-4 w-4" />
@@ -183,9 +193,7 @@ export default function Dashboard() {
           <Card className="md:col-span-1 lg:col-span-3 overflow-x-auto">
             <CardHeader className="pb-2">
               <CardTitle className="text-base">CTEM Process</CardTitle>
-              <CardDescription>
-                Continuous Threat Exposure Management lifecycle
-              </CardDescription>
+              <CardDescription>Continuous Threat Exposure Management lifecycle</CardDescription>
             </CardHeader>
             <CardContent>
               <ProcessStepper currentStep={1} />
@@ -203,7 +211,12 @@ export default function Dashboard() {
               <div className="text-center">
                 <AlertTriangle className="mx-auto mb-2 h-8 w-8 text-yellow-500" />
                 <p className="text-muted-foreground">Failed to load dashboard data</p>
-                <Button variant="outline" size="sm" className="mt-2" onClick={() => window.location.reload()}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                  onClick={() => window.location.reload()}
+                >
                   Retry
                 </Button>
               </div>
@@ -218,37 +231,41 @@ export default function Dashboard() {
               <StatsCard
                 title="Total Assets"
                 value={stats.assets.total}
-                change={Object.keys(stats.assets.byType).length > 0
-                  ? `${Object.keys(stats.assets.byType).length} types`
-                  : "No data"}
+                change={
+                  Object.keys(stats.assets.byType).length > 0
+                    ? `${Object.keys(stats.assets.byType).length} types`
+                    : 'No data'
+                }
                 changeType="neutral"
                 icon={Server}
               />
               <StatsCard
                 title="Active Findings"
                 value={activeFindings}
-                change={stats.findings.overdue > 0
-                  ? `${stats.findings.overdue} overdue`
-                  : "None overdue"}
-                changeType={stats.findings.overdue > 0 ? "negative" : "neutral"}
+                change={
+                  stats.findings.overdue > 0 ? `${stats.findings.overdue} overdue` : 'None overdue'
+                }
+                changeType={stats.findings.overdue > 0 ? 'negative' : 'neutral'}
                 icon={AlertTriangle}
               />
               <StatsCard
                 title="Avg CVSS Score"
                 value={stats.findings.averageCvss.toFixed(1)}
-                change={stats.findings.total > 0
-                  ? `${stats.findings.total} findings`
-                  : "No findings"}
-                changeType={stats.findings.averageCvss > 7 ? "negative" : "neutral"}
+                change={
+                  stats.findings.total > 0 ? `${stats.findings.total} findings` : 'No findings'
+                }
+                changeType={stats.findings.averageCvss > 7 ? 'negative' : 'neutral'}
                 icon={ShieldAlert}
               />
               <StatsCard
                 title="Repositories"
                 value={stats.repositories.total}
-                change={stats.repositories.withFindings > 0
-                  ? `${stats.repositories.withFindings} with findings`
-                  : "None with findings"}
-                changeType={stats.repositories.withFindings > 0 ? "negative" : "neutral"}
+                change={
+                  stats.repositories.withFindings > 0
+                    ? `${stats.repositories.withFindings} with findings`
+                    : 'None with findings'
+                }
+                changeType={stats.repositories.withFindings > 0 ? 'negative' : 'neutral'}
                 icon={ListChecks}
               />
             </section>
@@ -259,9 +276,7 @@ export default function Dashboard() {
               <Card className="col-span-1 lg:col-span-4">
                 <CardHeader>
                   <CardTitle>Findings Trend</CardTitle>
-                  <CardDescription>
-                    Security findings over the last 6 months
-                  </CardDescription>
+                  <CardDescription>Security findings over the last 6 months</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={300}>
@@ -320,9 +335,7 @@ export default function Dashboard() {
               <Card className="col-span-1 lg:col-span-3">
                 <CardHeader>
                   <CardTitle>Severity Distribution</CardTitle>
-                  <CardDescription>
-                    Findings by severity level
-                  </CardDescription>
+                  <CardDescription>Findings by severity level</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {severityData.length > 0 ? (
@@ -360,9 +373,7 @@ export default function Dashboard() {
               <Card>
                 <CardHeader>
                   <CardTitle>Asset Distribution</CardTitle>
-                  <CardDescription>
-                    {stats.assets.total} total assets by type
-                  </CardDescription>
+                  <CardDescription>{stats.assets.total} total assets by type</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {assetDistribution.length > 0 ? (
@@ -454,5 +465,5 @@ export default function Dashboard() {
         )}
       </Main>
     </>
-  );
+  )
 }
