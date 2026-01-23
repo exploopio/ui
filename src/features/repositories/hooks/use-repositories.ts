@@ -503,6 +503,50 @@ export function useSyncRepository(assetId: string) {
 }
 
 /**
+ * Bulk sync result for a single asset
+ */
+export interface BulkSyncResultItem {
+  asset_id: string;
+  success: boolean;
+  message?: string;
+  updated_fields?: string[];
+  error?: string;
+}
+
+/**
+ * Bulk sync response
+ */
+export interface BulkSyncResponse {
+  total_count: number;
+  success_count: number;
+  failed_count: number;
+  synced_at: string;
+  results: BulkSyncResultItem[];
+}
+
+/**
+ * Bulk sync input
+ */
+export interface BulkSyncInput {
+  asset_ids: string[];
+}
+
+/**
+ * Bulk sync multiple repositories with SCM
+ * Uses POST /api/v1/assets/bulk-sync
+ */
+export function useBulkSyncRepositories() {
+  const { currentTenant } = useTenant();
+
+  return useSWRMutation(
+    currentTenant ? "/api/v1/assets/bulk-sync" : null,
+    async (url: string, { arg }: { arg: BulkSyncInput }) => {
+      return post<BulkSyncResponse>(url, arg);
+    }
+  );
+}
+
+/**
  * Update branch configuration
  */
 export function useUpdateBranchConfig(assetId: string, branchName: string) {

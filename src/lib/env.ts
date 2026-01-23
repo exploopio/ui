@@ -112,6 +112,16 @@ export const env = {
     url: getEnvVar('NEXT_PUBLIC_APP_URL', 'http://localhost:3000'),
     env: getEnvVar('NODE_ENV', 'development') as 'development' | 'production' | 'test',
   },
+
+  // Feature Flags
+  features: {
+    /**
+     * Enable dynamic sidebar badges (shows counts from API)
+     * Set to 'true' to enable. Disabled by default to reduce API calls on page load.
+     * Affected badges: Findings, Credential Leaks, Asset Groups
+     */
+    sidebarBadges: getEnvVar('NEXT_PUBLIC_ENABLE_SIDEBAR_BADGES', 'false') === 'true',
+  },
 } as const
 
 // ============================================

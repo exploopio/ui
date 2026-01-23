@@ -66,21 +66,9 @@ export function usePermissions() {
   // 3. Derive from predefined role (owner/admin/member/viewer) - fallback for old tokens
   // 4. Empty array - will filter normally, may show nothing if no permissions
   const permissions = useMemo(() => {
-    // Debug logging in development
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[usePermissions] user:', user ? {
-        permissions: user.permissions,
-        tenantRole: user.tenantRole
-      } : 'null')
-      console.log('[usePermissions] currentTenant?.role:', currentTenant?.role)
-    }
-
     // Priority 1: Use permissions from JWT token (auth store)
     // This is the source of truth for RBAC - includes all permissions from assigned roles
     if (user?.permissions && user.permissions.length > 0) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[usePermissions] Using auth store permissions:', user.permissions)
-      }
       return user.permissions
     }
 
@@ -88,9 +76,6 @@ export function usePermissions() {
     // This handles the case where page loads before auth store is populated
     const cookiePermissions = getPermissionsFromCookie()
     if (cookiePermissions.length > 0) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[usePermissions] Using cookie permissions:', cookiePermissions)
-      }
       return cookiePermissions
     }
 
@@ -99,20 +84,13 @@ export function usePermissions() {
     // Note: tenantRole from JWT might be a custom RBAC role name (e.g., "test"),
     // which won't be in RolePermissions - that's OK, we'll return empty array
     if (tenantRole && RolePermissions[tenantRole as RoleString]) {
-      const derivedPermissions = RolePermissions[tenantRole as RoleString]
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[usePermissions] Deriving from predefined role:', tenantRole, derivedPermissions.length, 'permissions')
-      }
-      return derivedPermissions
+      return RolePermissions[tenantRole as RoleString]
     }
 
     // Priority 4: No permissions available
     // This happens when user hasn't logged in yet or cookie hasn't been set
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[usePermissions] No permissions available - tenantRole:', tenantRole, '(not in RolePermissions)')
-    }
     return []
-  }, [user, tenantRole, currentTenant?.role])
+  }, [user, tenantRole])
 
   // ============================================
   // PERMISSION CHECKS

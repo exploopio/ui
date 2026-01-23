@@ -23,19 +23,35 @@ import type {
 // FETCH MEMBERS
 // ============================================
 
+export interface UseMembersOptions {
+  /** Include RBAC roles for each member (reduces N+1 calls on Users page) */
+  includeRoles?: boolean
+}
+
 /**
  * Hook to fetch team members with user details
  * Only fetches if user has members:read permission
+ *
+ * @param tenantIdOrSlug - Tenant ID or slug
+ * @param options - Options for fetching members
+ * @param options.includeRoles - Include RBAC roles for each member
  */
-export function useMembers(tenantIdOrSlug: string | undefined) {
+export function useMembers(tenantIdOrSlug: string | undefined, options?: UseMembersOptions) {
   const { can } = usePermissions()
   const canReadMembers = can(Permission.MembersRead)
 
   // Only fetch if user has permission
   const shouldFetch = tenantIdOrSlug && canReadMembers
 
+  // Build include parameter
+  const includes = ['user']
+  if (options?.includeRoles) {
+    includes.push('roles')
+  }
+  const includeParam = includes.join(',')
+
   const { data, error, isLoading, mutate } = useSWR<MemberListResponse>(
-    shouldFetch ? `${tenantEndpoints.members(tenantIdOrSlug)}?include=user` : null,
+    shouldFetch ? `${tenantEndpoints.members(tenantIdOrSlug)}?include=${includeParam}` : null,
     fetcher,
     {
       revalidateOnFocus: false,
@@ -233,8 +249,12 @@ export function useDeleteInvitation(tenantIdOrSlug: string | undefined, invitati
 /**
  * Get the SWR key for members list
  */
-export function getMembersKey(tenantIdOrSlug: string) {
-  return `${tenantEndpoints.members(tenantIdOrSlug)}?include=user`
+export function getMembersKey(tenantIdOrSlug: string, options?: UseMembersOptions) {
+  const includes = ['user']
+  if (options?.includeRoles) {
+    includes.push('roles')
+  }
+  return `${tenantEndpoints.members(tenantIdOrSlug)}?include=${includes.join(',')}`
 }
 
 /**

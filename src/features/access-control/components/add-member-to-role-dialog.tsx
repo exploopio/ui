@@ -28,6 +28,7 @@ import { useMembers } from '@/features/organization';
 import {
   type Role,
   type RoleMember,
+  useBulkAssignRoleMembers,
 } from '@/features/access-control';
 
 interface AddMemberToRoleDialogProps {
@@ -54,6 +55,7 @@ export function AddMemberToRoleDialog({
 }: AddMemberToRoleDialogProps) {
   const { currentTenant, isLoading: isTenantLoading } = useTenant();
   const { members: tenantMembers, isLoading: isLoadingMembers, isError: isMembersError } = useMembers(currentTenant?.slug);
+  const { bulkAssignMembers, isAssigning } = useBulkAssignRoleMembers(role?.id || null);
 
   // Combined loading state
   const isLoading = isTenantLoading || isLoadingMembers || !currentTenant;
@@ -61,7 +63,6 @@ export function AddMemberToRoleDialog({
   // State
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
-  const [isAssigning, setIsAssigning] = useState(false);
 
   // Filter available members (exclude those already in role)
   const existingMemberIds = useMemo(() => {
@@ -103,52 +104,39 @@ export function AddMemberToRoleDialog({
     setSelectedUserIds(new Set());
   }, []);
 
-  // Handle add members
+  // Handle add members using bulk endpoint
   const handleAddMembers = async () => {
     if (!role || selectedUserIds.size === 0) return;
 
-    setIsAssigning(true);
-    let successCount = 0;
-    let errorCount = 0;
+    try {
+      const result = await bulkAssignMembers({
+        user_ids: Array.from(selectedUserIds),
+      });
 
-    for (const userId of selectedUserIds) {
-      try {
-        const response = await fetch(`/api/v1/users/${userId}/roles`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ role_id: role.id }),
-        });
+      if (result) {
+        const { success_count, failed_count } = result;
 
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.message || 'Failed to assign role');
+        if (success_count > 0) {
+          toast.success(
+            success_count === 1
+              ? '1 member added to role'
+              : `${success_count} members added to role`
+          );
+        }
+        if (failed_count > 0) {
+          toast.error(`Failed to add ${failed_count} member(s)`);
         }
 
-        successCount++;
-      } catch (error) {
-        console.error(`Failed to add user ${userId} to role:`, error);
-        errorCount++;
+        if (success_count > 0) {
+          setSelectedUserIds(new Set());
+          setSearchQuery('');
+          onOpenChange(false);
+          onSuccess?.();
+        }
       }
-    }
-
-    setIsAssigning(false);
-
-    if (successCount > 0) {
-      toast.success(
-        successCount === 1
-          ? '1 member added to role'
-          : `${successCount} members added to role`
-      );
-    }
-    if (errorCount > 0) {
-      toast.error(`Failed to add ${errorCount} member(s)`);
-    }
-
-    if (successCount > 0) {
-      setSelectedUserIds(new Set());
-      setSearchQuery('');
-      onOpenChange(false);
-      onSuccess?.();
+    } catch (error) {
+      console.error('Failed to bulk assign members:', error);
+      toast.error('Failed to add members to role');
     }
   };
 

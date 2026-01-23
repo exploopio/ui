@@ -3,6 +3,9 @@
  *
  * Fetches real counts from API to replace hardcoded badge values in sidebar.
  * Uses optimized caching to minimize API calls.
+ *
+ * DISABLED BY DEFAULT: Set NEXT_PUBLIC_ENABLE_SIDEBAR_BADGES=true to enable.
+ * When disabled, no API calls are made and empty badges are returned.
  */
 
 'use client'
@@ -14,6 +17,7 @@ import { useTenant } from '@/context/tenant-provider'
 import { useAssetGroupStatsApi } from '@/features/asset-groups/api'
 import { useCredentialStatsApi } from '@/features/credentials/api'
 import { usePermissions, Permission } from '@/lib/permissions'
+import { env } from '@/lib/env'
 
 // ============================================
 // TYPES
@@ -69,11 +73,17 @@ function useDashboardStatsForBadges(shouldFetch: boolean = true) {
  * Returns a map of URL path to badge count.
  * Only fetches data for features the user has permission to access.
  *
+ * IMPORTANT: This feature is disabled by default to reduce API calls on page load.
+ * Set NEXT_PUBLIC_ENABLE_SIDEBAR_BADGES=true to enable dynamic badges.
+ *
  * @example
  * const badges = useDynamicBadges()
  * // badges = { '/asset-groups': '12', '/findings': '24', ... }
  */
 export function useDynamicBadges(): DynamicBadges {
+    // Check if sidebar badges feature is enabled
+    const badgesEnabled = env.features.sidebarBadges
+
     // Check user permissions to determine which APIs to call
     const { can } = usePermissions()
     const canReadGroups = can(Permission.GroupsRead)
@@ -81,23 +91,23 @@ export function useDynamicBadges(): DynamicBadges {
     const canReadCredentials = can(Permission.CredentialsRead)
     const canReadDashboard = can(Permission.DashboardRead)
 
-    // Fetch asset group stats - only if user has permission
+    // Fetch asset group stats - only if badges enabled AND user has permission
     const { data: assetGroupStats } = useAssetGroupStatsApi(
-        canReadGroups ? {
+        badgesEnabled && canReadGroups ? {
             revalidateOnFocus: false,
             dedupingInterval: 60000,
-        } : { isPaused: () => true } // Don't fetch if no permission
+        } : { isPaused: () => true } // Don't fetch if disabled or no permission
     )
 
-    // Fetch dashboard stats for findings count - only if user has permission
-    const { data: dashboardStats } = useDashboardStatsForBadges(canReadDashboard && canReadFindings)
+    // Fetch dashboard stats for findings count - only if badges enabled AND user has permission
+    const { data: dashboardStats } = useDashboardStatsForBadges(badgesEnabled && canReadDashboard && canReadFindings)
 
-    // Fetch credential stats for credential leaks badge - only if user has permission
+    // Fetch credential stats for credential leaks badge - only if badges enabled AND user has permission
     const { data: credentialStats } = useCredentialStatsApi(
-        canReadCredentials ? {
+        badgesEnabled && canReadCredentials ? {
             revalidateOnFocus: false,
             dedupingInterval: 60000,
-        } : { isPaused: () => true } // Don't fetch if no permission
+        } : { isPaused: () => true } // Don't fetch if disabled or no permission
     )
 
     const badges = useMemo(() => {

@@ -47,6 +47,8 @@ interface TenantContextValue {
   refreshTenants: () => Promise<void>
   /** Update current tenant info (name, slug) without full reload */
   updateCurrentTenant: (updates: Partial<Pick<CurrentTenant, 'name' | 'slug'>>) => void
+  /** Trigger eager fetch of tenant list (call when opening dropdown) */
+  loadTenants: () => void
 }
 
 // ============================================
@@ -71,9 +73,9 @@ export function TenantProvider({ children }: TenantProviderProps) {
   const { mutate: globalMutate } = useSWRConfig()
   const [currentTenant, setCurrentTenant] = React.useState<CurrentTenant | null>(null)
   const [isSwitching, setIsSwitching] = React.useState(false)
-
-  // Fetch user's tenants
-  const { data: tenants = [], error, isLoading, mutate } = useMyTenants()
+  const [hasTenantCookie, setHasTenantCookie] = React.useState<boolean | null>(null)
+  // Track if dropdown has been opened (trigger eager fetch when user wants to switch)
+  const [shouldEagerFetch, setShouldEagerFetch] = React.useState(false)
 
   // Read current tenant from cookie on mount
   React.useEffect(() => {
@@ -82,14 +84,25 @@ export function TenantProvider({ children }: TenantProviderProps) {
       try {
         const parsed = JSON.parse(tenantCookie) as CurrentTenant
         setCurrentTenant(parsed)
+        setHasTenantCookie(true)
       } catch {
         // Old cookie format might be just a tenant ID string (not JSON)
         // Clear the cookie so backend can set a new one with proper format
         console.warn('[TenantProvider] Invalid tenant cookie format, clearing cookie')
         removeCookie(TENANT_COOKIE)
+        setHasTenantCookie(false)
       }
+    } else {
+      setHasTenantCookie(false)
     }
   }, [])
+
+  // OPTIMIZATION: Only fetch tenants on page load if:
+  // 1. No tenant cookie exists (need to check if user needs onboarding)
+  // 2. User has opened the dropdown (wants to switch teams)
+  // Otherwise, skip the API call to reduce load time
+  const skipTenantsFetch = hasTenantCookie === null || (hasTenantCookie && !shouldEagerFetch)
+  const { data: tenants = [], error, isLoading, mutate } = useMyTenants({ skip: skipTenantsFetch })
 
   // Update current tenant with additional info from tenants list
   // Use ref to prevent unnecessary updates
@@ -216,6 +229,13 @@ export function TenantProvider({ children }: TenantProviderProps) {
     }), { path: '/', maxAge: 7 * 24 * 60 * 60 })
   }, [currentTenant])
 
+  // Load tenants on demand (for dropdown)
+  const loadTenants = React.useCallback(() => {
+    if (!shouldEagerFetch) {
+      setShouldEagerFetch(true)
+    }
+  }, [shouldEagerFetch])
+
   const value = React.useMemo<TenantContextValue>(() => ({
     currentTenant,
     tenants,
@@ -225,7 +245,8 @@ export function TenantProvider({ children }: TenantProviderProps) {
     isSwitching,
     refreshTenants,
     updateCurrentTenant,
-  }), [currentTenant, tenants, isLoading, error, switchTeam, isSwitching, refreshTenants, updateCurrentTenant])
+    loadTenants,
+  }), [currentTenant, tenants, isLoading, error, switchTeam, isSwitching, refreshTenants, updateCurrentTenant, loadTenants])
 
   return (
     <TenantContext.Provider value={value}>

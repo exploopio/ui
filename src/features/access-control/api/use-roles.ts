@@ -32,7 +32,12 @@ const PERMISSIONS_BASE = '/api/v1/permissions';
 /**
  * Fetch all roles for the current tenant (includes system roles)
  */
-export function useRoles(filters?: RoleFilters) {
+export interface RoleFiltersWithOptions extends RoleFilters {
+  /** Set to true to skip fetching (for lazy loading) */
+  skip?: boolean;
+}
+
+export function useRoles(filters?: RoleFiltersWithOptions) {
   const params = new URLSearchParams();
   if (filters?.search) params.set('search', filters.search);
   if (filters?.is_system !== undefined) params.set('is_system', String(filters.is_system));
@@ -40,8 +45,11 @@ export function useRoles(filters?: RoleFilters) {
   const queryString = params.toString();
   const url = queryString ? `${API_BASE}?${queryString}` : API_BASE;
 
+  // Support conditional fetching - pass null key to skip
+  const shouldFetch = !filters?.skip;
+
   const { data, error, isLoading, mutate } = useSWR<RoleListResponse | Role[]>(
-    url,
+    shouldFetch ? url : null,
     fetcher,
     {
       revalidateOnFocus: false,
@@ -382,6 +390,47 @@ export function useSetUserRoles(userId: string | null) {
   return {
     setUserRoles: trigger,
     isSetting: isMutating,
+    error,
+  };
+}
+
+// ============================================
+// BULK ROLE ASSIGNMENT
+// ============================================
+
+export interface BulkAssignRoleMembersInput {
+  user_ids: string[];
+}
+
+export interface BulkAssignRoleMembersResult {
+  success_count: number;
+  failed_count: number;
+  failed_users?: string[];
+}
+
+async function bulkAssignRoleMembersMutation(
+  url: string,
+  { arg }: { arg: BulkAssignRoleMembersInput }
+) {
+  return fetcherWithOptions<BulkAssignRoleMembersResult>(url, {
+    method: 'POST',
+    body: JSON.stringify(arg),
+  });
+}
+
+/**
+ * Hook to assign a role to multiple users at once
+ * Uses POST /api/v1/roles/{roleId}/members/bulk
+ */
+export function useBulkAssignRoleMembers(roleId: string | null) {
+  const { trigger, isMutating, error } = useSWRMutation(
+    roleId ? `${API_BASE}/${roleId}/members/bulk` : null,
+    bulkAssignRoleMembersMutation
+  );
+
+  return {
+    bulkAssignMembers: trigger,
+    isAssigning: isMutating,
     error,
   };
 }

@@ -207,32 +207,16 @@ export function useFilteredSidebarData(sidebarData: SidebarData): FilteredSideba
       // If user has a valid tenantRole (authenticated), fail-open
       // This provides better UX than hiding all features when API has issues
       // Security note: Backend still enforces proper authorization
-      if (tenantRole) {
-        if (process.env.NODE_ENV === 'development') {
-          console.log('[Sidebar Filter] Modules API failed, falling back to show all modules for authenticated user')
-        }
-        return true
-      }
-
-      // No tenantRole = not authenticated
-      return false
+      return !!tenantRole
     }
   }, [moduleIds, modulesLoading, tenantRole])
 
   const result = useMemo(() => {
-    // Debug logging in development
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[Sidebar Filter] tenantRole:', tenantRole, 'permissions:', permissions.length, 'modules:', moduleIds.length, 'modulesLoading:', modulesLoading)
-    }
-
     // Check if we have permission data (user is authenticated)
     const hasPermissionData = permissions.length > 0 || tenantRole !== undefined
 
     // If no permission data, user is not loaded yet
     if (!hasPermissionData) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[Sidebar Filter] No auth data yet (loading)')
-      }
       // Return minimal sidebar (just Dashboard) while loading
       const minimalGroups = sidebarData.navGroups
         .map((group) => ({
@@ -252,9 +236,6 @@ export function useFilteredSidebarData(sidebarData: SidebarData): FilteredSideba
     // Exception: Authenticated users (have tenantRole) can see all modules during loading
     // to provide better UX - backend still enforces authorization
     if (modulesLoading) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[Sidebar Filter] Modules loading, tenantRole:', tenantRole)
-      }
       // Filter out items with module restrictions while loading
       // Authenticated users can see all modules even during loading for better UX
       const isAuthenticated = !!tenantRole

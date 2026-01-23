@@ -39,6 +39,7 @@ import { useIntegrationRepositoriesApi } from "@/features/integrations";
 import {
   useCreateRepository,
   useRepositories,
+  useBulkSyncRepositories,
   invalidateRepositoriesCache,
 } from "@/features/repositories/hooks/use-repositories";
 import type { SCMProvider } from "@/features/assets/types/asset.types";
@@ -115,6 +116,7 @@ export function SyncRepositoriesDialog({
   }, [existingRepos]);
 
   const { trigger: createRepository } = useCreateRepository();
+  const { trigger: bulkSync } = useBulkSyncRepositories();
 
   // Reset state when dialog opens
   useEffect(() => {
@@ -270,32 +272,34 @@ export function SyncRepositoriesDialog({
       }));
     }
 
-    // Phase 2: Sync imported repos to get full data (languages, etc.)
+    // Phase 2: Bulk sync imported repos to get full data (languages, etc.)
     if (importedAssetIds.length > 0) {
       setImportProgress({
         total: importedAssetIds.length,
         completed: 0,
         failed: 0,
-        current: "",
+        current: "Syncing all repositories...",
         phase: "syncing",
       });
 
-      let syncedCount = 0;
-      for (const assetId of importedAssetIds) {
-        try {
-          await fetch(`/api/v1/assets/${assetId}/sync`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
+      try {
+        const syncResult = await bulkSync({ asset_ids: importedAssetIds });
+        if (syncResult) {
+          setImportProgress({
+            total: syncResult.total_count,
+            completed: syncResult.success_count,
+            failed: syncResult.failed_count,
+            current: "Completed",
+            phase: "syncing",
           });
-          syncedCount++;
-        } catch {
-          // Sync failures are not critical, continue
-          console.warn(`Failed to sync asset ${assetId}`);
         }
+      } catch (error) {
+        // Sync failures are not critical
+        console.warn("Failed to bulk sync repositories:", error);
         setImportProgress((prev) => ({
           ...prev!,
-          completed: syncedCount,
-          current: `${syncedCount}/${importedAssetIds.length}`,
+          completed: importedAssetIds.length,
+          current: "Sync completed with errors",
         }));
       }
     }

@@ -67,14 +67,14 @@ export function GroupDetailSheet({
   const { currentTenant } = useTenant();
   const tenantSlug = currentTenant?.slug;
 
-  // API Hooks
-  const { group, isLoading: groupLoading, isError: groupError, error: groupErrorDetails, mutate: mutateGroup } = useGroup(groupId);
-  const { members, isLoading: membersLoading, mutate: mutateMembers } = useGroupMembers(groupId);
-  const { updateGroup, isUpdating } = useUpdateGroup(groupId);
-  const { addMember, isAdding: isAddingMember } = useAddGroupMember(groupId);
-  const { members: tenantMembers } = useMembers(tenantSlug);
-  const { assets, isLoading: assetsLoading, mutate: mutateAssets } = useGroupAssets(groupId);
-  const { assignAsset, isAssigning: isAssigningAsset } = useAssignAssetToGroup(groupId);
+  // API Hooks - Only fetch when sheet is open (avoid unnecessary API calls)
+  const { group, isLoading: groupLoading, isError: groupError, error: groupErrorDetails, mutate: mutateGroup } = useGroup(groupId, { skip: !open });
+  const { members, isLoading: membersLoading, mutate: mutateMembers } = useGroupMembers(groupId, { skip: !open });
+  const { updateGroup, isUpdating } = useUpdateGroup(open ? groupId : null);
+  const { addMember, isAdding: isAddingMember } = useAddGroupMember(open ? groupId : null);
+  const { members: tenantMembers } = useMembers(open ? tenantSlug : undefined);
+  const { assets, isLoading: assetsLoading, mutate: mutateAssets } = useGroupAssets(groupId, { skip: !open });
+  const { assignAsset, isAssigning: isAssigningAsset } = useAssignAssetToGroup(open ? groupId : null);
 
   // UI State
   const [activeTab, setActiveTab] = useState("overview");

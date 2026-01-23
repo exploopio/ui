@@ -54,10 +54,12 @@ export function AddAssetDialog({
     const [selectedAssetId, setSelectedAssetId] = useState("");
     const [ownershipType, setOwnershipType] = useState<AssetOwnershipType>("secondary");
 
+    // Only fetch assets when dialog is open (avoid unnecessary API calls)
     const { assets, isLoading } = useAssets({
         search: debouncedSearch,
         pageSize: 20,
         statuses: ["active"],
+        skip: !open,
     });
 
     // Reset state when dialog opens/closes

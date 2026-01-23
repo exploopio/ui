@@ -19,12 +19,22 @@ export interface Member {
   joined_at: string
 }
 
+// RBAC role returned with member data
+export interface MemberRBACRole {
+  id: string
+  name: string
+  slug: string
+  is_system: boolean
+}
+
 export interface MemberWithUser extends Member {
   email: string
   name: string
   avatar_url?: string
   status: MemberStatus
   last_login_at?: string
+  // RBAC roles (included when ?include=roles)
+  rbac_roles?: MemberRBACRole[]
 }
 
 export interface MemberStats {

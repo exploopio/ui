@@ -68,6 +68,9 @@ export interface AssetSearchFilters {
 
   // Sorting (e.g., "-created_at", "name", "-risk_score")
   sort?: string
+
+  // Skip fetching (for lazy loading dialogs)
+  skip?: boolean
 }
 
 // Backend asset type mapping (matches Go AssetResponse struct)
@@ -271,8 +274,8 @@ export function useAssets(filters?: AssetSearchFilters) {
     ? '?' + new URLSearchParams(queryParams).toString()
     : ''
 
-  // Only fetch if user has permission and tenant context
-  const shouldFetch = currentTenant && canReadAssets
+  // Only fetch if user has permission, tenant context, and not skipped
+  const shouldFetch = currentTenant && canReadAssets && !filters?.skip
 
   const { data, error, isLoading, mutate } = useSWR<BackendListResponse<BackendAsset>>(
     shouldFetch ? ['assets', filters] : null,

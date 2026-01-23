@@ -100,14 +100,19 @@ import {
 import { useTenant } from "@/context/tenant-provider";
 import {
   useMembers,
-  useMemberStats,
   useInvitations,
   useCreateInvitation,
   type MemberWithUser,
   type MemberRole,
+  type MemberRBACRole,
   STATUS_DISPLAY,
 } from "@/features/organization";
 import { useUserRoles, useRoles, useSetUserRoles, type Role } from "@/features/access-control";
+import { createContext, useContext } from "react";
+
+// Context to pass member roles without N+1 API calls
+type MemberRolesMap = Map<string, MemberRBACRole[]>;
+const MemberRolesContext = createContext<MemberRolesMap>(new Map());
 import { fetcherWithOptions } from "@/lib/api/client";
 import { tenantEndpoints } from "@/lib/api/endpoints";
 import { Can, Permission } from "@/lib/permissions";
@@ -179,11 +184,36 @@ const getRoleColor = (role: Role) => {
   return "bg-green-500/20 text-green-400"; // Custom roles
 };
 
-// Component to display user's RBAC roles (compact for table)
-function UserRolesCell({ userId }: { userId: string }) {
-  const { roles, isLoading } = useUserRoles(userId);
+// Helper to convert MemberRBACRole to Role-like object for styling
+const memberRBACRoleToRole = (role: MemberRBACRole): Role => ({
+  id: role.id,
+  name: role.name,
+  slug: role.slug,
+  is_system: role.is_system,
+  description: '',
+  permissions: [],
+  hierarchy_level: 0,
+  has_full_data_access: false,
+  permission_count: 0,
+  created_at: '',
+  updated_at: '',
+});
 
-  if (isLoading) {
+// Component to display user's RBAC roles (compact for table)
+// Uses roles from MemberRolesContext if available, otherwise falls back to useUserRoles hook
+function UserRolesCell({ userId }: { userId: string }) {
+  const memberRolesMap = useContext(MemberRolesContext);
+  const cachedRoles = memberRolesMap.get(userId);
+
+  // Fallback to individual API call if roles not in context (backward compatibility)
+  const { roles: fetchedRoles, isLoading } = useUserRoles(
+    cachedRoles === undefined ? userId : null // Only fetch if not in cache
+  );
+
+  // Use cached roles if available, otherwise use fetched roles
+  const roles = cachedRoles !== undefined ? cachedRoles : fetchedRoles;
+
+  if (isLoading && cachedRoles === undefined) {
     return <Skeleton className="h-6 w-20" />;
   }
 
@@ -191,9 +221,14 @@ function UserRolesCell({ userId }: { userId: string }) {
     return <span className="text-muted-foreground text-xs">No roles</span>;
   }
 
+  // Handle both MemberRBACRole (from context) and Role (from useUserRoles) types
+  const displayRoles = cachedRoles !== undefined
+    ? roles.map(memberRBACRoleToRole)
+    : (roles as Role[]);
+
   return (
     <div className="flex flex-wrap gap-1">
-      {roles.slice(0, 2).map((role) => (
+      {displayRoles.slice(0, 2).map((role) => (
         <Badge
           key={role.id}
           className={`${getRoleColor(role)} border-0 text-xs`}
@@ -201,9 +236,9 @@ function UserRolesCell({ userId }: { userId: string }) {
           {role.name}
         </Badge>
       ))}
-      {roles.length > 2 && (
+      {displayRoles.length > 2 && (
         <Badge variant="secondary" className="text-xs">
-          +{roles.length - 2}
+          +{displayRoles.length - 2}
         </Badge>
       )}
     </div>
@@ -211,20 +246,14 @@ function UserRolesCell({ userId }: { userId: string }) {
 }
 
 // Component to display user's roles with details (for sheet)
+// Uses roles from MemberRolesContext - NO API call needed for viewing
+// API call only happens when user clicks "Manage" to edit roles
 function UserRolesDetailCard({ userId, onManageRoles }: { userId: string; onManageRoles?: () => void }) {
-  const { roles, isLoading } = useUserRoles(userId);
+  const memberRolesMap = useContext(MemberRolesContext);
+  const cachedRoles = memberRolesMap.get(userId);
 
-  if (isLoading) {
-    return (
-      <div className="rounded-xl border bg-card p-4">
-        <Skeleton className="h-5 w-32 mb-3" />
-        <div className="space-y-2">
-          <Skeleton className="h-12 w-full" />
-          <Skeleton className="h-12 w-full" />
-        </div>
-      </div>
-    );
-  }
+  // Convert to display format
+  const roles = cachedRoles?.map(memberRBACRoleToRole) || [];
 
   return (
     <div className="rounded-xl border bg-card p-4">
@@ -245,7 +274,7 @@ function UserRolesDetailCard({ userId, onManageRoles }: { userId: string; onMana
         )}
       </div>
 
-      {!roles || roles.length === 0 ? (
+      {roles.length === 0 ? (
         <div className="text-center py-4">
           <Shield className="h-8 w-8 mx-auto text-muted-foreground/30 mb-2" />
           <p className="text-sm text-muted-foreground">No roles assigned</p>
@@ -272,9 +301,11 @@ function UserRolesDetailCard({ userId, onManageRoles }: { userId: string; onMana
                     {role.description}
                   </p>
                 )}
-                <p className="text-xs text-muted-foreground mt-1">
-                  {role.permission_count} permissions
-                </p>
+                {role.permission_count > 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {role.permission_count} permissions
+                  </p>
+                )}
               </div>
             </div>
           ))}
@@ -296,9 +327,10 @@ function EditUserRolesDialog({
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
 }) {
-  const { roles: userRoles, isLoading: userRolesLoading, mutate: mutateUserRoles } = useUserRoles(member?.user_id || null);
-  const { roles: allRoles, isLoading: allRolesLoading } = useRoles();
-  const { setUserRoles, isSetting } = useSetUserRoles(member?.user_id || null);
+  // Only fetch data when dialog is actually open (avoid unnecessary API calls)
+  const { roles: userRoles, isLoading: userRolesLoading, mutate: mutateUserRoles } = useUserRoles(open ? member?.user_id || null : null);
+  const { roles: allRoles, isLoading: allRolesLoading } = useRoles({ skip: !open });
+  const { setUserRoles, isSetting } = useSetUserRoles(open ? member?.user_id || null : null);
   const [selectedRoleIds, setSelectedRoleIds] = useState<string[]>([]);
 
   // Initialize selected roles when dialog opens
@@ -527,9 +559,20 @@ export default function UsersPage() {
   const { currentTenant } = useTenant();
   const tenantSlug = currentTenant?.slug;
 
-  // API Hooks
-  const { members, isLoading: membersLoading, isError: membersError, mutate: mutateMembers } = useMembers(tenantSlug);
-  const { stats, isLoading: statsLoading, mutate: mutateStats } = useMemberStats(tenantSlug);
+  // API Hooks - includeRoles: true to get RBAC roles in single API call (avoids N+1)
+  const { members, isLoading: membersLoading, isError: membersError, mutate: mutateMembers } = useMembers(tenantSlug, { includeRoles: true });
+  // Note: Stats are calculated from members/invitations data to avoid extra API call
+
+  // Build roles map from members data for O(1) lookup in table cells
+  const memberRolesMap = useMemo(() => {
+    const map: MemberRolesMap = new Map();
+    members.forEach((member) => {
+      if (member.rbac_roles) {
+        map.set(member.user_id, member.rbac_roles);
+      }
+    });
+    return map;
+  }, [members]);
   const { invitations: rawInvitations, mutate: mutateInvitations } = useInvitations(tenantSlug);
   const { createInvitation, isCreating } = useCreateInvitation(tenantSlug);
 
@@ -578,8 +621,8 @@ export default function UsersPage() {
     roleIds: [] as string[], // RBAC roles to assign when user joins
   });
 
-  // Get available roles for invite dialog
-  const { roles: availableRolesForInvite, isLoading: rolesLoading } = useRoles();
+  // Lazy load roles - only fetch when invite dialog is open (avoids unnecessary API call on page load)
+  const { roles: availableRolesForInvite, isLoading: rolesLoading } = useRoles({ skip: !inviteDialogOpen });
   const selectableRoles = availableRolesForInvite.filter(r => r.slug !== "owner");
   // Separate system and custom roles for invite dialog
   const systemRolesForInvite = selectableRoles.filter(r => r.is_system);
@@ -589,10 +632,9 @@ export default function UsersPage() {
   const refreshData = useCallback(() => {
     if (tenantSlug) {
       mutateMembers();
-      mutateStats();
       mutateInvitations();
     }
-  }, [tenantSlug, mutateMembers, mutateStats, mutateInvitations]);
+  }, [tenantSlug, mutateMembers, mutateInvitations]);
 
   // Filter data
   const filteredData = useMemo(() => {
@@ -609,7 +651,27 @@ export default function UsersPage() {
     return data;
   }, [members, statusFilter, roleFilter]);
 
-  // Status counts from members
+  // Calculate stats from local data (avoids extra /stats API call)
+  const stats = useMemo(() => {
+    const activeMembersCount = members.filter((m) => m.status === "active").length;
+
+    // Count unique roles across all members
+    const roleSet = new Set<string>();
+    members.forEach((member) => {
+      if (member.rbac_roles) {
+        member.rbac_roles.forEach((role) => roleSet.add(role.id));
+      }
+    });
+
+    return {
+      total_members: members.length,
+      active_members: activeMembersCount,
+      pending_invites: invitations.length,
+      role_counts: Object.fromEntries([...roleSet].map(id => [id, 1])), // Just need the count of unique roles
+    };
+  }, [members, invitations]);
+
+  // Status counts from members (for tabs)
   const statusCounts = useMemo(() => ({
     all: members.length,
     active: members.filter((m) => m.status === "active").length,
@@ -819,7 +881,7 @@ export default function UsersPage() {
   };
 
   return (
-    <>
+    <MemberRolesContext.Provider value={memberRolesMap}>
       <Header fixed>
         <div className="ms-auto flex items-center gap-2 sm:gap-4">
           <Search />
@@ -873,7 +935,7 @@ export default function UsersPage() {
                 Total Members
               </CardDescription>
               <CardTitle className="text-3xl">
-                {statsLoading ? <Skeleton className="h-9 w-12" /> : (stats?.total_members ?? members.length)}
+                {stats.total_members}
               </CardTitle>
             </CardHeader>
           </Card>
@@ -887,7 +949,7 @@ export default function UsersPage() {
                 Active
               </CardDescription>
               <CardTitle className="text-3xl text-green-500">
-                {statsLoading ? <Skeleton className="h-9 w-12" /> : (stats?.active_members ?? statusCounts.active)}
+                {stats.active_members}
               </CardTitle>
             </CardHeader>
           </Card>
@@ -904,7 +966,7 @@ export default function UsersPage() {
                 Pending Invites
               </CardDescription>
               <CardTitle className="text-3xl text-yellow-500">
-                {statsLoading ? <Skeleton className="h-9 w-12" /> : (stats?.pending_invites ?? invitations.length)}
+                {stats.pending_invites}
               </CardTitle>
             </CardHeader>
           </Card>
@@ -915,7 +977,7 @@ export default function UsersPage() {
                 Roles
               </CardDescription>
               <CardTitle className="text-3xl">
-                {statsLoading ? <Skeleton className="h-9 w-12" /> : Object.keys(stats?.role_counts ?? {}).length || 4}
+                {Object.keys(stats.role_counts).length || 4}
               </CardTitle>
             </CardHeader>
           </Card>
@@ -1632,6 +1694,6 @@ export default function UsersPage() {
           onSuccess={refreshData}
         />
       )}
-    </>
+    </MemberRolesContext.Provider>
   );
 }

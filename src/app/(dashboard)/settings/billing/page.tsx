@@ -15,6 +15,10 @@ import {
   AlertCircle,
   Sparkles,
   Loader2,
+  Users,
+  Server,
+  Headphones,
+  Gift,
 } from "lucide-react";
 import {
   Card,
@@ -166,6 +170,41 @@ export default function BillingPage() {
 
                   <Separator />
 
+                  {/* Plan Limits */}
+                  {currentPlan && (
+                    <div className="grid grid-cols-3 gap-4 rounded-lg border p-4 bg-muted/30">
+                      <div className="text-center">
+                        <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
+                          <Users className="h-4 w-4" />
+                          <span className="text-xs">Team Members</span>
+                        </div>
+                        <span className="text-lg font-semibold">
+                          {currentPlan.max_users === -1 ? "Unlimited" : currentPlan.max_users}
+                        </span>
+                      </div>
+                      <div className="text-center">
+                        <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
+                          <Server className="h-4 w-4" />
+                          <span className="text-xs">Assets</span>
+                        </div>
+                        <span className="text-lg font-semibold">
+                          {currentPlan.max_assets === -1 ? "Unlimited" : currentPlan.max_assets}
+                        </span>
+                      </div>
+                      <div className="text-center">
+                        <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
+                          <Headphones className="h-4 w-4" />
+                          <span className="text-xs">Support</span>
+                        </div>
+                        <span className="text-lg font-semibold capitalize">
+                          {currentPlan.support_level || "Community"}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  <Separator />
+
                   {/* Subscription Dates */}
                   <div className="space-y-2 text-sm">
                     {subscription?.started_at && (
@@ -306,16 +345,33 @@ export default function BillingPage() {
                             <span className="text-muted-foreground">/month</span>
                           )}
                         </div>
-                        <ul className="space-y-2 min-h-[120px]">
-                          {plan.features.slice(0, 5).map((feature) => (
+                        {/* Plan limits summary */}
+                        <div className="grid grid-cols-2 gap-2 text-xs border rounded-md p-2 bg-muted/30">
+                          <div className="flex items-center gap-1">
+                            <Users className="h-3 w-3 text-muted-foreground" />
+                            <span>{plan.max_users === -1 ? "Unlimited" : plan.max_users} users</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Server className="h-3 w-3 text-muted-foreground" />
+                            <span>{plan.max_assets === -1 ? "Unlimited" : plan.max_assets} assets</span>
+                          </div>
+                          {plan.trial_days > 0 && (
+                            <div className="flex items-center gap-1 col-span-2">
+                              <Gift className="h-3 w-3 text-blue-500" />
+                              <span className="text-blue-600">{plan.trial_days}-day free trial</span>
+                            </div>
+                          )}
+                        </div>
+                        <ul className="space-y-2 min-h-[100px]">
+                          {plan.features.slice(0, 4).map((feature) => (
                             <li key={feature} className="flex items-start gap-2 text-sm">
                               <Check className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
                               <span>{feature}</span>
                             </li>
                           ))}
-                          {plan.features.length > 5 && (
+                          {plan.features.length > 4 && (
                             <li className="text-sm text-muted-foreground">
-                              +{plan.features.length - 5} more features
+                              +{plan.features.length - 4} more features
                             </li>
                           )}
                         </ul>

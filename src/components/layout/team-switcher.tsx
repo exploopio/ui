@@ -5,7 +5,7 @@
  *
  * Displays current team and allows switching between teams.
  * - Fetches real tenant data from API
- * - Shows actual plan name from subscription API
+ * - Shows actual plan name from subscription API (Pro, Business, Enterprise, etc.)
  * - Supports keyboard shortcuts (⌘1, ⌘2, etc.)
  * - Shows loading state during switch
  */
@@ -58,10 +58,11 @@ export function TeamSwitcher() {
     isSwitching,
     switchTeam,
     error,
+    loadTenants,
   } = useTenant();
 
   // Fetch actual plan name from subscription API
-  const { plan: subscriptionPlan } = useTenantSubscription();
+  const { plan: subscriptionPlan, isLoading: isPlanLoading } = useTenantSubscription();
 
   const [isOpen, setIsOpen] = React.useState(false);
 
@@ -124,9 +125,9 @@ export function TeamSwitcher() {
 
   // Get current tenant display info
   const currentTeamName = currentTenant?.name || currentTenant?.slug || "Select Team";
-  // Use plan name from subscription API (e.g., "Enterprise", "Pro", "Business")
-  // Fall back to "Team" if subscription not loaded yet
-  const currentTeamPlan = subscriptionPlan?.name || "Team";
+  // Use plan name from subscription API (e.g., "Enterprise", "Pro", "Business", "Starter")
+  // Show skeleton/loading indicator while fetching, then actual plan name
+  const currentTeamPlan = subscriptionPlan?.name;
   const currentIndex = currentTenant
     ? displayTenants.findIndex(t => t.id === currentTenant.id)
     : 0;
@@ -178,7 +179,13 @@ export function TeamSwitcher() {
   return (
     <SidebarMenu>
       <SidebarMenuItem>
-        <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+        <DropdownMenu open={isOpen} onOpenChange={(open) => {
+            setIsOpen(open);
+            // Trigger lazy load of tenant list when dropdown is opened
+            if (open) {
+              loadTenants();
+            }
+          }}>
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size="lg"
@@ -195,9 +202,13 @@ export function TeamSwitcher() {
 
               <div className="grid flex-1 text-start text-sm leading-tight">
                 <span className="truncate font-semibold">{currentTeamName}</span>
-                <span className="truncate text-xs text-muted-foreground">
-                  {currentTeamPlan}
-                </span>
+                {isPlanLoading ? (
+                  <span className="h-3 w-12 bg-muted rounded animate-pulse" />
+                ) : currentTeamPlan ? (
+                  <span className="truncate text-xs text-muted-foreground">
+                    {currentTeamPlan}
+                  </span>
+                ) : null}
               </div>
 
               <ChevronsUpDown className="ms-auto size-4" />
@@ -210,8 +221,11 @@ export function TeamSwitcher() {
             side={isMobile ? "bottom" : "right"}
             sideOffset={4}
           >
-            <DropdownMenuLabel className="text-muted-foreground text-xs">
+            <DropdownMenuLabel className="text-muted-foreground text-xs flex items-center gap-2">
               Teams
+              {isLoading && (
+                <Loader2 className="size-3 animate-spin text-muted-foreground" />
+              )}
             </DropdownMenuLabel>
 
             {displayTenants.map((tenant, index) => {
@@ -234,6 +248,20 @@ export function TeamSwitcher() {
                 </DropdownMenuItem>
               );
             })}
+
+            {/* Show skeleton items while loading additional teams */}
+            {isLoading && displayTenants.length <= 1 && (
+              <>
+                <DropdownMenuItem disabled className="gap-2 p-2 opacity-50">
+                  <div className="flex size-6 items-center justify-center rounded-sm border bg-muted animate-pulse" />
+                  <div className="h-4 w-24 bg-muted rounded animate-pulse" />
+                </DropdownMenuItem>
+                <DropdownMenuItem disabled className="gap-2 p-2 opacity-50">
+                  <div className="flex size-6 items-center justify-center rounded-sm border bg-muted animate-pulse" />
+                  <div className="h-4 w-20 bg-muted rounded animate-pulse" />
+                </DropdownMenuItem>
+              </>
+            )}
 
             <DropdownMenuSeparator />
 

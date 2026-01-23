@@ -13,7 +13,7 @@
  * So we need to let the tenant API call happen first to validate auth.
  */
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTenant } from "@/context/tenant-provider";
 import { getCookie, removeCookie } from "@/lib/cookies";
 import { env } from "@/lib/env";
@@ -85,8 +85,19 @@ function clearAuthAndRedirectToLogin() {
 }
 
 export function TenantGate({ children }: TenantGateProps) {
-  const { tenants, isLoading, currentTenant, error } = useTenant();
+  const { tenants, isLoading, error } = useTenant();
   const hasRedirected = useRef(false);
+
+  // Check if tenant cookie exists directly (don't wait for state update)
+  // This prevents the flash redirect to onboarding when cookie exists
+  const [hasCookieChecked, setHasCookieChecked] = useState(false);
+  const [hasTenantCookie, setHasTenantCookie] = useState(false);
+
+  useEffect(() => {
+    const cookie = getCookie(env.cookies.tenant);
+    setHasTenantCookie(!!cookie);
+    setHasCookieChecked(true);
+  }, []);
 
   // Handle authentication errors - HIGHEST PRIORITY
   // When token is invalid, API will return 401 - redirect to login
@@ -99,13 +110,24 @@ export function TenantGate({ children }: TenantGateProps) {
     }
   }, [error]);
 
-  // Handle tenant check AFTER API response
+  // Handle tenant check AFTER API response (when needed)
   // Only redirect to onboarding if:
-  // 1. API call completed (not loading)
-  // 2. No auth error (error is null or not auth error)
-  // 3. User has no tenants
+  // 1. Cookie check completed
+  // 2. API call completed (not loading) - only needed when no cookie
+  // 3. No auth error
+  // 4. User has no tenants AND no tenant cookie
+  //
+  // OPTIMIZATION: If user has a tenant cookie, we trust it and skip the
+  // tenants API call. The API is only called when user doesn't have a
+  // tenant cookie (to check if they need onboarding).
   useEffect(() => {
-    // Wait for API to complete
+    // Wait for cookie check to complete
+    if (!hasCookieChecked) return;
+
+    // If user has a tenant cookie, trust it - no need to check tenants
+    if (hasTenantCookie) return;
+
+    // Wait for API to complete (only called when no tenant cookie)
     if (isLoading) return;
 
     // If there's an auth error, let the auth error handler deal with it
@@ -116,7 +138,7 @@ export function TenantGate({ children }: TenantGateProps) {
 
     // Check if user has no tenants - redirect to onboarding
     // This means auth is valid but user hasn't created a team yet
-    if (tenants.length === 0 && !currentTenant) {
+    if (tenants.length === 0) {
       hasRedirected.current = true;
       console.log("[TenantGate] No tenants found - redirecting to onboarding");
       window.location.href = "/onboarding/create-team";
@@ -125,19 +147,15 @@ export function TenantGate({ children }: TenantGateProps) {
 
     // Check if user has tenants but no tenant cookie selected
     // This can happen if cookie was cleared but auth is still valid
-    if (tenants.length > 0 && !currentTenant) {
-      const tenantCookie = getCookie(env.cookies.tenant);
-      if (!tenantCookie) {
-        // Auto-select the first tenant
-        console.log("[TenantGate] No tenant selected, but has tenants - selecting first one");
-        // This will be handled by the first tenant selection flow
-      }
+    if (tenants.length > 0) {
+      console.log("[TenantGate] No tenant selected, but has tenants - selecting first one");
+      // This will be handled by the first tenant selection flow
     }
-  }, [isLoading, error, tenants.length, currentTenant]);
+  }, [hasCookieChecked, hasTenantCookie, isLoading, error, tenants.length]);
 
-  // Show loading while API is fetching (validating auth)
-  if (isLoading) {
-    return <LoadingScreen message="Verifying..." />;
+  // Show loading while cookie check hasn't completed
+  if (!hasCookieChecked) {
+    return <LoadingScreen message="Loading..." />;
   }
 
   // Show loading if auth error (will redirect to login)
@@ -145,11 +163,23 @@ export function TenantGate({ children }: TenantGateProps) {
     return <LoadingScreen message="Session expired..." />;
   }
 
+  // If user has tenant cookie, show dashboard immediately
+  // No need to wait for tenants API - it will be lazy loaded
+  if (hasTenantCookie) {
+    return <>{children}</>;
+  }
+
+  // No tenant cookie - need to check tenants API
+  // Show loading while API is fetching
+  if (isLoading) {
+    return <LoadingScreen message="Verifying..." />;
+  }
+
   // Show loading while redirecting for empty tenants
-  if (tenants.length === 0 && !currentTenant) {
+  if (tenants.length === 0) {
     return <LoadingScreen message="Redirecting..." />;
   }
 
-  // User has tenants - show normal dashboard layout
+  // User has tenants from API - show normal dashboard layout
   return <>{children}</>;
 }

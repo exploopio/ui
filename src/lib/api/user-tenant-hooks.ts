@@ -74,43 +74,47 @@ const userTenantEndpoints = {
 // HOOKS
 // ============================================
 
+export interface UseMyTenantsOptions extends SWRConfiguration {
+  /**
+   * Skip fetching until explicitly needed (for lazy loading)
+   * When true, the hook will not fetch until skip becomes false
+   */
+  skip?: boolean
+}
+
 /**
  * Fetch current user's tenants with their roles
  *
- * IMPORTANT: This hook ALWAYS makes an API call to:
+ * IMPORTANT: This hook makes an API call to:
  * 1. Validate the user's auth token (returns 401 if invalid)
  * 2. Fetch the user's tenants (returns empty array if new user)
  *
- * The API call is essential for auth validation, even if user has no tenant cookie.
+ * The API call is essential for auth validation when no tenant cookie exists.
  * TenantGate relies on this to properly redirect:
  * - 401 error → redirect to /login
  * - Empty tenants → redirect to /onboarding
  * - Has tenants → show dashboard
+ *
+ * OPTIMIZATION: Pass `skip: true` to lazy load tenant list.
+ * Use this when user already has a tenant cookie and you only need
+ * the list when they open the team switcher dropdown.
  *
  * NOTE: We cannot check for refresh_token cookies because they are HttpOnly.
  * We must always make the API call and let the server validate auth.
  *
  * @example
  * ```typescript
- * function TeamSwitcher() {
- *   const { data: tenants, error, isLoading } = useMyTenants()
+ * // Eager load (for TenantGate - needs to check if user has tenants)
+ * const { data: tenants } = useMyTenants()
  *
- *   if (isLoading) return <Loading />
- *   if (error) return <Error error={error} />
- *
- *   return (
- *     <Select>
- *       {tenants?.map(tenant => (
- *         <Option key={tenant.id} value={tenant.id}>
- *           {tenant.name} ({tenant.role})
- *         </Option>
- *       ))}
- *     </Select>
- *   )
- * }
+ * // Lazy load (for dropdown - only fetch when opened)
+ * const [dropdownOpen, setDropdownOpen] = useState(false)
+ * const { data: tenants } = useMyTenants({ skip: !dropdownOpen })
  * ```
  */
-export function useMyTenants(config?: SWRConfiguration) {
+export function useMyTenants(options?: UseMyTenantsOptions) {
+  const { skip, ...config } = options || {}
+
   // Track if component has mounted on client
   // This prevents SSR/hydration issues with SWR
   const [isMounted, setIsMounted] = React.useState(false)
@@ -119,10 +123,11 @@ export function useMyTenants(config?: SWRConfiguration) {
     setIsMounted(true)
   }, [])
 
-  // ALWAYS make the API call to validate auth
-  // We cannot check HttpOnly cookies from client-side JavaScript
-  // The API will return 401 if user is not authenticated
-  const swrKey = isMounted ? userTenantEndpoints.myTenants() : null
+  // Only make the API call if:
+  // 1. Component is mounted (client-side)
+  // 2. Not explicitly skipped (for lazy loading)
+  const shouldFetch = isMounted && !skip
+  const swrKey = shouldFetch ? userTenantEndpoints.myTenants() : null
 
   const result = useSWR<TenantMembership[]>(
     swrKey,
@@ -132,9 +137,10 @@ export function useMyTenants(config?: SWRConfiguration) {
 
   // Return with custom isLoading that includes mount check
   // With keepPreviousData, we only show loading on initial fetch (no data yet)
+  // If skipped, isLoading should be false (not loading, just not fetching)
   return {
     ...result,
-    isLoading: !isMounted || (result.isLoading && !result.data),
+    isLoading: skip ? false : (!isMounted || (result.isLoading && !result.data)),
   }
 }
 

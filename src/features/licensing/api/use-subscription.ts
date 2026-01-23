@@ -39,6 +39,10 @@ export interface Plan {
   display_order: number
   features: string[]
   badge: string | null
+  trial_days: number
+  max_users: number
+  max_assets: number
+  support_level: string
   modules: PlanModule[]
 }
 

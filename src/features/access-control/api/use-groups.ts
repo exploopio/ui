@@ -89,12 +89,19 @@ export function useMyGroups() {
   };
 }
 
+export interface UseGroupOptions {
+  /** Set to true to skip fetching (for lazy loading) */
+  skip?: boolean;
+}
+
 /**
  * Fetch a single group with full details
  */
-export function useGroup(groupId: string | null) {
+export function useGroup(groupId: string | null, options?: UseGroupOptions) {
+  const shouldFetch = !options?.skip && groupId;
+
   const { data, error, isLoading, mutate } = useSWR<GroupWithDetails>(
-    groupId ? `${API_BASE}/${groupId}` : null,
+    shouldFetch ? `${API_BASE}/${groupId}` : null,
     fetcher,
     {
       revalidateOnFocus: false,
@@ -108,7 +115,7 @@ export function useGroup(groupId: string | null) {
 
   return {
     group,
-    isLoading,
+    isLoading: shouldFetch ? isLoading : false,
     isError: !!error,
     error,
     mutate,
@@ -118,9 +125,11 @@ export function useGroup(groupId: string | null) {
 /**
  * Fetch group members
  */
-export function useGroupMembers(groupId: string | null) {
+export function useGroupMembers(groupId: string | null, options?: UseGroupOptions) {
+  const shouldFetch = !options?.skip && groupId;
+
   const { data, error, isLoading, mutate } = useSWR<ApiResponse<GroupMember>>(
-    groupId ? `${API_BASE}/${groupId}/members` : null,
+    shouldFetch ? `${API_BASE}/${groupId}/members` : null,
     fetcher,
     {
       revalidateOnFocus: false,
@@ -142,7 +151,7 @@ export function useGroupMembers(groupId: string | null) {
 
   return {
     members,
-    isLoading,
+    isLoading: shouldFetch ? isLoading : false,
     isError: !!error,
     error,
     mutate,
@@ -152,9 +161,11 @@ export function useGroupMembers(groupId: string | null) {
 /**
  * Fetch group's assigned permission sets
  */
-export function useGroupPermissionSets(groupId: string | null) {
+export function useGroupPermissionSets(groupId: string | null, options?: UseGroupOptions) {
+  const shouldFetch = !options?.skip && groupId;
+
   const { data, error, isLoading, mutate } = useSWR<ApiResponse<PermissionSet>>(
-    groupId ? `${API_BASE}/${groupId}/permission-sets` : null,
+    shouldFetch ? `${API_BASE}/${groupId}/permission-sets` : null,
     fetcher,
     {
       revalidateOnFocus: false,
@@ -173,7 +184,7 @@ export function useGroupPermissionSets(groupId: string | null) {
 
   return {
     permissionSets,
-    isLoading,
+    isLoading: shouldFetch ? isLoading : false,
     isError: !!error,
     error,
     mutate,
@@ -183,9 +194,11 @@ export function useGroupPermissionSets(groupId: string | null) {
 /**
  * Fetch group's assets
  */
-export function useGroupAssets(groupId: string | null) {
+export function useGroupAssets(groupId: string | null, options?: UseGroupOptions) {
+  const shouldFetch = !options?.skip && groupId;
+
   const { data, error, isLoading, mutate } = useSWR<ApiResponse<GroupAsset>>(
-    groupId ? `${API_BASE}/${groupId}/assets` : null,
+    shouldFetch ? `${API_BASE}/${groupId}/assets` : null,
     fetcher,
     {
       revalidateOnFocus: false,
@@ -204,7 +217,7 @@ export function useGroupAssets(groupId: string | null) {
 
   return {
     assets,
-    isLoading,
+    isLoading: shouldFetch ? isLoading : false,
     isError: !!error,
     error,
     mutate,
