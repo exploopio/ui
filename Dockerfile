@@ -30,8 +30,10 @@ FROM base AS deps
 # Copy package files
 COPY package.json package-lock.json* ./
 
-# Install all dependencies
-RUN npm ci
+# Install all dependencies with BuildKit cache mount for faster builds
+# Cache is shared across builds, significantly speeding up npm ci
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci
 
 # ==============================================================================
 # DEVELOPMENT STAGE - Hot reload enabled
