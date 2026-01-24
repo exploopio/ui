@@ -1,6 +1,6 @@
-"use client";
+'use client'
 
-import { useState, useMemo } from "react";
+import { useState, useMemo } from 'react'
 import {
   ColumnDef,
   flexRender,
@@ -10,19 +10,16 @@ import {
   getSortedRowModel,
   SortingState,
   useReactTable,
-} from "@tanstack/react-table";
-import { Header, Main } from "@/components/layout";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { PageHeader, StatusBadge, RiskScoreBadge } from "@/features/shared";
+} from '@tanstack/react-table'
+import { Header, Main } from '@/components/layout'
+import { PageHeader, StatusBadge, RiskScoreBadge } from '@/features/shared'
 import {
   AssetDetailSheet,
   StatCard,
   StatsGrid,
   SectionTitle,
   ClassificationBadges,
-} from "@/features/assets";
+} from '@/features/assets'
 import {
   ScopeBadge,
   ScopeCoverageCard,
@@ -31,18 +28,12 @@ import {
   getActiveScopeTargets,
   getActiveScopeExclusions,
   type ScopeMatchResult,
-} from "@/features/scope";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+} from '@/features/scope'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -50,7 +41,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from '@/components/ui/table'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -60,23 +51,23 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+} from '@/components/ui/alert-dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "sonner";
+} from '@/components/ui/select'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { toast } from 'sonner'
 import {
   Cpu,
   Search as SearchIcon,
@@ -98,160 +89,172 @@ import {
   Zap,
   Cloud,
   Network,
-} from "lucide-react";
+} from 'lucide-react'
 import {
   useAssets,
   deleteAsset,
   bulkDeleteAssets,
   getAssetRelationships,
-  type Asset
-} from "@/features/assets";
-import type { Status } from "@/features/shared/types";
-import type { CloudProvider } from "@/features/assets/types/asset.types";
+  type Asset,
+} from '@/features/assets'
+import type { Status } from '@/features/shared/types'
+import type { CloudProvider } from '@/features/assets/types/asset.types'
 
 // Filter types
-type StatusFilter = Status | "all";
-type RuntimeFilter = "all" | "nodejs" | "python" | "java" | "dotnet" | "go";
-type ProviderFilter = "all" | CloudProvider;
+type StatusFilter = Status | 'all'
+type RuntimeFilter = 'all' | 'nodejs' | 'python' | 'java' | 'dotnet' | 'go'
+type ProviderFilter = 'all' | CloudProvider
 
 const statusFilters: { value: StatusFilter; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "active", label: "Active" },
-  { value: "inactive", label: "Inactive" },
-  { value: "pending", label: "Pending" },
-];
+  { value: 'all', label: 'All' },
+  { value: 'active', label: 'Active' },
+  { value: 'inactive', label: 'Inactive' },
+  { value: 'pending', label: 'Pending' },
+]
 
 const runtimeFilters: { value: RuntimeFilter; label: string }[] = [
-  { value: "all", label: "All Runtimes" },
-  { value: "nodejs", label: "Node.js" },
-  { value: "python", label: "Python" },
-  { value: "java", label: "Java" },
-  { value: "dotnet", label: ".NET" },
-  { value: "go", label: "Go" },
-];
+  { value: 'all', label: 'All Runtimes' },
+  { value: 'nodejs', label: 'Node.js' },
+  { value: 'python', label: 'Python' },
+  { value: 'java', label: 'Java' },
+  { value: 'dotnet', label: '.NET' },
+  { value: 'go', label: 'Go' },
+]
 
 const providerFilters: { value: ProviderFilter; label: string }[] = [
-  { value: "all", label: "All Providers" },
-  { value: "aws", label: "AWS Lambda" },
-  { value: "gcp", label: "GCP Functions" },
-  { value: "azure", label: "Azure Functions" },
-];
+  { value: 'all', label: 'All Providers' },
+  { value: 'aws', label: 'AWS Lambda' },
+  { value: 'gcp', label: 'GCP Functions' },
+  { value: 'azure', label: 'Azure Functions' },
+]
 
 const runtimeColors: Record<string, string> = {
-  nodejs: "bg-green-500/10 text-green-500",
-  python: "bg-blue-500/10 text-blue-500",
-  java: "bg-orange-500/10 text-orange-500",
-  dotnet: "bg-purple-500/10 text-purple-500",
-  go: "bg-cyan-500/10 text-cyan-500",
-};
+  nodejs: 'bg-green-500/10 text-green-500',
+  python: 'bg-blue-500/10 text-blue-500',
+  java: 'bg-orange-500/10 text-orange-500',
+  dotnet: 'bg-purple-500/10 text-purple-500',
+  go: 'bg-cyan-500/10 text-cyan-500',
+}
 
 const providerColors: Record<string, string> = {
-  aws: "bg-orange-500/10 text-orange-500",
-  gcp: "bg-blue-500/10 text-blue-500",
-  azure: "bg-cyan-500/10 text-cyan-500",
-};
+  aws: 'bg-orange-500/10 text-orange-500',
+  gcp: 'bg-blue-500/10 text-blue-500',
+  azure: 'bg-cyan-500/10 text-cyan-500',
+}
 
 const getRuntimeCategory = (runtime: string): string => {
-  const r = runtime.toLowerCase();
-  if (r.includes("node")) return "nodejs";
-  if (r.includes("python")) return "python";
-  if (r.includes("java")) return "java";
-  if (r.includes("dotnet") || r.includes(".net")) return "dotnet";
-  if (r.includes("go")) return "go";
-  return "nodejs";
-};
+  const r = runtime.toLowerCase()
+  if (r.includes('node')) return 'nodejs'
+  if (r.includes('python')) return 'python'
+  if (r.includes('java')) return 'java'
+  if (r.includes('dotnet') || r.includes('.net')) return 'dotnet'
+  if (r.includes('go')) return 'go'
+  return 'nodejs'
+}
 
 export default function ServerlessPage() {
   // Fetch serverless functions from API
-  const { assets: functions, isLoading: _isLoading, isError: _isError, error: _fetchError, mutate } = useAssets({
+  const {
+    assets: functions,
+    isLoading: _isLoading,
+    isError: _isError,
+    error: _fetchError,
+    mutate,
+  } = useAssets({
     types: ['serverless'],
-  });
+  })
 
-  const [selectedFunction, setSelectedFunction] = useState<Asset | null>(null);
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [globalFilter, setGlobalFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [runtimeFilter, setRuntimeFilter] = useState<RuntimeFilter>("all");
-  const [providerFilter, setProviderFilter] = useState<ProviderFilter>("all");
-  const [rowSelection, setRowSelection] = useState({});
-  const [_isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedFunction, setSelectedFunction] = useState<Asset | null>(null)
+  const [sorting, setSorting] = useState<SortingState>([])
+  const [globalFilter, setGlobalFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [runtimeFilter, setRuntimeFilter] = useState<RuntimeFilter>('all')
+  const [providerFilter, setProviderFilter] = useState<ProviderFilter>('all')
+  const [rowSelection, setRowSelection] = useState({})
+  const [_isSubmitting, setIsSubmitting] = useState(false)
 
   // Dialog states
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [functionToDelete, setFunctionToDelete] = useState<Asset | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [functionToDelete, setFunctionToDelete] = useState<Asset | null>(null)
 
   // Filter data
   const filteredData = useMemo(() => {
-    let data = [...functions];
-    if (statusFilter !== "all") {
-      data = data.filter((f) => f.status === statusFilter);
+    let data = [...functions]
+    if (statusFilter !== 'all') {
+      data = data.filter((f) => f.status === statusFilter)
     }
-    if (runtimeFilter !== "all") {
+    if (runtimeFilter !== 'all') {
       data = data.filter((f) => {
-        const runtime = f.metadata.functionRuntime || "";
-        return getRuntimeCategory(runtime) === runtimeFilter;
-      });
+        const runtime = f.metadata.functionRuntime || ''
+        return getRuntimeCategory(runtime) === runtimeFilter
+      })
     }
-    if (providerFilter !== "all") {
-      data = data.filter((f) => f.metadata.cloudProvider === providerFilter);
+    if (providerFilter !== 'all') {
+      data = data.filter((f) => f.metadata.cloudProvider === providerFilter)
     }
-    return data;
-  }, [functions, statusFilter, runtimeFilter, providerFilter]);
+    return data
+  }, [functions, statusFilter, runtimeFilter, providerFilter])
 
   // Status counts
-  const statusCounts = useMemo(() => ({
-    all: functions.length,
-    active: functions.filter((f) => f.status === "active").length,
-    inactive: functions.filter((f) => f.status === "inactive").length,
-    pending: functions.filter((f) => f.status === "pending").length,
-  }), [functions]);
+  const statusCounts = useMemo(
+    () => ({
+      all: functions.length,
+      active: functions.filter((f) => f.status === 'active').length,
+      inactive: functions.filter((f) => f.status === 'inactive').length,
+      pending: functions.filter((f) => f.status === 'pending').length,
+    }),
+    [functions]
+  )
 
   // Additional stats
-  const stats = useMemo(() => ({
-    vpcEnabled: functions.filter((f) => f.metadata.functionVpcEnabled).length,
-    withFindings: functions.filter((f) => f.findingCount > 0).length,
-    avgMemory: Math.round(
-      functions.reduce((acc, f) => acc + (f.metadata.functionMemory || 0), 0) / functions.length
-    ),
-  }), [functions]);
+  const stats = useMemo(
+    () => ({
+      vpcEnabled: functions.filter((f) => f.metadata.functionVpcEnabled).length,
+      withFindings: functions.filter((f) => f.findingCount > 0).length,
+      avgMemory: Math.round(
+        functions.reduce((acc, f) => acc + (f.metadata.functionMemory || 0), 0) / functions.length
+      ),
+    }),
+    [functions]
+  )
 
   // Scope data
-  const scopeTargets = useMemo(() => getActiveScopeTargets(), []);
-  const scopeExclusions = useMemo(() => getActiveScopeExclusions(), []);
+  const scopeTargets = useMemo(() => getActiveScopeTargets(), [])
+  const scopeExclusions = useMemo(() => getActiveScopeExclusions(), [])
 
   // Compute scope matches for each serverless function
   const scopeMatchesMap = useMemo(() => {
-    const map = new Map<string, ScopeMatchResult>();
+    const map = new Map<string, ScopeMatchResult>()
     functions.forEach((fn) => {
       const match = getScopeMatchesForAsset(
-        { id: fn.id, type: "cloud_resource", name: fn.metadata.functionName || fn.name },
+        { id: fn.id, type: 'cloud_resource', name: fn.metadata.functionName || fn.name },
         scopeTargets,
         scopeExclusions
-      );
-      map.set(fn.id, match);
-    });
-    return map;
-  }, [functions, scopeTargets, scopeExclusions]);
+      )
+      map.set(fn.id, match)
+    })
+    return map
+  }, [functions, scopeTargets, scopeExclusions])
 
   // Calculate scope coverage
   const scopeCoverage = useMemo(() => {
     const assets = functions.map((f) => ({
       id: f.id,
       name: f.metadata.functionName || f.name,
-      type: "cloud_resource" as const,
-    }));
-    return calculateScopeCoverage(assets, scopeTargets, scopeExclusions);
-  }, [functions, scopeTargets, scopeExclusions]);
+      type: 'cloud_resource' as const,
+    }))
+    return calculateScopeCoverage(assets, scopeTargets, scopeExclusions)
+  }, [functions, scopeTargets, scopeExclusions])
 
   // Table columns
   const columns: ColumnDef<Asset>[] = [
     {
-      id: "select",
+      id: 'select',
       header: ({ table }) => (
         <Checkbox
           checked={
             table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && "indeterminate")
+            (table.getIsSomePageRowsSelected() && 'indeterminate')
           }
           onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
           aria-label="Select all"
@@ -267,11 +270,11 @@ export default function ServerlessPage() {
       enableSorting: false,
     },
     {
-      accessorKey: "name",
+      accessorKey: 'name',
       header: ({ column }) => (
         <Button
           variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           className="-ml-4"
         >
           Function
@@ -283,60 +286,62 @@ export default function ServerlessPage() {
           <Cpu className="h-4 w-4 text-violet-500 shrink-0" />
           <div className="min-w-0">
             <p className="font-medium truncate">{row.original.name}</p>
-            <p className="text-muted-foreground text-xs truncate">{row.original.metadata.functionHandler}</p>
+            <p className="text-muted-foreground text-xs truncate">
+              {row.original.metadata.functionHandler}
+            </p>
           </div>
         </div>
       ),
     },
     {
-      accessorKey: "metadata.functionRuntime",
-      header: "Runtime",
+      accessorKey: 'metadata.functionRuntime',
+      header: 'Runtime',
       cell: ({ row }) => {
-        const runtime = row.original.metadata.functionRuntime || "";
-        const category = getRuntimeCategory(runtime);
+        const runtime = row.original.metadata.functionRuntime || ''
+        const category = getRuntimeCategory(runtime)
         return (
           <Badge variant="secondary" className={runtimeColors[category]}>
             {runtime}
           </Badge>
-        );
+        )
       },
     },
     {
-      accessorKey: "metadata.cloudProvider",
-      header: "Provider",
+      accessorKey: 'metadata.cloudProvider',
+      header: 'Provider',
       cell: ({ row }) => {
-        const provider = row.original.metadata.cloudProvider || "aws";
+        const provider = row.original.metadata.cloudProvider || 'aws'
         return (
           <Badge variant="secondary" className={providerColors[provider]}>
             {provider.toUpperCase()}
           </Badge>
-        );
+        )
       },
     },
     {
-      accessorKey: "metadata.functionMemory",
-      header: "Memory",
+      accessorKey: 'metadata.functionMemory',
+      header: 'Memory',
       cell: ({ row }) => {
-        const memory = row.original.metadata.functionMemory;
-        return <span className="text-sm">{memory ? `${memory} MB` : "-"}</span>;
+        const memory = row.original.metadata.functionMemory
+        return <span className="text-sm">{memory ? `${memory} MB` : '-'}</span>
       },
     },
     {
-      accessorKey: "metadata.functionTimeout",
-      header: "Timeout",
+      accessorKey: 'metadata.functionTimeout',
+      header: 'Timeout',
       cell: ({ row }) => {
-        const timeout = row.original.metadata.functionTimeout;
-        return <span className="text-sm">{timeout ? `${timeout}s` : "-"}</span>;
+        const timeout = row.original.metadata.functionTimeout
+        return <span className="text-sm">{timeout ? `${timeout}s` : '-'}</span>
       },
     },
     {
-      accessorKey: "status",
-      header: "Status",
+      accessorKey: 'status',
+      header: 'Status',
       cell: ({ row }) => <StatusBadge status={row.original.status} />,
     },
     {
-      id: "classification",
-      header: "Classification",
+      id: 'classification',
+      header: 'Classification',
       cell: ({ row }) => (
         <ClassificationBadges
           scope={row.original.scope}
@@ -347,20 +352,20 @@ export default function ServerlessPage() {
       ),
     },
     {
-      id: "scope",
-      header: "Scope",
+      id: 'scope',
+      header: 'Scope',
       cell: ({ row }) => {
-        const match = scopeMatchesMap.get(row.original.id);
-        if (!match) return <span className="text-muted-foreground">-</span>;
-        return <ScopeBadge match={match} />;
+        const match = scopeMatchesMap.get(row.original.id)
+        if (!match) return <span className="text-muted-foreground">-</span>
+        return <ScopeBadge match={match} />
       },
     },
     {
-      accessorKey: "findingCount",
+      accessorKey: 'findingCount',
       header: ({ column }) => (
         <Button
           variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           className="-ml-4"
         >
           Findings
@@ -368,21 +373,17 @@ export default function ServerlessPage() {
         </Button>
       ),
       cell: ({ row }) => {
-        const count = row.original.findingCount;
-        if (count === 0) return <span className="text-muted-foreground">0</span>;
-        return (
-          <Badge variant={count > 5 ? "destructive" : "secondary"}>
-            {count}
-          </Badge>
-        );
+        const count = row.original.findingCount
+        if (count === 0) return <span className="text-muted-foreground">0</span>
+        return <Badge variant={count > 5 ? 'destructive' : 'secondary'}>{count}</Badge>
       },
     },
     {
-      accessorKey: "riskScore",
+      accessorKey: 'riskScore',
       header: ({ column }) => (
         <Button
           variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           className="-ml-4"
         >
           Risk
@@ -392,27 +393,47 @@ export default function ServerlessPage() {
       cell: ({ row }) => <RiskScoreBadge score={row.original.riskScore} size="sm" />,
     },
     {
-      id: "actions",
+      id: 'actions',
       cell: ({ row }) => {
-        const fn = row.original;
+        const fn = row.original
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSelectedFunction(fn); }}>
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setSelectedFunction(fn)
+                }}
+              >
                 <Eye className="mr-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleCopyArn(fn); }}>
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleCopyArn(fn)
+                }}
+              >
                 <Copy className="mr-2 h-4 w-4" />
                 Copy ARN
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); toast.info("Scanning function..."); }}>
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation()
+                  toast.info('Scanning function...')
+                }}
+              >
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Rescan
               </DropdownMenuItem>
@@ -420,9 +441,9 @@ export default function ServerlessPage() {
               <DropdownMenuItem
                 className="text-red-400"
                 onClick={(e) => {
-                  e.stopPropagation();
-                  setFunctionToDelete(fn);
-                  setDeleteDialogOpen(true);
+                  e.stopPropagation()
+                  setFunctionToDelete(fn)
+                  setDeleteDialogOpen(true)
                 }}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
@@ -430,10 +451,10 @@ export default function ServerlessPage() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        );
+        )
       },
     },
-  ];
+  ]
 
   const table = useReactTable({
     data: filteredData,
@@ -446,83 +467,87 @@ export default function ServerlessPage() {
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-  });
+  })
 
   // Handlers
   const handleCopyArn = (fn: Asset) => {
-    const arn = `arn:${fn.metadata.cloudProvider}:lambda:${fn.metadata.region}:${fn.metadata.functionName}`;
-    navigator.clipboard.writeText(arn);
-    toast.success("ARN copied to clipboard");
-  };
+    const arn = `arn:${fn.metadata.cloudProvider}:lambda:${fn.metadata.region}:${fn.metadata.functionName}`
+    navigator.clipboard.writeText(arn)
+    toast.success('ARN copied to clipboard')
+  }
 
   const handleDeleteFunction = async () => {
-    if (!functionToDelete) return;
-    setIsSubmitting(true);
+    if (!functionToDelete) return
+    setIsSubmitting(true)
     try {
-      await deleteAsset(functionToDelete.id);
-      await mutate();
-      setDeleteDialogOpen(false);
-      setFunctionToDelete(null);
-      toast.success("Function removed from inventory");
+      await deleteAsset(functionToDelete.id)
+      await mutate()
+      setDeleteDialogOpen(false)
+      setFunctionToDelete(null)
+      toast.success('Function removed from inventory')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete function");
+      toast.error(err instanceof Error ? err.message : 'Failed to delete function')
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   const handleBulkDelete = async () => {
-    const selectedFunctionIds = table.getSelectedRowModel().rows.map((r) => r.original.id);
-    if (selectedFunctionIds.length === 0) return;
-    setIsSubmitting(true);
+    const selectedFunctionIds = table.getSelectedRowModel().rows.map((r) => r.original.id)
+    if (selectedFunctionIds.length === 0) return
+    setIsSubmitting(true)
     try {
-      await bulkDeleteAssets(selectedFunctionIds);
-      await mutate();
-      setRowSelection({});
-      toast.success(`Removed ${selectedFunctionIds.length} functions from inventory`);
+      await bulkDeleteAssets(selectedFunctionIds)
+      await mutate()
+      setRowSelection({})
+      toast.success(`Removed ${selectedFunctionIds.length} functions from inventory`)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete functions");
+      toast.error(err instanceof Error ? err.message : 'Failed to delete functions')
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   const handleExport = () => {
     const csv = [
-      ["Name", "Runtime", "Provider", "Memory (MB)", "Timeout (s)", "VPC Enabled", "Status", "Risk Score", "Findings"].join(","),
+      [
+        'Name',
+        'Runtime',
+        'Provider',
+        'Memory (MB)',
+        'Timeout (s)',
+        'VPC Enabled',
+        'Status',
+        'Risk Score',
+        'Findings',
+      ].join(','),
       ...functions.map((f) =>
         [
           f.name,
-          f.metadata.functionRuntime || "",
-          f.metadata.cloudProvider || "",
-          f.metadata.functionMemory || "",
-          f.metadata.functionTimeout || "",
-          f.metadata.functionVpcEnabled ? "Yes" : "No",
+          f.metadata.functionRuntime || '',
+          f.metadata.cloudProvider || '',
+          f.metadata.functionMemory || '',
+          f.metadata.functionTimeout || '',
+          f.metadata.functionVpcEnabled ? 'Yes' : 'No',
           f.status,
           f.riskScore,
           f.findingCount,
-        ].join(",")
+        ].join(',')
       ),
-    ].join("\n");
+    ].join('\n')
 
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "serverless-functions.csv";
-    a.click();
-    toast.success("Functions exported");
-  };
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'serverless-functions.csv'
+    a.click()
+    toast.success('Functions exported')
+  }
 
   return (
     <>
-      <Header fixed>
-        <div className="ms-auto flex items-center gap-2 sm:gap-4">
-          <Search />
-          <ThemeSwitch />
-          <ProfileDropdown />
-        </div>
-      </Header>
+      <Header fixed />
 
       <Main>
         <PageHeader
@@ -537,7 +562,10 @@ export default function ServerlessPage() {
 
         {/* Stats Cards */}
         <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <Card className="cursor-pointer hover:border-primary transition-colors" onClick={() => setStatusFilter("all")}>
+          <Card
+            className="cursor-pointer hover:border-primary transition-colors"
+            onClick={() => setStatusFilter('all')}
+          >
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
                 <Cpu className="h-4 w-4" />
@@ -546,7 +574,10 @@ export default function ServerlessPage() {
               <CardTitle className="text-3xl">{statusCounts.all}</CardTitle>
             </CardHeader>
           </Card>
-          <Card className={`cursor-pointer hover:border-green-500 transition-colors ${statusFilter === "active" ? "border-green-500" : ""}`} onClick={() => setStatusFilter("active")}>
+          <Card
+            className={`cursor-pointer hover:border-green-500 transition-colors ${statusFilter === 'active' ? 'border-green-500' : ''}`}
+            onClick={() => setStatusFilter('active')}
+          >
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
                 <CheckCircle className="h-4 w-4 text-green-500" />
@@ -608,7 +639,10 @@ export default function ServerlessPage() {
               </Tabs>
 
               <div className="flex gap-2">
-                <Select value={runtimeFilter} onValueChange={(v) => setRuntimeFilter(v as RuntimeFilter)}>
+                <Select
+                  value={runtimeFilter}
+                  onValueChange={(v) => setRuntimeFilter(v as RuntimeFilter)}
+                >
                   <SelectTrigger className="w-[150px]">
                     <SelectValue placeholder="Filter by runtime" />
                   </SelectTrigger>
@@ -621,7 +655,10 @@ export default function ServerlessPage() {
                   </SelectContent>
                 </Select>
 
-                <Select value={providerFilter} onValueChange={(v) => setProviderFilter(v as ProviderFilter)}>
+                <Select
+                  value={providerFilter}
+                  onValueChange={(v) => setProviderFilter(v as ProviderFilter)}
+                >
                   <SelectTrigger className="w-[150px]">
                     <SelectValue placeholder="Filter by provider" />
                   </SelectTrigger>
@@ -657,7 +694,9 @@ export default function ServerlessPage() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => toast.info("Scanning selected functions...")}>
+                      <DropdownMenuItem
+                        onClick={() => toast.info('Scanning selected functions...')}
+                      >
                         <RefreshCw className="mr-2 h-4 w-4" />
                         Rescan Selected
                       </DropdownMenuItem>
@@ -693,14 +732,16 @@ export default function ServerlessPage() {
                     table.getRowModel().rows.map((row) => (
                       <TableRow
                         key={row.id}
-                        data-state={row.getIsSelected() && "selected"}
+                        data-state={row.getIsSelected() && 'selected'}
                         className="cursor-pointer"
                         onClick={(e) => {
-                          if ((e.target as HTMLElement).closest('[role="checkbox"]') ||
-                              (e.target as HTMLElement).closest('button')) {
-                            return;
+                          if (
+                            (e.target as HTMLElement).closest('[role="checkbox"]') ||
+                            (e.target as HTMLElement).closest('button')
+                          ) {
+                            return
                           }
-                          setSelectedFunction(row.original);
+                          setSelectedFunction(row.original)
                         }}
                       >
                         {row.getVisibleCells().map((cell) => (
@@ -724,7 +765,7 @@ export default function ServerlessPage() {
             {/* Pagination */}
             <div className="flex items-center justify-between mt-4">
               <p className="text-sm text-muted-foreground">
-                {table.getFilteredSelectedRowModel().rows.length} of{" "}
+                {table.getFilteredSelectedRowModel().rows.length} of{' '}
                 {table.getFilteredRowModel().rows.length} row(s) selected
               </p>
               <div className="flex flex-wrap items-center gap-2">
@@ -780,13 +821,17 @@ export default function ServerlessPage() {
         gradientVia="via-violet-500/10"
         assetTypeName="Serverless Function"
         relationships={selectedFunction ? getAssetRelationships(selectedFunction.id) : []}
-        subtitle={selectedFunction ? `${selectedFunction.metadata.cloudProvider?.toUpperCase()} - ${selectedFunction.metadata.functionRuntime}` : undefined}
-        onEdit={() => toast.info("Edit functionality coming soon")}
+        subtitle={
+          selectedFunction
+            ? `${selectedFunction.metadata.cloudProvider?.toUpperCase()} - ${selectedFunction.metadata.functionRuntime}`
+            : undefined
+        }
+        onEdit={() => toast.info('Edit functionality coming soon')}
         onDelete={() => {
           if (selectedFunction) {
-            setFunctionToDelete(selectedFunction);
-            setDeleteDialogOpen(true);
-            setSelectedFunction(null);
+            setFunctionToDelete(selectedFunction)
+            setDeleteDialogOpen(true)
+            setSelectedFunction(null)
           }
         }}
         quickActions={
@@ -826,23 +871,39 @@ export default function ServerlessPage() {
                 <div className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
                   <div>
                     <p className="text-muted-foreground">Runtime</p>
-                    <p className="font-medium">{selectedFunction.metadata.functionRuntime || "-"}</p>
+                    <p className="font-medium">
+                      {selectedFunction.metadata.functionRuntime || '-'}
+                    </p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Handler</p>
-                    <p className="font-medium font-mono text-xs">{selectedFunction.metadata.functionHandler || "-"}</p>
+                    <p className="font-medium font-mono text-xs">
+                      {selectedFunction.metadata.functionHandler || '-'}
+                    </p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Memory</p>
-                    <p className="font-medium">{selectedFunction.metadata.functionMemory ? `${selectedFunction.metadata.functionMemory} MB` : "-"}</p>
+                    <p className="font-medium">
+                      {selectedFunction.metadata.functionMemory
+                        ? `${selectedFunction.metadata.functionMemory} MB`
+                        : '-'}
+                    </p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Timeout</p>
-                    <p className="font-medium">{selectedFunction.metadata.functionTimeout ? `${selectedFunction.metadata.functionTimeout}s` : "-"}</p>
+                    <p className="font-medium">
+                      {selectedFunction.metadata.functionTimeout
+                        ? `${selectedFunction.metadata.functionTimeout}s`
+                        : '-'}
+                    </p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Code Size</p>
-                    <p className="font-medium">{selectedFunction.metadata.functionCodeSize ? `${(selectedFunction.metadata.functionCodeSize / 1024).toFixed(1)} MB` : "-"}</p>
+                    <p className="font-medium">
+                      {selectedFunction.metadata.functionCodeSize
+                        ? `${(selectedFunction.metadata.functionCodeSize / 1024).toFixed(1)} MB`
+                        : '-'}
+                    </p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Environment Variables</p>
@@ -856,16 +917,24 @@ export default function ServerlessPage() {
                 <SectionTitle>Cloud and Network</SectionTitle>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex items-center gap-3">
-                    <Cloud className={`h-5 w-5 ${providerColors[selectedFunction.metadata.cloudProvider || "aws"]?.split(" ")[1] || "text-muted-foreground"}`} />
+                    <Cloud
+                      className={`h-5 w-5 ${providerColors[selectedFunction.metadata.cloudProvider || 'aws']?.split(' ')[1] || 'text-muted-foreground'}`}
+                    />
                     <div>
-                      <p className="text-sm font-medium">{selectedFunction.metadata.cloudProvider?.toUpperCase() || "-"}</p>
+                      <p className="text-sm font-medium">
+                        {selectedFunction.metadata.cloudProvider?.toUpperCase() || '-'}
+                      </p>
                       <p className="text-xs text-muted-foreground">Provider</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <Network className={`h-5 w-5 ${selectedFunction.metadata.functionVpcEnabled ? "text-blue-500" : "text-muted-foreground"}`} />
+                    <Network
+                      className={`h-5 w-5 ${selectedFunction.metadata.functionVpcEnabled ? 'text-blue-500' : 'text-muted-foreground'}`}
+                    />
                     <div>
-                      <p className="text-sm font-medium">{selectedFunction.metadata.functionVpcEnabled ? "Enabled" : "Disabled"}</p>
+                      <p className="text-sm font-medium">
+                        {selectedFunction.metadata.functionVpcEnabled ? 'Enabled' : 'Disabled'}
+                      </p>
                       <p className="text-xs text-muted-foreground">VPC</p>
                     </div>
                   </div>
@@ -879,33 +948,35 @@ export default function ServerlessPage() {
               </div>
 
               {/* Triggers */}
-              {selectedFunction.metadata.functionTriggers && selectedFunction.metadata.functionTriggers.length > 0 && (
-                <div className="rounded-xl border p-4 bg-card">
-                  <SectionTitle>Triggers</SectionTitle>
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {selectedFunction.metadata.functionTriggers.map((trigger, i) => (
-                      <Badge key={i} variant="outline" className="gap-1">
-                        <Zap className="h-3 w-3" />
-                        {trigger}
-                      </Badge>
-                    ))}
+              {selectedFunction.metadata.functionTriggers &&
+                selectedFunction.metadata.functionTriggers.length > 0 && (
+                  <div className="rounded-xl border p-4 bg-card">
+                    <SectionTitle>Triggers</SectionTitle>
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {selectedFunction.metadata.functionTriggers.map((trigger, i) => (
+                        <Badge key={i} variant="outline" className="gap-1">
+                          <Zap className="h-3 w-3" />
+                          {trigger}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
               {/* Layers */}
-              {selectedFunction.metadata.functionLayers && selectedFunction.metadata.functionLayers.length > 0 && (
-                <div className="rounded-xl border p-4 bg-card">
-                  <SectionTitle>Layers</SectionTitle>
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {selectedFunction.metadata.functionLayers.map((layer, i) => (
-                      <Badge key={i} variant="secondary" className="text-xs">
-                        {layer}
-                      </Badge>
-                    ))}
+              {selectedFunction.metadata.functionLayers &&
+                selectedFunction.metadata.functionLayers.length > 0 && (
+                  <div className="rounded-xl border p-4 bg-card">
+                    <SectionTitle>Layers</SectionTitle>
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {selectedFunction.metadata.functionLayers.map((layer, i) => (
+                        <Badge key={i} variant="secondary" className="text-xs">
+                          {layer}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
               {/* Timeline */}
               <div className="rounded-xl border p-4 bg-card">
@@ -919,7 +990,9 @@ export default function ServerlessPage() {
                       <div>
                         <p className="text-sm font-medium">Last Modified</p>
                         <p className="text-xs text-muted-foreground">
-                          {new Date(selectedFunction.metadata.functionLastModified).toLocaleString()}
+                          {new Date(
+                            selectedFunction.metadata.functionLastModified
+                          ).toLocaleString()}
                         </p>
                       </div>
                     </div>
@@ -959,8 +1032,8 @@ export default function ServerlessPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Remove Function</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to remove <strong>{functionToDelete?.name}</strong> from your inventory?
-              This action cannot be undone.
+              Are you sure you want to remove <strong>{functionToDelete?.name}</strong> from your
+              inventory? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -975,5 +1048,5 @@ export default function ServerlessPage() {
         </AlertDialogContent>
       </AlertDialog>
     </>
-  );
+  )
 }

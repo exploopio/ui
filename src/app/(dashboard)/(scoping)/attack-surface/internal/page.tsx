@@ -1,16 +1,13 @@
-"use client";
+'use client'
 
-import { useState, useMemo } from "react";
-import { Header, Main } from "@/components/layout";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { PageHeader } from "@/features/shared";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
+import { useState, useMemo } from 'react'
+import { Header, Main } from '@/components/layout'
+import { PageHeader } from '@/features/shared'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { Progress } from '@/components/ui/progress'
 import {
   Network,
   Plus,
@@ -33,20 +30,14 @@ import {
   X,
   Search as SearchIcon,
   Wifi,
-} from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+} from 'lucide-react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu'
 import {
   Dialog,
   DialogContent,
@@ -54,21 +45,21 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog'
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet";
+} from '@/components/ui/sheet'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from '@/components/ui/select'
 import {
   Table,
   TableBody,
@@ -76,236 +67,236 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { toast } from "sonner";
-import { Can, Permission } from "@/lib/permissions";
+} from '@/components/ui/table'
+import { toast } from 'sonner'
+import { Can, Permission } from '@/lib/permissions'
 
-type AssetStatus = "online" | "offline" | "unknown";
-type RiskLevel = "critical" | "high" | "medium" | "low";
-type AssetType = "server" | "workstation" | "network_device" | "database" | "storage";
-type NetworkZone = "dmz" | "internal" | "restricted" | "guest";
+type AssetStatus = 'online' | 'offline' | 'unknown'
+type RiskLevel = 'critical' | 'high' | 'medium' | 'low'
+type AssetType = 'server' | 'workstation' | 'network_device' | 'database' | 'storage'
+type NetworkZone = 'dmz' | 'internal' | 'restricted' | 'guest'
 
 interface InternalAsset {
-  id: string;
-  hostname: string;
-  type: AssetType;
-  ipAddress: string;
-  macAddress?: string;
-  networkZone: NetworkZone;
-  vlan?: string;
-  operatingSystem?: string;
-  status: AssetStatus;
-  riskLevel: RiskLevel;
-  lastSeen: string;
-  discoveredAt: string;
-  findingsCount: number;
-  openPorts?: number[];
-  services?: string[];
-  owner?: string;
-  notes?: string;
+  id: string
+  hostname: string
+  type: AssetType
+  ipAddress: string
+  macAddress?: string
+  networkZone: NetworkZone
+  vlan?: string
+  operatingSystem?: string
+  status: AssetStatus
+  riskLevel: RiskLevel
+  lastSeen: string
+  discoveredAt: string
+  findingsCount: number
+  openPorts?: number[]
+  services?: string[]
+  owner?: string
+  notes?: string
 }
 
 const daysAgo = (days: number) => {
-  const date = new Date();
-  date.setDate(date.getDate() - days);
-  return date.toISOString();
-};
+  const date = new Date()
+  date.setDate(date.getDate() - days)
+  return date.toISOString()
+}
 
 const mockInternalAssets: InternalAsset[] = [
   {
-    id: "int-001",
-    hostname: "dc01.internal.tcb.vn",
-    type: "server",
-    ipAddress: "10.0.1.10",
-    macAddress: "00:1A:2B:3C:4D:5E",
-    networkZone: "internal",
-    vlan: "VLAN 10",
-    operatingSystem: "Windows Server 2022",
-    status: "online",
-    riskLevel: "high",
+    id: 'int-001',
+    hostname: 'dc01.internal.tcb.vn',
+    type: 'server',
+    ipAddress: '10.0.1.10',
+    macAddress: '00:1A:2B:3C:4D:5E',
+    networkZone: 'internal',
+    vlan: 'VLAN 10',
+    operatingSystem: 'Windows Server 2022',
+    status: 'online',
+    riskLevel: 'high',
     lastSeen: daysAgo(0),
     discoveredAt: daysAgo(365),
     findingsCount: 3,
     openPorts: [53, 88, 135, 389, 445, 636],
-    services: ["Active Directory", "DNS", "LDAP"],
-    owner: "IT Infrastructure",
+    services: ['Active Directory', 'DNS', 'LDAP'],
+    owner: 'IT Infrastructure',
   },
   {
-    id: "int-002",
-    hostname: "sql01.internal.tcb.vn",
-    type: "database",
-    ipAddress: "10.0.2.20",
-    macAddress: "00:1A:2B:3C:4D:5F",
-    networkZone: "restricted",
-    vlan: "VLAN 20",
-    operatingSystem: "Windows Server 2019",
-    status: "online",
-    riskLevel: "critical",
+    id: 'int-002',
+    hostname: 'sql01.internal.tcb.vn',
+    type: 'database',
+    ipAddress: '10.0.2.20',
+    macAddress: '00:1A:2B:3C:4D:5F',
+    networkZone: 'restricted',
+    vlan: 'VLAN 20',
+    operatingSystem: 'Windows Server 2019',
+    status: 'online',
+    riskLevel: 'critical',
     lastSeen: daysAgo(0),
     discoveredAt: daysAgo(300),
     findingsCount: 5,
     openPorts: [1433, 1434, 3389],
-    services: ["SQL Server", "RDP"],
-    owner: "Database Team",
-    notes: "Contains PII data - requires strict access control",
+    services: ['SQL Server', 'RDP'],
+    owner: 'Database Team',
+    notes: 'Contains PII data - requires strict access control',
   },
   {
-    id: "int-003",
-    hostname: "web-internal.tcb.vn",
-    type: "server",
-    ipAddress: "10.0.3.30",
-    networkZone: "dmz",
-    vlan: "VLAN 30",
-    operatingSystem: "Ubuntu 22.04 LTS",
-    status: "online",
-    riskLevel: "medium",
+    id: 'int-003',
+    hostname: 'web-internal.tcb.vn',
+    type: 'server',
+    ipAddress: '10.0.3.30',
+    networkZone: 'dmz',
+    vlan: 'VLAN 30',
+    operatingSystem: 'Ubuntu 22.04 LTS',
+    status: 'online',
+    riskLevel: 'medium',
     lastSeen: daysAgo(0),
     discoveredAt: daysAgo(200),
     findingsCount: 2,
     openPorts: [80, 443, 22],
-    services: ["Nginx", "SSH"],
-    owner: "Web Team",
+    services: ['Nginx', 'SSH'],
+    owner: 'Web Team',
   },
   {
-    id: "int-004",
-    hostname: "fw-core01",
-    type: "network_device",
-    ipAddress: "10.0.0.1",
-    macAddress: "00:1A:2B:3C:4D:60",
-    networkZone: "internal",
-    operatingSystem: "Palo Alto PAN-OS 10.2",
-    status: "online",
-    riskLevel: "low",
+    id: 'int-004',
+    hostname: 'fw-core01',
+    type: 'network_device',
+    ipAddress: '10.0.0.1',
+    macAddress: '00:1A:2B:3C:4D:60',
+    networkZone: 'internal',
+    operatingSystem: 'Palo Alto PAN-OS 10.2',
+    status: 'online',
+    riskLevel: 'low',
     lastSeen: daysAgo(0),
     discoveredAt: daysAgo(365),
     findingsCount: 0,
     openPorts: [443, 22],
-    services: ["Management Interface"],
-    owner: "Network Team",
+    services: ['Management Interface'],
+    owner: 'Network Team',
   },
   {
-    id: "int-005",
-    hostname: "nas01.internal.tcb.vn",
-    type: "storage",
-    ipAddress: "10.0.4.40",
-    macAddress: "00:1A:2B:3C:4D:61",
-    networkZone: "internal",
-    vlan: "VLAN 40",
-    operatingSystem: "Synology DSM 7.2",
-    status: "online",
-    riskLevel: "high",
+    id: 'int-005',
+    hostname: 'nas01.internal.tcb.vn',
+    type: 'storage',
+    ipAddress: '10.0.4.40',
+    macAddress: '00:1A:2B:3C:4D:61',
+    networkZone: 'internal',
+    vlan: 'VLAN 40',
+    operatingSystem: 'Synology DSM 7.2',
+    status: 'online',
+    riskLevel: 'high',
     lastSeen: daysAgo(0),
     discoveredAt: daysAgo(180),
     findingsCount: 4,
     openPorts: [445, 5000, 5001, 22],
-    services: ["SMB", "HTTP/HTTPS", "SSH"],
-    owner: "IT Operations",
-    notes: "Contains backup data and shared files",
+    services: ['SMB', 'HTTP/HTTPS', 'SSH'],
+    owner: 'IT Operations',
+    notes: 'Contains backup data and shared files',
   },
   {
-    id: "int-006",
-    hostname: "ws-dev-001",
-    type: "workstation",
-    ipAddress: "10.0.100.50",
-    macAddress: "00:1A:2B:3C:4D:62",
-    networkZone: "internal",
-    vlan: "VLAN 100",
-    operatingSystem: "Windows 11 Pro",
-    status: "online",
-    riskLevel: "medium",
+    id: 'int-006',
+    hostname: 'ws-dev-001',
+    type: 'workstation',
+    ipAddress: '10.0.100.50',
+    macAddress: '00:1A:2B:3C:4D:62',
+    networkZone: 'internal',
+    vlan: 'VLAN 100',
+    operatingSystem: 'Windows 11 Pro',
+    status: 'online',
+    riskLevel: 'medium',
     lastSeen: daysAgo(0),
     discoveredAt: daysAgo(90),
     findingsCount: 2,
-    owner: "Development Team",
+    owner: 'Development Team',
   },
   {
-    id: "int-007",
-    hostname: "switch-floor2",
-    type: "network_device",
-    ipAddress: "10.0.0.22",
-    macAddress: "00:1A:2B:3C:4D:63",
-    networkZone: "internal",
-    operatingSystem: "Cisco IOS 15.2",
-    status: "online",
-    riskLevel: "low",
+    id: 'int-007',
+    hostname: 'switch-floor2',
+    type: 'network_device',
+    ipAddress: '10.0.0.22',
+    macAddress: '00:1A:2B:3C:4D:63',
+    networkZone: 'internal',
+    operatingSystem: 'Cisco IOS 15.2',
+    status: 'online',
+    riskLevel: 'low',
     lastSeen: daysAgo(0),
     discoveredAt: daysAgo(365),
     findingsCount: 1,
     openPorts: [22, 23],
-    services: ["SSH", "Telnet"],
-    owner: "Network Team",
-    notes: "Telnet should be disabled",
+    services: ['SSH', 'Telnet'],
+    owner: 'Network Team',
+    notes: 'Telnet should be disabled',
   },
   {
-    id: "int-008",
-    hostname: "guest-ap01",
-    type: "network_device",
-    ipAddress: "10.255.0.10",
-    networkZone: "guest",
-    operatingSystem: "Ubiquiti UniFi",
-    status: "online",
-    riskLevel: "low",
+    id: 'int-008',
+    hostname: 'guest-ap01',
+    type: 'network_device',
+    ipAddress: '10.255.0.10',
+    networkZone: 'guest',
+    operatingSystem: 'Ubiquiti UniFi',
+    status: 'online',
+    riskLevel: 'low',
     lastSeen: daysAgo(0),
     discoveredAt: daysAgo(120),
     findingsCount: 0,
-    owner: "Network Team",
+    owner: 'Network Team',
   },
   {
-    id: "int-009",
-    hostname: "legacy-app01",
-    type: "server",
-    ipAddress: "10.0.5.100",
-    networkZone: "internal",
-    vlan: "VLAN 50",
-    operatingSystem: "Windows Server 2012 R2",
-    status: "online",
-    riskLevel: "critical",
+    id: 'int-009',
+    hostname: 'legacy-app01',
+    type: 'server',
+    ipAddress: '10.0.5.100',
+    networkZone: 'internal',
+    vlan: 'VLAN 50',
+    operatingSystem: 'Windows Server 2012 R2',
+    status: 'online',
+    riskLevel: 'critical',
     lastSeen: daysAgo(0),
     discoveredAt: daysAgo(365),
     findingsCount: 12,
     openPorts: [80, 443, 3389, 445],
-    services: ["IIS", "RDP", "SMB"],
-    owner: "Legacy Systems",
-    notes: "End of life OS - migration planned",
+    services: ['IIS', 'RDP', 'SMB'],
+    owner: 'Legacy Systems',
+    notes: 'End of life OS - migration planned',
   },
   {
-    id: "int-010",
-    hostname: "backup-srv01",
-    type: "server",
-    ipAddress: "10.0.6.60",
-    networkZone: "restricted",
-    vlan: "VLAN 60",
-    operatingSystem: "Windows Server 2022",
-    status: "offline",
-    riskLevel: "medium",
+    id: 'int-010',
+    hostname: 'backup-srv01',
+    type: 'server',
+    ipAddress: '10.0.6.60',
+    networkZone: 'restricted',
+    vlan: 'VLAN 60',
+    operatingSystem: 'Windows Server 2022',
+    status: 'offline',
+    riskLevel: 'medium',
     lastSeen: daysAgo(2),
     discoveredAt: daysAgo(200),
     findingsCount: 1,
-    services: ["Veeam Backup"],
-    owner: "IT Operations",
-    notes: "Scheduled maintenance",
+    services: ['Veeam Backup'],
+    owner: 'IT Operations',
+    notes: 'Scheduled maintenance',
   },
-];
+]
 
 const statusColors: Record<AssetStatus, string> = {
-  online: "bg-green-500/10 text-green-500 border-green-500/20",
-  offline: "bg-gray-500/10 text-gray-500 border-gray-500/20",
-  unknown: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
-};
+  online: 'bg-green-500/10 text-green-500 border-green-500/20',
+  offline: 'bg-gray-500/10 text-gray-500 border-gray-500/20',
+  unknown: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
+}
 
 const riskColors: Record<RiskLevel, string> = {
-  critical: "bg-red-500/10 text-red-500 border-red-500/20",
-  high: "bg-orange-500/10 text-orange-500 border-orange-500/20",
-  medium: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
-  low: "bg-green-500/10 text-green-500 border-green-500/20",
-};
+  critical: 'bg-red-500/10 text-red-500 border-red-500/20',
+  high: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
+  medium: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
+  low: 'bg-green-500/10 text-green-500 border-green-500/20',
+}
 
 const zoneColors: Record<NetworkZone, string> = {
-  dmz: "bg-purple-500/10 text-purple-500 border-purple-500/20",
-  internal: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-  restricted: "bg-red-500/10 text-red-500 border-red-500/20",
-  guest: "bg-gray-500/10 text-gray-500 border-gray-500/20",
-};
+  dmz: 'bg-purple-500/10 text-purple-500 border-purple-500/20',
+  internal: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
+  restricted: 'bg-red-500/10 text-red-500 border-red-500/20',
+  guest: 'bg-gray-500/10 text-gray-500 border-gray-500/20',
+}
 
 const typeIcons: Record<AssetType, React.ElementType> = {
   server: Server,
@@ -313,84 +304,84 @@ const typeIcons: Record<AssetType, React.ElementType> = {
   network_device: Router,
   database: Database,
   storage: HardDrive,
-};
+}
 
 export default function InternalSurfacePage() {
-  const [assets, setAssets] = useState<InternalAsset[]>(mockInternalAssets);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filterType, setFilterType] = useState<AssetType | "all">("all");
-  const [filterZone, setFilterZone] = useState<NetworkZone | "all">("all");
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [viewAsset, setViewAsset] = useState<InternalAsset | null>(null);
-  const [editAsset, setEditAsset] = useState<InternalAsset | null>(null);
-  const [deleteAsset, setDeleteAsset] = useState<InternalAsset | null>(null);
+  const [assets, setAssets] = useState<InternalAsset[]>(mockInternalAssets)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [filterType, setFilterType] = useState<AssetType | 'all'>('all')
+  const [filterZone, setFilterZone] = useState<NetworkZone | 'all'>('all')
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [viewAsset, setViewAsset] = useState<InternalAsset | null>(null)
+  const [editAsset, setEditAsset] = useState<InternalAsset | null>(null)
+  const [deleteAsset, setDeleteAsset] = useState<InternalAsset | null>(null)
 
   const [formData, setFormData] = useState({
-    hostname: "",
-    type: "server" as AssetType,
-    ipAddress: "",
-    macAddress: "",
-    networkZone: "internal" as NetworkZone,
-    vlan: "",
-    operatingSystem: "",
-    status: "online" as AssetStatus,
-    riskLevel: "medium" as RiskLevel,
-    owner: "",
-    notes: "",
-  });
+    hostname: '',
+    type: 'server' as AssetType,
+    ipAddress: '',
+    macAddress: '',
+    networkZone: 'internal' as NetworkZone,
+    vlan: '',
+    operatingSystem: '',
+    status: 'online' as AssetStatus,
+    riskLevel: 'medium' as RiskLevel,
+    owner: '',
+    notes: '',
+  })
 
   const stats = useMemo(() => {
     return {
       total: assets.length,
-      online: assets.filter((a) => a.status === "online").length,
-      critical: assets.filter((a) => a.riskLevel === "critical").length,
+      online: assets.filter((a) => a.status === 'online').length,
+      critical: assets.filter((a) => a.riskLevel === 'critical').length,
       totalFindings: assets.reduce((acc, a) => acc + a.findingsCount, 0),
       byZone: {
-        dmz: assets.filter((a) => a.networkZone === "dmz").length,
-        internal: assets.filter((a) => a.networkZone === "internal").length,
-        restricted: assets.filter((a) => a.networkZone === "restricted").length,
-        guest: assets.filter((a) => a.networkZone === "guest").length,
+        dmz: assets.filter((a) => a.networkZone === 'dmz').length,
+        internal: assets.filter((a) => a.networkZone === 'internal').length,
+        restricted: assets.filter((a) => a.networkZone === 'restricted').length,
+        guest: assets.filter((a) => a.networkZone === 'guest').length,
       },
-    };
-  }, [assets]);
+    }
+  }, [assets])
 
   const filteredAssets = useMemo(() => {
     return assets.filter((asset) => {
       if (searchQuery) {
-        const query = searchQuery.toLowerCase();
+        const query = searchQuery.toLowerCase()
         if (
           !asset.hostname.toLowerCase().includes(query) &&
           !asset.ipAddress.toLowerCase().includes(query)
         ) {
-          return false;
+          return false
         }
       }
-      if (filterType !== "all" && asset.type !== filterType) return false;
-      if (filterZone !== "all" && asset.networkZone !== filterZone) return false;
-      return true;
-    });
-  }, [assets, searchQuery, filterType, filterZone]);
+      if (filterType !== 'all' && asset.type !== filterType) return false
+      if (filterZone !== 'all' && asset.networkZone !== filterZone) return false
+      return true
+    })
+  }, [assets, searchQuery, filterType, filterZone])
 
   const resetForm = () => {
     setFormData({
-      hostname: "",
-      type: "server",
-      ipAddress: "",
-      macAddress: "",
-      networkZone: "internal",
-      vlan: "",
-      operatingSystem: "",
-      status: "online",
-      riskLevel: "medium",
-      owner: "",
-      notes: "",
-    });
-  };
+      hostname: '',
+      type: 'server',
+      ipAddress: '',
+      macAddress: '',
+      networkZone: 'internal',
+      vlan: '',
+      operatingSystem: '',
+      status: 'online',
+      riskLevel: 'medium',
+      owner: '',
+      notes: '',
+    })
+  }
 
   const handleCreate = () => {
     if (!formData.hostname || !formData.ipAddress) {
-      toast.error("Please enter hostname and IP address");
-      return;
+      toast.error('Please enter hostname and IP address')
+      return
     }
     const newAsset: InternalAsset = {
       id: `int-${Date.now()}`,
@@ -408,17 +399,17 @@ export default function InternalSurfacePage() {
       findingsCount: 0,
       owner: formData.owner || undefined,
       notes: formData.notes || undefined,
-    };
-    setAssets((prev) => [...prev, newAsset]);
-    toast.success("Internal asset added successfully");
-    setIsCreateOpen(false);
-    resetForm();
-  };
+    }
+    setAssets((prev) => [...prev, newAsset])
+    toast.success('Internal asset added successfully')
+    setIsCreateOpen(false)
+    resetForm()
+  }
 
   const handleEdit = () => {
     if (!editAsset || !formData.hostname || !formData.ipAddress) {
-      toast.error("Please enter hostname and IP address");
-      return;
+      toast.error('Please enter hostname and IP address')
+      return
     }
     setAssets((prev) =>
       prev.map((a) =>
@@ -439,35 +430,35 @@ export default function InternalSurfacePage() {
             }
           : a
       )
-    );
-    toast.success("Internal asset updated successfully");
-    setEditAsset(null);
-    resetForm();
-  };
+    )
+    toast.success('Internal asset updated successfully')
+    setEditAsset(null)
+    resetForm()
+  }
 
   const handleDelete = () => {
-    if (!deleteAsset) return;
-    setAssets((prev) => prev.filter((a) => a.id !== deleteAsset.id));
-    toast.success("Internal asset deleted successfully");
-    setDeleteAsset(null);
-  };
+    if (!deleteAsset) return
+    setAssets((prev) => prev.filter((a) => a.id !== deleteAsset.id))
+    toast.success('Internal asset deleted successfully')
+    setDeleteAsset(null)
+  }
 
   const openEdit = (asset: InternalAsset) => {
     setFormData({
       hostname: asset.hostname,
       type: asset.type,
       ipAddress: asset.ipAddress,
-      macAddress: asset.macAddress || "",
+      macAddress: asset.macAddress || '',
       networkZone: asset.networkZone,
-      vlan: asset.vlan || "",
-      operatingSystem: asset.operatingSystem || "",
+      vlan: asset.vlan || '',
+      operatingSystem: asset.operatingSystem || '',
       status: asset.status,
       riskLevel: asset.riskLevel,
-      owner: asset.owner || "",
-      notes: asset.notes || "",
-    });
-    setEditAsset(asset);
-  };
+      owner: asset.owner || '',
+      notes: asset.notes || '',
+    })
+    setEditAsset(asset)
+  }
 
   const formFields = (
     <div className="space-y-4">
@@ -604,17 +595,11 @@ export default function InternalSurfacePage() {
         />
       </div>
     </div>
-  );
+  )
 
   return (
     <>
-      <Header fixed>
-        <Search />
-        <div className="ms-auto flex items-center gap-2 sm:gap-4">
-          <ThemeSwitch />
-          <ProfileDropdown />
-        </div>
-      </Header>
+      <Header fixed />
 
       <Main>
         <PageHeader
@@ -701,19 +686,27 @@ export default function InternalSurfacePage() {
           <CardContent>
             <div className="flex gap-4">
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="outline" className={zoneColors.dmz}>DMZ</Badge>
+                <Badge variant="outline" className={zoneColors.dmz}>
+                  DMZ
+                </Badge>
                 <span className="text-sm font-medium">{stats.byZone.dmz}</span>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="outline" className={zoneColors.internal}>Internal</Badge>
+                <Badge variant="outline" className={zoneColors.internal}>
+                  Internal
+                </Badge>
                 <span className="text-sm font-medium">{stats.byZone.internal}</span>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="outline" className={zoneColors.restricted}>Restricted</Badge>
+                <Badge variant="outline" className={zoneColors.restricted}>
+                  Restricted
+                </Badge>
                 <span className="text-sm font-medium">{stats.byZone.restricted}</span>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="outline" className={zoneColors.guest}>Guest</Badge>
+                <Badge variant="outline" className={zoneColors.guest}>
+                  Guest
+                </Badge>
                 <span className="text-sm font-medium">{stats.byZone.guest}</span>
               </div>
             </div>
@@ -737,7 +730,10 @@ export default function InternalSurfacePage() {
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <Filter className="h-4 w-4 text-muted-foreground" />
-                <Select value={filterType} onValueChange={(v) => setFilterType(v as AssetType | "all")}>
+                <Select
+                  value={filterType}
+                  onValueChange={(v) => setFilterType(v as AssetType | 'all')}
+                >
                   <SelectTrigger className="w-36">
                     <SelectValue placeholder="Type" />
                   </SelectTrigger>
@@ -750,7 +746,10 @@ export default function InternalSurfacePage() {
                     <SelectItem value="storage">Storage</SelectItem>
                   </SelectContent>
                 </Select>
-                <Select value={filterZone} onValueChange={(v) => setFilterZone(v as NetworkZone | "all")}>
+                <Select
+                  value={filterZone}
+                  onValueChange={(v) => setFilterZone(v as NetworkZone | 'all')}
+                >
                   <SelectTrigger className="w-32">
                     <SelectValue placeholder="Zone" />
                   </SelectTrigger>
@@ -762,14 +761,14 @@ export default function InternalSurfacePage() {
                     <SelectItem value="guest">Guest</SelectItem>
                   </SelectContent>
                 </Select>
-                {(filterType !== "all" || filterZone !== "all" || searchQuery) && (
+                {(filterType !== 'all' || filterZone !== 'all' || searchQuery) && (
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => {
-                      setFilterType("all");
-                      setFilterZone("all");
-                      setSearchQuery("");
+                      setFilterType('all')
+                      setFilterZone('all')
+                      setSearchQuery('')
                     }}
                   >
                     <X className="mr-1 h-3 w-3" />
@@ -805,7 +804,7 @@ export default function InternalSurfacePage() {
               </TableHeader>
               <TableBody>
                 {filteredAssets.map((asset) => {
-                  const TypeIcon = typeIcons[asset.type];
+                  const TypeIcon = typeIcons[asset.type]
                   return (
                     <TableRow
                       key={asset.id}
@@ -820,14 +819,16 @@ export default function InternalSurfacePage() {
                           <div>
                             <p className="font-medium">{asset.hostname}</p>
                             {asset.operatingSystem && (
-                              <p className="text-xs text-muted-foreground">{asset.operatingSystem}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {asset.operatingSystem}
+                              </p>
                             )}
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="capitalize">
-                          {asset.type.replace("_", " ")}
+                          {asset.type.replace('_', ' ')}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -849,7 +850,9 @@ export default function InternalSurfacePage() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <span className={asset.findingsCount > 0 ? "text-orange-500 font-medium" : ""}>
+                        <span
+                          className={asset.findingsCount > 0 ? 'text-orange-500 font-medium' : ''}
+                        >
                           {asset.findingsCount}
                         </span>
                       </TableCell>
@@ -886,7 +889,7 @@ export default function InternalSurfacePage() {
                         </Can>
                       </TableCell>
                     </TableRow>
-                  );
+                  )
                 })}
               </TableBody>
             </Table>
@@ -934,7 +937,8 @@ export default function InternalSurfacePage() {
           <DialogHeader>
             <DialogTitle>Delete Asset</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete &quot;{deleteAsset?.hostname}&quot;? This action cannot be undone.
+              Are you sure you want to delete &quot;{deleteAsset?.hostname}&quot;? This action
+              cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -1074,7 +1078,9 @@ export default function InternalSurfacePage() {
                       <CardTitle className="text-sm">Findings</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className={`text-2xl font-bold ${viewAsset.findingsCount > 0 ? "text-orange-500" : ""}`}>
+                      <div
+                        className={`text-2xl font-bold ${viewAsset.findingsCount > 0 ? 'text-orange-500' : ''}`}
+                      >
                         {viewAsset.findingsCount}
                       </div>
                     </CardContent>
@@ -1084,7 +1090,7 @@ export default function InternalSurfacePage() {
                       <CardTitle className="text-sm">Owner</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-sm">{viewAsset.owner || "Unassigned"}</p>
+                      <p className="text-sm">{viewAsset.owner || 'Unassigned'}</p>
                     </CardContent>
                   </Card>
                 </div>
@@ -1132,5 +1138,5 @@ export default function InternalSurfacePage() {
         </SheetContent>
       </Sheet>
     </>
-  );
+  )
 }

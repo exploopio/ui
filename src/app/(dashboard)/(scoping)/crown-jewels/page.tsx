@@ -1,18 +1,15 @@
-"use client";
+'use client'
 
-import { useState, useMemo } from "react";
-import { ColumnDef } from "@tanstack/react-table";
-import { Header, Main } from "@/components/layout";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { PageHeader, DataTable, DataTableColumnHeader, RiskScoreBadge } from "@/features/shared";
-import { Can, Permission } from "@/lib/permissions";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
+import { useState, useMemo } from 'react'
+import { ColumnDef } from '@tanstack/react-table'
+import { Header, Main } from '@/components/layout'
+import { PageHeader, DataTable, DataTableColumnHeader, RiskScoreBadge } from '@/features/shared'
+import { Can, Permission } from '@/lib/permissions'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Badge } from '@/components/ui/badge'
 import {
   Plus,
   Download,
@@ -38,21 +35,15 @@ import {
   ShieldCheck,
   ShieldX,
   Clock,
-} from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+} from 'lucide-react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu'
 import {
   Dialog,
   DialogContent,
@@ -60,21 +51,21 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog'
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet";
+} from '@/components/ui/sheet'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from '@/components/ui/select'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -84,9 +75,9 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "sonner";
+} from '@/components/ui/alert-dialog'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { toast } from 'sonner'
 import {
   mockCrownJewels,
   getDependencies,
@@ -95,35 +86,35 @@ import {
   type ProtectionLevel,
   type DataClassification,
   type JewelStatus,
-} from "@/features/crown-jewels";
+} from '@/features/crown-jewels'
 
 const statusColors: Record<JewelStatus, string> = {
-  protected: "bg-green-500/10 text-green-500 border-green-500/20",
-  at_risk: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
-  exposed: "bg-red-500/10 text-red-500 border-red-500/20",
-  under_review: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-};
+  protected: 'bg-green-500/10 text-green-500 border-green-500/20',
+  at_risk: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
+  exposed: 'bg-red-500/10 text-red-500 border-red-500/20',
+  under_review: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
+}
 
 const statusIcons: Record<JewelStatus, React.ElementType> = {
   protected: ShieldCheck,
   at_risk: ShieldAlert,
   exposed: ShieldX,
   under_review: Clock,
-};
+}
 
 const protectionColors: Record<ProtectionLevel, string> = {
-  maximum: "bg-purple-500/10 text-purple-500 border-purple-500/20",
-  high: "bg-red-500/10 text-red-500 border-red-500/20",
-  standard: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
-  basic: "bg-gray-500/10 text-gray-500 border-gray-500/20",
-};
+  maximum: 'bg-purple-500/10 text-purple-500 border-purple-500/20',
+  high: 'bg-red-500/10 text-red-500 border-red-500/20',
+  standard: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
+  basic: 'bg-gray-500/10 text-gray-500 border-gray-500/20',
+}
 
 const classificationColors: Record<DataClassification, string> = {
-  top_secret: "bg-red-500/10 text-red-500 border-red-500/20",
-  confidential: "bg-orange-500/10 text-orange-500 border-orange-500/20",
-  internal: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-  public: "bg-green-500/10 text-green-500 border-green-500/20",
-};
+  top_secret: 'bg-red-500/10 text-red-500 border-red-500/20',
+  confidential: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
+  internal: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
+  public: 'bg-green-500/10 text-green-500 border-green-500/20',
+}
 
 const categoryIcons: Record<AssetCategory, React.ElementType> = {
   data: Database,
@@ -132,83 +123,87 @@ const categoryIcons: Record<AssetCategory, React.ElementType> = {
   infrastructure: HardDrive,
   intellectual_property: Lightbulb,
   financial: DollarSign,
-};
+}
 
 const categoryLabels: Record<AssetCategory, string> = {
-  data: "Data",
-  system: "System",
-  application: "Application",
-  infrastructure: "Infrastructure",
-  intellectual_property: "IP",
-  financial: "Financial",
-};
+  data: 'Data',
+  system: 'System',
+  application: 'Application',
+  infrastructure: 'Infrastructure',
+  intellectual_property: 'IP',
+  financial: 'Financial',
+}
 
 export default function CrownJewelsPage() {
-  const [crownJewels, setCrownJewels] = useState<CrownJewel[]>(mockCrownJewels);
-  const [viewJewel, setViewJewel] = useState<CrownJewel | null>(null);
-  const [editJewel, setEditJewel] = useState<CrownJewel | null>(null);
-  const [deleteJewel, setDeleteJewel] = useState<CrownJewel | null>(null);
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [filterStatus, setFilterStatus] = useState<string>("all");
-  const [filterCategory, setFilterCategory] = useState<string>("all");
+  const [crownJewels, setCrownJewels] = useState<CrownJewel[]>(mockCrownJewels)
+  const [viewJewel, setViewJewel] = useState<CrownJewel | null>(null)
+  const [editJewel, setEditJewel] = useState<CrownJewel | null>(null)
+  const [deleteJewel, setDeleteJewel] = useState<CrownJewel | null>(null)
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [filterStatus, setFilterStatus] = useState<string>('all')
+  const [filterCategory, setFilterCategory] = useState<string>('all')
 
   const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-    category: "data" as AssetCategory,
-    protectionLevel: "high" as ProtectionLevel,
-    dataClassification: "confidential" as DataClassification,
-    businessImpact: "",
-    owner: "",
-    ownerEmail: "",
-    businessUnit: "",
-    tags: "",
-  });
+    name: '',
+    description: '',
+    category: 'data' as AssetCategory,
+    protectionLevel: 'high' as ProtectionLevel,
+    dataClassification: 'confidential' as DataClassification,
+    businessImpact: '',
+    owner: '',
+    ownerEmail: '',
+    businessUnit: '',
+    tags: '',
+  })
 
   const stats = useMemo(() => {
-    const jewels = crownJewels;
+    const jewels = crownJewels
     return {
       total: jewels.length,
       byStatus: {
-        protected: jewels.filter((j) => j.status === "protected").length,
-        at_risk: jewels.filter((j) => j.status === "at_risk").length,
-        exposed: jewels.filter((j) => j.status === "exposed").length,
-        under_review: jewels.filter((j) => j.status === "under_review").length,
+        protected: jewels.filter((j) => j.status === 'protected').length,
+        at_risk: jewels.filter((j) => j.status === 'at_risk').length,
+        exposed: jewels.filter((j) => j.status === 'exposed').length,
+        under_review: jewels.filter((j) => j.status === 'under_review').length,
       },
       totalExposures: jewels.reduce((acc, j) => acc + j.exposureCount, 0),
-      averageRiskScore: Math.round(
-        jewels.reduce((acc, j) => acc + j.riskScore, 0) / jewels.length
-      ),
-    };
-  }, [crownJewels]);
+      averageRiskScore: Math.round(jewels.reduce((acc, j) => acc + j.riskScore, 0) / jewels.length),
+    }
+  }, [crownJewels])
 
   const filteredJewels = useMemo(() => {
     return crownJewels.filter((jewel) => {
-      if (filterStatus !== "all" && jewel.status !== filterStatus) return false;
-      if (filterCategory !== "all" && jewel.category !== filterCategory) return false;
-      return true;
-    });
-  }, [crownJewels, filterStatus, filterCategory]);
+      if (filterStatus !== 'all' && jewel.status !== filterStatus) return false
+      if (filterCategory !== 'all' && jewel.category !== filterCategory) return false
+      return true
+    })
+  }, [crownJewels, filterStatus, filterCategory])
 
   const resetForm = () => {
     setFormData({
-      name: "",
-      description: "",
-      category: "data",
-      protectionLevel: "high",
-      dataClassification: "confidential",
-      businessImpact: "",
-      owner: "",
-      ownerEmail: "",
-      businessUnit: "",
-      tags: "",
-    });
-  };
+      name: '',
+      description: '',
+      category: 'data',
+      protectionLevel: 'high',
+      dataClassification: 'confidential',
+      businessImpact: '',
+      owner: '',
+      ownerEmail: '',
+      businessUnit: '',
+      tags: '',
+    })
+  }
 
   const handleCreate = () => {
-    if (!formData.name || !formData.businessImpact || !formData.owner || !formData.ownerEmail || !formData.businessUnit) {
-      toast.error("Please fill in all required fields");
-      return;
+    if (
+      !formData.name ||
+      !formData.businessImpact ||
+      !formData.owner ||
+      !formData.ownerEmail ||
+      !formData.businessUnit
+    ) {
+      toast.error('Please fill in all required fields')
+      return
     }
     const newJewel: CrownJewel = {
       id: `cj-${Date.now()}`,
@@ -217,7 +212,7 @@ export default function CrownJewelsPage() {
       category: formData.category,
       protectionLevel: formData.protectionLevel,
       dataClassification: formData.dataClassification,
-      status: "under_review",
+      status: 'under_review',
       businessImpact: formData.businessImpact,
       owner: formData.owner,
       ownerEmail: formData.ownerEmail,
@@ -226,20 +221,26 @@ export default function CrownJewelsPage() {
       exposureCount: 0,
       dependencyCount: 0,
       lastAssessed: new Date().toISOString(),
-      tags: formData.tags ? formData.tags.split(",").map((t) => t.trim()) : [],
+      tags: formData.tags ? formData.tags.split(',').map((t) => t.trim()) : [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-    };
-    setCrownJewels((prev) => [...prev, newJewel]);
-    toast.success("Crown jewel added successfully");
-    setIsCreateOpen(false);
-    resetForm();
-  };
+    }
+    setCrownJewels((prev) => [...prev, newJewel])
+    toast.success('Crown jewel added successfully')
+    setIsCreateOpen(false)
+    resetForm()
+  }
 
   const handleEdit = () => {
-    if (!editJewel || !formData.name || !formData.businessImpact || !formData.owner || !formData.ownerEmail) {
-      toast.error("Please fill in all required fields");
-      return;
+    if (
+      !editJewel ||
+      !formData.name ||
+      !formData.businessImpact ||
+      !formData.owner ||
+      !formData.ownerEmail
+    ) {
+      toast.error('Please fill in all required fields')
+      return
     }
     setCrownJewels((prev) =>
       prev.map((jewel) =>
@@ -255,28 +256,28 @@ export default function CrownJewelsPage() {
               owner: formData.owner,
               ownerEmail: formData.ownerEmail,
               businessUnit: formData.businessUnit,
-              tags: formData.tags ? formData.tags.split(",").map((t) => t.trim()) : [],
+              tags: formData.tags ? formData.tags.split(',').map((t) => t.trim()) : [],
               updatedAt: new Date().toISOString(),
             }
           : jewel
       )
-    );
-    toast.success("Crown jewel updated successfully");
-    setEditJewel(null);
-    resetForm();
-  };
+    )
+    toast.success('Crown jewel updated successfully')
+    setEditJewel(null)
+    resetForm()
+  }
 
   const handleDelete = () => {
-    if (!deleteJewel) return;
-    setCrownJewels((prev) => prev.filter((jewel) => jewel.id !== deleteJewel.id));
-    toast.success("Crown jewel removed successfully");
-    setDeleteJewel(null);
-  };
+    if (!deleteJewel) return
+    setCrownJewels((prev) => prev.filter((jewel) => jewel.id !== deleteJewel.id))
+    toast.success('Crown jewel removed successfully')
+    setDeleteJewel(null)
+  }
 
   const openEdit = (jewel: CrownJewel) => {
     setFormData({
       name: jewel.name,
-      description: jewel.description || "",
+      description: jewel.description || '',
       category: jewel.category,
       protectionLevel: jewel.protectionLevel,
       dataClassification: jewel.dataClassification,
@@ -284,18 +285,18 @@ export default function CrownJewelsPage() {
       owner: jewel.owner,
       ownerEmail: jewel.ownerEmail,
       businessUnit: jewel.businessUnit,
-      tags: jewel.tags.join(", "),
-    });
-    setEditJewel(jewel);
-  };
+      tags: jewel.tags.join(', '),
+    })
+    setEditJewel(jewel)
+  }
 
   const columns: ColumnDef<CrownJewel>[] = [
     {
-      accessorKey: "name",
+      accessorKey: 'name',
       header: ({ column }) => <DataTableColumnHeader column={column} title="Crown Jewel" />,
       cell: ({ row }) => {
-        const jewel = row.original;
-        const CategoryIcon = categoryIcons[jewel.category];
+        const jewel = row.original
+        const CategoryIcon = categoryIcons[jewel.category]
         return (
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/10">
@@ -311,25 +312,25 @@ export default function CrownJewelsPage() {
               </div>
             </div>
           </div>
-        );
+        )
       },
     },
     {
-      accessorKey: "status",
+      accessorKey: 'status',
       header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
       cell: ({ row }) => {
-        const status = row.original.status;
-        const StatusIcon = statusIcons[status];
+        const status = row.original.status
+        const StatusIcon = statusIcons[status]
         return (
           <Badge variant="outline" className={statusColors[status]}>
             <StatusIcon className="mr-1 h-3 w-3" />
-            {status.replace("_", " ")}
+            {status.replace('_', ' ')}
           </Badge>
-        );
+        )
       },
     },
     {
-      accessorKey: "protectionLevel",
+      accessorKey: 'protectionLevel',
       header: ({ column }) => <DataTableColumnHeader column={column} title="Protection" />,
       cell: ({ row }) => (
         <Badge variant="outline" className={protectionColors[row.original.protectionLevel]}>
@@ -339,33 +340,33 @@ export default function CrownJewelsPage() {
       ),
     },
     {
-      accessorKey: "dataClassification",
+      accessorKey: 'dataClassification',
       header: ({ column }) => <DataTableColumnHeader column={column} title="Classification" />,
       cell: ({ row }) => (
         <Badge variant="outline" className={classificationColors[row.original.dataClassification]}>
-          {row.original.dataClassification.replace("_", " ")}
+          {row.original.dataClassification.replace('_', ' ')}
         </Badge>
       ),
     },
     {
-      accessorKey: "riskScore",
+      accessorKey: 'riskScore',
       header: ({ column }) => <DataTableColumnHeader column={column} title="Risk Score" />,
       cell: ({ row }) => <RiskScoreBadge score={row.original.riskScore} />,
     },
     {
-      accessorKey: "exposureCount",
+      accessorKey: 'exposureCount',
       header: ({ column }) => <DataTableColumnHeader column={column} title="Exposures" />,
       cell: ({ row }) => {
-        const count = row.original.exposureCount;
+        const count = row.original.exposureCount
         return (
-          <span className={count > 0 ? "text-red-500 font-medium" : "text-muted-foreground"}>
+          <span className={count > 0 ? 'text-red-500 font-medium' : 'text-muted-foreground'}>
             {count}
           </span>
-        );
+        )
       },
     },
     {
-      accessorKey: "owner",
+      accessorKey: 'owner',
       header: ({ column }) => <DataTableColumnHeader column={column} title="Owner" />,
       cell: ({ row }) => (
         <div className="text-sm">
@@ -374,9 +375,9 @@ export default function CrownJewelsPage() {
       ),
     },
     {
-      id: "actions",
+      id: 'actions',
       cell: ({ row }) => {
-        const jewel = row.original;
+        const jewel = row.original
         return (
           <Can permission={[Permission.ScopeWrite, Permission.ScopeDelete]}>
             <DropdownMenu>
@@ -409,10 +410,10 @@ export default function CrownJewelsPage() {
               </DropdownMenuContent>
             </DropdownMenu>
           </Can>
-        );
+        )
       },
     },
-  ];
+  ]
 
   const formFields = (
     <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
@@ -430,7 +431,9 @@ export default function CrownJewelsPage() {
           <Label htmlFor="category">Category *</Label>
           <Select
             value={formData.category}
-            onValueChange={(value) => setFormData({ ...formData, category: value as AssetCategory })}
+            onValueChange={(value) =>
+              setFormData({ ...formData, category: value as AssetCategory })
+            }
           >
             <SelectTrigger>
               <SelectValue />
@@ -463,7 +466,9 @@ export default function CrownJewelsPage() {
           <Label htmlFor="protectionLevel">Protection Level *</Label>
           <Select
             value={formData.protectionLevel}
-            onValueChange={(value) => setFormData({ ...formData, protectionLevel: value as ProtectionLevel })}
+            onValueChange={(value) =>
+              setFormData({ ...formData, protectionLevel: value as ProtectionLevel })
+            }
           >
             <SelectTrigger>
               <SelectValue />
@@ -480,7 +485,9 @@ export default function CrownJewelsPage() {
           <Label htmlFor="dataClassification">Data Classification *</Label>
           <Select
             value={formData.dataClassification}
-            onValueChange={(value) => setFormData({ ...formData, dataClassification: value as DataClassification })}
+            onValueChange={(value) =>
+              setFormData({ ...formData, dataClassification: value as DataClassification })
+            }
           >
             <SelectTrigger>
               <SelectValue />
@@ -549,17 +556,11 @@ export default function CrownJewelsPage() {
         </div>
       </div>
     </div>
-  );
+  )
 
   return (
     <>
-      <Header fixed>
-        <Search />
-        <div className="ms-auto flex items-center gap-2 sm:gap-4">
-          <ThemeSwitch />
-          <ProfileDropdown />
-        </div>
-      </Header>
+      <Header fixed />
 
       <Main>
         <PageHeader
@@ -587,9 +588,7 @@ export default function CrownJewelsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.total}</div>
-              <p className="text-xs text-muted-foreground">
-                {stats.byStatus.protected} protected
-              </p>
+              <p className="text-xs text-muted-foreground">{stats.byStatus.protected} protected</p>
             </CardContent>
           </Card>
           <Card>
@@ -668,13 +667,13 @@ export default function CrownJewelsPage() {
                   </SelectContent>
                 </Select>
               </div>
-              {(filterStatus !== "all" || filterCategory !== "all") && (
+              {(filterStatus !== 'all' || filterCategory !== 'all') && (
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => {
-                    setFilterStatus("all");
-                    setFilterCategory("all");
+                    setFilterStatus('all')
+                    setFilterCategory('all')
                   }}
                 >
                   <X className="mr-1 h-3 w-3" />
@@ -769,12 +768,15 @@ export default function CrownJewelsPage() {
                     <div className="space-y-1">
                       <p className="text-sm text-muted-foreground">Status</p>
                       <Badge variant="outline" className={statusColors[viewJewel.status]}>
-                        {viewJewel.status.replace("_", " ")}
+                        {viewJewel.status.replace('_', ' ')}
                       </Badge>
                     </div>
                     <div className="space-y-1">
                       <p className="text-sm text-muted-foreground">Protection Level</p>
-                      <Badge variant="outline" className={protectionColors[viewJewel.protectionLevel]}>
+                      <Badge
+                        variant="outline"
+                        className={protectionColors[viewJewel.protectionLevel]}
+                      >
                         {viewJewel.protectionLevel}
                       </Badge>
                     </div>
@@ -787,8 +789,11 @@ export default function CrownJewelsPage() {
                     </div>
                     <div className="space-y-1">
                       <p className="text-sm text-muted-foreground">Classification</p>
-                      <Badge variant="outline" className={classificationColors[viewJewel.dataClassification]}>
-                        {viewJewel.dataClassification.replace("_", " ")}
+                      <Badge
+                        variant="outline"
+                        className={classificationColors[viewJewel.dataClassification]}
+                      >
+                        {viewJewel.dataClassification.replace('_', ' ')}
                       </Badge>
                     </div>
                   </div>
@@ -808,7 +813,9 @@ export default function CrownJewelsPage() {
                         <CardTitle className="text-sm">Exposures</CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <div className={`text-2xl font-bold ${viewJewel.exposureCount > 0 ? "text-red-500" : ""}`}>
+                        <div
+                          className={`text-2xl font-bold ${viewJewel.exposureCount > 0 ? 'text-red-500' : ''}`}
+                        >
                           {viewJewel.exposureCount}
                         </div>
                       </CardContent>
@@ -857,7 +864,9 @@ export default function CrownJewelsPage() {
                       <p className="text-sm text-muted-foreground">Tags</p>
                       <div className="flex flex-wrap gap-2">
                         {viewJewel.tags.map((tag) => (
-                          <Badge key={tag} variant="secondary">{tag}</Badge>
+                          <Badge key={tag} variant="secondary">
+                            {tag}
+                          </Badge>
                         ))}
                       </div>
                     </div>
@@ -883,11 +892,11 @@ export default function CrownJewelsPage() {
                                 <Badge
                                   variant="outline"
                                   className={
-                                    dep.criticality === "critical"
-                                      ? "bg-red-500/10 text-red-500"
-                                      : dep.criticality === "high"
-                                      ? "bg-orange-500/10 text-orange-500"
-                                      : ""
+                                    dep.criticality === 'critical'
+                                      ? 'bg-red-500/10 text-red-500'
+                                      : dep.criticality === 'high'
+                                        ? 'bg-orange-500/10 text-orange-500'
+                                        : ''
                                   }
                                 >
                                   {dep.criticality}
@@ -913,8 +922,8 @@ export default function CrownJewelsPage() {
                   variant="destructive"
                   className="flex-1"
                   onClick={() => {
-                    setViewJewel(null);
-                    setDeleteJewel(viewJewel);
+                    setViewJewel(null)
+                    setDeleteJewel(viewJewel)
                   }}
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
@@ -932,18 +941,21 @@ export default function CrownJewelsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Remove Crown Jewel?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to remove &quot;{deleteJewel?.name}&quot; from your crown jewels?
-              This will remove tracking and protection requirements.
+              Are you sure you want to remove &quot;{deleteJewel?.name}&quot; from your crown
+              jewels? This will remove tracking and protection requirements.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground"
+            >
               Remove
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </>
-  );
+  )
 }

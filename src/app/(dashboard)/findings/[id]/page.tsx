@@ -1,20 +1,22 @@
-"use client";
+'use client'
 
-import { useParams, useRouter } from "next/navigation";
-import { Header, Main } from "@/components/layout";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft } from "lucide-react";
-import { useFindingApi, useAddFindingCommentApi, useFindingCommentsApi } from "@/features/findings/api/use-findings-api";
-import { useAsset } from "@/features/assets/hooks/use-assets";
-import type { ApiFinding, ApiFindingComment } from "@/features/findings/api/finding-api.types";
-import { toast } from "sonner";
-import type { FindingDetail, FindingStatus, Activity } from "@/features/findings/types";
-import type { Severity } from "@/features/shared/types";
+import { useParams, useRouter } from 'next/navigation'
+import { Header, Main } from '@/components/layout'
+import { Button } from '@/components/ui/button'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
+import { ArrowLeft } from 'lucide-react'
+import {
+  useFindingApi,
+  useAddFindingCommentApi,
+  useFindingCommentsApi,
+} from '@/features/findings/api/use-findings-api'
+import { useAsset } from '@/features/assets/hooks/use-assets'
+import type { ApiFinding, ApiFindingComment } from '@/features/findings/api/finding-api.types'
+import { toast } from 'sonner'
+import type { FindingDetail, FindingStatus, Activity } from '@/features/findings/types'
+import type { Severity } from '@/features/shared/types'
 import {
   FindingHeader,
   OverviewTab,
@@ -22,7 +24,7 @@ import {
   RemediationTab,
   RelatedTab,
   ActivityPanel,
-} from "@/features/findings/components/detail";
+} from '@/features/findings/components/detail'
 
 /**
  * Transform API response to FindingDetail format for UI components
@@ -30,21 +32,21 @@ import {
 function transformApiToFindingDetail(api: ApiFinding, assetName?: string): FindingDetail {
   // Map API status to internal status
   const statusMap: Record<string, FindingStatus> = {
-    open: "new",
-    confirmed: "confirmed",
-    in_progress: "in_progress",
-    resolved: "resolved",
-    false_positive: "false_positive",
-    accepted: "closed",
-    wont_fix: "closed",
-  };
+    open: 'new',
+    confirmed: 'confirmed',
+    in_progress: 'in_progress',
+    resolved: 'resolved',
+    false_positive: 'false_positive',
+    accepted: 'closed',
+    wont_fix: 'closed',
+  }
 
   // Create initial activity from creation
   const activities: Activity[] = [
     {
       id: `act-created-${api.id}`,
-      type: "created",
-      actor: "system",
+      type: 'created',
+      actor: 'system',
       content: `Discovered by ${api.tool_name}`,
       metadata: {
         source: api.source,
@@ -52,41 +54,41 @@ function transformApiToFindingDetail(api: ApiFinding, assetName?: string): Findi
       },
       createdAt: api.created_at,
     },
-  ];
+  ]
 
   // Add status change activity if resolved
   if (api.resolved_at) {
     activities.unshift({
       id: `act-resolved-${api.id}`,
-      type: "status_changed",
+      type: 'status_changed',
       actor: api.resolved_by
-        ? { id: "resolver", name: api.resolved_by, email: "", role: "analyst" }
-        : "system",
-      previousValue: "in_progress",
-      newValue: "resolved",
-      content: api.resolution || "Finding resolved",
+        ? { id: 'resolver', name: api.resolved_by, email: '', role: 'analyst' }
+        : 'system',
+      previousValue: 'in_progress',
+      newValue: 'resolved',
+      content: api.resolution || 'Finding resolved',
       createdAt: api.resolved_at,
-    });
+    })
   }
 
   // Build location string for display (file:line:col)
-  let locationDisplay = api.file_path || "";
+  let locationDisplay = api.file_path || ''
   if (api.start_line) {
-    locationDisplay = `${locationDisplay}:${api.start_line}`;
+    locationDisplay = `${locationDisplay}:${api.start_line}`
     if (api.start_column) {
-      locationDisplay = `${locationDisplay}:${api.start_column}`;
+      locationDisplay = `${locationDisplay}:${api.start_column}`
     }
   }
 
   // Use asset name if provided, otherwise use a display-friendly version
-  const displayAssetName = assetName || api.asset_id;
+  const displayAssetName = assetName || api.asset_id
 
   return {
     id: api.id,
     title: api.title || api.rule_name || api.message,
     description: api.description || api.message,
     severity: api.severity as Severity,
-    status: statusMap[api.status] || "new",
+    status: statusMap[api.status] || 'new',
 
     // Technical details - use direct API fields first, then metadata fallback
     cvss: api.cvss_score ?? (api.metadata?.cvss as number) ?? undefined,
@@ -116,7 +118,7 @@ function transformApiToFindingDetail(api: ApiFinding, assetName?: string): Findi
     assets: [
       {
         id: api.asset_id,
-        type: "repository",
+        type: 'repository',
         name: displayAssetName,
         url: api.file_path ? undefined : undefined, // URL will be constructed in component
       },
@@ -127,16 +129,16 @@ function transformApiToFindingDetail(api: ApiFinding, assetName?: string): Findi
       ? [
           {
             id: `ev-snippet-${api.id}`,
-            type: "code",
-            title: locationDisplay || "Code Snippet",
+            type: 'code',
+            title: locationDisplay || 'Code Snippet',
             content: api.snippet,
-            mimeType: "text/plain",
+            mimeType: 'text/plain',
             createdAt: api.created_at,
             createdBy: {
-              id: "system",
+              id: 'system',
               name: api.tool_name,
-              email: "scanner@rediver.io",
-              role: "admin",
+              email: 'scanner@rediver.io',
+              role: 'admin',
             },
           },
         ]
@@ -144,14 +146,14 @@ function transformApiToFindingDetail(api: ApiFinding, assetName?: string): Findi
 
     // Remediation - use recommendation from scanner, then resolution, then fallback
     remediation: {
-      description: api.recommendation || api.resolution || "No recommendation provided by scanner.",
+      description: api.recommendation || api.resolution || 'No recommendation provided by scanner.',
       steps: [],
       references: (api.metadata?.references as string[]) || [],
-      progress: api.status === "resolved" ? 100 : 0,
+      progress: api.status === 'resolved' ? 100 : 0,
     },
 
     // Source info - pass through actual source type from API
-    source: api.source as FindingDetail["source"],
+    source: api.source as FindingDetail['source'],
     scanner: api.tool_name,
     scanId: api.scan_id,
 
@@ -166,7 +168,7 @@ function transformApiToFindingDetail(api: ApiFinding, assetName?: string): Findi
 
     // Activities
     activities,
-  };
+  }
 }
 
 function LoadingSkeleton() {
@@ -214,75 +216,71 @@ function LoadingSkeleton() {
         </div>
       </Card>
     </div>
-  );
+  )
 }
 
 // Transform API comments to Activity format
 function transformCommentsToActivities(comments: ApiFindingComment[]): Activity[] {
-  return comments.map((comment): Activity => ({
-    id: comment.id,
-    type: comment.is_status_change ? "status_changed" : "comment",
-    actor: {
-      id: comment.author_id,
-      name: comment.author_name || "Unknown User",
-      email: comment.author_email || "",
-      role: "analyst",
-    },
-    content: comment.content,
-    previousValue: comment.old_status,
-    newValue: comment.new_status,
-    createdAt: comment.created_at,
-    editedAt: comment.updated_at,
-  }));
+  return comments.map(
+    (comment): Activity => ({
+      id: comment.id,
+      type: comment.is_status_change ? 'status_changed' : 'comment',
+      actor: {
+        id: comment.author_id,
+        name: comment.author_name || 'Unknown User',
+        email: comment.author_email || '',
+        role: 'analyst',
+      },
+      content: comment.content,
+      previousValue: comment.old_status,
+      newValue: comment.new_status,
+      createdAt: comment.created_at,
+      editedAt: comment.updated_at,
+    })
+  )
 }
 
 export default function FindingDetailPage() {
-  const params = useParams();
-  const router = useRouter();
-  const id = params.id as string;
+  const params = useParams()
+  const router = useRouter()
+  const id = params.id as string
 
-  const { data: apiFinding, error, isLoading } = useFindingApi(id);
-  const { data: commentsData, mutate: mutateComments } = useFindingCommentsApi(id);
-  const { trigger: addComment } = useAddFindingCommentApi(id);
+  const { data: apiFinding, error, isLoading } = useFindingApi(id)
+  const { data: commentsData, mutate: mutateComments } = useFindingCommentsApi(id)
+  const { trigger: addComment } = useAddFindingCommentApi(id)
 
   // Fetch asset details for name resolution
-  const { asset } = useAsset(apiFinding?.asset_id || null);
+  const { asset } = useAsset(apiFinding?.asset_id || null)
 
   // Transform API data to FindingDetail format, passing asset name if available
-  const finding = apiFinding ? transformApiToFindingDetail(apiFinding, asset?.name) : null;
+  const finding = apiFinding ? transformApiToFindingDetail(apiFinding, asset?.name) : null
 
   // Merge API comments with finding activities
-  const apiComments = commentsData?.data || [];
-  const commentActivities = transformCommentsToActivities(apiComments);
-  const allActivities = finding
-    ? [...finding.activities, ...commentActivities]
-    : [];
+  const apiComments = commentsData?.data || []
+  const commentActivities = transformCommentsToActivities(apiComments)
+  const allActivities = finding ? [...finding.activities, ...commentActivities] : []
 
   // Handler for adding new comments
   const handleAddComment = async (content: string, _isInternal: boolean) => {
-    if (!content.trim()) return;
+    if (!content.trim()) return
 
     try {
-      await addComment({ content });
+      await addComment({ content })
       // Only revalidate comments, not the entire findings cache
       // This prevents page flicker when adding comments
-      await mutateComments();
-      toast.success("Comment added");
+      await mutateComments()
+      toast.success('Comment added')
     } catch (error) {
-      toast.error("Failed to add comment");
-      console.error("Add comment error:", error);
+      toast.error('Failed to add comment')
+      console.error('Add comment error:', error)
     }
-  };
+  }
 
   if (isLoading) {
     return (
       <>
         <Header fixed>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.push("/findings")}
-          >
+          <Button variant="ghost" size="sm" onClick={() => router.push('/findings')}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Findings
           </Button>
@@ -291,18 +289,14 @@ export default function FindingDetailPage() {
           <LoadingSkeleton />
         </Main>
       </>
-    );
+    )
   }
 
   if (error || !finding) {
     return (
       <>
         <Header fixed>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.push("/findings")}
-          >
+          <Button variant="ghost" size="sm" onClick={() => router.push('/findings')}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Findings
           </Button>
@@ -314,38 +308,25 @@ export default function FindingDetailPage() {
               <p className="text-muted-foreground mt-2">
                 The finding with ID &quot;{id}&quot; does not exist.
               </p>
-              <Button
-                className="mt-4"
-                onClick={() => router.push("/findings")}
-              >
+              <Button className="mt-4" onClick={() => router.push('/findings')}>
                 Return to Findings
               </Button>
             </div>
           </div>
         </Main>
       </>
-    );
+    )
   }
 
   return (
     <>
       <Header fixed>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => router.push("/findings")}
-        >
+        <Button variant="ghost" size="sm" onClick={() => router.push('/findings')}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back
         </Button>
         <div className="flex-1">
-          <span className="text-muted-foreground ml-4 font-mono text-sm">
-            {finding.id}
-          </span>
-        </div>
-        <div className="flex items-center gap-2 sm:gap-4">
-          <ThemeSwitch />
-          <ProfileDropdown />
+          <span className="text-muted-foreground ml-4 font-mono text-sm">{finding.id}</span>
         </div>
       </Header>
 
@@ -367,9 +348,7 @@ export default function FindingDetailPage() {
                 <CardHeader className="flex-shrink-0 pb-0">
                   <TabsList>
                     <TabsTrigger value="overview">Overview</TabsTrigger>
-                    <TabsTrigger value="evidence">
-                      Evidence ({finding.evidence.length})
-                    </TabsTrigger>
+                    <TabsTrigger value="evidence">Evidence ({finding.evidence.length})</TabsTrigger>
                     <TabsTrigger value="remediation">Remediation</TabsTrigger>
                     <TabsTrigger value="related">Related</TabsTrigger>
                   </TabsList>
@@ -399,14 +378,11 @@ export default function FindingDetailPage() {
               <CardTitle className="text-base">Activity</CardTitle>
             </CardHeader>
             <div className="flex-1 overflow-hidden">
-              <ActivityPanel
-                activities={allActivities}
-                onAddComment={handleAddComment}
-              />
+              <ActivityPanel activities={allActivities} onAddComment={handleAddComment} />
             </div>
           </Card>
         </div>
       </Main>
     </>
-  );
+  )
 }

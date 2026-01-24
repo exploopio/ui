@@ -1,88 +1,66 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import { Header, Main } from "@/components/layout";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { PageHeader } from "@/features/shared";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { useState } from 'react'
+import { Header, Main } from '@/components/layout'
+import { PageHeader } from '@/features/shared'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
+import { Separator } from '@/components/ui/separator'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import {
-  Settings,
-  Globe,
-  Clock,
-  Calendar,
-  Save,
-  RotateCcw,
-} from "lucide-react";
-import { toast } from "sonner";
+} from '@/components/ui/select'
+import { Settings, Globe, Clock, Calendar, Save, RotateCcw } from 'lucide-react'
+import { toast } from 'sonner'
 
 export default function GeneralSettingsPage() {
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false)
 
   // Settings state
   const [settings, setSettings] = useState({
-    platformName: "Rediver Security Platform",
-    timezone: "Asia/Ho_Chi_Minh",
-    dateFormat: "DD/MM/YYYY",
-    timeFormat: "24h",
-    language: "en",
+    platformName: 'Rediver Security Platform',
+    timezone: 'Asia/Ho_Chi_Minh',
+    dateFormat: 'DD/MM/YYYY',
+    timeFormat: '24h',
+    language: 'en',
     autoRefresh: true,
-    refreshInterval: "60",
+    refreshInterval: '60',
     showWelcome: true,
     compactMode: false,
-  });
+  })
 
   const handleSave = async () => {
-    setIsLoading(true);
+    setIsLoading(true)
     // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setIsLoading(false);
-    toast.success("Settings saved successfully");
-  };
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+    setIsLoading(false)
+    toast.success('Settings saved successfully')
+  }
 
   const handleReset = () => {
     setSettings({
-      platformName: "Rediver Security Platform",
-      timezone: "Asia/Ho_Chi_Minh",
-      dateFormat: "DD/MM/YYYY",
-      timeFormat: "24h",
-      language: "en",
+      platformName: 'Rediver Security Platform',
+      timezone: 'Asia/Ho_Chi_Minh',
+      dateFormat: 'DD/MM/YYYY',
+      timeFormat: '24h',
+      language: 'en',
       autoRefresh: true,
-      refreshInterval: "60",
+      refreshInterval: '60',
       showWelcome: true,
       compactMode: false,
-    });
-    toast.info("Settings reset to defaults");
-  };
+    })
+    toast.info('Settings reset to defaults')
+  }
 
   return (
     <>
-      <Header fixed>
-        <div className="ms-auto flex items-center gap-2 sm:gap-4">
-          <Search />
-          <ThemeSwitch />
-          <ProfileDropdown />
-        </div>
-      </Header>
+      <Header fixed />
 
       <Main>
         <PageHeader
@@ -96,7 +74,7 @@ export default function GeneralSettingsPage() {
             </Button>
             <Button onClick={handleSave} disabled={isLoading}>
               <Save className="mr-2 h-4 w-4" />
-              {isLoading ? "Saving..." : "Save Changes"}
+              {isLoading ? 'Saving...' : 'Save Changes'}
             </Button>
           </div>
         </PageHeader>
@@ -109,9 +87,7 @@ export default function GeneralSettingsPage() {
                 <Settings className="h-5 w-5" />
                 Platform Settings
               </CardTitle>
-              <CardDescription>
-                Basic platform configuration options
-              </CardDescription>
+              <CardDescription>Basic platform configuration options</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -119,9 +95,7 @@ export default function GeneralSettingsPage() {
                 <Input
                   id="platformName"
                   value={settings.platformName}
-                  onChange={(e) =>
-                    setSettings({ ...settings, platformName: e.target.value })
-                  }
+                  onChange={(e) => setSettings({ ...settings, platformName: e.target.value })}
                 />
                 <p className="text-xs text-muted-foreground">
                   This name appears in the sidebar and reports
@@ -139,9 +113,7 @@ export default function GeneralSettingsPage() {
                 </div>
                 <Switch
                   checked={settings.showWelcome}
-                  onCheckedChange={(checked) =>
-                    setSettings({ ...settings, showWelcome: checked })
-                  }
+                  onCheckedChange={(checked) => setSettings({ ...settings, showWelcome: checked })}
                 />
               </div>
 
@@ -154,9 +126,7 @@ export default function GeneralSettingsPage() {
                 </div>
                 <Switch
                   checked={settings.compactMode}
-                  onCheckedChange={(checked) =>
-                    setSettings({ ...settings, compactMode: checked })
-                  }
+                  onCheckedChange={(checked) => setSettings({ ...settings, compactMode: checked })}
                 />
               </div>
             </CardContent>
@@ -169,9 +139,7 @@ export default function GeneralSettingsPage() {
                 <Globe className="h-5 w-5" />
                 Localization
               </CardTitle>
-              <CardDescription>
-                Language, timezone, and format settings
-              </CardDescription>
+              <CardDescription>Language, timezone, and format settings</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
@@ -179,9 +147,7 @@ export default function GeneralSettingsPage() {
                   <Label htmlFor="language">Language</Label>
                   <Select
                     value={settings.language}
-                    onValueChange={(value) =>
-                      setSettings({ ...settings, language: value })
-                    }
+                    onValueChange={(value) => setSettings({ ...settings, language: value })}
                   >
                     <SelectTrigger id="language">
                       <SelectValue />
@@ -198,26 +164,16 @@ export default function GeneralSettingsPage() {
                   <Label htmlFor="timezone">Timezone</Label>
                   <Select
                     value={settings.timezone}
-                    onValueChange={(value) =>
-                      setSettings({ ...settings, timezone: value })
-                    }
+                    onValueChange={(value) => setSettings({ ...settings, timezone: value })}
                   >
                     <SelectTrigger id="timezone">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Asia/Ho_Chi_Minh">
-                        Asia/Ho Chi Minh (UTC+7)
-                      </SelectItem>
-                      <SelectItem value="Asia/Tokyo">
-                        Asia/Tokyo (UTC+9)
-                      </SelectItem>
-                      <SelectItem value="America/New_York">
-                        America/New York (UTC-5)
-                      </SelectItem>
-                      <SelectItem value="Europe/London">
-                        Europe/London (UTC+0)
-                      </SelectItem>
+                      <SelectItem value="Asia/Ho_Chi_Minh">Asia/Ho Chi Minh (UTC+7)</SelectItem>
+                      <SelectItem value="Asia/Tokyo">Asia/Tokyo (UTC+9)</SelectItem>
+                      <SelectItem value="America/New_York">America/New York (UTC-5)</SelectItem>
+                      <SelectItem value="Europe/London">Europe/London (UTC+0)</SelectItem>
                       <SelectItem value="UTC">UTC</SelectItem>
                     </SelectContent>
                   </Select>
@@ -234,9 +190,7 @@ export default function GeneralSettingsPage() {
                   </Label>
                   <Select
                     value={settings.dateFormat}
-                    onValueChange={(value) =>
-                      setSettings({ ...settings, dateFormat: value })
-                    }
+                    onValueChange={(value) => setSettings({ ...settings, dateFormat: value })}
                   >
                     <SelectTrigger id="dateFormat">
                       <SelectValue />
@@ -256,9 +210,7 @@ export default function GeneralSettingsPage() {
                   </Label>
                   <Select
                     value={settings.timeFormat}
-                    onValueChange={(value) =>
-                      setSettings({ ...settings, timeFormat: value })
-                    }
+                    onValueChange={(value) => setSettings({ ...settings, timeFormat: value })}
                   >
                     <SelectTrigger id="timeFormat">
                       <SelectValue />
@@ -280,9 +232,7 @@ export default function GeneralSettingsPage() {
                 <RotateCcw className="h-5 w-5" />
                 Data Refresh
               </CardTitle>
-              <CardDescription>
-                Configure automatic data refresh behavior
-              </CardDescription>
+              <CardDescription>Configure automatic data refresh behavior</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
@@ -294,9 +244,7 @@ export default function GeneralSettingsPage() {
                 </div>
                 <Switch
                   checked={settings.autoRefresh}
-                  onCheckedChange={(checked) =>
-                    setSettings({ ...settings, autoRefresh: checked })
-                  }
+                  onCheckedChange={(checked) => setSettings({ ...settings, autoRefresh: checked })}
                 />
               </div>
 
@@ -305,9 +253,7 @@ export default function GeneralSettingsPage() {
                   <Label htmlFor="refreshInterval">Refresh Interval</Label>
                   <Select
                     value={settings.refreshInterval}
-                    onValueChange={(value) =>
-                      setSettings({ ...settings, refreshInterval: value })
-                    }
+                    onValueChange={(value) => setSettings({ ...settings, refreshInterval: value })}
                   >
                     <SelectTrigger id="refreshInterval">
                       <SelectValue />
@@ -326,5 +272,5 @@ export default function GeneralSettingsPage() {
         </div>
       </Main>
     </>
-  );
+  )
 }

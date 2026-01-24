@@ -1,20 +1,11 @@
-"use client";
+'use client'
 
-import { Header, Main } from "@/components/layout";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { PageHeader } from "@/features/shared";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
+import { Header, Main } from '@/components/layout'
+import { PageHeader } from '@/features/shared'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Progress } from '@/components/ui/progress'
 import {
   Table,
   TableBody,
@@ -22,7 +13,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from '@/components/ui/table'
 import {
   ShieldCheck,
   ShieldAlert,
@@ -34,7 +25,7 @@ import {
   RefreshCw,
   FileSearch,
   Settings,
-} from "lucide-react";
+} from 'lucide-react'
 
 // Mock data for control testing
 const controlStats = {
@@ -43,179 +34,173 @@ const controlStats = {
   failed: 6,
   notTested: 4,
   overallScore: 79,
-};
+}
 
 const securityControls = [
   {
-    id: "ctrl-001",
-    name: "Firewall Rules Validation",
-    category: "Network Security",
-    framework: "CIS Controls",
-    lastTested: "2024-03-10",
-    status: "passed",
+    id: 'ctrl-001',
+    name: 'Firewall Rules Validation',
+    category: 'Network Security',
+    framework: 'CIS Controls',
+    lastTested: '2024-03-10',
+    status: 'passed',
     score: 95,
     findings: 0,
   },
   {
-    id: "ctrl-002",
-    name: "Endpoint Protection Status",
-    category: "Endpoint Security",
-    framework: "NIST CSF",
-    lastTested: "2024-03-09",
-    status: "passed",
+    id: 'ctrl-002',
+    name: 'Endpoint Protection Status',
+    category: 'Endpoint Security',
+    framework: 'NIST CSF',
+    lastTested: '2024-03-09',
+    status: 'passed',
     score: 88,
     findings: 2,
   },
   {
-    id: "ctrl-003",
-    name: "Access Control Policies",
-    category: "Identity & Access",
-    framework: "ISO 27001",
-    lastTested: "2024-03-08",
-    status: "failed",
+    id: 'ctrl-003',
+    name: 'Access Control Policies',
+    category: 'Identity & Access',
+    framework: 'ISO 27001',
+    lastTested: '2024-03-08',
+    status: 'failed',
     score: 45,
     findings: 5,
   },
   {
-    id: "ctrl-004",
-    name: "Data Encryption at Rest",
-    category: "Data Protection",
-    framework: "PCI-DSS",
-    lastTested: "2024-03-07",
-    status: "passed",
+    id: 'ctrl-004',
+    name: 'Data Encryption at Rest',
+    category: 'Data Protection',
+    framework: 'PCI-DSS',
+    lastTested: '2024-03-07',
+    status: 'passed',
     score: 92,
     findings: 1,
   },
   {
-    id: "ctrl-005",
-    name: "Logging & Monitoring",
-    category: "Detection",
-    framework: "CIS Controls",
-    lastTested: "2024-03-06",
-    status: "failed",
+    id: 'ctrl-005',
+    name: 'Logging & Monitoring',
+    category: 'Detection',
+    framework: 'CIS Controls',
+    lastTested: '2024-03-06',
+    status: 'failed',
     score: 38,
     findings: 8,
   },
   {
-    id: "ctrl-006",
-    name: "Patch Management",
-    category: "Vulnerability Mgmt",
-    framework: "NIST CSF",
-    lastTested: "2024-03-05",
-    status: "passed",
+    id: 'ctrl-006',
+    name: 'Patch Management',
+    category: 'Vulnerability Mgmt',
+    framework: 'NIST CSF',
+    lastTested: '2024-03-05',
+    status: 'passed',
     score: 85,
     findings: 3,
   },
   {
-    id: "ctrl-007",
-    name: "Backup & Recovery",
-    category: "Business Continuity",
-    framework: "ISO 27001",
-    lastTested: "2024-03-04",
-    status: "testing",
+    id: 'ctrl-007',
+    name: 'Backup & Recovery',
+    category: 'Business Continuity',
+    framework: 'ISO 27001',
+    lastTested: '2024-03-04',
+    status: 'testing',
     score: 0,
     findings: 0,
   },
   {
-    id: "ctrl-008",
-    name: "Security Awareness Training",
-    category: "Human Security",
-    framework: "CIS Controls",
-    lastTested: "2024-03-03",
-    status: "passed",
+    id: 'ctrl-008',
+    name: 'Security Awareness Training',
+    category: 'Human Security',
+    framework: 'CIS Controls',
+    lastTested: '2024-03-03',
+    status: 'passed',
     score: 78,
     findings: 2,
   },
-];
+]
 
 const controlCategories = [
-  { name: "Network Security", controls: 12, passed: 10, score: 88 },
-  { name: "Endpoint Security", controls: 8, passed: 7, score: 85 },
-  { name: "Identity & Access", controls: 10, passed: 6, score: 62 },
-  { name: "Data Protection", controls: 6, passed: 5, score: 90 },
-  { name: "Detection", controls: 5, passed: 3, score: 55 },
-  { name: "Vulnerability Mgmt", controls: 7, passed: 7, score: 92 },
-];
+  { name: 'Network Security', controls: 12, passed: 10, score: 88 },
+  { name: 'Endpoint Security', controls: 8, passed: 7, score: 85 },
+  { name: 'Identity & Access', controls: 10, passed: 6, score: 62 },
+  { name: 'Data Protection', controls: 6, passed: 5, score: 90 },
+  { name: 'Detection', controls: 5, passed: 3, score: 55 },
+  { name: 'Vulnerability Mgmt', controls: 7, passed: 7, score: 92 },
+]
 
 const recentTests = [
   {
-    control: "Firewall Rules Validation",
-    result: "Passed",
-    duration: "2m 34s",
-    timestamp: "10 mins ago",
+    control: 'Firewall Rules Validation',
+    result: 'Passed',
+    duration: '2m 34s',
+    timestamp: '10 mins ago',
   },
   {
-    control: "Access Control Policies",
-    result: "Failed",
-    duration: "5m 12s",
-    timestamp: "1 hour ago",
+    control: 'Access Control Policies',
+    result: 'Failed',
+    duration: '5m 12s',
+    timestamp: '1 hour ago',
   },
   {
-    control: "Endpoint Protection Status",
-    result: "Passed",
-    duration: "3m 45s",
-    timestamp: "2 hours ago",
+    control: 'Endpoint Protection Status',
+    result: 'Passed',
+    duration: '3m 45s',
+    timestamp: '2 hours ago',
   },
   {
-    control: "Logging & Monitoring",
-    result: "Failed",
-    duration: "8m 23s",
-    timestamp: "3 hours ago",
+    control: 'Logging & Monitoring',
+    result: 'Failed',
+    duration: '8m 23s',
+    timestamp: '3 hours ago',
   },
   {
-    control: "Data Encryption at Rest",
-    result: "Passed",
-    duration: "1m 58s",
-    timestamp: "5 hours ago",
+    control: 'Data Encryption at Rest',
+    result: 'Passed',
+    duration: '1m 58s',
+    timestamp: '5 hours ago',
   },
-];
+]
 
 const statusConfig: Record<string, { icon: React.ReactNode; color: string; bgColor: string }> = {
   passed: {
     icon: <CheckCircle className="h-4 w-4" />,
-    color: "text-green-400",
-    bgColor: "bg-green-500/20",
+    color: 'text-green-400',
+    bgColor: 'bg-green-500/20',
   },
   failed: {
     icon: <XCircle className="h-4 w-4" />,
-    color: "text-red-400",
-    bgColor: "bg-red-500/20",
+    color: 'text-red-400',
+    bgColor: 'bg-red-500/20',
   },
   testing: {
     icon: <RefreshCw className="h-4 w-4 animate-spin" />,
-    color: "text-blue-400",
-    bgColor: "bg-blue-500/20",
+    color: 'text-blue-400',
+    bgColor: 'bg-blue-500/20',
   },
   not_tested: {
     icon: <Clock className="h-4 w-4" />,
-    color: "text-gray-400",
-    bgColor: "bg-gray-500/20",
+    color: 'text-gray-400',
+    bgColor: 'bg-gray-500/20',
   },
-};
+}
 
 const resultConfig: Record<string, string> = {
-  Passed: "bg-green-500/20 text-green-400",
-  Failed: "bg-red-500/20 text-red-400",
-  Pending: "bg-yellow-500/20 text-yellow-400",
-};
+  Passed: 'bg-green-500/20 text-green-400',
+  Failed: 'bg-red-500/20 text-red-400',
+  Pending: 'bg-yellow-500/20 text-yellow-400',
+}
 
 export default function ControlTestingPage() {
   const getScoreColor = (score: number) => {
-    if (score >= 80) return "text-green-500";
-    if (score >= 60) return "text-yellow-500";
-    if (score >= 40) return "text-orange-500";
-    return "text-red-500";
-  };
+    if (score >= 80) return 'text-green-500'
+    if (score >= 60) return 'text-yellow-500'
+    if (score >= 40) return 'text-orange-500'
+    return 'text-red-500'
+  }
 
   return (
     <>
-      <Header fixed>
-        <div className="ms-auto flex items-center gap-2 sm:gap-4">
-          <Search />
-          <ThemeSwitch />
-          <ProfileDropdown />
-        </div>
-      </Header>
+      <Header fixed />
 
       <Main>
         <PageHeader
@@ -318,10 +303,7 @@ export default function ControlTestingPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               {recentTests.map((test, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between rounded-lg border p-3"
-                >
+                <div key={idx} className="flex items-center justify-between rounded-lg border p-3">
                   <div className="space-y-1">
                     <p className="text-sm font-medium">{test.control}</p>
                     <div className="text-muted-foreground flex items-center gap-3 text-xs">
@@ -332,9 +314,7 @@ export default function ControlTestingPage() {
                       <span>{test.timestamp}</span>
                     </div>
                   </div>
-                  <Badge className={`${resultConfig[test.result]} border-0`}>
-                    {test.result}
-                  </Badge>
+                  <Badge className={`${resultConfig[test.result]} border-0`}>{test.result}</Badge>
                 </div>
               ))}
             </CardContent>
@@ -377,7 +357,7 @@ export default function ControlTestingPage() {
               </TableHeader>
               <TableBody>
                 {securityControls.map((control) => {
-                  const status = statusConfig[control.status];
+                  const status = statusConfig[control.status]
                   return (
                     <TableRow key={control.id} className="cursor-pointer hover:bg-muted/50">
                       <TableCell>
@@ -395,7 +375,7 @@ export default function ControlTestingPage() {
                         {control.lastTested}
                       </TableCell>
                       <TableCell>
-                        {control.status !== "testing" && control.status !== "not_tested" ? (
+                        {control.status !== 'testing' && control.status !== 'not_tested' ? (
                           <span className={`font-mono ${getScoreColor(control.score)}`}>
                             {control.score}%
                           </span>
@@ -416,7 +396,9 @@ export default function ControlTestingPage() {
                       <TableCell>
                         <Badge className={`${status.bgColor} ${status.color} border-0`}>
                           {status.icon}
-                          <span className="ml-1 capitalize">{control.status.replace("_", " ")}</span>
+                          <span className="ml-1 capitalize">
+                            {control.status.replace('_', ' ')}
+                          </span>
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -425,7 +407,7 @@ export default function ControlTestingPage() {
                         </Button>
                       </TableCell>
                     </TableRow>
-                  );
+                  )
                 })}
               </TableBody>
             </Table>
@@ -433,5 +415,5 @@ export default function ControlTestingPage() {
         </Card>
       </Main>
     </>
-  );
+  )
 }

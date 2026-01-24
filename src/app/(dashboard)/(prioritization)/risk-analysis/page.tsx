@@ -1,20 +1,11 @@
-"use client";
+'use client'
 
-import { Header, Main } from "@/components/layout";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { PageHeader, SeverityBadge } from "@/features/shared";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
+import { Header, Main } from '@/components/layout'
+import { PageHeader, SeverityBadge } from '@/features/shared'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Progress } from '@/components/ui/progress'
 import {
   Table,
   TableBody,
@@ -22,7 +13,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from '@/components/ui/table'
 import {
   BarChart3,
   TrendingUp,
@@ -33,115 +24,109 @@ import {
   Zap,
   Clock,
   ArrowUpRight,
-} from "lucide-react";
-import type { Severity } from "@/features/shared/types";
+} from 'lucide-react'
+import type { Severity } from '@/features/shared/types'
 
 // Mock data for risk analysis
 const riskMetrics = {
   overallRiskScore: 72,
   criticalRisks: 4,
   highRisks: 8,
-  avgTimeToRemediate: "12 days",
+  avgTimeToRemediate: '12 days',
   riskTrend: -5,
-};
+}
 
 const riskByCategory = [
-  { category: "Network Security", score: 85, findings: 12, trend: "up" },
-  { category: "Application Security", score: 72, findings: 18, trend: "down" },
-  { category: "Data Protection", score: 65, findings: 8, trend: "stable" },
-  { category: "Access Control", score: 58, findings: 14, trend: "up" },
-  { category: "Cloud Security", score: 78, findings: 6, trend: "down" },
-  { category: "Endpoint Security", score: 82, findings: 4, trend: "stable" },
-];
+  { category: 'Network Security', score: 85, findings: 12, trend: 'up' },
+  { category: 'Application Security', score: 72, findings: 18, trend: 'down' },
+  { category: 'Data Protection', score: 65, findings: 8, trend: 'stable' },
+  { category: 'Access Control', score: 58, findings: 14, trend: 'up' },
+  { category: 'Cloud Security', score: 78, findings: 6, trend: 'down' },
+  { category: 'Endpoint Security', score: 82, findings: 4, trend: 'stable' },
+]
 
 const topRisks = [
   {
-    id: "risk-001",
-    title: "SQL Injection in Payment API",
-    severity: "critical" as Severity,
+    id: 'risk-001',
+    title: 'SQL Injection in Payment API',
+    severity: 'critical' as Severity,
     cvss: 9.8,
-    asset: "api.techcombank.com.vn",
-    exploitability: "High",
-    businessImpact: "Critical",
+    asset: 'api.techcombank.com.vn',
+    exploitability: 'High',
+    businessImpact: 'Critical',
     daysOpen: 5,
   },
   {
-    id: "risk-002",
-    title: "Outdated SSL Certificate",
-    severity: "high" as Severity,
+    id: 'risk-002',
+    title: 'Outdated SSL Certificate',
+    severity: 'high' as Severity,
     cvss: 7.5,
-    asset: "mail.techcombank.com.vn",
-    exploitability: "Medium",
-    businessImpact: "High",
+    asset: 'mail.techcombank.com.vn',
+    exploitability: 'Medium',
+    businessImpact: 'High',
     daysOpen: 12,
   },
   {
-    id: "risk-003",
-    title: "Exposed Admin Panel",
-    severity: "critical" as Severity,
+    id: 'risk-003',
+    title: 'Exposed Admin Panel',
+    severity: 'critical' as Severity,
     cvss: 9.1,
-    asset: "admin.tcb.vn",
-    exploitability: "High",
-    businessImpact: "Critical",
+    asset: 'admin.tcb.vn',
+    exploitability: 'High',
+    businessImpact: 'Critical',
     daysOpen: 3,
   },
   {
-    id: "risk-004",
-    title: "Weak Password Policy",
-    severity: "high" as Severity,
+    id: 'risk-004',
+    title: 'Weak Password Policy',
+    severity: 'high' as Severity,
     cvss: 7.2,
-    asset: "auth.techcombank.com.vn",
-    exploitability: "Low",
-    businessImpact: "High",
+    asset: 'auth.techcombank.com.vn',
+    exploitability: 'Low',
+    businessImpact: 'High',
     daysOpen: 30,
   },
   {
-    id: "risk-005",
-    title: "Missing Security Headers",
-    severity: "medium" as Severity,
+    id: 'risk-005',
+    title: 'Missing Security Headers',
+    severity: 'medium' as Severity,
     cvss: 5.3,
-    asset: "www.techcombank.com.vn",
-    exploitability: "Low",
-    businessImpact: "Medium",
+    asset: 'www.techcombank.com.vn',
+    exploitability: 'Low',
+    businessImpact: 'Medium',
     daysOpen: 45,
   },
-];
+]
 
 const riskMatrix = [
-  { impact: "Critical", likelihood: "High", count: 2, color: "bg-red-500" },
-  { impact: "Critical", likelihood: "Medium", count: 1, color: "bg-red-400" },
-  { impact: "Critical", likelihood: "Low", count: 1, color: "bg-orange-500" },
-  { impact: "High", likelihood: "High", count: 3, color: "bg-red-400" },
-  { impact: "High", likelihood: "Medium", count: 5, color: "bg-orange-500" },
-  { impact: "High", likelihood: "Low", count: 2, color: "bg-yellow-500" },
-  { impact: "Medium", likelihood: "High", count: 4, color: "bg-orange-400" },
-  { impact: "Medium", likelihood: "Medium", count: 6, color: "bg-yellow-400" },
-  { impact: "Medium", likelihood: "Low", count: 3, color: "bg-green-400" },
-];
+  { impact: 'Critical', likelihood: 'High', count: 2, color: 'bg-red-500' },
+  { impact: 'Critical', likelihood: 'Medium', count: 1, color: 'bg-red-400' },
+  { impact: 'Critical', likelihood: 'Low', count: 1, color: 'bg-orange-500' },
+  { impact: 'High', likelihood: 'High', count: 3, color: 'bg-red-400' },
+  { impact: 'High', likelihood: 'Medium', count: 5, color: 'bg-orange-500' },
+  { impact: 'High', likelihood: 'Low', count: 2, color: 'bg-yellow-500' },
+  { impact: 'Medium', likelihood: 'High', count: 4, color: 'bg-orange-400' },
+  { impact: 'Medium', likelihood: 'Medium', count: 6, color: 'bg-yellow-400' },
+  { impact: 'Medium', likelihood: 'Low', count: 3, color: 'bg-green-400' },
+]
 
 const exploitabilityConfig: Record<string, string> = {
-  High: "bg-red-500/20 text-red-400",
-  Medium: "bg-yellow-500/20 text-yellow-400",
-  Low: "bg-green-500/20 text-green-400",
-};
+  High: 'bg-red-500/20 text-red-400',
+  Medium: 'bg-yellow-500/20 text-yellow-400',
+  Low: 'bg-green-500/20 text-green-400',
+}
 
 export default function RiskAnalysisPage() {
   const getScoreColor = (score: number) => {
-    if (score >= 80) return "text-red-500";
-    if (score >= 60) return "text-orange-500";
-    if (score >= 40) return "text-yellow-500";
-    return "text-green-500";
-  };
+    if (score >= 80) return 'text-red-500'
+    if (score >= 60) return 'text-orange-500'
+    if (score >= 40) return 'text-yellow-500'
+    return 'text-green-500'
+  }
 
   return (
     <>
-      <Header fixed>
-        <div className="ms-auto flex items-center gap-2 sm:gap-4">
-          <Search />
-          <ThemeSwitch />
-          <ProfileDropdown />
-        </div>
-      </Header>
+      <Header fixed />
 
       <Main>
         <PageHeader
@@ -234,8 +219,8 @@ export default function RiskAnalysisPage() {
                       <span className={`text-sm font-bold ${getScoreColor(cat.score)}`}>
                         {cat.score}
                       </span>
-                      {cat.trend === "up" && <TrendingUp className="h-3 w-3 text-red-400" />}
-                      {cat.trend === "down" && <TrendingDown className="h-3 w-3 text-green-400" />}
+                      {cat.trend === 'up' && <TrendingUp className="h-3 w-3 text-red-400" />}
+                      {cat.trend === 'down' && <TrendingDown className="h-3 w-3 text-green-400" />}
                     </div>
                   </div>
                   <Progress value={cat.score} className="h-1.5" />
@@ -267,48 +252,48 @@ export default function RiskAnalysisPage() {
                 <div className="text-center text-xs font-medium">High</div>
 
                 <div className="flex items-center text-xs font-medium">Critical</div>
-                {["Low", "Medium", "High"].map((likelihood) => {
+                {['Low', 'Medium', 'High'].map((likelihood) => {
                   const cell = riskMatrix.find(
-                    (r) => r.impact === "Critical" && r.likelihood === likelihood
-                  );
+                    (r) => r.impact === 'Critical' && r.likelihood === likelihood
+                  )
                   return (
                     <div
                       key={`critical-${likelihood}`}
-                      className={`flex h-16 items-center justify-center rounded ${cell?.color || "bg-gray-500"} text-white font-bold`}
+                      className={`flex h-16 items-center justify-center rounded ${cell?.color || 'bg-gray-500'} text-white font-bold`}
                     >
                       {cell?.count || 0}
                     </div>
-                  );
+                  )
                 })}
 
                 <div className="flex items-center text-xs font-medium">High</div>
-                {["Low", "Medium", "High"].map((likelihood) => {
+                {['Low', 'Medium', 'High'].map((likelihood) => {
                   const cell = riskMatrix.find(
-                    (r) => r.impact === "High" && r.likelihood === likelihood
-                  );
+                    (r) => r.impact === 'High' && r.likelihood === likelihood
+                  )
                   return (
                     <div
                       key={`high-${likelihood}`}
-                      className={`flex h-16 items-center justify-center rounded ${cell?.color || "bg-gray-500"} text-white font-bold`}
+                      className={`flex h-16 items-center justify-center rounded ${cell?.color || 'bg-gray-500'} text-white font-bold`}
                     >
                       {cell?.count || 0}
                     </div>
-                  );
+                  )
                 })}
 
                 <div className="flex items-center text-xs font-medium">Medium</div>
-                {["Low", "Medium", "High"].map((likelihood) => {
+                {['Low', 'Medium', 'High'].map((likelihood) => {
                   const cell = riskMatrix.find(
-                    (r) => r.impact === "Medium" && r.likelihood === likelihood
-                  );
+                    (r) => r.impact === 'Medium' && r.likelihood === likelihood
+                  )
                   return (
                     <div
                       key={`medium-${likelihood}`}
-                      className={`flex h-16 items-center justify-center rounded ${cell?.color || "bg-gray-500"} text-white font-bold`}
+                      className={`flex h-16 items-center justify-center rounded ${cell?.color || 'bg-gray-500'} text-white font-bold`}
                     >
                       {cell?.count || 0}
                     </div>
-                  );
+                  )
                 })}
               </div>
               <div className="text-muted-foreground mt-4 flex justify-center gap-4 text-xs">
@@ -367,7 +352,7 @@ export default function RiskAnalysisPage() {
                       <Badge variant="outline">{risk.businessImpact}</Badge>
                     </TableCell>
                     <TableCell>
-                      <span className={risk.daysOpen > 14 ? "text-red-400" : ""}>
+                      <span className={risk.daysOpen > 14 ? 'text-red-400' : ''}>
                         {risk.daysOpen} days
                       </span>
                     </TableCell>
@@ -379,5 +364,5 @@ export default function RiskAnalysisPage() {
         </Card>
       </Main>
     </>
-  );
+  )
 }

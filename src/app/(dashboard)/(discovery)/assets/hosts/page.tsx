@@ -1,6 +1,6 @@
-"use client";
+'use client'
 
-import { useState, useMemo } from "react";
+import { useState, useMemo } from 'react'
 import {
   ColumnDef,
   flexRender,
@@ -10,31 +10,17 @@ import {
   getSortedRowModel,
   SortingState,
   useReactTable,
-} from "@tanstack/react-table";
-import { Header, Main } from "@/components/layout";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { PageHeader, StatusBadge, RiskScoreBadge } from "@/features/shared";
-import {
-  AssetDetailSheet,
-  StatCard,
-  StatsGrid,
-  SectionTitle,
-} from "@/features/assets";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+} from '@tanstack/react-table'
+import { Header, Main } from '@/components/layout'
+import { PageHeader, StatusBadge, RiskScoreBadge } from '@/features/shared'
+import { AssetDetailSheet, StatCard, StatsGrid, SectionTitle } from '@/features/assets'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Textarea } from '@/components/ui/textarea'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -42,7 +28,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from '@/components/ui/table'
 import {
   Dialog,
   DialogContent,
@@ -50,7 +36,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -60,23 +46,23 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+} from '@/components/ui/alert-dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "sonner";
+} from '@/components/ui/select'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { toast } from 'sonner'
 import {
   Plus,
   Server,
@@ -99,7 +85,7 @@ import {
   Cpu,
   HardDrive,
   Network,
-} from "lucide-react";
+} from 'lucide-react'
 import {
   useAssets,
   createAsset,
@@ -108,11 +94,11 @@ import {
   bulkDeleteAssets,
   getAssetRelationships,
   ClassificationBadges,
-  type Asset
-} from "@/features/assets";
-import { Can, Permission, usePermissions } from "@/lib/permissions";
-import { mockAssetGroups } from "@/features/asset-groups";
-import type { Status } from "@/features/shared/types";
+  type Asset,
+} from '@/features/assets'
+import { Can, Permission, usePermissions } from '@/lib/permissions'
+import { mockAssetGroups } from '@/features/asset-groups'
+import type { Status } from '@/features/shared/types'
 import {
   ScopeBadge,
   ScopeCoverageCard,
@@ -121,141 +107,159 @@ import {
   getActiveScopeTargets,
   getActiveScopeExclusions,
   type ScopeMatchResult,
-} from "@/features/scope";
+} from '@/features/scope'
 
 // Filter types
-type StatusFilter = Status | "all";
-type OSFilter = "all" | "linux" | "windows" | "macos";
+type StatusFilter = Status | 'all'
+type OSFilter = 'all' | 'linux' | 'windows' | 'macos'
 
 const statusFilters: { value: StatusFilter; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "active", label: "Active" },
-  { value: "inactive", label: "Inactive" },
-  { value: "pending", label: "Pending" },
-];
+  { value: 'all', label: 'All' },
+  { value: 'active', label: 'Active' },
+  { value: 'inactive', label: 'Inactive' },
+  { value: 'pending', label: 'Pending' },
+]
 
 const osFilters: { value: OSFilter; label: string }[] = [
-  { value: "all", label: "All OS" },
-  { value: "linux", label: "Linux" },
-  { value: "windows", label: "Windows" },
-  { value: "macos", label: "macOS" },
-];
+  { value: 'all', label: 'All OS' },
+  { value: 'linux', label: 'Linux' },
+  { value: 'windows', label: 'Windows' },
+  { value: 'macos', label: 'macOS' },
+]
 
 // Empty form state
 const emptyHostForm = {
-  name: "",
-  description: "",
-  groupId: "",
-  ip: "",
-  hostname: "",
-  os: "",
-  osVersion: "",
-  architecture: "x64" as "x86" | "x64" | "arm64",
-  cpuCores: "",
-  memoryGB: "",
+  name: '',
+  description: '',
+  groupId: '',
+  ip: '',
+  hostname: '',
+  os: '',
+  osVersion: '',
+  architecture: 'x64' as 'x86' | 'x64' | 'arm64',
+  cpuCores: '',
+  memoryGB: '',
   isVirtual: false,
-  hypervisor: "",
-  openPorts: "",
-  tags: "",
-};
+  hypervisor: '',
+  openPorts: '',
+  tags: '',
+}
 
 export default function HostsPage() {
   // Permission checks
-  const { can } = usePermissions();
-  const canWriteAssets = can(Permission.AssetsWrite);
-  const canDeleteAssets = can(Permission.AssetsDelete);
+  const { can } = usePermissions()
+  const canWriteAssets = can(Permission.AssetsWrite)
+  const canDeleteAssets = can(Permission.AssetsDelete)
 
   // Fetch hosts from API
-  const { assets: hosts, isLoading: _isLoading, isError: _isError, error: _fetchError, mutate } = useAssets({
+  const {
+    assets: hosts,
+    isLoading: _isLoading,
+    isError: _isError,
+    error: _fetchError,
+    mutate,
+  } = useAssets({
     types: ['host'],
-  });
+  })
 
-  const [selectedHost, setSelectedHost] = useState<Asset | null>(null);
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [globalFilter, setGlobalFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [osFilter, setOSFilter] = useState<OSFilter>("all");
-  const [rowSelection, setRowSelection] = useState({});
-  const [_isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedHost, setSelectedHost] = useState<Asset | null>(null)
+  const [sorting, setSorting] = useState<SortingState>([])
+  const [globalFilter, setGlobalFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [osFilter, setOSFilter] = useState<OSFilter>('all')
+  const [rowSelection, setRowSelection] = useState({})
+  const [_isSubmitting, setIsSubmitting] = useState(false)
 
   // Dialog states
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [hostToDelete, setHostToDelete] = useState<Asset | null>(null);
+  const [addDialogOpen, setAddDialogOpen] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [hostToDelete, setHostToDelete] = useState<Asset | null>(null)
 
   // Form state
-  const [formData, setFormData] = useState(emptyHostForm);
+  const [formData, setFormData] = useState(emptyHostForm)
 
   // Filter data
   const filteredData = useMemo(() => {
-    let data = [...hosts];
-    if (statusFilter !== "all") {
-      data = data.filter((d) => d.status === statusFilter);
+    let data = [...hosts]
+    if (statusFilter !== 'all') {
+      data = data.filter((d) => d.status === statusFilter)
     }
-    if (osFilter !== "all") {
+    if (osFilter !== 'all') {
       data = data.filter((d) => {
-        const os = d.metadata.os?.toLowerCase() || "";
-        if (osFilter === "linux") return os.includes("ubuntu") || os.includes("centos") || os.includes("debian") || os.includes("linux");
-        if (osFilter === "windows") return os.includes("windows");
-        if (osFilter === "macos") return os.includes("mac") || os.includes("darwin");
-        return true;
-      });
+        const os = d.metadata.os?.toLowerCase() || ''
+        if (osFilter === 'linux')
+          return (
+            os.includes('ubuntu') ||
+            os.includes('centos') ||
+            os.includes('debian') ||
+            os.includes('linux')
+          )
+        if (osFilter === 'windows') return os.includes('windows')
+        if (osFilter === 'macos') return os.includes('mac') || os.includes('darwin')
+        return true
+      })
     }
-    return data;
-  }, [hosts, statusFilter, osFilter]);
+    return data
+  }, [hosts, statusFilter, osFilter])
 
   // Status counts
-  const statusCounts = useMemo(() => ({
-    all: hosts.length,
-    active: hosts.filter((d) => d.status === "active").length,
-    inactive: hosts.filter((d) => d.status === "inactive").length,
-    pending: hosts.filter((d) => d.status === "pending").length,
-  }), [hosts]);
+  const statusCounts = useMemo(
+    () => ({
+      all: hosts.length,
+      active: hosts.filter((d) => d.status === 'active').length,
+      inactive: hosts.filter((d) => d.status === 'inactive').length,
+      pending: hosts.filter((d) => d.status === 'pending').length,
+    }),
+    [hosts]
+  )
 
   // Additional stats
-  const stats = useMemo(() => ({
-    virtual: hosts.filter((h) => h.metadata.isVirtual).length,
-    withFindings: hosts.filter((h) => h.findingCount > 0).length,
-  }), [hosts]);
+  const stats = useMemo(
+    () => ({
+      virtual: hosts.filter((h) => h.metadata.isVirtual).length,
+      withFindings: hosts.filter((h) => h.findingCount > 0).length,
+    }),
+    [hosts]
+  )
 
   // Scope data
-  const scopeTargets = useMemo(() => getActiveScopeTargets(), []);
-  const scopeExclusions = useMemo(() => getActiveScopeExclusions(), []);
+  const scopeTargets = useMemo(() => getActiveScopeTargets(), [])
+  const scopeExclusions = useMemo(() => getActiveScopeExclusions(), [])
 
   // Compute scope matches for each host
   const scopeMatchesMap = useMemo(() => {
-    const map = new Map<string, ScopeMatchResult>();
+    const map = new Map<string, ScopeMatchResult>()
     hosts.forEach((host) => {
       const match = getScopeMatchesForAsset(
-        { id: host.id, type: "host", name: host.name },
+        { id: host.id, type: 'host', name: host.name },
         scopeTargets,
         scopeExclusions
-      );
-      map.set(host.id, match);
-    });
-    return map;
-  }, [hosts, scopeTargets, scopeExclusions]);
+      )
+      map.set(host.id, match)
+    })
+    return map
+  }, [hosts, scopeTargets, scopeExclusions])
 
   // Calculate scope coverage for all hosts
   const scopeCoverage = useMemo(() => {
     const assets = hosts.map((h) => ({
       id: h.id,
       name: h.name,
-      type: "host",
-    }));
-    return calculateScopeCoverage(assets, scopeTargets, scopeExclusions);
-  }, [hosts, scopeTargets, scopeExclusions]);
+      type: 'host',
+    }))
+    return calculateScopeCoverage(assets, scopeTargets, scopeExclusions)
+  }, [hosts, scopeTargets, scopeExclusions])
 
   // Table columns
   const columns: ColumnDef<Asset>[] = [
     {
-      id: "select",
+      id: 'select',
       header: ({ table }) => (
         <Checkbox
           checked={
             table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && "indeterminate")
+            (table.getIsSomePageRowsSelected() && 'indeterminate')
           }
           onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
           aria-label="Select all"
@@ -271,11 +275,11 @@ export default function HostsPage() {
       enableSorting: false,
     },
     {
-      accessorKey: "name",
+      accessorKey: 'name',
       header: ({ column }) => (
         <Button
           variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           className="-ml-4"
         >
           Host
@@ -293,25 +297,25 @@ export default function HostsPage() {
       ),
     },
     {
-      accessorKey: "metadata.os",
-      header: "OS",
+      accessorKey: 'metadata.os',
+      header: 'OS',
       cell: ({ row }) => {
-        const os = row.original.metadata.os;
-        const version = row.original.metadata.osVersion;
+        const os = row.original.metadata.os
+        const version = row.original.metadata.osVersion
         return (
           <div>
-            <p className="text-sm">{os || "-"}</p>
+            <p className="text-sm">{os || '-'}</p>
             {version && <p className="text-xs text-muted-foreground">{version}</p>}
           </div>
-        );
+        )
       },
     },
     {
-      accessorKey: "metadata.cpuCores",
-      header: "Resources",
+      accessorKey: 'metadata.cpuCores',
+      header: 'Resources',
       cell: ({ row }) => {
-        const cpu = row.original.metadata.cpuCores;
-        const mem = row.original.metadata.memoryGB;
+        const cpu = row.original.metadata.cpuCores
+        const mem = row.original.metadata.memoryGB
         return (
           <div className="flex flex-wrap items-center gap-2">
             {cpu && (
@@ -327,15 +331,15 @@ export default function HostsPage() {
               </Badge>
             )}
           </div>
-        );
+        )
       },
     },
     {
-      accessorKey: "metadata.openPorts",
-      header: "Ports",
+      accessorKey: 'metadata.openPorts',
+      header: 'Ports',
       cell: ({ row }) => {
-        const ports = row.original.metadata.openPorts;
-        if (!ports || ports.length === 0) return <span className="text-muted-foreground">-</span>;
+        const ports = row.original.metadata.openPorts
+        if (!ports || ports.length === 0) return <span className="text-muted-foreground">-</span>
         return (
           <div className="flex flex-wrap gap-1">
             {ports.slice(0, 3).map((port) => (
@@ -349,26 +353,26 @@ export default function HostsPage() {
               </Badge>
             )}
           </div>
-        );
+        )
       },
     },
     {
-      accessorKey: "status",
-      header: "Status",
+      accessorKey: 'status',
+      header: 'Status',
       cell: ({ row }) => <StatusBadge status={row.original.status} />,
     },
     {
-      id: "scope",
-      header: "Scope",
+      id: 'scope',
+      header: 'Scope',
       cell: ({ row }) => {
-        const match = scopeMatchesMap.get(row.original.id);
-        if (!match) return <span className="text-muted-foreground">-</span>;
-        return <ScopeBadge match={match} />;
+        const match = scopeMatchesMap.get(row.original.id)
+        if (!match) return <span className="text-muted-foreground">-</span>
+        return <ScopeBadge match={match} />
       },
     },
     {
-      id: "classification",
-      header: "Classification",
+      id: 'classification',
+      header: 'Classification',
       cell: ({ row }) => (
         <ClassificationBadges
           scope={row.original.scope}
@@ -379,11 +383,11 @@ export default function HostsPage() {
       ),
     },
     {
-      accessorKey: "findingCount",
+      accessorKey: 'findingCount',
       header: ({ column }) => (
         <Button
           variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           className="-ml-4"
         >
           Findings
@@ -391,21 +395,17 @@ export default function HostsPage() {
         </Button>
       ),
       cell: ({ row }) => {
-        const count = row.original.findingCount;
-        if (count === 0) return <span className="text-muted-foreground">0</span>;
-        return (
-          <Badge variant={count > 5 ? "destructive" : "secondary"}>
-            {count}
-          </Badge>
-        );
+        const count = row.original.findingCount
+        if (count === 0) return <span className="text-muted-foreground">0</span>
+        return <Badge variant={count > 5 ? 'destructive' : 'secondary'}>{count}</Badge>
       },
     },
     {
-      accessorKey: "riskScore",
+      accessorKey: 'riskScore',
       header: ({ column }) => (
         <Button
           variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           className="-ml-4"
         >
           Risk
@@ -415,28 +415,48 @@ export default function HostsPage() {
       cell: ({ row }) => <RiskScoreBadge score={row.original.riskScore} size="sm" />,
     },
     {
-      id: "actions",
+      id: 'actions',
       cell: ({ row }) => {
-        const host = row.original;
+        const host = row.original
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSelectedHost(host); }}>
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setSelectedHost(host)
+                }}
+              >
                 <Eye className="mr-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
               <Can permission={Permission.AssetsWrite}>
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenEdit(host); }}>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleOpenEdit(host)
+                  }}
+                >
                   <Pencil className="mr-2 h-4 w-4" />
                   Edit
                 </DropdownMenuItem>
               </Can>
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleCopyIP(host); }}>
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleCopyIP(host)
+                }}
+              >
                 <Copy className="mr-2 h-4 w-4" />
                 Copy IP
               </DropdownMenuItem>
@@ -445,9 +465,9 @@ export default function HostsPage() {
                 <DropdownMenuItem
                   className="text-red-400"
                   onClick={(e) => {
-                    e.stopPropagation();
-                    setHostToDelete(host);
-                    setDeleteDialogOpen(true);
+                    e.stopPropagation()
+                    setHostToDelete(host)
+                    setDeleteDialogOpen(true)
                   }}
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
@@ -456,10 +476,10 @@ export default function HostsPage() {
               </Can>
             </DropdownMenuContent>
           </DropdownMenu>
-        );
+        )
       },
     },
-  ];
+  ]
 
   const table = useReactTable({
     data: filteredData,
@@ -472,158 +492,169 @@ export default function HostsPage() {
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-  });
+  })
 
   // Handlers
   const handleCopyIP = (host: Asset) => {
-    navigator.clipboard.writeText(host.metadata.ip || host.name);
-    toast.success("IP copied to clipboard");
-  };
+    navigator.clipboard.writeText(host.metadata.ip || host.name)
+    toast.success('IP copied to clipboard')
+  }
 
   const handleOpenEdit = (host: Asset) => {
     setFormData({
       name: host.name,
-      description: host.description || "",
-      groupId: host.groupId || "",
-      ip: host.metadata.ip || "",
-      hostname: host.metadata.hostname || "",
-      os: host.metadata.os || "",
-      osVersion: host.metadata.osVersion || "",
-      architecture: host.metadata.architecture || "x64",
-      cpuCores: host.metadata.cpuCores?.toString() || "",
-      memoryGB: host.metadata.memoryGB?.toString() || "",
+      description: host.description || '',
+      groupId: host.groupId || '',
+      ip: host.metadata.ip || '',
+      hostname: host.metadata.hostname || '',
+      os: host.metadata.os || '',
+      osVersion: host.metadata.osVersion || '',
+      architecture: host.metadata.architecture || 'x64',
+      cpuCores: host.metadata.cpuCores?.toString() || '',
+      memoryGB: host.metadata.memoryGB?.toString() || '',
       isVirtual: host.metadata.isVirtual || false,
-      hypervisor: host.metadata.hypervisor || "",
-      openPorts: host.metadata.openPorts?.join(", ") || "",
-      tags: host.tags?.join(", ") || "",
-    });
-    setSelectedHost(host);
-    setEditDialogOpen(true);
-  };
+      hypervisor: host.metadata.hypervisor || '',
+      openPorts: host.metadata.openPorts?.join(', ') || '',
+      tags: host.tags?.join(', ') || '',
+    })
+    setSelectedHost(host)
+    setEditDialogOpen(true)
+  }
 
   const handleAddHost = async () => {
     if (!formData.name || !formData.ip) {
-      toast.error("Please fill in required fields");
-      return;
+      toast.error('Please fill in required fields')
+      return
     }
 
-    setIsSubmitting(true);
+    setIsSubmitting(true)
     try {
       await createAsset({
         name: formData.name,
-        type: "host",
-        criticality: "medium",
+        type: 'host',
+        criticality: 'medium',
         description: formData.description,
-        scope: "internal",
-        exposure: "private",
-        tags: formData.tags.split(",").map((s) => s.trim()).filter(Boolean),
-      });
-      await mutate();
-      setFormData(emptyHostForm);
-      setAddDialogOpen(false);
-      toast.success("Host added successfully");
+        scope: 'internal',
+        exposure: 'private',
+        tags: formData.tags
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean),
+      })
+      await mutate()
+      setFormData(emptyHostForm)
+      setAddDialogOpen(false)
+      toast.success('Host added successfully')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to add host");
+      toast.error(err instanceof Error ? err.message : 'Failed to add host')
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   const handleEditHost = async () => {
     if (!selectedHost || !formData.name || !formData.ip) {
-      toast.error("Please fill in required fields");
-      return;
+      toast.error('Please fill in required fields')
+      return
     }
 
-    setIsSubmitting(true);
+    setIsSubmitting(true)
     try {
       await updateAsset(selectedHost.id, {
         name: formData.name,
         description: formData.description,
-        tags: formData.tags.split(",").map((s) => s.trim()).filter(Boolean),
-      });
-      await mutate();
-      setFormData(emptyHostForm);
-      setEditDialogOpen(false);
-      setSelectedHost(null);
-      toast.success("Host updated successfully");
+        tags: formData.tags
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean),
+      })
+      await mutate()
+      setFormData(emptyHostForm)
+      setEditDialogOpen(false)
+      setSelectedHost(null)
+      toast.success('Host updated successfully')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to update host");
+      toast.error(err instanceof Error ? err.message : 'Failed to update host')
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   const handleDeleteHost = async () => {
-    if (!hostToDelete) return;
-    setIsSubmitting(true);
+    if (!hostToDelete) return
+    setIsSubmitting(true)
     try {
-      await deleteAsset(hostToDelete.id);
-      await mutate();
-      setDeleteDialogOpen(false);
-      setHostToDelete(null);
-      toast.success("Host deleted successfully");
+      await deleteAsset(hostToDelete.id)
+      await mutate()
+      setDeleteDialogOpen(false)
+      setHostToDelete(null)
+      toast.success('Host deleted successfully')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete host");
+      toast.error(err instanceof Error ? err.message : 'Failed to delete host')
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   const handleBulkDelete = async () => {
-    const selectedHostIds = table.getSelectedRowModel().rows.map((r) => r.original.id);
-    if (selectedHostIds.length === 0) return;
+    const selectedHostIds = table.getSelectedRowModel().rows.map((r) => r.original.id)
+    if (selectedHostIds.length === 0) return
 
-    setIsSubmitting(true);
+    setIsSubmitting(true)
     try {
-      await bulkDeleteAssets(selectedHostIds);
-      await mutate();
-      setRowSelection({});
-      toast.success(`Deleted ${selectedHostIds.length} hosts`);
+      await bulkDeleteAssets(selectedHostIds)
+      await mutate()
+      setRowSelection({})
+      toast.success(`Deleted ${selectedHostIds.length} hosts`)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete hosts");
+      toast.error(err instanceof Error ? err.message : 'Failed to delete hosts')
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   const handleExport = () => {
     const csv = [
-      ["Name", "IP", "Hostname", "OS", "Version", "CPU", "Memory", "Status", "Risk Score", "Findings"].join(","),
+      [
+        'Name',
+        'IP',
+        'Hostname',
+        'OS',
+        'Version',
+        'CPU',
+        'Memory',
+        'Status',
+        'Risk Score',
+        'Findings',
+      ].join(','),
       ...hosts.map((h) =>
         [
           h.name,
-          h.metadata.ip || "",
-          h.metadata.hostname || "",
-          h.metadata.os || "",
-          h.metadata.osVersion || "",
-          h.metadata.cpuCores || "",
-          h.metadata.memoryGB || "",
+          h.metadata.ip || '',
+          h.metadata.hostname || '',
+          h.metadata.os || '',
+          h.metadata.osVersion || '',
+          h.metadata.cpuCores || '',
+          h.metadata.memoryGB || '',
           h.status,
           h.riskScore,
           h.findingCount,
-        ].join(",")
+        ].join(',')
       ),
-    ].join("\n");
+    ].join('\n')
 
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "hosts.csv";
-    a.click();
-    toast.success("Hosts exported");
-  };
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'hosts.csv'
+    a.click()
+    toast.success('Hosts exported')
+  }
 
   return (
     <>
-      <Header fixed>
-        <div className="ms-auto flex items-center gap-2 sm:gap-4">
-          <Search />
-          <ThemeSwitch />
-          <ProfileDropdown />
-        </div>
-      </Header>
+      <Header fixed />
 
       <Main>
         <PageHeader
@@ -636,10 +667,12 @@ export default function HostsPage() {
               Export
             </Button>
             <Can permission={Permission.AssetsWrite}>
-              <Button onClick={() => {
-                setFormData(emptyHostForm);
-                setAddDialogOpen(true);
-              }}>
+              <Button
+                onClick={() => {
+                  setFormData(emptyHostForm)
+                  setAddDialogOpen(true)
+                }}
+              >
                 <Plus className="mr-2 h-4 w-4" />
                 Add Host
               </Button>
@@ -649,7 +682,10 @@ export default function HostsPage() {
 
         {/* Stats Cards */}
         <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <Card className="cursor-pointer hover:border-primary transition-colors" onClick={() => setStatusFilter("all")}>
+          <Card
+            className="cursor-pointer hover:border-primary transition-colors"
+            onClick={() => setStatusFilter('all')}
+          >
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
                 <Server className="h-4 w-4" />
@@ -658,7 +694,10 @@ export default function HostsPage() {
               <CardTitle className="text-3xl">{statusCounts.all}</CardTitle>
             </CardHeader>
           </Card>
-          <Card className={`cursor-pointer hover:border-green-500 transition-colors ${statusFilter === "active" ? "border-green-500" : ""}`} onClick={() => setStatusFilter("active")}>
+          <Card
+            className={`cursor-pointer hover:border-green-500 transition-colors ${statusFilter === 'active' ? 'border-green-500' : ''}`}
+            onClick={() => setStatusFilter('active')}
+          >
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
                 <CheckCircle className="h-4 w-4 text-green-500" />
@@ -760,7 +799,7 @@ export default function HostsPage() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => toast.info("Scanning selected hosts...")}>
+                      <DropdownMenuItem onClick={() => toast.info('Scanning selected hosts...')}>
                         <RefreshCw className="mr-2 h-4 w-4" />
                         Rescan Selected
                       </DropdownMenuItem>
@@ -798,14 +837,16 @@ export default function HostsPage() {
                     table.getRowModel().rows.map((row) => (
                       <TableRow
                         key={row.id}
-                        data-state={row.getIsSelected() && "selected"}
+                        data-state={row.getIsSelected() && 'selected'}
                         className="cursor-pointer"
                         onClick={(e) => {
-                          if ((e.target as HTMLElement).closest('[role="checkbox"]') ||
-                              (e.target as HTMLElement).closest('button')) {
-                            return;
+                          if (
+                            (e.target as HTMLElement).closest('[role="checkbox"]') ||
+                            (e.target as HTMLElement).closest('button')
+                          ) {
+                            return
                           }
-                          setSelectedHost(row.original);
+                          setSelectedHost(row.original)
                         }}
                       >
                         {row.getVisibleCells().map((cell) => (
@@ -829,7 +870,7 @@ export default function HostsPage() {
             {/* Pagination */}
             <div className="flex items-center justify-between mt-4">
               <p className="text-sm text-muted-foreground">
-                {table.getFilteredSelectedRowModel().rows.length} of{" "}
+                {table.getFilteredSelectedRowModel().rows.length} of{' '}
                 {table.getFilteredRowModel().rows.length} row(s) selected
               </p>
               <div className="flex flex-wrap items-center gap-2">
@@ -889,9 +930,9 @@ export default function HostsPage() {
         onEdit={() => selectedHost && handleOpenEdit(selectedHost)}
         onDelete={() => {
           if (selectedHost) {
-            setHostToDelete(selectedHost);
-            setDeleteDialogOpen(true);
-            setSelectedHost(null);
+            setHostToDelete(selectedHost)
+            setDeleteDialogOpen(true)
+            setSelectedHost(null)
           }
         }}
         canEdit={canWriteAssets}
@@ -933,7 +974,7 @@ export default function HostsPage() {
                 <div className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
                   <div>
                     <p className="text-muted-foreground">Hostname</p>
-                    <p className="font-medium">{selectedHost.metadata.hostname || "-"}</p>
+                    <p className="font-medium">{selectedHost.metadata.hostname || '-'}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Operating System</p>
@@ -943,12 +984,12 @@ export default function HostsPage() {
                   </div>
                   <div>
                     <p className="text-muted-foreground">Architecture</p>
-                    <p className="font-medium">{selectedHost.metadata.architecture || "-"}</p>
+                    <p className="font-medium">{selectedHost.metadata.architecture || '-'}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Type</p>
                     <p className="font-medium">
-                      {selectedHost.metadata.isVirtual ? "Virtual" : "Physical"}
+                      {selectedHost.metadata.isVirtual ? 'Virtual' : 'Physical'}
                       {selectedHost.metadata.hypervisor && ` (${selectedHost.metadata.hypervisor})`}
                     </p>
                   </div>
@@ -962,14 +1003,16 @@ export default function HostsPage() {
                   <div className="flex items-center gap-3">
                     <Cpu className="h-5 w-5 text-blue-500" />
                     <div>
-                      <p className="text-lg font-bold">{selectedHost.metadata.cpuCores || "-"}</p>
+                      <p className="text-lg font-bold">{selectedHost.metadata.cpuCores || '-'}</p>
                       <p className="text-xs text-muted-foreground">CPU Cores</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
                     <HardDrive className="h-5 w-5 text-green-500" />
                     <div>
-                      <p className="text-lg font-bold">{selectedHost.metadata.memoryGB || "-"} GB</p>
+                      <p className="text-lg font-bold">
+                        {selectedHost.metadata.memoryGB || '-'} GB
+                      </p>
                       <p className="text-xs text-muted-foreground">Memory</p>
                     </div>
                   </div>
@@ -982,7 +1025,9 @@ export default function HostsPage() {
                   <SectionTitle>Open Ports</SectionTitle>
                   <div className="flex flex-wrap gap-1 mt-2">
                     {selectedHost.metadata.openPorts.map((port) => (
-                      <Badge key={port} variant="outline" className="text-xs">{port}</Badge>
+                      <Badge key={port} variant="outline" className="text-xs">
+                        {port}
+                      </Badge>
                     ))}
                   </div>
                 </div>
@@ -1000,9 +1045,7 @@ export default function HostsPage() {
               <Server className="h-5 w-5" />
               Add Host
             </DialogTitle>
-            <DialogDescription>
-              Add a new host to your asset inventory
-            </DialogDescription>
+            <DialogDescription>Add a new host to your asset inventory</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -1086,7 +1129,9 @@ export default function HostsPage() {
                 <Label htmlFor="architecture">Architecture</Label>
                 <Select
                   value={formData.architecture}
-                  onValueChange={(value) => setFormData({ ...formData, architecture: value as "x86" | "x64" | "arm64" })}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, architecture: value as 'x86' | 'x64' | 'arm64' })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select" />
@@ -1124,7 +1169,9 @@ export default function HostsPage() {
                 <Checkbox
                   id="isVirtual"
                   checked={formData.isVirtual}
-                  onCheckedChange={(checked) => setFormData({ ...formData, isVirtual: checked === true })}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, isVirtual: checked === true })
+                  }
                 />
                 <Label htmlFor="isVirtual">Virtual Machine</Label>
               </div>
@@ -1177,9 +1224,7 @@ export default function HostsPage() {
               <Pencil className="h-5 w-5" />
               Edit Host
             </DialogTitle>
-            <DialogDescription>
-              Update host information
-            </DialogDescription>
+            <DialogDescription>Update host information</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -1263,7 +1308,9 @@ export default function HostsPage() {
                 <Label htmlFor="edit-architecture">Architecture</Label>
                 <Select
                   value={formData.architecture}
-                  onValueChange={(value) => setFormData({ ...formData, architecture: value as "x86" | "x64" | "arm64" })}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, architecture: value as 'x86' | 'x64' | 'arm64' })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select" />
@@ -1301,7 +1348,9 @@ export default function HostsPage() {
                 <Checkbox
                   id="edit-isVirtual"
                   checked={formData.isVirtual}
-                  onCheckedChange={(checked) => setFormData({ ...formData, isVirtual: checked === true })}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, isVirtual: checked === true })
+                  }
                 />
                 <Label htmlFor="edit-isVirtual">Virtual Machine</Label>
               </div>
@@ -1352,21 +1401,18 @@ export default function HostsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Host</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete <strong>{hostToDelete?.name}</strong>?
-              This action cannot be undone.
+              Are you sure you want to delete <strong>{hostToDelete?.name}</strong>? This action
+              cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-red-500 hover:bg-red-600"
-              onClick={handleDeleteHost}
-            >
+            <AlertDialogAction className="bg-red-500 hover:bg-red-600" onClick={handleDeleteHost}>
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </>
-  );
+  )
 }

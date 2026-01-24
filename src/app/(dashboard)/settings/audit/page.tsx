@@ -1,23 +1,14 @@
-"use client";
+'use client'
 
-import { useState, useMemo } from "react";
-import { Header, Main } from "@/components/layout";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { PageHeader } from "@/features/shared";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { useState, useMemo } from 'react'
+import { Header, Main } from '@/components/layout'
+import { PageHeader } from '@/features/shared'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -25,21 +16,16 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+} from '@/components/ui/table'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+} from '@/components/ui/select'
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import {
   History,
   Search as SearchIcon,
@@ -62,7 +48,7 @@ import {
   Calendar,
   Activity,
   Loader2,
-} from "lucide-react";
+} from 'lucide-react'
 import {
   useAuditLogs,
   useAuditStats,
@@ -74,111 +60,108 @@ import {
   SEVERITY_DISPLAY,
   formatAction,
   getActionCategory,
-} from "@/features/organization";
-import { Permission, useHasPermission } from "@/lib/permissions";
+} from '@/features/organization'
+import { Permission, useHasPermission } from '@/lib/permissions'
 
 // Helper functions
 const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-};
+  return new Date(dateString).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
+}
 
 const formatTime = (dateString: string) => {
-  return new Date(dateString).toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-};
+  return new Date(dateString).toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
 
 const formatRelativeTime = (dateString: string) => {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMs / 3600000)
+  const diffDays = Math.floor(diffMs / 86400000)
 
-  if (diffMins < 1) return "Just now";
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return formatDate(dateString);
-};
+  if (diffMins < 1) return 'Just now'
+  if (diffMins < 60) return `${diffMins}m ago`
+  if (diffHours < 24) return `${diffHours}h ago`
+  if (diffDays < 7) return `${diffDays}d ago`
+  return formatDate(dateString)
+}
 
 const getActionIcon = (action: string) => {
-  const category = getActionCategory(action);
+  const category = getActionCategory(action)
   switch (category) {
-    case "user":
-      return User;
-    case "member":
-      return Users;
-    case "invitation":
-      return Mail;
-    case "tenant":
-      return Building;
-    case "settings":
-      return Settings;
-    case "auth":
-      return Key;
-    case "permission":
-      return ShieldAlert;
+    case 'user':
+      return User
+    case 'member':
+      return Users
+    case 'invitation':
+      return Mail
+    case 'tenant':
+      return Building
+    case 'settings':
+      return Settings
+    case 'auth':
+      return Key
+    case 'permission':
+      return ShieldAlert
     default:
-      return Activity;
+      return Activity
   }
-};
+}
 
 const getResultIcon = (result: AuditResult) => {
   switch (result) {
-    case "success":
-      return CheckCircle;
-    case "failure":
-      return XCircle;
-    case "denied":
-      return ShieldAlert;
+    case 'success':
+      return CheckCircle
+    case 'failure':
+      return XCircle
+    case 'denied':
+      return ShieldAlert
     default:
-      return AlertCircle;
+      return AlertCircle
   }
-};
+}
 
 export default function AuditLogPage() {
   // Permission check
-  const hasAuditPermission = useHasPermission(Permission.AuditRead);
+  const hasAuditPermission = useHasPermission(Permission.AuditRead)
 
   // Filters state
   const [filters, setFilters] = useState<AuditLogFilters>({
     page: 0,
     per_page: 20,
-  });
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
+  })
+  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null)
 
   // Build filters with search
-  const activeFilters = useMemo(() => ({
-    ...filters,
-    search: searchTerm || undefined,
-  }), [filters, searchTerm]);
+  const activeFilters = useMemo(
+    () => ({
+      ...filters,
+      search: searchTerm || undefined,
+    }),
+    [filters, searchTerm]
+  )
 
   // Fetch data (tenant is extracted from JWT token by backend)
   // Only fetch if user has permission
   const { logs, total, page, totalPages, isLoading, isError, mutate } = useAuditLogs(
     hasAuditPermission ? activeFilters : undefined
-  );
-  const { stats, isLoading: statsLoading } = useAuditStats();
+  )
+  const { stats, isLoading: statsLoading } = useAuditStats()
 
   // Access denied page
   if (!hasAuditPermission) {
     return (
       <>
-        <Header fixed>
-          <div className="ms-auto flex items-center gap-2 sm:gap-4">
-            <Search />
-            <ThemeSwitch />
-            <ProfileDropdown />
-          </div>
-        </Header>
+        <Header fixed />
         <Main>
           <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
             <div className="rounded-full bg-red-100 p-4 dark:bg-red-900/20">
@@ -186,50 +169,42 @@ export default function AuditLogPage() {
             </div>
             <h2 className="text-xl font-semibold">Access Denied</h2>
             <p className="text-muted-foreground text-center max-w-md">
-              You don&apos;t have permission to view audit logs. Please contact your administrator to request access.
+              You don&apos;t have permission to view audit logs. Please contact your administrator
+              to request access.
             </p>
           </div>
         </Main>
       </>
-    );
+    )
   }
 
   // Filter options
-  const resultOptions: AuditResult[] = ["success", "failure", "denied"];
-  const severityOptions: AuditSeverity[] = ["info", "low", "medium", "high", "critical"];
+  const resultOptions: AuditResult[] = ['success', 'failure', 'denied']
+  const severityOptions: AuditSeverity[] = ['info', 'low', 'medium', 'high', 'critical']
 
   // Active filters count
   const activeFiltersCount = [
     filters.result?.length,
     filters.severity?.length,
     filters.action?.length,
-  ].filter(Boolean).length;
+  ].filter(Boolean).length
 
   const clearFilters = () => {
-    setFilters({ page: 0, per_page: 20 });
-    setSearchTerm("");
-  };
+    setFilters({ page: 0, per_page: 20 })
+    setSearchTerm('')
+  }
 
   // Pagination
   const goToPage = (newPage: number) => {
-    setFilters({ ...filters, page: newPage });
-  };
+    setFilters({ ...filters, page: newPage })
+  }
 
   return (
     <>
-      <Header fixed>
-        <div className="ms-auto flex items-center gap-2 sm:gap-4">
-          <Search />
-          <ThemeSwitch />
-          <ProfileDropdown />
-        </div>
-      </Header>
+      <Header fixed />
 
       <Main>
-        <PageHeader
-          title="Audit Log"
-          description="View activity history and security events"
-        >
+        <PageHeader title="Audit Log" description="View activity history and security events">
           <Button variant="outline" onClick={() => mutate()}>
             <RefreshCw className="mr-2 h-4 w-4" />
             Refresh
@@ -245,7 +220,7 @@ export default function AuditLogPage() {
                 Total Events (7 days)
               </CardDescription>
               <CardTitle className="text-3xl">
-                {statsLoading ? <Skeleton className="h-9 w-16" /> : stats?.total_logs ?? 0}
+                {statsLoading ? <Skeleton className="h-9 w-16" /> : (stats?.total_logs ?? 0)}
               </CardTitle>
             </CardHeader>
           </Card>
@@ -256,7 +231,11 @@ export default function AuditLogPage() {
                 Successful
               </CardDescription>
               <CardTitle className="text-3xl text-green-500">
-                {statsLoading ? <Skeleton className="h-9 w-16" /> : stats?.logs_by_result?.success ?? 0}
+                {statsLoading ? (
+                  <Skeleton className="h-9 w-16" />
+                ) : (
+                  (stats?.logs_by_result?.success ?? 0)
+                )}
               </CardTitle>
             </CardHeader>
           </Card>
@@ -267,7 +246,11 @@ export default function AuditLogPage() {
                 Failed
               </CardDescription>
               <CardTitle className="text-3xl text-red-500">
-                {statsLoading ? <Skeleton className="h-9 w-16" /> : stats?.logs_by_result?.failure ?? 0}
+                {statsLoading ? (
+                  <Skeleton className="h-9 w-16" />
+                ) : (
+                  (stats?.logs_by_result?.failure ?? 0)
+                )}
               </CardTitle>
             </CardHeader>
           </Card>
@@ -278,7 +261,11 @@ export default function AuditLogPage() {
                 Denied
               </CardDescription>
               <CardTitle className="text-3xl text-orange-500">
-                {statsLoading ? <Skeleton className="h-9 w-16" /> : stats?.logs_by_result?.denied ?? 0}
+                {statsLoading ? (
+                  <Skeleton className="h-9 w-16" />
+                ) : (
+                  (stats?.logs_by_result?.denied ?? 0)
+                )}
               </CardTitle>
             </CardHeader>
           </Card>
@@ -290,9 +277,7 @@ export default function AuditLogPage() {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-base">Activity History</CardTitle>
-                <CardDescription>
-                  {total} events found
-                </CardDescription>
+                <CardDescription>{total} events found</CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -312,12 +297,12 @@ export default function AuditLogPage() {
               <div className="flex flex-wrap items-center gap-2">
                 {/* Result Filter */}
                 <Select
-                  value={filters.result?.[0] || "all"}
+                  value={filters.result?.[0] || 'all'}
                   onValueChange={(value) =>
                     setFilters({
                       ...filters,
-                      result: value === "all" ? undefined : [value as AuditResult],
-                      page: 0
+                      result: value === 'all' ? undefined : [value as AuditResult],
+                      page: 0,
                     })
                   }
                 >
@@ -336,12 +321,12 @@ export default function AuditLogPage() {
 
                 {/* Severity Filter */}
                 <Select
-                  value={filters.severity?.[0] || "all"}
+                  value={filters.severity?.[0] || 'all'}
                   onValueChange={(value) =>
                     setFilters({
                       ...filters,
-                      severity: value === "all" ? undefined : [value as AuditSeverity],
-                      page: 0
+                      severity: value === 'all' ? undefined : [value as AuditSeverity],
+                      page: 0,
                     })
                   }
                 >
@@ -408,10 +393,10 @@ export default function AuditLogPage() {
                         </TableRow>
                       ) : (
                         logs.map((log) => {
-                          const ActionIcon = getActionIcon(log.action);
-                          const ResultIcon = getResultIcon(log.result);
-                          const resultDisplay = RESULT_DISPLAY[log.result];
-                          const severityDisplay = SEVERITY_DISPLAY[log.severity];
+                          const ActionIcon = getActionIcon(log.action)
+                          const ResultIcon = getResultIcon(log.result)
+                          const resultDisplay = RESULT_DISPLAY[log.result]
+                          const severityDisplay = SEVERITY_DISPLAY[log.severity]
 
                           return (
                             <TableRow
@@ -433,11 +418,11 @@ export default function AuditLogPage() {
                                 <div className="flex flex-wrap items-center gap-2">
                                   <Avatar className="h-7 w-7">
                                     <AvatarFallback className="text-xs">
-                                      {log.actor_email?.substring(0, 2).toUpperCase() || "?"}
+                                      {log.actor_email?.substring(0, 2).toUpperCase() || '?'}
                                     </AvatarFallback>
                                   </Avatar>
                                   <span className="text-sm truncate max-w-[150px]">
-                                    {log.actor_email || "System"}
+                                    {log.actor_email || 'System'}
                                   </span>
                                 </div>
                               </TableCell>
@@ -449,23 +434,31 @@ export default function AuditLogPage() {
                               </TableCell>
                               <TableCell>
                                 <div className="flex flex-col">
-                                  <span className="text-sm">{log.resource_name || log.resource_id}</span>
-                                  <span className="text-xs text-muted-foreground">{log.resource_type}</span>
+                                  <span className="text-sm">
+                                    {log.resource_name || log.resource_id}
+                                  </span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {log.resource_type}
+                                  </span>
                                 </div>
                               </TableCell>
                               <TableCell>
-                                <Badge className={`${resultDisplay.bgColor} ${resultDisplay.color} border-0 gap-1`}>
+                                <Badge
+                                  className={`${resultDisplay.bgColor} ${resultDisplay.color} border-0 gap-1`}
+                                >
                                   <ResultIcon className="h-3 w-3" />
                                   {resultDisplay.label}
                                 </Badge>
                               </TableCell>
                               <TableCell>
-                                <Badge className={`${severityDisplay.bgColor} ${severityDisplay.color} border-0`}>
+                                <Badge
+                                  className={`${severityDisplay.bgColor} ${severityDisplay.color} border-0`}
+                                >
                                   {severityDisplay.label}
                                 </Badge>
                               </TableCell>
                             </TableRow>
-                          );
+                          )
                         })
                       )}
                     </TableBody>
@@ -530,17 +523,25 @@ export default function AuditLogPage() {
           {selectedLog && (
             <>
               {/* Header */}
-              <div className={`-mx-6 -mt-6 px-6 py-6 ${
-                selectedLog.result === "success" ? "bg-gradient-to-r from-green-500/20 to-green-500/5" :
-                selectedLog.result === "failure" ? "bg-gradient-to-r from-red-500/20 to-red-500/5" :
-                "bg-gradient-to-r from-orange-500/20 to-orange-500/5"
-              }`}>
+              <div
+                className={`-mx-6 -mt-6 px-6 py-6 ${
+                  selectedLog.result === 'success'
+                    ? 'bg-gradient-to-r from-green-500/20 to-green-500/5'
+                    : selectedLog.result === 'failure'
+                      ? 'bg-gradient-to-r from-red-500/20 to-red-500/5'
+                      : 'bg-gradient-to-r from-orange-500/20 to-orange-500/5'
+                }`}
+              >
                 <SheetHeader className="text-left">
                   <div className="flex items-center gap-2 mb-2">
-                    <Badge className={`${RESULT_DISPLAY[selectedLog.result].bgColor} ${RESULT_DISPLAY[selectedLog.result].color} border-0`}>
+                    <Badge
+                      className={`${RESULT_DISPLAY[selectedLog.result].bgColor} ${RESULT_DISPLAY[selectedLog.result].color} border-0`}
+                    >
                       {RESULT_DISPLAY[selectedLog.result].label}
                     </Badge>
-                    <Badge className={`${SEVERITY_DISPLAY[selectedLog.severity].bgColor} ${SEVERITY_DISPLAY[selectedLog.severity].color} border-0`}>
+                    <Badge
+                      className={`${SEVERITY_DISPLAY[selectedLog.severity].bgColor} ${SEVERITY_DISPLAY[selectedLog.severity].color} border-0`}
+                    >
                       {SEVERITY_DISPLAY[selectedLog.severity].label}
                     </Badge>
                   </div>
@@ -556,11 +557,11 @@ export default function AuditLogPage() {
                   <div className="flex items-center gap-3 p-3 rounded-lg border">
                     <Avatar className="h-10 w-10">
                       <AvatarFallback>
-                        {selectedLog.actor_email?.substring(0, 2).toUpperCase() || "?"}
+                        {selectedLog.actor_email?.substring(0, 2).toUpperCase() || '?'}
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <p className="font-medium">{selectedLog.actor_email || "System"}</p>
+                      <p className="font-medium">{selectedLog.actor_email || 'System'}</p>
                       {selectedLog.actor_ip && (
                         <p className="text-xs text-muted-foreground">IP: {selectedLog.actor_ip}</p>
                       )}
@@ -578,7 +579,9 @@ export default function AuditLogPage() {
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">ID</span>
-                      <code className="text-xs bg-muted px-2 py-1 rounded">{selectedLog.resource_id}</code>
+                      <code className="text-xs bg-muted px-2 py-1 rounded">
+                        {selectedLog.resource_id}
+                      </code>
                     </div>
                     {selectedLog.resource_name && (
                       <div className="flex items-center justify-between">
@@ -596,33 +599,38 @@ export default function AuditLogPage() {
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                     <div>
                       <p className="text-sm font-medium">{formatDate(selectedLog.timestamp)}</p>
-                      <p className="text-xs text-muted-foreground">{formatTime(selectedLog.timestamp)}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatTime(selectedLog.timestamp)}
+                      </p>
                     </div>
                   </div>
                 </div>
 
                 {/* Changes */}
-                {selectedLog.changes?.field_changes && Object.keys(selectedLog.changes.field_changes).length > 0 && (
-                  <div className="space-y-3">
-                    <h4 className="text-sm font-medium text-muted-foreground">Changes</h4>
-                    <div className="p-3 rounded-lg border space-y-2">
-                      {Object.entries(selectedLog.changes.field_changes).map(([field, change]) => (
-                        <div key={field} className="text-sm">
-                          <span className="font-medium">{field}</span>
-                          <div className="flex items-center gap-2 mt-1">
-                            <code className="text-xs bg-red-500/10 text-red-500 px-2 py-1 rounded line-through">
-                              {String(change.old)}
-                            </code>
-                            <span className="text-muted-foreground">→</span>
-                            <code className="text-xs bg-green-500/10 text-green-500 px-2 py-1 rounded">
-                              {String(change.new)}
-                            </code>
-                          </div>
-                        </div>
-                      ))}
+                {selectedLog.changes?.field_changes &&
+                  Object.keys(selectedLog.changes.field_changes).length > 0 && (
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-medium text-muted-foreground">Changes</h4>
+                      <div className="p-3 rounded-lg border space-y-2">
+                        {Object.entries(selectedLog.changes.field_changes).map(
+                          ([field, change]) => (
+                            <div key={field} className="text-sm">
+                              <span className="font-medium">{field}</span>
+                              <div className="flex items-center gap-2 mt-1">
+                                <code className="text-xs bg-red-500/10 text-red-500 px-2 py-1 rounded line-through">
+                                  {String(change.old)}
+                                </code>
+                                <span className="text-muted-foreground">→</span>
+                                <code className="text-xs bg-green-500/10 text-green-500 px-2 py-1 rounded">
+                                  {String(change.new)}
+                                </code>
+                              </div>
+                            </div>
+                          )
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
                 {/* Metadata */}
                 {selectedLog.metadata && Object.keys(selectedLog.metadata).length > 0 && (
@@ -651,5 +659,5 @@ export default function AuditLogPage() {
         </SheetContent>
       </Sheet>
     </>
-  );
+  )
 }

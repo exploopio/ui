@@ -1,12 +1,9 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import { Header, Main } from "@/components/layout";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { PageHeader } from "@/features/shared";
-import { Button } from "@/components/ui/button";
+import { useState } from 'react'
+import { Header, Main } from '@/components/layout'
+import { PageHeader } from '@/features/shared'
+import { Button } from '@/components/ui/button'
 import {
   CreditCard,
   Check,
@@ -19,7 +16,7 @@ import {
   Server,
   Headphones,
   Gift,
-} from "lucide-react";
+} from 'lucide-react'
 import {
   Card,
   CardContent,
@@ -27,76 +24,68 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Skeleton } from "@/components/ui/skeleton";
-import { toast } from "sonner";
-import { cn } from "@/lib/utils";
-import {
-  useTenantSubscription,
-  usePlans,
-  LimitIndicator,
-} from "@/features/licensing";
+} from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import { Skeleton } from '@/components/ui/skeleton'
+import { toast } from 'sonner'
+import { cn } from '@/lib/utils'
+import { useTenantSubscription, usePlans, LimitIndicator } from '@/features/licensing'
 
 // Status badge colors
 const STATUS_COLORS: Record<string, string> = {
-  active: "bg-green-500",
-  trial: "bg-blue-500",
-  past_due: "bg-yellow-500",
-  cancelled: "bg-orange-500",
-  expired: "bg-red-500",
-};
+  active: 'bg-green-500',
+  trial: 'bg-blue-500',
+  past_due: 'bg-yellow-500',
+  cancelled: 'bg-orange-500',
+  expired: 'bg-red-500',
+}
 
 export default function BillingPage() {
-  const { subscription, plan: currentPlan, isActive, isLoading: subLoading } = useTenantSubscription();
-  const { plans, isLoading: plansLoading } = usePlans();
-  const [upgradingPlan, setUpgradingPlan] = useState<string | null>(null);
+  const {
+    subscription,
+    plan: currentPlan,
+    isActive,
+    isLoading: subLoading,
+  } = useTenantSubscription()
+  const { plans, isLoading: plansLoading } = usePlans()
+  const [upgradingPlan, setUpgradingPlan] = useState<string | null>(null)
 
   const handleUpdatePayment = () => {
-    toast.info("Redirecting to payment portal...");
+    toast.info('Redirecting to payment portal...')
     // TODO: Implement Stripe customer portal
-  };
+  }
 
   const handleChangePlan = async (planSlug: string) => {
-    setUpgradingPlan(planSlug);
+    setUpgradingPlan(planSlug)
     // TODO: Implement plan change via Stripe
     setTimeout(() => {
-      setUpgradingPlan(null);
-      toast.info(`Contact sales to upgrade to ${planSlug} plan`);
-    }, 1000);
-  };
+      setUpgradingPlan(null)
+      toast.info(`Contact sales to upgrade to ${planSlug} plan`)
+    }, 1000)
+  }
 
   const isCurrentPlan = (planSlug: string) => {
-    return currentPlan?.slug === planSlug;
-  };
+    return currentPlan?.slug === planSlug
+  }
 
   // Format price display
-  const formatPrice = (price: number | null, currency: string = "USD") => {
-    if (price === null) return "Custom";
-    if (price === 0) return "Free";
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
+  const formatPrice = (price: number | null, currency: string = 'USD') => {
+    if (price === null) return 'Custom'
+    if (price === 0) return 'Free'
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
       currency,
       minimumFractionDigits: 0,
-    }).format(price);
-  };
+    }).format(price)
+  }
 
   return (
     <>
-      <Header fixed>
-        <div className="ms-auto flex items-center gap-2 sm:gap-4">
-          <Search />
-          <ThemeSwitch />
-          <ProfileDropdown />
-        </div>
-      </Header>
+      <Header fixed />
 
       <Main>
-        <PageHeader
-          title="Billing"
-          description="Manage your subscription and billing information"
-        >
+        <PageHeader title="Billing" description="Manage your subscription and billing information">
           <Button variant="outline" onClick={handleUpdatePayment}>
             <CreditCard className="mr-2 h-4 w-4" />
             Update Payment Method
@@ -114,7 +103,7 @@ export default function BillingPage() {
                     {subLoading ? (
                       <Skeleton className="h-6 w-32" />
                     ) : (
-                      <>{currentPlan?.name || "No Plan"} Plan</>
+                      <>{currentPlan?.name || 'No Plan'} Plan</>
                     )}
                   </CardTitle>
                   <CardDescription>Your current subscription</CardDescription>
@@ -122,8 +111,8 @@ export default function BillingPage() {
                 {subLoading ? (
                   <Skeleton className="h-6 w-16" />
                 ) : (
-                  <Badge className={cn(STATUS_COLORS[subscription?.status || "expired"])}>
-                    {subscription?.status || "Unknown"}
+                  <Badge className={cn(STATUS_COLORS[subscription?.status || 'expired'])}>
+                    {subscription?.status || 'Unknown'}
                   </Badge>
                 )}
               </div>
@@ -147,7 +136,7 @@ export default function BillingPage() {
                       {formatPrice(currentPlan?.price_monthly || 0, currentPlan?.currency)}
                     </span>
                     <span className="text-muted-foreground">
-                      /{subscription?.billing_cycle || "month"}
+                      /{subscription?.billing_cycle || 'month'}
                     </span>
                   </div>
 
@@ -179,7 +168,7 @@ export default function BillingPage() {
                           <span className="text-xs">Team Members</span>
                         </div>
                         <span className="text-lg font-semibold">
-                          {currentPlan.max_users === -1 ? "Unlimited" : currentPlan.max_users}
+                          {currentPlan.max_users === -1 ? 'Unlimited' : currentPlan.max_users}
                         </span>
                       </div>
                       <div className="text-center">
@@ -188,7 +177,7 @@ export default function BillingPage() {
                           <span className="text-xs">Assets</span>
                         </div>
                         <span className="text-lg font-semibold">
-                          {currentPlan.max_assets === -1 ? "Unlimited" : currentPlan.max_assets}
+                          {currentPlan.max_assets === -1 ? 'Unlimited' : currentPlan.max_assets}
                         </span>
                       </div>
                       <div className="text-center">
@@ -197,7 +186,7 @@ export default function BillingPage() {
                           <span className="text-xs">Support</span>
                         </div>
                         <span className="text-lg font-semibold capitalize">
-                          {currentPlan.support_level || "Community"}
+                          {currentPlan.support_level || 'Community'}
                         </span>
                       </div>
                     </div>
@@ -211,10 +200,10 @@ export default function BillingPage() {
                       <div className="flex items-center justify-between">
                         <span className="text-muted-foreground">Started</span>
                         <span className="font-medium">
-                          {new Date(subscription.started_at).toLocaleDateString("en-US", {
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
+                          {new Date(subscription.started_at).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
                           })}
                         </span>
                       </div>
@@ -223,10 +212,10 @@ export default function BillingPage() {
                       <div className="flex items-center justify-between">
                         <span className="text-muted-foreground">Expires</span>
                         <span className="font-medium">
-                          {new Date(subscription.expires_at).toLocaleDateString("en-US", {
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
+                          {new Date(subscription.expires_at).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
                           })}
                         </span>
                       </div>
@@ -301,25 +290,25 @@ export default function BillingPage() {
             ) : (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {plans.map((plan) => {
-                  const isCurrent = isCurrentPlan(plan.slug);
-                  const isPopular = plan.is_popular;
-                  const isUpgrading = upgradingPlan === plan.slug;
+                  const isCurrent = isCurrentPlan(plan.slug)
+                  const isPopular = plan.is_popular
+                  const isUpgrading = upgradingPlan === plan.slug
 
                   return (
                     <div
                       key={plan.id}
                       className={cn(
-                        "relative rounded-lg border p-4 sm:p-6 transition-all",
-                        isPopular && "border-primary ring-2 ring-primary",
-                        isCurrent && "bg-muted/50"
+                        'relative rounded-lg border p-4 sm:p-6 transition-all',
+                        isPopular && 'border-primary ring-2 ring-primary',
+                        isCurrent && 'bg-muted/50'
                       )}
                     >
                       {plan.badge && (
                         <Badge
                           className={cn(
-                            "absolute -top-2 right-4",
-                            plan.badge === "POPULAR" && "bg-primary",
-                            plan.badge === "BEST VALUE" && "bg-green-500"
+                            'absolute -top-2 right-4',
+                            plan.badge === 'POPULAR' && 'bg-primary',
+                            plan.badge === 'BEST VALUE' && 'bg-green-500'
                           )}
                         >
                           {plan.badge}
@@ -349,16 +338,22 @@ export default function BillingPage() {
                         <div className="grid grid-cols-2 gap-2 text-xs border rounded-md p-2 bg-muted/30">
                           <div className="flex items-center gap-1">
                             <Users className="h-3 w-3 text-muted-foreground" />
-                            <span>{plan.max_users === -1 ? "Unlimited" : plan.max_users} users</span>
+                            <span>
+                              {plan.max_users === -1 ? 'Unlimited' : plan.max_users} users
+                            </span>
                           </div>
                           <div className="flex items-center gap-1">
                             <Server className="h-3 w-3 text-muted-foreground" />
-                            <span>{plan.max_assets === -1 ? "Unlimited" : plan.max_assets} assets</span>
+                            <span>
+                              {plan.max_assets === -1 ? 'Unlimited' : plan.max_assets} assets
+                            </span>
                           </div>
                           {plan.trial_days > 0 && (
                             <div className="flex items-center gap-1 col-span-2">
                               <Gift className="h-3 w-3 text-blue-500" />
-                              <span className="text-blue-600">{plan.trial_days}-day free trial</span>
+                              <span className="text-blue-600">
+                                {plan.trial_days}-day free trial
+                              </span>
                             </div>
                           )}
                         </div>
@@ -377,7 +372,7 @@ export default function BillingPage() {
                         </ul>
                         <Button
                           className="w-full"
-                          variant={isCurrent ? "outline" : isPopular ? "default" : "secondary"}
+                          variant={isCurrent ? 'outline' : isPopular ? 'default' : 'secondary'}
                           disabled={isCurrent || isUpgrading}
                           onClick={() => handleChangePlan(plan.slug)}
                         >
@@ -387,16 +382,16 @@ export default function BillingPage() {
                               Processing...
                             </>
                           ) : isCurrent ? (
-                            "Current Plan"
+                            'Current Plan'
                           ) : plan.price_monthly === null ? (
-                            "Contact Sales"
+                            'Contact Sales'
                           ) : (
-                            "Upgrade"
+                            'Upgrade'
                           )}
                         </Button>
                       </div>
                     </div>
-                  );
+                  )
                 })}
               </div>
             )}
@@ -409,35 +404,35 @@ export default function BillingPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-destructive">
                 <AlertCircle className="h-5 w-5" />
-                Subscription {subscription.status === "expired" ? "Expired" : "Inactive"}
+                Subscription {subscription.status === 'expired' ? 'Expired' : 'Inactive'}
               </CardTitle>
               <CardDescription>
-                {subscription.status === "cancelled"
-                  ? "Your subscription has been cancelled. You can still access your data until the end of the billing period."
-                  : subscription.status === "past_due"
-                  ? "Your payment is past due. Please update your payment method to continue using the service."
-                  : "Your subscription has expired. Please renew to continue using the service."}
+                {subscription.status === 'cancelled'
+                  ? 'Your subscription has been cancelled. You can still access your data until the end of the billing period.'
+                  : subscription.status === 'past_due'
+                    ? 'Your payment is past due. Please update your payment method to continue using the service.'
+                    : 'Your subscription has expired. Please renew to continue using the service.'}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Button onClick={handleUpdatePayment}>
                 <CreditCard className="mr-2 h-4 w-4" />
-                {subscription.status === "past_due" ? "Update Payment" : "Renew Subscription"}
+                {subscription.status === 'past_due' ? 'Update Payment' : 'Renew Subscription'}
               </Button>
             </CardContent>
           </Card>
         )}
       </Main>
     </>
-  );
+  )
 }
 
 // Helper to format metric labels
 function formatMetricLabel(moduleId: string, metric: string): string {
   const labels: Record<string, Record<string, string>> = {
-    assets: { max_items: "Assets" },
-    team: { max_members: "Team Members" },
-    scans: { max_per_month: "Scans/Month" },
-  };
-  return labels[moduleId]?.[metric] || `${moduleId} ${metric}`;
+    assets: { max_items: 'Assets' },
+    team: { max_members: 'Team Members' },
+    scans: { max_per_month: 'Scans/Month' },
+  }
+  return labels[moduleId]?.[metric] || `${moduleId} ${metric}`
 }

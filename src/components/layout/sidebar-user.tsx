@@ -1,87 +1,83 @@
-"use client";
+'use client'
 
 /**
  * Sidebar User Component
  *
- * Displays current user info in sidebar footer with logout option
+ * Displays current user info in sidebar footer with compact dropdown
  * - Fetches user data from local storage or server
  * - Shows avatar, name, and email
- * - Provides logout functionality
+ * - Provides quick access to Settings and Sign out
+ *
+ * Note: Full account/settings menu is in ProfileDropdown (header)
  */
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import {
-  BadgeCheck,
-  Bell,
-  ChevronsUpDown,
-  LogOut,
-} from "lucide-react";
-import useDialogState from "@/hooks/use-dialog-state";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useEffect, useState } from 'react'
+import Link from 'next/link'
+import { ChevronsUpDown, LogOut, Settings } from 'lucide-react'
+import useDialogState from '@/hooks/use-dialog-state'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu'
 import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
-} from "@/components/ui/sidebar";
-import { SignOutDialog } from "@/components/sign-out-dialog";
+} from '@/components/ui/sidebar'
+import { SignOutDialog } from '@/components/sign-out-dialog'
 
 interface UserData {
-  id: string;
-  name: string;
-  email: string;
-  avatar?: string;
+  id: string
+  name: string
+  email: string
+  avatar?: string
 }
 
 interface SidebarUserProps {
   /**
    * Initial user data passed from server
    */
-  initialUser?: UserData | null;
+  initialUser?: UserData | null
 }
 
 export function SidebarUser({ initialUser }: SidebarUserProps) {
-  const { isMobile } = useSidebar();
-  const [open, setOpen] = useDialogState();
-  const [user, setUser] = useState<UserData | null>(initialUser || null);
+  const { isMobile } = useSidebar()
+  const [open, setOpen] = useDialogState()
+  const [user, setUser] = useState<UserData | null>(initialUser || null)
 
   // Try to get user from localStorage on mount (for local auth) - syncing with external storage
   useEffect(() => {
     if (!user) {
       try {
-        const storedUser = localStorage.getItem("app_user");
+        const storedUser = localStorage.getItem('app_user')
         if (storedUser) {
-          setUser(JSON.parse(storedUser));
+          setUser(JSON.parse(storedUser))
         }
       } catch {
         // Ignore localStorage errors
       }
     }
-  }, [user]);
+  }, [user])
 
   // Don't render if no user
   if (!user) {
-    return null;
+    return null
   }
 
   const initials = user.name
     ? user.name
-        .split(" ")
+        .split(' ')
         .map((n) => n[0])
-        .join("")
+        .join('')
         .toUpperCase()
         .slice(0, 2)
-    : user.email?.charAt(0).toUpperCase() || "U";
+    : user.email?.charAt(0).toUpperCase() || 'U'
 
   return (
     <>
@@ -95,15 +91,11 @@ export function SidebarUser({ initialUser }: SidebarUserProps) {
               >
                 <Avatar className="h-8 w-8 rounded-lg">
                   <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback className="rounded-lg">
-                    {initials}
-                  </AvatarFallback>
+                  <AvatarFallback className="rounded-lg">{initials}</AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-start text-sm leading-tight">
-                  <span className="truncate font-semibold">{user.name || "User"}</span>
-                  <span className="truncate text-xs text-muted-foreground">
-                    {user.email}
-                  </span>
+                  <span className="truncate font-semibold">{user.name || 'User'}</span>
+                  <span className="truncate text-xs text-muted-foreground">{user.email}</span>
                 </div>
                 <ChevronsUpDown className="ms-auto size-4" />
               </SidebarMenuButton>
@@ -111,7 +103,7 @@ export function SidebarUser({ initialUser }: SidebarUserProps) {
 
             <DropdownMenuContent
               className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
-              side={isMobile ? "bottom" : "right"}
+              side={isMobile ? 'bottom' : 'right'}
               align="end"
               sideOffset={4}
             >
@@ -119,43 +111,27 @@ export function SidebarUser({ initialUser }: SidebarUserProps) {
                 <div className="flex items-center gap-2 px-1 py-1.5 text-start text-sm">
                   <Avatar className="h-8 w-8 rounded-lg">
                     <AvatarImage src={user.avatar} alt={user.name} />
-                    <AvatarFallback className="rounded-lg">
-                      {initials}
-                    </AvatarFallback>
+                    <AvatarFallback className="rounded-lg">{initials}</AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-start text-sm leading-tight">
-                    <span className="truncate font-semibold">{user.name || "User"}</span>
-                    <span className="truncate text-xs text-muted-foreground">
-                      {user.email}
-                    </span>
+                    <span className="truncate font-semibold">{user.name || 'User'}</span>
+                    <span className="truncate text-xs text-muted-foreground">{user.email}</span>
                   </div>
                 </div>
               </DropdownMenuLabel>
 
               <DropdownMenuSeparator />
 
-              <DropdownMenuGroup>
-                <DropdownMenuItem asChild>
-                  <Link href="/settings/account" className="flex items-center gap-2">
-                    <BadgeCheck className="h-4 w-4" />
-                    Account
-                  </Link>
-                </DropdownMenuItem>
-
-                <DropdownMenuItem asChild>
-                  <Link href="/settings/notifications" className="flex items-center gap-2">
-                    <Bell className="h-4 w-4" />
-                    Notifications
-                  </Link>
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
+              <DropdownMenuItem asChild>
+                <Link href="/settings/tenant" className="flex items-center gap-2">
+                  <Settings className="h-4 w-4" />
+                  Settings
+                </Link>
+              </DropdownMenuItem>
 
               <DropdownMenuSeparator />
 
-              <DropdownMenuItem
-                variant="destructive"
-                onClick={() => setOpen(true)}
-              >
+              <DropdownMenuItem variant="destructive" onClick={() => setOpen(true)}>
                 <LogOut className="mr-2 h-4 w-4" />
                 Sign out
               </DropdownMenuItem>
@@ -166,5 +142,5 @@ export function SidebarUser({ initialUser }: SidebarUserProps) {
 
       <SignOutDialog open={!!open} onOpenChange={setOpen} />
     </>
-  );
+  )
 }

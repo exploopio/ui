@@ -2,9 +2,6 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Header, Main } from '@/components/layout'
-import { ProfileDropdown } from '@/components/profile-dropdown'
-import { Search } from '@/components/search'
-import { ThemeSwitch } from '@/components/theme-switch'
 import { ProcessStepper, StatsCard } from '@/features/shared'
 import { ActivityItem, QuickStat, useGlobalDashboardStats } from '@/features/dashboard'
 import { Can, Permission } from '@/lib/permissions'
@@ -121,13 +118,7 @@ export default function Dashboard() {
 
   return (
     <>
-      <Header fixed>
-        <div className="ms-auto flex items-center gap-2 sm:gap-4">
-          <Search />
-          <ThemeSwitch />
-          <ProfileDropdown />
-        </div>
-      </Header>
+      <Header fixed />
 
       <Main>
         {/* Quick Actions & Process Stepper */}

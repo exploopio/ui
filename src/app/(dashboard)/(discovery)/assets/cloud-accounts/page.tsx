@@ -1,15 +1,12 @@
-"use client";
+'use client'
 
-import { useState, useMemo } from "react";
-import { Header, Main } from "@/components/layout";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { PageHeader } from "@/features/shared";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Cloud, Plus, Shield, AlertTriangle, DollarSign } from "lucide-react";
+import { useState, useMemo } from 'react'
+import { Header, Main } from '@/components/layout'
+import { PageHeader } from '@/features/shared'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Cloud, Plus, Shield, AlertTriangle, DollarSign } from 'lucide-react'
 import {
   ScopeBadge,
   ScopeCoverageCard,
@@ -18,15 +15,15 @@ import {
   getActiveScopeTargets,
   getActiveScopeExclusions,
   type ScopeMatchResult,
-} from "@/features/scope";
+} from '@/features/scope'
 
 const mockCloudAccounts = [
   {
-    id: "ca-1",
-    name: "Production AWS",
-    provider: "aws" as const,
-    accountId: "123456789012",
-    alias: "prod-main",
+    id: 'ca-1',
+    name: 'Production AWS',
+    provider: 'aws' as const,
+    accountId: '123456789012',
+    alias: 'prod-main',
     resourceCount: 245,
     mfaEnabled: true,
     ssoEnabled: true,
@@ -34,11 +31,11 @@ const mockCloudAccounts = [
     riskScore: 35,
   },
   {
-    id: "ca-2",
-    name: "Development GCP",
-    provider: "gcp" as const,
-    accountId: "dev-project-123",
-    alias: "dev-gcp",
+    id: 'ca-2',
+    name: 'Development GCP',
+    provider: 'gcp' as const,
+    accountId: 'dev-project-123',
+    alias: 'dev-gcp',
     resourceCount: 89,
     mfaEnabled: true,
     ssoEnabled: false,
@@ -46,83 +43,77 @@ const mockCloudAccounts = [
     riskScore: 45,
   },
   {
-    id: "ca-3",
-    name: "Staging Azure",
-    provider: "azure" as const,
-    accountId: "sub-abc-123",
-    alias: "staging-azure",
+    id: 'ca-3',
+    name: 'Staging Azure',
+    provider: 'azure' as const,
+    accountId: 'sub-abc-123',
+    alias: 'staging-azure',
     resourceCount: 56,
     mfaEnabled: false,
     ssoEnabled: true,
     monthlySpend: 12000,
     riskScore: 65,
   },
-];
+]
 
 const providerColors = {
-  aws: "bg-orange-500/15 text-orange-600",
-  gcp: "bg-blue-500/15 text-blue-600",
-  azure: "bg-sky-500/15 text-sky-600",
-};
+  aws: 'bg-orange-500/15 text-orange-600',
+  gcp: 'bg-blue-500/15 text-blue-600',
+  azure: 'bg-sky-500/15 text-sky-600',
+}
 
 const providerLabels = {
-  aws: "AWS",
-  gcp: "GCP",
-  azure: "Azure",
-};
+  aws: 'AWS',
+  gcp: 'GCP',
+  azure: 'Azure',
+}
 
 export default function CloudAccountsPage() {
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('')
 
   const filteredAccounts = mockCloudAccounts.filter(
     (account) =>
       account.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       account.accountId.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  )
 
   const getRiskColor = (score: number) => {
-    if (score >= 70) return "text-red-600 bg-red-500/15";
-    if (score >= 40) return "text-yellow-600 bg-yellow-500/15";
-    return "text-green-600 bg-green-500/15";
-  };
+    if (score >= 70) return 'text-red-600 bg-red-500/15'
+    if (score >= 40) return 'text-yellow-600 bg-yellow-500/15'
+    return 'text-green-600 bg-green-500/15'
+  }
 
   // Scope data
-  const scopeTargets = useMemo(() => getActiveScopeTargets(), []);
-  const scopeExclusions = useMemo(() => getActiveScopeExclusions(), []);
+  const scopeTargets = useMemo(() => getActiveScopeTargets(), [])
+  const scopeExclusions = useMemo(() => getActiveScopeExclusions(), [])
 
   // Compute scope matches for each cloud account
   const scopeMatchesMap = useMemo(() => {
-    const map = new Map<string, ScopeMatchResult>();
+    const map = new Map<string, ScopeMatchResult>()
     mockCloudAccounts.forEach((account) => {
       const match = getScopeMatchesForAsset(
-        { id: account.id, type: "cloud_account", name: account.name },
+        { id: account.id, type: 'cloud_account', name: account.name },
         scopeTargets,
         scopeExclusions
-      );
-      map.set(account.id, match);
-    });
-    return map;
-  }, [scopeTargets, scopeExclusions]);
+      )
+      map.set(account.id, match)
+    })
+    return map
+  }, [scopeTargets, scopeExclusions])
 
   // Calculate scope coverage for all cloud accounts
   const scopeCoverage = useMemo(() => {
     const assets = mockCloudAccounts.map((a) => ({
       id: a.id,
       name: a.name,
-      type: "cloud_account",
-    }));
-    return calculateScopeCoverage(assets, scopeTargets, scopeExclusions);
-  }, [scopeTargets, scopeExclusions]);
+      type: 'cloud_account',
+    }))
+    return calculateScopeCoverage(assets, scopeTargets, scopeExclusions)
+  }, [scopeTargets, scopeExclusions])
 
   return (
     <>
-      <Header>
-        <Search />
-        <div className="ml-auto flex items-center space-x-4">
-          <ThemeSwitch />
-          <ProfileDropdown />
-        </div>
-      </Header>
+      <Header fixed />
 
       <Main>
         <PageHeader
@@ -170,7 +161,8 @@ export default function CloudAccountsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
-                ${(mockCloudAccounts.reduce((acc, a) => acc + a.monthlySpend, 0) / 1000).toFixed(0)}k
+                ${(mockCloudAccounts.reduce((acc, a) => acc + a.monthlySpend, 0) / 1000).toFixed(0)}
+                k
               </div>
             </CardContent>
           </Card>
@@ -215,7 +207,9 @@ export default function CloudAccountsPage() {
                   <tr key={account.id} className="border-b last:border-0 hover:bg-muted/50">
                     <td className="p-4">
                       <div className="font-medium">{account.name}</div>
-                      <div className="text-sm text-muted-foreground font-mono">{account.accountId}</div>
+                      <div className="text-sm text-muted-foreground font-mono">
+                        {account.accountId}
+                      </div>
                     </td>
                     <td className="p-4">
                       <Badge className={providerColors[account.provider]}>
@@ -225,11 +219,16 @@ export default function CloudAccountsPage() {
                     <td className="p-4 font-medium">{account.resourceCount}</td>
                     <td className="p-4">
                       <div className="flex gap-2">
-                        <Badge variant={account.mfaEnabled ? "default" : "destructive"} className="text-xs">
-                          {account.mfaEnabled ? "MFA" : "No MFA"}
+                        <Badge
+                          variant={account.mfaEnabled ? 'default' : 'destructive'}
+                          className="text-xs"
+                        >
+                          {account.mfaEnabled ? 'MFA' : 'No MFA'}
                         </Badge>
                         {account.ssoEnabled && (
-                          <Badge variant="secondary" className="text-xs">SSO</Badge>
+                          <Badge variant="secondary" className="text-xs">
+                            SSO
+                          </Badge>
                         )}
                       </div>
                     </td>
@@ -241,7 +240,9 @@ export default function CloudAccountsPage() {
                       )}
                     </td>
                     <td className="p-4">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getRiskColor(account.riskScore)}`}>
+                      <span
+                        className={`px-2.5 py-1 rounded-full text-xs font-medium ${getRiskColor(account.riskScore)}`}
+                      >
                         {account.riskScore}
                       </span>
                     </td>
@@ -253,5 +254,5 @@ export default function CloudAccountsPage() {
         </Card>
       </Main>
     </>
-  );
+  )
 }

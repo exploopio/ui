@@ -4,9 +4,6 @@ import { Suspense, useState, useCallback, useEffect, useMemo, useRef } from 'rea
 import { useRouter, useSearchParams } from 'next/navigation'
 import { formatDistanceToNow } from 'date-fns'
 import { Header, Main } from '@/components/layout'
-import { ProfileDropdown } from '@/components/profile-dropdown'
-import { Search } from '@/components/search'
-import { ThemeSwitch } from '@/components/theme-switch'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -444,7 +441,7 @@ function HistoryContent() {
 
   const { data: integrationsData, isLoading: loadingIntegrations } =
     useNotificationIntegrationsApi()
-  const integrations = integrationsData?.data ?? []
+  const integrations = useMemo(() => integrationsData?.data ?? [], [integrationsData?.data])
 
   // Auto-select first integration if none selected and integrations are available
   useEffect(() => {
@@ -561,13 +558,7 @@ function HistoryContent() {
 export default function NotificationHistoryPage() {
   return (
     <>
-      <Header fixed>
-        <div className="ms-auto flex items-center gap-2 sm:gap-4">
-          <Search />
-          <ThemeSwitch />
-          <ProfileDropdown />
-        </div>
-      </Header>
+      <Header fixed />
       <Main>
         <Suspense
           fallback={

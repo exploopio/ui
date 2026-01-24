@@ -1,17 +1,14 @@
-"use client";
+'use client'
 
-import { useState, useMemo } from "react";
-import { Header, Main } from "@/components/layout";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { PageHeader } from "@/features/shared";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
+import { useState, useMemo } from 'react'
+import { Header, Main } from '@/components/layout'
+import { PageHeader } from '@/features/shared'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Badge } from '@/components/ui/badge'
+import { Progress } from '@/components/ui/progress'
 import {
   Download,
   Filter,
@@ -29,20 +26,14 @@ import {
   X,
   Calendar,
   ChevronRight,
-} from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+} from 'lucide-react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu'
 import {
   Dialog,
   DialogContent,
@@ -50,23 +41,23 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog'
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet";
+} from '@/components/ui/sheet'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "sonner";
+} from '@/components/ui/select'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { toast } from 'sonner'
 import {
   mockFrameworkSummaries,
   mockRequirements,
@@ -75,81 +66,81 @@ import {
   type ComplianceFramework,
   type ControlStatus,
   type Priority,
-} from "@/features/compliance";
+} from '@/features/compliance'
 
 const statusColors: Record<ControlStatus, string> = {
-  implemented: "bg-green-500/10 text-green-500 border-green-500/20",
-  partial: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
-  not_implemented: "bg-red-500/10 text-red-500 border-red-500/20",
-  not_applicable: "bg-gray-500/10 text-gray-500 border-gray-500/20",
-};
+  implemented: 'bg-green-500/10 text-green-500 border-green-500/20',
+  partial: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
+  not_implemented: 'bg-red-500/10 text-red-500 border-red-500/20',
+  not_applicable: 'bg-gray-500/10 text-gray-500 border-gray-500/20',
+}
 
 const statusLabels: Record<ControlStatus, string> = {
-  implemented: "Implemented",
-  partial: "Partial",
-  not_implemented: "Not Implemented",
-  not_applicable: "N/A",
-};
+  implemented: 'Implemented',
+  partial: 'Partial',
+  not_implemented: 'Not Implemented',
+  not_applicable: 'N/A',
+}
 
 const statusIcons: Record<ControlStatus, React.ElementType> = {
   implemented: CheckCircle2,
   partial: Clock,
   not_implemented: XCircle,
   not_applicable: AlertCircle,
-};
+}
 
 const priorityColors: Record<Priority, string> = {
-  critical: "bg-red-500/10 text-red-500 border-red-500/20",
-  high: "bg-orange-500/10 text-orange-500 border-orange-500/20",
-  medium: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
-  low: "bg-green-500/10 text-green-500 border-green-500/20",
-};
+  critical: 'bg-red-500/10 text-red-500 border-red-500/20',
+  high: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
+  medium: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
+  low: 'bg-green-500/10 text-green-500 border-green-500/20',
+}
 
 export default function CompliancePage() {
-  const [requirements, setRequirements] = useState<ComplianceRequirement[]>(mockRequirements);
-  const [selectedFramework, setSelectedFramework] = useState<ComplianceFramework | "all">("all");
-  const [selectedStatus, setSelectedStatus] = useState<ControlStatus | "all">("all");
-  const [viewRequirement, setViewRequirement] = useState<ComplianceRequirement | null>(null);
-  const [editRequirement, setEditRequirement] = useState<ComplianceRequirement | null>(null);
+  const [requirements, setRequirements] = useState<ComplianceRequirement[]>(mockRequirements)
+  const [selectedFramework, setSelectedFramework] = useState<ComplianceFramework | 'all'>('all')
+  const [selectedStatus, setSelectedStatus] = useState<ControlStatus | 'all'>('all')
+  const [viewRequirement, setViewRequirement] = useState<ComplianceRequirement | null>(null)
+  const [editRequirement, setEditRequirement] = useState<ComplianceRequirement | null>(null)
 
   const [formData, setFormData] = useState({
-    status: "partial" as ControlStatus,
-    priority: "medium" as Priority,
-    owner: "",
-    dueDate: "",
-    notes: "",
-  });
+    status: 'partial' as ControlStatus,
+    priority: 'medium' as Priority,
+    owner: '',
+    dueDate: '',
+    notes: '',
+  })
 
   const stats = useMemo(() => {
     return {
       totalFrameworks: mockFrameworkSummaries.length,
       totalControls: requirements.length,
       byStatus: {
-        implemented: requirements.filter((r) => r.status === "implemented").length,
-        partial: requirements.filter((r) => r.status === "partial").length,
-        not_implemented: requirements.filter((r) => r.status === "not_implemented").length,
-        not_applicable: requirements.filter((r) => r.status === "not_applicable").length,
+        implemented: requirements.filter((r) => r.status === 'implemented').length,
+        partial: requirements.filter((r) => r.status === 'partial').length,
+        not_implemented: requirements.filter((r) => r.status === 'not_implemented').length,
+        not_applicable: requirements.filter((r) => r.status === 'not_applicable').length,
       },
       averageComplianceScore: Math.round(
         mockFrameworkSummaries.reduce((acc, f) => acc + f.complianceScore, 0) /
           mockFrameworkSummaries.length
       ),
       overdueControls: requirements.filter(
-        (r) => r.dueDate && new Date(r.dueDate) < new Date() && r.status !== "implemented"
+        (r) => r.dueDate && new Date(r.dueDate) < new Date() && r.status !== 'implemented'
       ).length,
-    };
-  }, [requirements]);
+    }
+  }, [requirements])
 
   const filteredRequirements = useMemo(() => {
     return requirements.filter((req) => {
-      if (selectedFramework !== "all" && req.framework !== selectedFramework) return false;
-      if (selectedStatus !== "all" && req.status !== selectedStatus) return false;
-      return true;
-    });
-  }, [requirements, selectedFramework, selectedStatus]);
+      if (selectedFramework !== 'all' && req.framework !== selectedFramework) return false
+      if (selectedStatus !== 'all' && req.status !== selectedStatus) return false
+      return true
+    })
+  }, [requirements, selectedFramework, selectedStatus])
 
   const handleEditSave = () => {
-    if (!editRequirement) return;
+    if (!editRequirement) return
     setRequirements((prev) =>
       prev.map((req) =>
         req.id === editRequirement.id
@@ -165,7 +156,7 @@ export default function CompliancePage() {
             }
           : req
       )
-    );
+    )
     // Update view if open
     if (viewRequirement && viewRequirement.id === editRequirement.id) {
       setViewRequirement({
@@ -177,32 +168,26 @@ export default function CompliancePage() {
         notes: formData.notes || undefined,
         lastAssessed: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-      });
+      })
     }
-    toast.success("Requirement updated successfully");
-    setEditRequirement(null);
-  };
+    toast.success('Requirement updated successfully')
+    setEditRequirement(null)
+  }
 
   const openEdit = (req: ComplianceRequirement) => {
     setFormData({
       status: req.status,
       priority: req.priority,
       owner: req.owner,
-      dueDate: req.dueDate ? req.dueDate.split("T")[0] : "",
-      notes: req.notes || "",
-    });
-    setEditRequirement(req);
-  };
+      dueDate: req.dueDate ? req.dueDate.split('T')[0] : '',
+      notes: req.notes || '',
+    })
+    setEditRequirement(req)
+  }
 
   return (
     <>
-      <Header fixed>
-        <Search />
-        <div className="ms-auto flex items-center gap-2 sm:gap-4">
-          <ThemeSwitch />
-          <ProfileDropdown />
-        </div>
-      </Header>
+      <Header fixed />
 
       <Main>
         <PageHeader
@@ -245,7 +230,9 @@ export default function CompliancePage() {
               <CheckCircle2 className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-500">{stats.averageComplianceScore}%</div>
+              <div className="text-2xl font-bold text-green-500">
+                {stats.averageComplianceScore}%
+              </div>
               <Progress value={stats.averageComplianceScore} className="mt-2" />
             </CardContent>
           </Card>
@@ -271,7 +258,10 @@ export default function CompliancePage() {
           <TabsContent value="frameworks">
             <div className="grid gap-4 md:grid-cols-2">
               {mockFrameworkSummaries.map((framework) => (
-                <Card key={framework.framework} className="cursor-pointer hover:shadow-md transition-shadow">
+                <Card
+                  key={framework.framework}
+                  className="cursor-pointer hover:shadow-md transition-shadow"
+                >
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
@@ -340,7 +330,7 @@ export default function CompliancePage() {
                     <Label className="text-sm">Framework:</Label>
                     <Select
                       value={selectedFramework}
-                      onValueChange={(v) => setSelectedFramework(v as ComplianceFramework | "all")}
+                      onValueChange={(v) => setSelectedFramework(v as ComplianceFramework | 'all')}
                     >
                       <SelectTrigger className="w-36">
                         <SelectValue />
@@ -358,7 +348,7 @@ export default function CompliancePage() {
                     <Label className="text-sm">Status:</Label>
                     <Select
                       value={selectedStatus}
-                      onValueChange={(v) => setSelectedStatus(v as ControlStatus | "all")}
+                      onValueChange={(v) => setSelectedStatus(v as ControlStatus | 'all')}
                     >
                       <SelectTrigger className="w-40">
                         <SelectValue />
@@ -372,13 +362,13 @@ export default function CompliancePage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  {(selectedFramework !== "all" || selectedStatus !== "all") && (
+                  {(selectedFramework !== 'all' || selectedStatus !== 'all') && (
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => {
-                        setSelectedFramework("all");
-                        setSelectedStatus("all");
+                        setSelectedFramework('all')
+                        setSelectedStatus('all')
                       }}
                     >
                       <X className="mr-1 h-3 w-3" />
@@ -400,7 +390,7 @@ export default function CompliancePage() {
               <CardContent>
                 <div className="space-y-3">
                   {filteredRequirements.map((req) => {
-                    const StatusIcon = statusIcons[req.status];
+                    const StatusIcon = statusIcons[req.status]
                     return (
                       <div
                         key={req.id}
@@ -452,7 +442,7 @@ export default function CompliancePage() {
                           <ChevronRight className="h-4 w-4 text-muted-foreground" />
                         </div>
                       </div>
-                    );
+                    )
                   })}
                 </div>
               </CardContent>
@@ -519,7 +509,9 @@ export default function CompliancePage() {
                       <CardTitle className="text-sm">Findings</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className={`text-2xl font-bold ${viewRequirement.findingCount > 0 ? "text-red-500" : ""}`}>
+                      <div
+                        className={`text-2xl font-bold ${viewRequirement.findingCount > 0 ? 'text-red-500' : ''}`}
+                      >
                         {viewRequirement.findingCount}
                       </div>
                     </CardContent>
@@ -589,7 +581,8 @@ export default function CompliancePage() {
           <DialogHeader>
             <DialogTitle>Update Control Status</DialogTitle>
             <DialogDescription>
-              {editRequirement && `${frameworkNames[editRequirement.framework]} - ${editRequirement.controlId}`}
+              {editRequirement &&
+                `${frameworkNames[editRequirement.framework]} - ${editRequirement.controlId}`}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -662,5 +655,5 @@ export default function CompliancePage() {
         </DialogContent>
       </Dialog>
     </>
-  );
+  )
 }

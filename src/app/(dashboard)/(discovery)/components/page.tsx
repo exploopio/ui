@@ -1,22 +1,13 @@
-"use client";
+'use client'
 
-import Link from "next/link";
-import { Header, Main } from "@/components/layout";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { PageHeader } from "@/features/shared";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import Link from 'next/link'
+import { Header, Main } from '@/components/layout'
+import { PageHeader } from '@/features/shared'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Progress } from '@/components/ui/progress'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Package,
   ShieldAlert,
@@ -29,47 +20,41 @@ import {
   CheckCircle,
   GitBranch,
   Loader2,
-} from "lucide-react";
+} from 'lucide-react'
 import {
   useComponentStatsApi,
   useEcosystemStatsApi,
   useVulnerableComponentsApi,
-} from "@/features/components/api/use-components-api";
-import { EcosystemBadge } from "@/features/components";
+} from '@/features/components/api/use-components-api'
+import { EcosystemBadge } from '@/features/components'
 
 export default function ComponentsOverviewPage() {
   // Fetch data from real API
-  const { data: stats, isLoading: statsLoading } = useComponentStatsApi();
-  const { data: ecosystemStats, isLoading: ecosystemLoading } = useEcosystemStatsApi();
-  const { data: vulnerableComponents, isLoading: vulnerableLoading } = useVulnerableComponentsApi(5);
+  const { data: stats, isLoading: statsLoading } = useComponentStatsApi()
+  const { data: ecosystemStats, isLoading: ecosystemLoading } = useEcosystemStatsApi()
+  const { data: vulnerableComponents, isLoading: vulnerableLoading } = useVulnerableComponentsApi(5)
 
-  const _isLoading = statsLoading || ecosystemLoading || vulnerableLoading;
+  const _isLoading = statsLoading || ecosystemLoading || vulnerableLoading
 
   // Extract values with defaults
-  const totalComponents = stats?.total_components ?? 0;
-  const directDeps = stats?.direct_dependencies ?? 0;
-  const transitiveDeps = stats?.transitive_dependencies ?? 0;
-  const vulnerableCount = stats?.vulnerable_components ?? 0;
-  const totalVulns = stats?.total_vulnerabilities ?? 0;
-  const outdatedCount = stats?.outdated_components ?? 0;
-  const kevCount = stats?.cisa_kev_components ?? 0;
+  const totalComponents = stats?.total_components ?? 0
+  const directDeps = stats?.direct_dependencies ?? 0
+  const transitiveDeps = stats?.transitive_dependencies ?? 0
+  const vulnerableCount = stats?.vulnerable_components ?? 0
+  const totalVulns = stats?.total_vulnerabilities ?? 0
+  const outdatedCount = stats?.outdated_components ?? 0
+  const kevCount = stats?.cisa_kev_components ?? 0
 
   // Vulnerability severity breakdown
-  const criticalVulns = stats?.vuln_by_severity?.critical ?? 0;
-  const highVulns = stats?.vuln_by_severity?.high ?? 0;
+  const criticalVulns = stats?.vuln_by_severity?.critical ?? 0
+  const highVulns = stats?.vuln_by_severity?.high ?? 0
 
   // License risks
-  const licenseRiskHigh = (stats?.license_risks?.high ?? 0) + (stats?.license_risks?.critical ?? 0);
+  const licenseRiskHigh = (stats?.license_risks?.high ?? 0) + (stats?.license_risks?.critical ?? 0)
 
   return (
     <>
-      <Header fixed>
-        <div className="ms-auto flex items-center gap-2 sm:gap-4">
-          <Search />
-          <ThemeSwitch />
-          <ProfileDropdown />
-        </div>
-      </Header>
+      <Header fixed />
 
       <Main>
         <PageHeader
@@ -105,25 +90,31 @@ export default function ComponentsOverviewPage() {
             </CardContent>
           </Card>
 
-          <Card className={criticalVulns > 0 ? "border-red-500/50" : ""}>
+          <Card className={criticalVulns > 0 ? 'border-red-500/50' : ''}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Vulnerabilities</CardTitle>
-              <ShieldAlert className={`h-4 w-4 ${criticalVulns > 0 ? "text-red-500" : "text-muted-foreground"}`} />
+              <ShieldAlert
+                className={`h-4 w-4 ${criticalVulns > 0 ? 'text-red-500' : 'text-muted-foreground'}`}
+              />
             </CardHeader>
             <CardContent>
               {statsLoading ? (
                 <Skeleton className="h-8 w-16" />
               ) : (
                 <>
-                  <div className={`text-2xl font-bold ${criticalVulns > 0 ? "text-red-500" : ""}`}>
+                  <div className={`text-2xl font-bold ${criticalVulns > 0 ? 'text-red-500' : ''}`}>
                     {totalVulns}
                   </div>
                   <div className="flex gap-2 mt-1">
                     {criticalVulns > 0 && (
-                      <Badge variant="destructive" className="text-xs">{criticalVulns}C</Badge>
+                      <Badge variant="destructive" className="text-xs">
+                        {criticalVulns}C
+                      </Badge>
                     )}
                     {highVulns > 0 && (
-                      <Badge className="bg-orange-500/15 text-orange-600 text-xs">{highVulns}H</Badge>
+                      <Badge className="bg-orange-500/15 text-orange-600 text-xs">
+                        {highVulns}H
+                      </Badge>
                     )}
                   </div>
                 </>
@@ -180,9 +171,7 @@ export default function ComponentsOverviewPage() {
                   <ShieldAlert className="h-5 w-5 text-red-500" />
                   Vulnerable Components
                 </CardTitle>
-                <CardDescription>
-                  {vulnerableCount} components need attention
-                </CardDescription>
+                <CardDescription>{vulnerableCount} components need attention</CardDescription>
               </div>
               <Link href="/components/vulnerable">
                 <Button variant="ghost" size="sm">
@@ -226,7 +215,9 @@ export default function ComponentsOverviewPage() {
                             <Badge variant="destructive">{component.critical_count}C</Badge>
                           )}
                           {component.high_count > 0 && (
-                            <Badge className="bg-orange-500/15 text-orange-600">{component.high_count}H</Badge>
+                            <Badge className="bg-orange-500/15 text-orange-600">
+                              {component.high_count}H
+                            </Badge>
                           )}
                         </div>
                       </div>
@@ -250,9 +241,7 @@ export default function ComponentsOverviewPage() {
                   <GitBranch className="h-5 w-5" />
                   Ecosystem Distribution
                 </CardTitle>
-                <CardDescription>
-                  Components by package manager
-                </CardDescription>
+                <CardDescription>Components by package manager</CardDescription>
               </div>
               <Link href="/components/ecosystems">
                 <Button variant="ghost" size="sm">
@@ -311,9 +300,7 @@ export default function ComponentsOverviewPage() {
                   <Scale className="h-5 w-5" />
                   License Compliance
                 </CardTitle>
-                <CardDescription>
-                  License distribution and risks
-                </CardDescription>
+                <CardDescription>License distribution and risks</CardDescription>
               </div>
               <Link href="/components/licenses">
                 <Button variant="ghost" size="sm">
@@ -334,8 +321,8 @@ export default function ComponentsOverviewPage() {
                   {Object.entries(stats.license_risks)
                     .filter(([_, count]) => count > 0)
                     .sort(([a], [b]) => {
-                      const order = ['critical', 'high', 'medium', 'low', 'unknown'];
-                      return order.indexOf(a) - order.indexOf(b);
+                      const order = ['critical', 'high', 'medium', 'low', 'unknown']
+                      return order.indexOf(a) - order.indexOf(b)
                     })
                     .map(([risk, count]) => (
                       <div
@@ -343,17 +330,23 @@ export default function ComponentsOverviewPage() {
                         className="flex items-center justify-between p-2 rounded-lg hover:bg-accent/50"
                       >
                         <Badge
-                          variant={risk === 'critical' || risk === 'high' ? 'destructive' : 'outline'}
+                          variant={
+                            risk === 'critical' || risk === 'high' ? 'destructive' : 'outline'
+                          }
                           className={
-                            risk === 'medium' ? 'bg-yellow-500/15 text-yellow-600' :
-                            risk === 'low' ? 'bg-green-500/15 text-green-600' :
-                            risk === 'unknown' ? 'bg-gray-500/15 text-gray-600' : ''
+                            risk === 'medium'
+                              ? 'bg-yellow-500/15 text-yellow-600'
+                              : risk === 'low'
+                                ? 'bg-green-500/15 text-green-600'
+                                : risk === 'unknown'
+                                  ? 'bg-gray-500/15 text-gray-600'
+                                  : ''
                           }
                         >
                           {risk.charAt(0).toUpperCase() + risk.slice(1)} Risk
                         </Badge>
                         <span className="text-sm text-muted-foreground">
-                          {count} component{count !== 1 ? "s" : ""}
+                          {count} component{count !== 1 ? 's' : ''}
                         </span>
                       </div>
                     ))}
@@ -373,9 +366,7 @@ export default function ComponentsOverviewPage() {
                 <TrendingUp className="h-5 w-5" />
                 Quick Actions
               </CardTitle>
-              <CardDescription>
-                Common tasks and reports
-              </CardDescription>
+              <CardDescription>Common tasks and reports</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid gap-3">
@@ -427,8 +418,8 @@ export default function ComponentsOverviewPage() {
                 CISA Known Exploited Vulnerabilities
               </CardTitle>
               <CardDescription>
-                {kevCount} component(s) contain vulnerabilities listed in CISA KEV catalog.
-                These require immediate attention.
+                {kevCount} component(s) contain vulnerabilities listed in CISA KEV catalog. These
+                require immediate attention.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -443,5 +434,5 @@ export default function ComponentsOverviewPage() {
         )}
       </Main>
     </>
-  );
+  )
 }

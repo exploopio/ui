@@ -1,18 +1,15 @@
-"use client";
+'use client'
 
-import { useState, useMemo, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { ColumnDef } from "@tanstack/react-table";
-import { Header, Main } from "@/components/layout";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { PageHeader, DataTable, DataTableColumnHeader, RiskScoreBadge } from "@/features/shared";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Slider } from "@/components/ui/slider";
+import { useState, useMemo, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { ColumnDef } from '@tanstack/react-table'
+import { Header, Main } from '@/components/layout'
+import { PageHeader, DataTable, DataTableColumnHeader, RiskScoreBadge } from '@/features/shared'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Slider } from '@/components/ui/slider'
 import {
   Plus,
   Download,
@@ -31,21 +28,15 @@ import {
   Tags,
   Search as SearchIcon,
   Package,
-} from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+} from 'lucide-react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu'
 import {
   Dialog,
   DialogContent,
@@ -53,14 +44,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+} from '@/components/ui/dialog'
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -70,16 +56,12 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { toast } from "sonner";
+} from '@/components/ui/alert-dialog'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import { toast } from 'sonner'
 import {
   CreateGroupDialog,
   EditGroupDialog,
@@ -92,57 +74,57 @@ import {
   useGroupAssets,
   useRemoveAssetsFromGroup,
   useBulkAssetGroupOperations,
-} from "@/features/asset-groups";
-import { useAssets } from "@/features/assets";
-import type { AssetGroup, CreateAssetGroupInput } from "@/features/asset-groups/types";
-import type { AssetGroupApiFilters } from "@/features/asset-groups/api";
-import { Can, Permission } from "@/lib/permissions";
+} from '@/features/asset-groups'
+import { useAssets } from '@/features/assets'
+import type { AssetGroup, CreateAssetGroupInput } from '@/features/asset-groups/types'
+import type { AssetGroupApiFilters } from '@/features/asset-groups/api'
+import { Can, Permission } from '@/lib/permissions'
 
-type Environment = "production" | "staging" | "development" | "testing";
-type Criticality = "critical" | "high" | "medium" | "low";
+type Environment = 'production' | 'staging' | 'development' | 'testing'
+type Criticality = 'critical' | 'high' | 'medium' | 'low'
 
 const criticalityColors: Record<string, string> = {
-  critical: "bg-red-500 text-white",
-  high: "bg-orange-500 text-white",
-  medium: "bg-yellow-500 text-black",
-  low: "bg-blue-500 text-white",
-};
+  critical: 'bg-red-500 text-white',
+  high: 'bg-orange-500 text-white',
+  medium: 'bg-yellow-500 text-black',
+  low: 'bg-blue-500 text-white',
+}
 
 const environmentColors: Record<string, string> = {
-  production: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100",
-  staging: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100",
-  development: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-100",
-  testing: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-100",
-};
+  production: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100',
+  staging: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100',
+  development: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-100',
+  testing: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-100',
+}
 
 // Filter types
 interface Filters {
-  environments: Environment[];
-  criticalities: Criticality[];
-  riskScoreRange: [number, number];
-  hasFindings: boolean | null;
+  environments: Environment[]
+  criticalities: Criticality[]
+  riskScoreRange: [number, number]
+  hasFindings: boolean | null
 }
 
 // QuickViewAssets component for Sheet
 function QuickViewAssets({ groupId, onRefresh }: { groupId: string; onRefresh?: () => void }) {
-  const { data: assets, isLoading, mutate: refreshAssets } = useGroupAssets(groupId);
-  const { trigger: removeAssets, isMutating: isRemoving } = useRemoveAssetsFromGroup(groupId);
-  const router = useRouter();
-  const [removingId, setRemovingId] = useState<string | null>(null);
+  const { data: assets, isLoading, mutate: refreshAssets } = useGroupAssets(groupId)
+  const { trigger: removeAssets, isMutating: isRemoving } = useRemoveAssetsFromGroup(groupId)
+  const router = useRouter()
+  const [removingId, setRemovingId] = useState<string | null>(null)
 
   const handleRemoveAsset = async (assetId: string) => {
-    setRemovingId(assetId);
+    setRemovingId(assetId)
     try {
-      await removeAssets([assetId]);
+      await removeAssets([assetId])
       // Toast is shown by the hook
-      refreshAssets();
-      onRefresh?.();
+      refreshAssets()
+      onRefresh?.()
     } catch {
       // Error handled by hook
     } finally {
-      setRemovingId(null);
+      setRemovingId(null)
     }
-  };
+  }
 
   if (isLoading) {
     return (
@@ -162,10 +144,10 @@ function QuickViewAssets({ groupId, onRefresh }: { groupId: string; onRefresh?: 
           ))}
         </div>
       </div>
-    );
+    )
   }
 
-  const displayAssets = (assets || []).slice(0, 5);
+  const displayAssets = (assets || []).slice(0, 5)
 
   return (
     <div className="rounded-xl border bg-card">
@@ -182,49 +164,55 @@ function QuickViewAssets({ groupId, onRefresh }: { groupId: string; onRefresh?: 
         </Button>
       </div>
       {displayAssets.length === 0 ? (
-        <div className="p-4 text-center text-sm text-muted-foreground">
-          No assets in this group
-        </div>
+        <div className="p-4 text-center text-sm text-muted-foreground">No assets in this group</div>
       ) : (
         <div className="divide-y">
-          {displayAssets.map((asset: { id: string; name: string; type: string; status?: string }) => (
-            <div key={asset.id} className="flex items-center justify-between p-3 hover:bg-muted/50 group">
-              <div className="flex items-center gap-3">
-                <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <FolderKanban className="h-4 w-4 text-primary" />
+          {displayAssets.map(
+            (asset: { id: string; name: string; type: string; status?: string }) => (
+              <div
+                key={asset.id}
+                className="flex items-center justify-between p-3 hover:bg-muted/50 group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <FolderKanban className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">{asset.name}</p>
+                    <p className="text-xs text-muted-foreground">{asset.type}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-medium">{asset.name}</p>
-                  <p className="text-xs text-muted-foreground">{asset.type}</p>
+                <div className="flex items-center gap-2">
+                  <Badge
+                    variant="outline"
+                    className="text-green-500 border-green-500/30 bg-green-500/10"
+                  >
+                    {asset.status || 'active'}
+                  </Badge>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleRemoveAsset(asset.id)
+                    }}
+                    disabled={isRemoving}
+                  >
+                    {removingId === asset.id ? (
+                      <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <X className="h-3.5 w-3.5" />
+                    )}
+                  </Button>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-green-500 border-green-500/30 bg-green-500/10">
-                  {asset.status || "active"}
-                </Badge>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRemoveAsset(asset.id);
-                  }}
-                  disabled={isRemoving}
-                >
-                  {removingId === asset.id ? (
-                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <X className="h-3.5 w-3.5" />
-                  )}
-                </Button>
-              </div>
-            </div>
-          ))}
+            )
+          )}
         </div>
       )}
     </div>
-  );
+  )
 }
 
 const defaultFilters: Filters = {
@@ -232,18 +220,18 @@ const defaultFilters: Filters = {
   criticalities: [],
   riskScoreRange: [0, 100],
   hasFindings: null,
-};
+}
 
 // Add Assets Dialog Component
 interface AddAssetsDialogProps {
-  group: AssetGroup;
-  allAssets: Array<{ id: string; name: string; type: string; riskScore: number }>;
-  selectedAssetIds: string[];
-  setSelectedAssetIds: React.Dispatch<React.SetStateAction<string[]>>;
-  searchTerm: string;
-  setSearchTerm: React.Dispatch<React.SetStateAction<string>>;
-  onClose: () => void;
-  onSuccess: () => void;
+  group: AssetGroup
+  allAssets: Array<{ id: string; name: string; type: string; riskScore: number }>
+  selectedAssetIds: string[]
+  setSelectedAssetIds: React.Dispatch<React.SetStateAction<string[]>>
+  searchTerm: string
+  setSearchTerm: React.Dispatch<React.SetStateAction<string>>
+  onClose: () => void
+  onSuccess: () => void
 }
 
 function AddAssetsDialog({
@@ -256,65 +244,57 @@ function AddAssetsDialog({
   onClose,
   onSuccess,
 }: AddAssetsDialogProps) {
-  const { trigger: addAssets, isMutating } = useAddAssetsToGroup(group.id);
-  const { data: groupAssets } = useGroupAssets(group.id);
-  const [displayLimit, setDisplayLimit] = useState(20);
-  const PAGE_SIZE = 20;
+  const { trigger: addAssets, isMutating } = useAddAssetsToGroup(group.id)
+  const { data: groupAssets } = useGroupAssets(group.id)
+  const [displayLimit, setDisplayLimit] = useState(20)
+  const PAGE_SIZE = 20
 
   // Get IDs of assets already in the group
   const existingAssetIds = useMemo(() => {
-    return groupAssets?.map((a: { id: string }) => a.id) || [];
-  }, [groupAssets]);
+    return groupAssets?.map((a: { id: string }) => a.id) || []
+  }, [groupAssets])
 
   // Filter assets and separate existing ones
   const filteredAssets = useMemo(() => {
-    return allAssets.filter((asset) =>
-      asset.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [allAssets, searchTerm]);
+    return allAssets.filter((asset) => asset.name.toLowerCase().includes(searchTerm.toLowerCase()))
+  }, [allAssets, searchTerm])
 
   // Count available (not already added) assets
-  const availableCount = filteredAssets.filter(
-    (a) => !existingAssetIds.includes(a.id)
-  ).length;
+  const availableCount = filteredAssets.filter((a) => !existingAssetIds.includes(a.id)).length
 
   // Reset display limit when search changes
   useEffect(() => {
-    setDisplayLimit(PAGE_SIZE);
-  }, [searchTerm]);
+    setDisplayLimit(PAGE_SIZE)
+  }, [searchTerm])
 
-  const displayedAssets = filteredAssets.slice(0, displayLimit);
-  const hasMore = displayLimit < filteredAssets.length;
+  const displayedAssets = filteredAssets.slice(0, displayLimit)
+  const hasMore = displayLimit < filteredAssets.length
 
   const handleToggle = (assetId: string) => {
     setSelectedAssetIds((prev) =>
-      prev.includes(assetId)
-        ? prev.filter((id) => id !== assetId)
-        : [...prev, assetId]
-    );
-  };
+      prev.includes(assetId) ? prev.filter((id) => id !== assetId) : [...prev, assetId]
+    )
+  }
 
   const handleLoadMore = () => {
-    setDisplayLimit((prev) => prev + PAGE_SIZE);
-  };
+    setDisplayLimit((prev) => prev + PAGE_SIZE)
+  }
 
   const handleSubmit = async () => {
     try {
-      await addAssets(selectedAssetIds);
-      onSuccess();
+      await addAssets(selectedAssetIds)
+      onSuccess()
     } catch {
       // Error handled by hook
     }
-  };
+  }
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-lg max-h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Add Assets to &quot;{group.name}&quot;</DialogTitle>
-          <DialogDescription>
-            {availableCount} assets available to add.
-          </DialogDescription>
+          <DialogDescription>{availableCount} assets available to add.</DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-hidden flex flex-col gap-4 py-4">
@@ -332,13 +312,11 @@ function AddAssetsDialog({
           {/* Asset List */}
           <div className="flex-1 overflow-y-auto border rounded-lg max-h-64">
             {displayedAssets.length === 0 ? (
-              <div className="p-4 text-center text-muted-foreground">
-                No assets found
-              </div>
+              <div className="p-4 text-center text-muted-foreground">No assets found</div>
             ) : (
               <div className="divide-y">
                 {displayedAssets.map((asset) => {
-                  const isAlreadyAdded = existingAssetIds.includes(asset.id);
+                  const isAlreadyAdded = existingAssetIds.includes(asset.id)
                   return (
                     <label
                       key={asset.id}
@@ -353,22 +331,19 @@ function AddAssetsDialog({
                         <p className="font-medium truncate">{asset.name}</p>
                         <p className="text-sm text-muted-foreground">
                           {asset.type}
-                          {isAlreadyAdded && <span className="ml-2 text-xs">(Already in group)</span>}
+                          {isAlreadyAdded && (
+                            <span className="ml-2 text-xs">(Already in group)</span>
+                          )}
                         </p>
                       </div>
                       <RiskScoreBadge score={asset.riskScore} size="sm" />
                     </label>
-                  );
+                  )
                 })}
                 {/* Load More Button */}
                 {hasMore && (
                   <div className="p-3 text-center">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleLoadMore}
-                      className="w-full"
-                    >
+                    <Button variant="ghost" size="sm" onClick={handleLoadMore} className="w-full">
                       Load more ({filteredAssets.length - displayLimit} remaining)
                     </Button>
                   </div>
@@ -389,52 +364,54 @@ function AddAssetsDialog({
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={selectedAssetIds.length === 0 || isMutating}>
-            {isMutating ? "Adding..." : `Add ${selectedAssetIds.length || ""} Asset${selectedAssetIds.length !== 1 ? "s" : ""}`}
+            {isMutating
+              ? 'Adding...'
+              : `Add ${selectedAssetIds.length || ''} Asset${selectedAssetIds.length !== 1 ? 's' : ''}`}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  )
 }
 
 export default function AssetGroupsPage() {
-  const router = useRouter();
+  const router = useRouter()
 
   // Data fetching hooks
-  const { data: stats } = useAssetGroupStats();
-  const createAssetGroup = useCreateAssetGroup();
-  const bulkOperations = useBulkAssetGroupOperations();
+  const { data: stats } = useAssetGroupStats()
+  const createAssetGroup = useCreateAssetGroup()
+  const bulkOperations = useBulkAssetGroupOperations()
 
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [quickFilter, setQuickFilter] = useState("all");
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [quickFilter, setQuickFilter] = useState('all')
 
   // Filter states
-  const [filters, setFilters] = useState<Filters>(defaultFilters);
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [filters, setFilters] = useState<Filters>(defaultFilters)
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
 
   // Dialog states
-  const [viewGroup, setViewGroup] = useState<AssetGroup | null>(null);
-  const [editGroup, setEditGroup] = useState<AssetGroup | null>(null);
-  const [deleteGroup, setDeleteGroup] = useState<AssetGroup | null>(null);
-  const [addAssetsGroup, setAddAssetsGroup] = useState<AssetGroup | null>(null);
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [_bulkActionType, setBulkActionType] = useState<string | null>(null);
+  const [viewGroup, setViewGroup] = useState<AssetGroup | null>(null)
+  const [editGroup, setEditGroup] = useState<AssetGroup | null>(null)
+  const [deleteGroup, setDeleteGroup] = useState<AssetGroup | null>(null)
+  const [addAssetsGroup, setAddAssetsGroup] = useState<AssetGroup | null>(null)
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [_bulkActionType, setBulkActionType] = useState<string | null>(null)
 
-  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false)
 
   // Add Assets state
-  const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([]);
-  const [assetSearchTerm, setAssetSearchTerm] = useState("");
+  const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([])
+  const [assetSearchTerm, setAssetSearchTerm] = useState('')
 
   // Count active filters
   const activeFilterCount = useMemo(() => {
-    let count = 0;
-    if (filters.environments.length > 0) count++;
-    if (filters.criticalities.length > 0) count++;
-    if (filters.riskScoreRange[0] > 0 || filters.riskScoreRange[1] < 100) count++;
-    if (filters.hasFindings !== null) count++;
-    return count;
-  }, [filters]);
+    let count = 0
+    if (filters.environments.length > 0) count++
+    if (filters.criticalities.length > 0) count++
+    if (filters.riskScoreRange[0] > 0 || filters.riskScoreRange[1] < 100) count++
+    if (filters.hasFindings !== null) count++
+    return count
+  }, [filters])
 
   // Build API filters from UI filters
   const apiFilters = useMemo(() => {
@@ -460,52 +437,56 @@ export default function AssetGroupsPage() {
   }, [filters])
 
   // Fetch data using hook
-  const { data: allGroups, isLoading, mutate: refreshData } = useAssetGroups({ filters: apiFilters })
+  const {
+    data: allGroups,
+    isLoading,
+    mutate: refreshData,
+  } = useAssetGroups({ filters: apiFilters })
 
   // Apply quick filter on top of API filters
   const filteredData = useMemo(() => {
-    let data = [...allGroups];
+    let data = [...allGroups]
 
     // Quick filter (applied client-side for responsiveness)
-    if (quickFilter === "critical") {
-      data = data.filter((g) => g.criticality === "critical");
-    } else if (quickFilter === "high-risk") {
-      data = data.filter((g) => g.riskScore >= 70);
-    } else if (quickFilter === "production") {
-      data = data.filter((g) => g.environment === "production");
-    } else if (quickFilter === "with-findings") {
-      data = data.filter((g) => g.findingCount > 0);
+    if (quickFilter === 'critical') {
+      data = data.filter((g) => g.criticality === 'critical')
+    } else if (quickFilter === 'high-risk') {
+      data = data.filter((g) => g.riskScore >= 70)
+    } else if (quickFilter === 'production') {
+      data = data.filter((g) => g.environment === 'production')
+    } else if (quickFilter === 'with-findings') {
+      data = data.filter((g) => g.findingCount > 0)
     }
 
-    return data;
-  }, [allGroups, quickFilter]);
+    return data
+  }, [allGroups, quickFilter])
 
   const handleRefresh = () => {
-    refreshData();
-    toast.success("Asset groups refreshed");
-  };
+    refreshData()
+    toast.success('Asset groups refreshed')
+  }
 
   const handleExport = (format: string) => {
     toast.success(`Exporting ${filteredData.length} groups as ${format}...`, {
-      description: "Your file will be downloaded shortly",
-    });
-  };
+      description: 'Your file will be downloaded shortly',
+    })
+  }
 
   // Get all assets for the create dialog (Backend doesn't have ungrouped filter yet)
-  const { assets: allAssets } = useAssets({ pageSize: 100 });
+  const { assets: allAssets } = useAssets({ pageSize: 100 })
 
   const handleCreate = async (input: CreateAssetGroupInput) => {
-    await createAssetGroup.trigger(input);
-    refreshData();
-  };
+    await createAssetGroup.trigger(input)
+    refreshData()
+  }
 
   // Get update mutation for current edit group
-  const updateAssetGroup = useUpdateAssetGroup(editGroup?.id || "");
+  const updateAssetGroup = useUpdateAssetGroup(editGroup?.id || '')
 
   const handleEdit = async (formData: EditGroupFormData) => {
-    if (!editGroup) return;
+    if (!editGroup) return
 
-    setIsEditSubmitting(true);
+    setIsEditSubmitting(true)
     try {
       await updateAssetGroup.trigger({
         name: formData.name,
@@ -516,64 +497,64 @@ export default function AssetGroupsPage() {
         owner: formData.owner || undefined,
         ownerEmail: formData.ownerEmail || undefined,
         tags: formData.tags.length > 0 ? formData.tags : undefined,
-      });
-      refreshData();
-      setEditGroup(null);
+      })
+      refreshData()
+      setEditGroup(null)
     } catch (error) {
       // Error toast is handled by hook
-      console.error("Failed to update asset group:", error);
+      console.error('Failed to update asset group:', error)
     } finally {
-      setIsEditSubmitting(false);
+      setIsEditSubmitting(false)
     }
-  };
+  }
 
   const handleDelete = () => {
-    toast.success("Asset group deleted", {
+    toast.success('Asset group deleted', {
       description: deleteGroup?.name,
-    });
-    setDeleteGroup(null);
-  };
+    })
+    setDeleteGroup(null)
+  }
 
   const handleBulkDelete = async () => {
-    await bulkOperations.bulkDelete(selectedIds);
-    setSelectedIds([]);
-    refreshData();
-  };
+    await bulkOperations.bulkDelete(selectedIds)
+    setSelectedIds([])
+    refreshData()
+  }
 
   const handleBulkAction = async (action: string, value?: string) => {
-    if (action === "delete") {
-      await handleBulkDelete();
-    } else if (action === "change-criticality" && value) {
-      await bulkOperations.bulkUpdate(selectedIds, { criticality: value });
-      setSelectedIds([]);
-      refreshData();
-    } else if (action === "change-environment" && value) {
-      await bulkOperations.bulkUpdate(selectedIds, { environment: value });
-      setSelectedIds([]);
-      refreshData();
+    if (action === 'delete') {
+      await handleBulkDelete()
+    } else if (action === 'change-criticality' && value) {
+      await bulkOperations.bulkUpdate(selectedIds, { criticality: value })
+      setSelectedIds([])
+      refreshData()
+    } else if (action === 'change-environment' && value) {
+      await bulkOperations.bulkUpdate(selectedIds, { environment: value })
+      setSelectedIds([])
+      refreshData()
     }
-    setBulkActionType(null);
-  };
+    setBulkActionType(null)
+  }
 
   const handleCopyId = (id: string) => {
-    navigator.clipboard.writeText(id);
-    toast.success("Group ID copied");
-  };
+    navigator.clipboard.writeText(id)
+    toast.success('Group ID copied')
+  }
 
   const handleCopyLink = (id: string) => {
-    navigator.clipboard.writeText(`${window.location.origin}/asset-groups/${id}`);
-    toast.success("Link copied to clipboard");
-  };
+    navigator.clipboard.writeText(`${window.location.origin}/asset-groups/${id}`)
+    toast.success('Link copied to clipboard')
+  }
 
   const openEditDialog = (group: AssetGroup) => {
-    setEditGroup(group);
-  };
+    setEditGroup(group)
+  }
 
   const clearFilters = () => {
-    setFilters(defaultFilters);
-    setQuickFilter("all");
-    toast.success("Filters cleared");
-  };
+    setFilters(defaultFilters)
+    setQuickFilter('all')
+    toast.success('Filters cleared')
+  }
 
   const toggleEnvironmentFilter = (env: Environment) => {
     setFilters((prev) => ({
@@ -581,8 +562,8 @@ export default function AssetGroupsPage() {
       environments: prev.environments.includes(env)
         ? prev.environments.filter((e) => e !== env)
         : [...prev.environments, env],
-    }));
-  };
+    }))
+  }
 
   const toggleCriticalityFilter = (crit: Criticality) => {
     setFilters((prev) => ({
@@ -590,22 +571,22 @@ export default function AssetGroupsPage() {
       criticalities: prev.criticalities.includes(crit)
         ? prev.criticalities.filter((c) => c !== crit)
         : [...prev.criticalities, crit],
-    }));
-  };
+    }))
+  }
 
   // Handle stats card click for quick filtering
   const handleStatsCardClick = (filter: string) => {
-    if (filter === "critical") {
-      setQuickFilter("critical");
-    } else if (filter === "all") {
-      setQuickFilter("all");
+    if (filter === 'critical') {
+      setQuickFilter('critical')
+    } else if (filter === 'all') {
+      setQuickFilter('all')
     }
-  };
+  }
 
   // React Compiler handles memoization automatically
   const columns: ColumnDef<AssetGroup>[] = [
     {
-      id: "select",
+      id: 'select',
       header: ({ table }) => (
         <Checkbox
           checked={table.getIsAllPageRowsSelected()}
@@ -624,10 +605,10 @@ export default function AssetGroupsPage() {
       enableHiding: false,
     },
     {
-      accessorKey: "name",
+      accessorKey: 'name',
       header: ({ column }) => <DataTableColumnHeader column={column} title="Name" />,
       cell: ({ row }) => {
-        const group = row.original;
+        const group = row.original
         return (
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
@@ -636,17 +617,15 @@ export default function AssetGroupsPage() {
             <div>
               <p className="font-medium">{group.name}</p>
               {group.description && (
-                <p className="text-xs text-muted-foreground line-clamp-1">
-                  {group.description}
-                </p>
+                <p className="text-xs text-muted-foreground line-clamp-1">{group.description}</p>
               )}
             </div>
           </div>
-        );
+        )
       },
     },
     {
-      accessorKey: "environment",
+      accessorKey: 'environment',
       header: ({ column }) => <DataTableColumnHeader column={column} title="Environment" />,
       cell: ({ row }) => (
         <Badge variant="outline" className={environmentColors[row.original.environment]}>
@@ -654,11 +633,11 @@ export default function AssetGroupsPage() {
         </Badge>
       ),
       filterFn: (row, id, value) => {
-        return value.includes(row.getValue(id));
+        return value.includes(row.getValue(id))
       },
     },
     {
-      accessorKey: "criticality",
+      accessorKey: 'criticality',
       header: ({ column }) => <DataTableColumnHeader column={column} title="Criticality" />,
       cell: ({ row }) => (
         <Badge className={criticalityColors[row.original.criticality]}>
@@ -666,37 +645,35 @@ export default function AssetGroupsPage() {
         </Badge>
       ),
       filterFn: (row, id, value) => {
-        return value.includes(row.getValue(id));
+        return value.includes(row.getValue(id))
       },
     },
     {
-      accessorKey: "assetCount",
+      accessorKey: 'assetCount',
       header: ({ column }) => <DataTableColumnHeader column={column} title="Assets" />,
-      cell: ({ row }) => (
-        <span className="font-medium">{row.original.assetCount}</span>
-      ),
+      cell: ({ row }) => <span className="font-medium">{row.original.assetCount}</span>,
     },
     {
-      accessorKey: "findingCount",
+      accessorKey: 'findingCount',
       header: ({ column }) => <DataTableColumnHeader column={column} title="Findings" />,
       cell: ({ row }) => {
-        const count = row.original.findingCount;
+        const count = row.original.findingCount
         return (
-          <span className={count > 0 ? "font-medium text-orange-500" : "text-muted-foreground"}>
+          <span className={count > 0 ? 'font-medium text-orange-500' : 'text-muted-foreground'}>
             {count}
           </span>
-        );
+        )
       },
     },
     {
-      accessorKey: "riskScore",
+      accessorKey: 'riskScore',
       header: ({ column }) => <DataTableColumnHeader column={column} title="Risk Score" />,
       cell: ({ row }) => <RiskScoreBadge score={row.original.riskScore} size="sm" />,
     },
     {
-      id: "actions",
+      id: 'actions',
       cell: ({ row }) => {
-        const group = row.original;
+        const group = row.original
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -718,15 +695,19 @@ export default function AssetGroupsPage() {
                   <Pencil className="mr-2 h-4 w-4" />
                   Edit
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => {
-                  setSelectedAssetIds([]);
-                  setAssetSearchTerm("");
-                  setAddAssetsGroup(group);
-                }}>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setSelectedAssetIds([])
+                    setAssetSearchTerm('')
+                    setAddAssetsGroup(group)
+                  }}
+                >
                   <Plus className="mr-2 h-4 w-4" />
                   Add Assets
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => router.push(`/asset-groups/${group.id}?tab=assets`)}>
+                <DropdownMenuItem
+                  onClick={() => router.push(`/asset-groups/${group.id}?tab=assets`)}
+                >
                   <Package className="mr-2 h-4 w-4" />
                   Manage Assets
                 </DropdownMenuItem>
@@ -742,30 +723,21 @@ export default function AssetGroupsPage() {
               </DropdownMenuItem>
               <Can permission={Permission.AssetGroupsDelete}>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="text-red-400"
-                  onClick={() => setDeleteGroup(group)}
-                >
+                <DropdownMenuItem className="text-red-400" onClick={() => setDeleteGroup(group)}>
                   <Trash2 className="mr-2 h-4 w-4" />
                   Delete
                 </DropdownMenuItem>
               </Can>
             </DropdownMenuContent>
           </DropdownMenu>
-        );
+        )
       },
     },
-  ];
+  ]
 
   return (
     <>
-      <Header fixed>
-        <div className="ms-auto flex items-center gap-2 sm:gap-4">
-          <Search />
-          <ThemeSwitch />
-          <ProfileDropdown />
-        </div>
-      </Header>
+      <Header fixed />
 
       <Main>
         <PageHeader
@@ -774,7 +746,7 @@ export default function AssetGroupsPage() {
         >
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isLoading}>
-              <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+              <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
             <DropdownMenu>
@@ -785,13 +757,13 @@ export default function AssetGroupsPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleExport("CSV")}>
+                <DropdownMenuItem onClick={() => handleExport('CSV')}>
                   Export as CSV
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport("JSON")}>
+                <DropdownMenuItem onClick={() => handleExport('JSON')}>
                   Export as JSON
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport("PDF")}>
+                <DropdownMenuItem onClick={() => handleExport('PDF')}>
                   Export as PDF
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -827,13 +799,14 @@ export default function AssetGroupsPage() {
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">Environment</Label>
                     <div className="flex flex-wrap gap-2">
-                      {(["production", "staging", "development", "testing"] as Environment[]).map(
+                      {(['production', 'staging', 'development', 'testing'] as Environment[]).map(
                         (env) => (
                           <Badge
                             key={env}
-                            variant={filters.environments.includes(env) ? "default" : "outline"}
-                            className={`cursor-pointer ${filters.environments.includes(env) ? "" : "hover:bg-muted"
-                              }`}
+                            variant={filters.environments.includes(env) ? 'default' : 'outline'}
+                            className={`cursor-pointer ${
+                              filters.environments.includes(env) ? '' : 'hover:bg-muted'
+                            }`}
                             onClick={() => toggleEnvironmentFilter(env)}
                           >
                             {env}
@@ -847,14 +820,15 @@ export default function AssetGroupsPage() {
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">Criticality</Label>
                     <div className="flex flex-wrap gap-2">
-                      {(["critical", "high", "medium", "low"] as Criticality[]).map((crit) => (
+                      {(['critical', 'high', 'medium', 'low'] as Criticality[]).map((crit) => (
                         <Badge
                           key={crit}
-                          variant={filters.criticalities.includes(crit) ? "default" : "outline"}
-                          className={`cursor-pointer ${filters.criticalities.includes(crit)
-                            ? criticalityColors[crit]
-                            : "hover:bg-muted"
-                            }`}
+                          variant={filters.criticalities.includes(crit) ? 'default' : 'outline'}
+                          className={`cursor-pointer ${
+                            filters.criticalities.includes(crit)
+                              ? criticalityColors[crit]
+                              : 'hover:bg-muted'
+                          }`}
                           onClick={() => toggleCriticalityFilter(crit)}
                         >
                           {crit}
@@ -891,7 +865,7 @@ export default function AssetGroupsPage() {
                     <Label className="text-sm font-medium">Findings</Label>
                     <div className="flex gap-2">
                       <Badge
-                        variant={filters.hasFindings === true ? "default" : "outline"}
+                        variant={filters.hasFindings === true ? 'default' : 'outline'}
                         className="cursor-pointer"
                         onClick={() =>
                           setFilters((prev) => ({
@@ -903,7 +877,7 @@ export default function AssetGroupsPage() {
                         Has Findings
                       </Badge>
                       <Badge
-                        variant={filters.hasFindings === false ? "default" : "outline"}
+                        variant={filters.hasFindings === false ? 'default' : 'outline'}
                         className="cursor-pointer"
                         onClick={() =>
                           setFilters((prev) => ({
@@ -941,19 +915,16 @@ export default function AssetGroupsPage() {
         </PageHeader>
 
         {/* Active Filters Display */}
-        {(activeFilterCount > 0 || quickFilter !== "all") && (
+        {(activeFilterCount > 0 || quickFilter !== 'all') && (
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <span className="text-sm text-muted-foreground">Active filters:</span>
-            {quickFilter !== "all" && (
+            {quickFilter !== 'all' && (
               <Badge variant="secondary" className="gap-1">
-                {quickFilter === "critical" && "Critical Only"}
-                {quickFilter === "high-risk" && "High Risk (70+)"}
-                {quickFilter === "production" && "Production Only"}
-                {quickFilter === "with-findings" && "With Findings"}
-                <X
-                  className="h-3 w-3 cursor-pointer"
-                  onClick={() => setQuickFilter("all")}
-                />
+                {quickFilter === 'critical' && 'Critical Only'}
+                {quickFilter === 'high-risk' && 'High Risk (70+)'}
+                {quickFilter === 'production' && 'Production Only'}
+                {quickFilter === 'with-findings' && 'With Findings'}
+                <X className="h-3 w-3 cursor-pointer" onClick={() => setQuickFilter('all')} />
               </Badge>
             )}
             {filters.environments.map((env) => (
@@ -979,15 +950,13 @@ export default function AssetGroupsPage() {
                 Risk: {filters.riskScoreRange[0]}-{filters.riskScoreRange[1]}
                 <X
                   className="h-3 w-3 cursor-pointer"
-                  onClick={() =>
-                    setFilters((prev) => ({ ...prev, riskScoreRange: [0, 100] }))
-                  }
+                  onClick={() => setFilters((prev) => ({ ...prev, riskScoreRange: [0, 100] }))}
                 />
               </Badge>
             )}
             {filters.hasFindings !== null && (
               <Badge variant="secondary" className="gap-1">
-                {filters.hasFindings ? "Has Findings" : "No Findings"}
+                {filters.hasFindings ? 'Has Findings' : 'No Findings'}
                 <X
                   className="h-3 w-3 cursor-pointer"
                   onClick={() => setFilters((prev) => ({ ...prev, hasFindings: null }))}
@@ -1004,9 +973,7 @@ export default function AssetGroupsPage() {
         {selectedIds.length > 0 && (
           <Card className="mt-4 border-primary">
             <CardContent className="flex items-center justify-between py-3">
-              <span className="text-sm font-medium">
-                {selectedIds.length} group(s) selected
-              </span>
+              <span className="text-sm font-medium">{selectedIds.length} group(s) selected</span>
               <div className="flex flex-wrap items-center gap-2">
                 {/* Change Criticality */}
                 <DropdownMenu>
@@ -1017,10 +984,10 @@ export default function AssetGroupsPage() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
-                    {(["critical", "high", "medium", "low"] as Criticality[]).map((crit) => (
+                    {(['critical', 'high', 'medium', 'low'] as Criticality[]).map((crit) => (
                       <DropdownMenuItem
                         key={crit}
-                        onClick={() => handleBulkAction("change-criticality", crit)}
+                        onClick={() => handleBulkAction('change-criticality', crit)}
                       >
                         <Badge className={`mr-2 ${criticalityColors[crit]}`}>{crit}</Badge>
                       </DropdownMenuItem>
@@ -1037,11 +1004,11 @@ export default function AssetGroupsPage() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
-                    {(["production", "staging", "development", "testing"] as Environment[]).map(
+                    {(['production', 'staging', 'development', 'testing'] as Environment[]).map(
                       (env) => (
                         <DropdownMenuItem
                           key={env}
-                          onClick={() => handleBulkAction("change-environment", env)}
+                          onClick={() => handleBulkAction('change-environment', env)}
                         >
                           {env}
                         </DropdownMenuItem>
@@ -1065,9 +1032,10 @@ export default function AssetGroupsPage() {
         {/* Stats Cards - Clickable */}
         <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
           <Card
-            className={`cursor-pointer transition-colors hover:border-primary ${quickFilter === "all" ? "border-primary" : ""
-              }`}
-            onClick={() => handleStatsCardClick("all")}
+            className={`cursor-pointer transition-colors hover:border-primary ${
+              quickFilter === 'all' ? 'border-primary' : ''
+            }`}
+            onClick={() => handleStatsCardClick('all')}
           >
             <CardHeader className="pb-2">
               <CardDescription>Total Groups</CardDescription>
@@ -1075,9 +1043,10 @@ export default function AssetGroupsPage() {
             </CardHeader>
           </Card>
           <Card
-            className={`cursor-pointer transition-colors hover:border-red-500 ${quickFilter === "critical" ? "border-red-500" : ""
-              }`}
-            onClick={() => handleStatsCardClick("critical")}
+            className={`cursor-pointer transition-colors hover:border-red-500 ${
+              quickFilter === 'critical' ? 'border-red-500' : ''
+            }`}
+            onClick={() => handleStatsCardClick('critical')}
           >
             <CardHeader className="pb-2">
               <CardDescription>Critical Groups</CardDescription>
@@ -1115,9 +1084,7 @@ export default function AssetGroupsPage() {
         <Card className="mt-4">
           <CardHeader>
             <CardTitle>All Groups</CardTitle>
-            <CardDescription>
-              Manage and organize your assets into logical groups
-            </CardDescription>
+            <CardDescription>Manage and organize your assets into logical groups</CardDescription>
           </CardHeader>
           <CardContent>
             <DataTable
@@ -1127,9 +1094,9 @@ export default function AssetGroupsPage() {
               pageSize={10}
               emptyMessage="No asset groups found"
               emptyDescription={
-                activeFilterCount > 0 || quickFilter !== "all"
-                  ? "Try adjusting your filters"
-                  : "Create your first asset group to organize your assets"
+                activeFilterCount > 0 || quickFilter !== 'all'
+                  ? 'Try adjusting your filters'
+                  : 'Create your first asset group to organize your assets'
               }
               onRowClick={(group) => setViewGroup(group)}
             />
@@ -1147,28 +1114,46 @@ export default function AssetGroupsPage() {
           {viewGroup && (
             <>
               {/* Header with gradient background */}
-              <div className={`relative p-6 ${viewGroup.criticality === "critical" ? "bg-gradient-to-br from-red-500/20 to-red-600/5" :
-                viewGroup.criticality === "high" ? "bg-gradient-to-br from-orange-500/20 to-orange-600/5" :
-                  viewGroup.criticality === "medium" ? "bg-gradient-to-br from-yellow-500/20 to-yellow-600/5" :
-                    "bg-gradient-to-br from-blue-500/20 to-blue-600/5"
-                }`}>
+              <div
+                className={`relative p-6 ${
+                  viewGroup.criticality === 'critical'
+                    ? 'bg-gradient-to-br from-red-500/20 to-red-600/5'
+                    : viewGroup.criticality === 'high'
+                      ? 'bg-gradient-to-br from-orange-500/20 to-orange-600/5'
+                      : viewGroup.criticality === 'medium'
+                        ? 'bg-gradient-to-br from-yellow-500/20 to-yellow-600/5'
+                        : 'bg-gradient-to-br from-blue-500/20 to-blue-600/5'
+                }`}
+              >
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-4">
-                    <div className={`flex h-14 w-14 items-center justify-center rounded-xl ${viewGroup.criticality === "critical" ? "bg-red-500/20" :
-                      viewGroup.criticality === "high" ? "bg-orange-500/20" :
-                        viewGroup.criticality === "medium" ? "bg-yellow-500/20" :
-                          "bg-blue-500/20"
-                      }`}>
-                      <FolderKanban className={`h-7 w-7 ${viewGroup.criticality === "critical" ? "text-red-500" :
-                        viewGroup.criticality === "high" ? "text-orange-500" :
-                          viewGroup.criticality === "medium" ? "text-yellow-500" :
-                            "text-blue-500"
-                        }`} />
+                    <div
+                      className={`flex h-14 w-14 items-center justify-center rounded-xl ${
+                        viewGroup.criticality === 'critical'
+                          ? 'bg-red-500/20'
+                          : viewGroup.criticality === 'high'
+                            ? 'bg-orange-500/20'
+                            : viewGroup.criticality === 'medium'
+                              ? 'bg-yellow-500/20'
+                              : 'bg-blue-500/20'
+                      }`}
+                    >
+                      <FolderKanban
+                        className={`h-7 w-7 ${
+                          viewGroup.criticality === 'critical'
+                            ? 'text-red-500'
+                            : viewGroup.criticality === 'high'
+                              ? 'text-orange-500'
+                              : viewGroup.criticality === 'medium'
+                                ? 'text-yellow-500'
+                                : 'text-blue-500'
+                        }`}
+                      />
                     </div>
                     <div>
                       <h2 className="text-xl font-semibold">{viewGroup.name}</h2>
                       <p className="text-sm text-muted-foreground mt-0.5">
-                        {viewGroup.description || "No description"}
+                        {viewGroup.description || 'No description'}
                       </p>
                     </div>
                   </div>
@@ -1223,7 +1208,9 @@ export default function AssetGroupsPage() {
                       <Filter className="h-4 w-4" />
                       <span className="text-xs font-medium">Findings</span>
                     </div>
-                    <p className={`text-2xl font-bold ${viewGroup.findingCount > 0 ? "text-orange-500" : ""}`}>
+                    <p
+                      className={`text-2xl font-bold ${viewGroup.findingCount > 0 ? 'text-orange-500' : ''}`}
+                    >
                       {viewGroup.findingCount}
                     </p>
                   </div>
@@ -1240,19 +1227,31 @@ export default function AssetGroupsPage() {
                 <div className="rounded-xl border bg-card p-4">
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-sm font-medium">Risk Score Distribution</span>
-                    <span className={`text-sm font-bold ${viewGroup.riskScore >= 80 ? "text-red-500" :
-                      viewGroup.riskScore >= 60 ? "text-orange-500" :
-                        viewGroup.riskScore >= 40 ? "text-yellow-500" :
-                          "text-green-500"
-                      }`}>{viewGroup.riskScore}/100</span>
+                    <span
+                      className={`text-sm font-bold ${
+                        viewGroup.riskScore >= 80
+                          ? 'text-red-500'
+                          : viewGroup.riskScore >= 60
+                            ? 'text-orange-500'
+                            : viewGroup.riskScore >= 40
+                              ? 'text-yellow-500'
+                              : 'text-green-500'
+                      }`}
+                    >
+                      {viewGroup.riskScore}/100
+                    </span>
                   </div>
                   <div className="h-2 rounded-full bg-muted overflow-hidden">
                     <div
-                      className={`h-full rounded-full transition-all ${viewGroup.riskScore >= 80 ? "bg-red-500" :
-                        viewGroup.riskScore >= 60 ? "bg-orange-500" :
-                          viewGroup.riskScore >= 40 ? "bg-yellow-500" :
-                            "bg-green-500"
-                        }`}
+                      className={`h-full rounded-full transition-all ${
+                        viewGroup.riskScore >= 80
+                          ? 'bg-red-500'
+                          : viewGroup.riskScore >= 60
+                            ? 'bg-orange-500'
+                            : viewGroup.riskScore >= 40
+                              ? 'bg-yellow-500'
+                              : 'bg-green-500'
+                      }`}
                       style={{ width: `${viewGroup.riskScore}%` }}
                     />
                   </div>
@@ -1285,7 +1284,7 @@ export default function AssetGroupsPage() {
                     </div>
                     <div>
                       <p className="text-muted-foreground text-xs">Owner</p>
-                      <p className="mt-0.5">{viewGroup.owner || "Not assigned"}</p>
+                      <p className="mt-0.5">{viewGroup.owner || 'Not assigned'}</p>
                     </div>
                   </div>
                 </div>
@@ -1293,18 +1292,25 @@ export default function AssetGroupsPage() {
                 {/* Action Buttons */}
                 <div className="flex gap-2 pt-2">
                   <Can permission={Permission.AssetGroupsWrite}>
-                    <Button className="flex-1" onClick={() => {
-                      setViewGroup(null);
-                      openEditDialog(viewGroup);
-                    }}>
+                    <Button
+                      className="flex-1"
+                      onClick={() => {
+                        setViewGroup(null)
+                        openEditDialog(viewGroup)
+                      }}
+                    >
                       <Pencil className="mr-2 h-4 w-4" />
                       Edit Group
                     </Button>
                   </Can>
-                  <Button variant="outline" className="flex-1" onClick={() => {
-                    setViewGroup(null);
-                    router.push(`/asset-groups/${viewGroup.id}`);
-                  }}>
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      setViewGroup(null)
+                      router.push(`/asset-groups/${viewGroup.id}`)
+                    }}
+                  >
                     <ExternalLink className="mr-2 h-4 w-4" />
                     Open Full Page
                   </Button>
@@ -1325,8 +1331,8 @@ export default function AssetGroupsPage() {
                         size="sm"
                         className="border-red-500/30 text-red-500 hover:bg-red-500/10"
                         onClick={() => {
-                          setViewGroup(null);
-                          setDeleteGroup(viewGroup);
+                          setViewGroup(null)
+                          setDeleteGroup(viewGroup)
                         }}
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
@@ -1366,16 +1372,13 @@ export default function AssetGroupsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Asset Group</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete &quot;{deleteGroup?.name}&quot;? This action cannot be undone.
-              All assets in this group will be unassigned.
+              Are you sure you want to delete &quot;{deleteGroup?.name}&quot;? This action cannot be
+              undone. All assets in this group will be unassigned.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-red-500 hover:bg-red-600"
-              onClick={handleDelete}
-            >
+            <AlertDialogAction className="bg-red-500 hover:bg-red-600" onClick={handleDelete}>
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -1392,18 +1395,18 @@ export default function AssetGroupsPage() {
           searchTerm={assetSearchTerm}
           setSearchTerm={setAssetSearchTerm}
           onClose={() => {
-            setAddAssetsGroup(null);
-            setSelectedAssetIds([]);
-            setAssetSearchTerm("");
+            setAddAssetsGroup(null)
+            setSelectedAssetIds([])
+            setAssetSearchTerm('')
           }}
           onSuccess={() => {
-            refreshData();
-            setAddAssetsGroup(null);
-            setSelectedAssetIds([]);
-            setAssetSearchTerm("");
+            refreshData()
+            setAddAssetsGroup(null)
+            setSelectedAssetIds([])
+            setAssetSearchTerm('')
           }}
         />
       )}
     </>
-  );
+  )
 }

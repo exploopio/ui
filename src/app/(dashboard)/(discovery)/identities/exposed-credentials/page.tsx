@@ -1,65 +1,50 @@
-"use client";
+'use client'
 
-import { Header, Main } from "@/components/layout";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { PageHeader } from "@/features/shared";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { KeyRound, FileCode, FileText, Globe } from "lucide-react";
+import { Header, Main } from '@/components/layout'
+import { PageHeader } from '@/features/shared'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { KeyRound, FileCode, FileText, Globe } from 'lucide-react'
 
 // Mock stats data
 const exposedCredentialStats = [
   {
-    title: "Total Exposed",
-    value: "23",
-    description: "Credentials found at risk",
+    title: 'Total Exposed',
+    value: '23',
+    description: 'Credentials found at risk',
     icon: KeyRound,
-    iconColor: "text-red-500",
-    iconBg: "bg-red-500/10",
+    iconColor: 'text-red-500',
+    iconBg: 'bg-red-500/10',
   },
   {
-    title: "In Code",
-    value: "12",
-    description: "Hardcoded in repositories",
+    title: 'In Code',
+    value: '12',
+    description: 'Hardcoded in repositories',
     icon: FileCode,
-    iconColor: "text-orange-500",
-    iconBg: "bg-orange-500/10",
+    iconColor: 'text-orange-500',
+    iconBg: 'bg-orange-500/10',
   },
   {
-    title: "In Logs",
-    value: "6",
-    description: "Found in log files",
+    title: 'In Logs',
+    value: '6',
+    description: 'Found in log files',
     icon: FileText,
-    iconColor: "text-yellow-500",
-    iconBg: "bg-yellow-500/10",
+    iconColor: 'text-yellow-500',
+    iconBg: 'bg-yellow-500/10',
   },
   {
-    title: "In Breaches",
-    value: "5",
-    description: "Found in data breaches",
+    title: 'In Breaches',
+    value: '5',
+    description: 'Found in data breaches',
     icon: Globe,
-    iconColor: "text-purple-500",
-    iconBg: "bg-purple-500/10",
+    iconColor: 'text-purple-500',
+    iconBg: 'bg-purple-500/10',
   },
-];
+]
 
 export default function ExposedCredentialsPage() {
   return (
     <>
-      <Header fixed>
-        <div className="ms-auto flex items-center gap-2 sm:gap-4">
-          <Search />
-          <ThemeSwitch />
-          <ProfileDropdown />
-        </div>
-      </Header>
+      <Header fixed />
 
       <Main>
         <PageHeader
@@ -80,14 +65,12 @@ export default function ExposedCredentialsPage() {
                 <CardTitle className="text-3xl">{stat.value}</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  {stat.description}
-                </p>
+                <p className="text-sm text-muted-foreground">{stat.description}</p>
               </CardContent>
             </Card>
           ))}
         </div>
       </Main>
     </>
-  );
+  )
 }

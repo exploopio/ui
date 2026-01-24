@@ -523,6 +523,103 @@ await del()
 - `integrations:notifications:write` for retry
 - `integrations:notifications:delete` for delete
 
+## 👤 Account Settings
+
+User account management for profile, security, and preferences.
+
+**Key Files:**
+
+```
+src/features/account/
+├── api/
+│   ├── use-profile.ts        # Profile CRUD hooks
+│   ├── use-security.ts       # Password, 2FA hooks
+│   ├── use-sessions.ts       # Session management
+│   └── use-preferences.ts    # User preferences
+├── types/
+│   └── account.types.ts      # Type definitions
+└── index.ts                  # Feature exports
+
+src/app/(dashboard)/account/
+├── layout.tsx                # Account layout with tabs
+├── page.tsx                  # Profile tab
+├── security/page.tsx         # Security tab (password, 2FA, sessions)
+├── preferences/page.tsx      # Preferences tab (theme, language, notifications)
+└── activity/page.tsx         # Activity log tab
+```
+
+**Types:**
+
+```tsx
+// User profile
+interface UserProfile {
+  id: string
+  email: string
+  name: string
+  avatar_url?: string
+  phone?: string
+  bio?: string
+  auth_provider: 'local' | 'google' | 'github' | 'microsoft' | 'saml' | 'oidc'
+}
+
+// Session
+interface Session {
+  id: string
+  device: string
+  browser: string
+  ip_address: string
+  is_current: boolean
+  last_active_at: string
+}
+
+// Preferences
+interface UserPreferences {
+  theme: 'light' | 'dark' | 'system'
+  language: string
+  timezone: string
+  email_notifications: EmailNotificationPreferences
+  desktop_notifications: boolean
+}
+```
+
+**Hooks:**
+
+```tsx
+// Profile
+const { profile, isLoading, mutate } = useProfile()
+const { updateProfile, isUpdating } = useUpdateProfile()
+const { updateAvatar, removeAvatar } = useUpdateAvatar()
+
+// Security
+const { changePassword, isChanging } = useChangePassword()
+const { status: twoFactorStatus } = useTwoFactorStatus()
+
+// Sessions
+const { sessions, mutate } = useSessions()
+const { revokeSession } = useRevokeSession()
+const { revokeAllSessions } = useRevokeAllSessions()
+
+// Preferences
+const { preferences, mutate } = usePreferences()
+const { updatePreferences, isUpdating } = useUpdatePreferences()
+```
+
+**API Endpoints:**
+
+| Endpoint                           | Method          | Description        |
+| ---------------------------------- | --------------- | ------------------ |
+| `/api/v1/users/me`                 | GET/PUT         | Profile CRUD       |
+| `/api/v1/users/me/avatar`          | PUT/DELETE      | Avatar management  |
+| `/api/v1/users/me/change-password` | POST            | Change password    |
+| `/api/v1/users/me/2fa`             | GET/POST/DELETE | 2FA management     |
+| `/api/v1/users/me/sessions`        | GET/DELETE      | Session management |
+| `/api/v1/users/me/preferences`     | GET/PUT         | User preferences   |
+
+**Navigation:**
+
+- Accessible via profile dropdown (top-right)
+- Tab-based navigation: Profile > Security > Preferences > Activity
+
 ## 🎨 UI & Theming
 
 ```tsx
@@ -566,6 +663,7 @@ toast.error('Failed!')
 - [architecture.md](.claude/architecture.md) - Structure deep dive
 - [auth.md](.claude/auth.md) - Authentication & multi-tenant flow
 - [access-control.md](.claude/access-control.md) - RBAC & permissions system
+- [account.md](.claude/account.md) - Account settings & preferences
 - [patterns.md](.claude/patterns.md) - Code patterns & examples
 - [i18n.md](.claude/i18n.md) - Internationalization guide
 - [troubleshooting.md](.claude/troubleshooting.md) - Common issues

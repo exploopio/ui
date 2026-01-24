@@ -1,23 +1,20 @@
-"use client";
+'use client'
 
-import { useState, useCallback } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
+import { useState, useCallback } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Badge } from '@/components/ui/badge'
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet";
-import { Header, Main } from "@/components/layout";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search as SearchComponent } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/sheet'
+import { Header, Main } from '@/components/layout'
+import { cn } from '@/lib/utils'
 import {
   Search,
   RefreshCw,
@@ -39,16 +36,12 @@ import {
   Globe,
   User,
   Server,
-} from "lucide-react";
-import { toast } from "sonner";
-import { formatDistanceToNow } from "date-fns";
-import { useTenant } from "@/context/tenant-provider";
+} from 'lucide-react'
+import { toast } from 'sonner'
+import { formatDistanceToNow } from 'date-fns'
+import { useTenant } from '@/context/tenant-provider'
 
-import {
-  useExposures,
-  useExposureStats,
-  useExposureHistory,
-} from "@/features/exposures/hooks";
+import { useExposures, useExposureStats, useExposureHistory } from '@/features/exposures/hooks'
 import {
   ExposureStatsCards,
   ExposureSeverityBreakdown,
@@ -56,55 +49,55 @@ import {
   ExposureTable,
   ExposureActionDialog,
   ExposureBulkActions,
-} from "@/features/exposures/components";
+} from '@/features/exposures/components'
 import type {
   ExposureEvent,
   ExposureListFilters,
   ExposureSeverity,
   ExposureState,
-} from "@/lib/api/exposure-types";
+} from '@/lib/api/exposure-types'
 
-type ActionType = "resolve" | "accept" | "false_positive" | "reactivate";
+type ActionType = 'resolve' | 'accept' | 'false_positive' | 'reactivate'
 
 // State tab type for cleaner organization
-type StateTab = "needs_attention" | "resolved" | "all";
+type StateTab = 'needs_attention' | 'resolved' | 'all'
 
 export default function ExposuresPage() {
-  const { currentTenant } = useTenant();
-  const tenantId = currentTenant?.id || null;
+  const { currentTenant } = useTenant()
+  const tenantId = currentTenant?.id || null
 
   // State tab - primary filter
-  const [activeTab, setActiveTab] = useState<StateTab>("needs_attention");
+  const [activeTab, setActiveTab] = useState<StateTab>('needs_attention')
 
   // Filters state
   const [filters, setFilters] = useState<ExposureListFilters>({
     page: 1,
     per_page: 20,
-  });
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedSeverities, setSelectedSeverities] = useState<ExposureSeverity[]>([]);
+  })
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedSeverities, setSelectedSeverities] = useState<ExposureSeverity[]>([])
 
   // Map tab to state filters
   const getStatesForTab = (tab: StateTab): ExposureState[] | undefined => {
     switch (tab) {
-      case "needs_attention":
-        return ["active"];
-      case "resolved":
-        return ["resolved", "accepted", "false_positive"];
-      case "all":
-        return undefined; // No filter = all states
+      case 'needs_attention':
+        return ['active']
+      case 'resolved':
+        return ['resolved', 'accepted', 'false_positive']
+      case 'all':
+        return undefined // No filter = all states
     }
-  };
+  }
 
   // Selection state
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
 
   // Action dialog state
-  const [selectedExposure, setSelectedExposure] = useState<ExposureEvent | null>(null);
-  const [actionType, setActionType] = useState<ActionType | null>(null);
+  const [selectedExposure, setSelectedExposure] = useState<ExposureEvent | null>(null)
+  const [actionType, setActionType] = useState<ActionType | null>(null)
 
   // Detail sheet state
-  const [detailExposure, setDetailExposure] = useState<ExposureEvent | null>(null);
+  const [detailExposure, setDetailExposure] = useState<ExposureEvent | null>(null)
 
   // Build filters for API based on active tab
   const apiFilters: ExposureListFilters = {
@@ -112,7 +105,7 @@ export default function ExposuresPage() {
     search: searchQuery || undefined,
     severities: selectedSeverities.length > 0 ? selectedSeverities : undefined,
     states: getStatesForTab(activeTab),
-  };
+  }
 
   // Data fetching
   const {
@@ -122,91 +115,89 @@ export default function ExposuresPage() {
     totalPages,
     isLoading: exposuresLoading,
     mutate: refreshExposures,
-  } = useExposures(tenantId, apiFilters);
+  } = useExposures(tenantId, apiFilters)
 
-  const {
-    stats,
-    isLoading: statsLoading,
-    mutate: refreshStats,
-  } = useExposureStats(tenantId);
+  const { stats, isLoading: statsLoading, mutate: refreshStats } = useExposureStats(tenantId)
 
-  const isLoading = exposuresLoading || statsLoading;
+  const isLoading = exposuresLoading || statsLoading
 
   // Handlers
   const handleRefresh = useCallback(() => {
-    refreshExposures();
-    refreshStats();
-  }, [refreshExposures, refreshStats]);
+    refreshExposures()
+    refreshStats()
+  }, [refreshExposures, refreshStats])
 
   const handleSearch = useCallback((value: string) => {
-    setSearchQuery(value);
-    setFilters((prev) => ({ ...prev, page: 1 }));
-  }, []);
+    setSearchQuery(value)
+    setFilters((prev) => ({ ...prev, page: 1 }))
+  }, [])
 
   const handleSeverityFilter = useCallback((severity: ExposureSeverity) => {
     setSelectedSeverities((prev) =>
-      prev.includes(severity)
-        ? prev.filter((s) => s !== severity)
-        : [...prev, severity]
-    );
-    setFilters((prev) => ({ ...prev, page: 1 }));
-  }, []);
+      prev.includes(severity) ? prev.filter((s) => s !== severity) : [...prev, severity]
+    )
+    setFilters((prev) => ({ ...prev, page: 1 }))
+  }, [])
 
   const handleTabChange = useCallback((tab: StateTab) => {
-    setActiveTab(tab);
-    setFilters((prev) => ({ ...prev, page: 1 }));
-  }, []);
+    setActiveTab(tab)
+    setFilters((prev) => ({ ...prev, page: 1 }))
+  }, [])
 
   const handlePageChange = useCallback((newPage: number) => {
-    setFilters((prev) => ({ ...prev, page: newPage }));
-  }, []);
+    setFilters((prev) => ({ ...prev, page: newPage }))
+  }, [])
 
   const handleAction = useCallback((exposure: ExposureEvent, action: ActionType) => {
-    setSelectedExposure(exposure);
-    setActionType(action);
-  }, []);
+    setSelectedExposure(exposure)
+    setActionType(action)
+  }, [])
 
   const handleActionSuccess = useCallback(() => {
-    handleRefresh();
-    setSelectedIds([]);
+    handleRefresh()
+    setSelectedIds([])
     // Close detail sheet after successful action
-    setDetailExposure(null);
-  }, [handleRefresh]);
+    setDetailExposure(null)
+  }, [handleRefresh])
 
-  const handleBulkResolve = useCallback(async (ids: string[]) => {
-    // In real implementation, call bulk API
-    toast.success(`${ids.length} exposures resolved`);
-    handleRefresh();
-  }, [handleRefresh]);
+  const handleBulkResolve = useCallback(
+    async (ids: string[]) => {
+      // In real implementation, call bulk API
+      toast.success(`${ids.length} exposures resolved`)
+      handleRefresh()
+    },
+    [handleRefresh]
+  )
 
-  const handleBulkAccept = useCallback(async (ids: string[], _reason: string) => {
-    toast.success(`${ids.length} exposures accepted`);
-    handleRefresh();
-  }, [handleRefresh]);
+  const handleBulkAccept = useCallback(
+    async (ids: string[], _reason: string) => {
+      toast.success(`${ids.length} exposures accepted`)
+      handleRefresh()
+    },
+    [handleRefresh]
+  )
 
-  const handleBulkFalsePositive = useCallback(async (ids: string[], _reason: string) => {
-    toast.success(`${ids.length} exposures marked as false positive`);
-    handleRefresh();
-  }, [handleRefresh]);
+  const handleBulkFalsePositive = useCallback(
+    async (ids: string[], _reason: string) => {
+      toast.success(`${ids.length} exposures marked as false positive`)
+      handleRefresh()
+    },
+    [handleRefresh]
+  )
 
   const clearFilters = useCallback(() => {
-    setSearchQuery("");
-    setSelectedSeverities([]);
-    setActiveTab("needs_attention");
-    setFilters({ page: 1, per_page: 20 });
-  }, []);
+    setSearchQuery('')
+    setSelectedSeverities([])
+    setActiveTab('needs_attention')
+    setFilters({ page: 1, per_page: 20 })
+  }, [])
 
-  const hasActiveFilters = searchQuery || selectedSeverities.length > 0 || activeTab !== "needs_attention";
+  const hasActiveFilters =
+    searchQuery || selectedSeverities.length > 0 || activeTab !== 'needs_attention'
 
   return (
     <>
-      <Header fixed>
-        <div className="ms-auto flex items-center gap-2 sm:gap-4">
-          <SearchComponent />
-          <ThemeSwitch />
-          <ProfileDropdown />
-        </div>
-      </Header>
+      <Header fixed />
 
       <Main>
         <div className="space-y-6">
@@ -214,9 +205,7 @@ export default function ExposuresPage() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 className="text-2xl font-bold tracking-tight">Exposure Events</h1>
-              <p className="text-muted-foreground">
-                Monitor and manage attack surface exposures
-              </p>
+              <p className="text-muted-foreground">Monitor and manage attack surface exposures</p>
             </div>
             <div className="flex items-center gap-2">
               <Button variant="outline" onClick={handleRefresh} disabled={isLoading}>
@@ -265,16 +254,19 @@ export default function ExposuresPage() {
                     <div className="flex items-center gap-2 flex-wrap">
                       {/* Severity Filter */}
                       <div className="flex items-center gap-1">
-                        {(["critical", "high", "medium", "low", "info"] as ExposureSeverity[]).map(
+                        {(['critical', 'high', 'medium', 'low', 'info'] as ExposureSeverity[]).map(
                           (severity) => (
                             <Button
                               key={severity}
-                              variant={selectedSeverities.includes(severity) ? "default" : "outline"}
+                              variant={
+                                selectedSeverities.includes(severity) ? 'default' : 'outline'
+                              }
                               size="sm"
                               onClick={() => handleSeverityFilter(severity)}
                               className={cn(
-                                "capitalize",
-                                selectedSeverities.includes(severity) && getSeverityButtonClass(severity)
+                                'capitalize',
+                                selectedSeverities.includes(severity) &&
+                                  getSeverityButtonClass(severity)
                               )}
                             >
                               {severity}
@@ -286,29 +278,31 @@ export default function ExposuresPage() {
                       {/* State Tabs */}
                       <div className="flex items-center gap-1 rounded-lg border p-1">
                         <Button
-                          variant={activeTab === "needs_attention" ? "default" : "ghost"}
+                          variant={activeTab === 'needs_attention' ? 'default' : 'ghost'}
                           size="sm"
                           className="h-7"
-                          onClick={() => handleTabChange("needs_attention")}
+                          onClick={() => handleTabChange('needs_attention')}
                         >
                           Needs Attention
                           {stats.by_state?.active > 0 && (
-                            <Badge variant="secondary" className="ml-1.5">{stats.by_state.active}</Badge>
+                            <Badge variant="secondary" className="ml-1.5">
+                              {stats.by_state.active}
+                            </Badge>
                           )}
                         </Button>
                         <Button
-                          variant={activeTab === "resolved" ? "default" : "ghost"}
+                          variant={activeTab === 'resolved' ? 'default' : 'ghost'}
                           size="sm"
                           className="h-7"
-                          onClick={() => handleTabChange("resolved")}
+                          onClick={() => handleTabChange('resolved')}
                         >
                           Resolved
                         </Button>
                         <Button
-                          variant={activeTab === "all" ? "default" : "ghost"}
+                          variant={activeTab === 'all' ? 'default' : 'ghost'}
                           size="sm"
                           className="h-7"
-                          onClick={() => handleTabChange("all")}
+                          onClick={() => handleTabChange('all')}
                         >
                           All
                         </Button>
@@ -343,10 +337,10 @@ export default function ExposuresPage() {
                 isLoading={exposuresLoading}
                 selectedIds={selectedIds}
                 onSelectionChange={setSelectedIds}
-                onResolve={(exposure) => handleAction(exposure, "resolve")}
-                onAccept={(exposure) => handleAction(exposure, "accept")}
-                onMarkFalsePositive={(exposure) => handleAction(exposure, "false_positive")}
-                onReactivate={(exposure) => handleAction(exposure, "reactivate")}
+                onResolve={(exposure) => handleAction(exposure, 'resolve')}
+                onAccept={(exposure) => handleAction(exposure, 'accept')}
+                onMarkFalsePositive={(exposure) => handleAction(exposure, 'false_positive')}
+                onReactivate={(exposure) => handleAction(exposure, 'reactivate')}
                 onViewDetails={setDetailExposure}
               />
 
@@ -407,8 +401,8 @@ export default function ExposuresPage() {
             open={actionType !== null}
             onOpenChange={(open) => {
               if (!open) {
-                setActionType(null);
-                setSelectedExposure(null);
+                setActionType(null)
+                setSelectedExposure(null)
               }
             }}
             onSuccess={handleActionSuccess}
@@ -421,60 +415,50 @@ export default function ExposuresPage() {
             onOpenChange={(open) => !open && setDetailExposure(null)}
             onAction={(action) => {
               if (detailExposure) {
-                handleAction(detailExposure, action);
+                handleAction(detailExposure, action)
               }
             }}
           />
         </div>
       </Main>
     </>
-  );
+  )
 }
 
 function getSeverityButtonClass(severity: ExposureSeverity): string {
   const classes: Record<ExposureSeverity, string> = {
-    critical: "bg-red-500 hover:bg-red-600",
-    high: "bg-orange-500 hover:bg-orange-600",
-    medium: "bg-yellow-500 hover:bg-yellow-600 text-black",
-    low: "bg-blue-500 hover:bg-blue-600",
-    info: "bg-gray-500 hover:bg-gray-600",
-  };
-  return classes[severity];
+    critical: 'bg-red-500 hover:bg-red-600',
+    high: 'bg-orange-500 hover:bg-orange-600',
+    medium: 'bg-yellow-500 hover:bg-yellow-600 text-black',
+    low: 'bg-blue-500 hover:bg-blue-600',
+    info: 'bg-gray-500 hover:bg-gray-600',
+  }
+  return classes[severity]
 }
 
 interface EventTypeDistributionProps {
-  byEventType: Record<string, number>;
+  byEventType: Record<string, number>
 }
 
 function EventTypeDistribution({ byEventType }: EventTypeDistributionProps) {
   if (!byEventType || Object.keys(byEventType).length === 0) {
-    return (
-      <div className="text-center py-8 text-muted-foreground">
-        No exposure data available
-      </div>
-    );
+    return <div className="text-center py-8 text-muted-foreground">No exposure data available</div>
   }
 
-  const entries = Object.entries(byEventType).sort((a, b) => b[1] - a[1]);
-  const total = entries.reduce((sum, [_, count]) => sum + count, 0) || 1;
+  const entries = Object.entries(byEventType).sort((a, b) => b[1] - a[1])
+  const total = entries.reduce((sum, [_, count]) => sum + count, 0) || 1
 
   if (entries.length === 0) {
-    return (
-      <div className="text-center py-8 text-muted-foreground">
-        No exposure data available
-      </div>
-    );
+    return <div className="text-center py-8 text-muted-foreground">No exposure data available</div>
   }
 
   return (
     <div className="space-y-2">
       {entries.slice(0, 10).map(([type, count]) => {
-        const percentage = ((count / total) * 100).toFixed(1);
+        const percentage = ((count / total) * 100).toFixed(1)
         return (
           <div key={type} className="flex items-center gap-3">
-            <div className="w-40 text-sm truncate capitalize">
-              {type.replace(/_/g, " ")}
-            </div>
+            <div className="w-40 text-sm truncate capitalize">{type.replace(/_/g, ' ')}</div>
             <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
               <div
                 className="h-full rounded-full bg-primary transition-all"
@@ -485,10 +469,10 @@ function EventTypeDistribution({ byEventType }: EventTypeDistributionProps) {
               {count} ({percentage}%)
             </div>
           </div>
-        );
+        )
       })}
     </div>
-  );
+  )
 }
 
 // ============================================
@@ -496,7 +480,7 @@ function EventTypeDistribution({ byEventType }: EventTypeDistributionProps) {
 // ============================================
 
 // Sensitive field patterns
-const SENSITIVE_FIELDS = ['secret_value', 'password', 'api_key', 'token', 'private_key', 'secret'];
+const SENSITIVE_FIELDS = ['secret_value', 'password', 'api_key', 'token', 'private_key', 'secret']
 
 // Field labels mapping
 const FIELD_LABELS: Record<string, string> = {
@@ -525,14 +509,22 @@ const FIELD_LABELS: Record<string, string> = {
   is_revoked: 'Revoked',
   discovered_at: 'Discovered',
   classification: 'Classification',
-};
+}
 
 // Group fields by category
 const FIELD_GROUPS: Record<string, { title: string; icon: typeof Key; fields: string[] }> = {
   credential: {
     title: 'Credential',
     icon: Key,
-    fields: ['credential_type', 'identifier', 'username', 'email', 'secret_value', 'is_verified', 'is_revoked'],
+    fields: [
+      'credential_type',
+      'identifier',
+      'username',
+      'email',
+      'secret_value',
+      'is_verified',
+      'is_revoked',
+    ],
   },
   database: {
     title: 'Database',
@@ -542,7 +534,14 @@ const FIELD_GROUPS: Record<string, { title: string; icon: typeof Key; fields: st
   source: {
     title: 'Source',
     icon: Globe,
-    fields: ['source_type', 'source_name', 'source_url', 'breach_name', 'breach_date', 'discovered_at'],
+    fields: [
+      'source_type',
+      'source_name',
+      'source_url',
+      'breach_name',
+      'breach_date',
+      'discovered_at',
+    ],
   },
   code: {
     title: 'Code Location',
@@ -554,82 +553,85 @@ const FIELD_GROUPS: Record<string, { title: string; icon: typeof Key; fields: st
     icon: Globe,
     fields: ['domain', 'ip_address'],
   },
-};
+}
 
 // ============================================
 // EXPOSURE DETAILS VIEW COMPONENT
 // ============================================
 
 interface ExposureDetailsViewProps {
-  details: Record<string, unknown>;
-  secretsRevealed: boolean;
-  onToggleSecrets: () => void;
+  details: Record<string, unknown>
+  secretsRevealed: boolean
+  onToggleSecrets: () => void
 }
 
-function ExposureDetailsView({ details, secretsRevealed, onToggleSecrets }: ExposureDetailsViewProps) {
+function ExposureDetailsView({
+  details,
+  secretsRevealed,
+  onToggleSecrets,
+}: ExposureDetailsViewProps) {
   const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast.success('Copied to clipboard');
-  };
+    navigator.clipboard.writeText(text)
+    toast.success('Copied to clipboard')
+  }
 
   const formatValue = (key: string, value: unknown): string => {
-    if (value === null || value === undefined) return '-';
-    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
-    if (typeof value === 'number') return String(value);
-    return String(value);
-  };
+    if (value === null || value === undefined) return '-'
+    if (typeof value === 'boolean') return value ? 'Yes' : 'No'
+    if (typeof value === 'number') return String(value)
+    return String(value)
+  }
 
   const isSensitiveField = (key: string): boolean => {
-    return SENSITIVE_FIELDS.some(pattern => key.toLowerCase().includes(pattern));
-  };
+    return SENSITIVE_FIELDS.some((pattern) => key.toLowerCase().includes(pattern))
+  }
 
   const maskValue = (value: string): string => {
-    if (value.length <= 4) return '****';
-    return value.substring(0, 2) + '*'.repeat(Math.min(value.length - 4, 20)) + value.substring(value.length - 2);
-  };
+    if (value.length <= 4) return '****'
+    return (
+      value.substring(0, 2) +
+      '*'.repeat(Math.min(value.length - 4, 20)) +
+      value.substring(value.length - 2)
+    )
+  }
 
   const isUrl = (value: string): boolean => {
-    return value.startsWith('http://') || value.startsWith('https://');
-  };
+    return value.startsWith('http://') || value.startsWith('https://')
+  }
 
   // Organize details into groups
-  const groupedDetails: Record<string, { key: string; value: unknown }[]> = {};
-  const ungroupedDetails: { key: string; value: unknown }[] = [];
+  const groupedDetails: Record<string, { key: string; value: unknown }[]> = {}
+  const ungroupedDetails: { key: string; value: unknown }[] = []
 
   Object.entries(details).forEach(([key, value]) => {
     // Skip empty values
-    if (value === null || value === undefined || value === '') return;
+    if (value === null || value === undefined || value === '') return
 
-    let found = false;
+    let found = false
     for (const [groupKey, group] of Object.entries(FIELD_GROUPS)) {
       if (group.fields.includes(key)) {
         if (!groupedDetails[groupKey]) {
-          groupedDetails[groupKey] = [];
+          groupedDetails[groupKey] = []
         }
-        groupedDetails[groupKey].push({ key, value });
-        found = true;
-        break;
+        groupedDetails[groupKey].push({ key, value })
+        found = true
+        break
       }
     }
     if (!found) {
-      ungroupedDetails.push({ key, value });
+      ungroupedDetails.push({ key, value })
     }
-  });
+  })
 
   // Check if we have any sensitive fields
-  const hasSensitiveFields = Object.keys(details).some(isSensitiveField);
+  const hasSensitiveFields = Object.keys(details).some(isSensitiveField)
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h4 className="text-sm font-medium">Details</h4>
         {hasSensitiveFields && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 text-xs"
-            onClick={onToggleSecrets}
-          >
+          <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={onToggleSecrets}>
             {secretsRevealed ? (
               <>
                 <EyeOff className="mr-1 h-3 w-3" />
@@ -647,10 +649,10 @@ function ExposureDetailsView({ details, secretsRevealed, onToggleSecrets }: Expo
 
       {/* Grouped Details */}
       {Object.entries(FIELD_GROUPS).map(([groupKey, group]) => {
-        const groupItems = groupedDetails[groupKey];
-        if (!groupItems || groupItems.length === 0) return null;
+        const groupItems = groupedDetails[groupKey]
+        if (!groupItems || groupItems.length === 0) return null
 
-        const GroupIcon = group.icon;
+        const GroupIcon = group.icon
 
         return (
           <div key={groupKey} className="rounded-lg border">
@@ -660,11 +662,14 @@ function ExposureDetailsView({ details, secretsRevealed, onToggleSecrets }: Expo
             </div>
             <div className="divide-y">
               {groupItems.map(({ key, value }) => {
-                const label = FIELD_LABELS[key] || key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-                const stringValue = formatValue(key, value);
-                const isSensitive = isSensitiveField(key);
-                const displayValue = isSensitive && !secretsRevealed ? maskValue(stringValue) : stringValue;
-                const showAsUrl = !isSensitive && isUrl(stringValue);
+                const label =
+                  FIELD_LABELS[key] ||
+                  key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+                const stringValue = formatValue(key, value)
+                const isSensitive = isSensitiveField(key)
+                const displayValue =
+                  isSensitive && !secretsRevealed ? maskValue(stringValue) : stringValue
+                const showAsUrl = !isSensitive && isUrl(stringValue)
 
                 return (
                   <div key={key} className="flex items-center justify-between px-3 py-2 text-sm">
@@ -681,10 +686,12 @@ function ExposureDetailsView({ details, secretsRevealed, onToggleSecrets }: Expo
                           <ExternalLink className="h-3 w-3 flex-shrink-0" />
                         </a>
                       ) : (
-                        <span className={cn(
-                          "font-mono text-xs max-w-[200px] truncate",
-                          isSensitive && "text-red-600 dark:text-red-400"
-                        )}>
+                        <span
+                          className={cn(
+                            'font-mono text-xs max-w-[200px] truncate',
+                            isSensitive && 'text-red-600 dark:text-red-400'
+                          )}
+                        >
                           {displayValue}
                         </span>
                       )}
@@ -710,11 +717,11 @@ function ExposureDetailsView({ details, secretsRevealed, onToggleSecrets }: Expo
                       )}
                     </div>
                   </div>
-                );
+                )
               })}
             </div>
           </div>
-        );
+        )
       })}
 
       {/* Ungrouped Details */}
@@ -725,11 +732,13 @@ function ExposureDetailsView({ details, secretsRevealed, onToggleSecrets }: Expo
           </div>
           <div className="divide-y">
             {ungroupedDetails.map(({ key, value }) => {
-              const label = FIELD_LABELS[key] || key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-              const stringValue = formatValue(key, value);
-              const isSensitive = isSensitiveField(key);
-              const displayValue = isSensitive && !secretsRevealed ? maskValue(stringValue) : stringValue;
-              const showAsUrl = !isSensitive && isUrl(stringValue);
+              const label =
+                FIELD_LABELS[key] || key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+              const stringValue = formatValue(key, value)
+              const isSensitive = isSensitiveField(key)
+              const displayValue =
+                isSensitive && !secretsRevealed ? maskValue(stringValue) : stringValue
+              const showAsUrl = !isSensitive && isUrl(stringValue)
 
               return (
                 <div key={key} className="flex items-center justify-between px-3 py-2 text-sm">
@@ -746,10 +755,12 @@ function ExposureDetailsView({ details, secretsRevealed, onToggleSecrets }: Expo
                         <ExternalLink className="h-3 w-3 flex-shrink-0" />
                       </a>
                     ) : (
-                      <span className={cn(
-                        "font-mono text-xs max-w-[200px] truncate",
-                        isSensitive && "text-red-600 dark:text-red-400"
-                      )}>
+                      <span
+                        className={cn(
+                          'font-mono text-xs max-w-[200px] truncate',
+                          isSensitive && 'text-red-600 dark:text-red-400'
+                        )}
+                      >
                         {displayValue}
                       </span>
                     )}
@@ -765,100 +776,162 @@ function ExposureDetailsView({ details, secretsRevealed, onToggleSecrets }: Expo
                     )}
                   </div>
                 </div>
-              );
+              )
             })}
           </div>
         </div>
       )}
     </div>
-  );
+  )
 }
 
 interface ExposureDetailSheetProps {
-  exposure: ExposureEvent | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onAction: (action: ActionType) => void;
+  exposure: ExposureEvent | null
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onAction: (action: ActionType) => void
 }
 
-function ExposureDetailSheet({
-  exposure,
-  open,
-  onOpenChange,
-  onAction,
-}: ExposureDetailSheetProps) {
-  const { currentTenant } = useTenant();
-  const [secretsRevealed, setSecretsRevealed] = useState(false);
+function ExposureDetailSheet({ exposure, open, onOpenChange, onAction }: ExposureDetailSheetProps) {
+  const { currentTenant } = useTenant()
+  const [secretsRevealed, setSecretsRevealed] = useState(false)
   const { history, isLoading: historyLoading } = useExposureHistory(
     currentTenant?.id || null,
     exposure?.id || null
-  );
+  )
 
-  if (!exposure) return null;
+  if (!exposure) return null
 
   const severityConfig: Record<string, { color: string; bgColor: string; borderColor: string }> = {
-    critical: { color: "text-red-700", bgColor: "bg-red-50 dark:bg-red-950/50", borderColor: "border-red-200 dark:border-red-900" },
-    high: { color: "text-orange-700", bgColor: "bg-orange-50 dark:bg-orange-950/50", borderColor: "border-orange-200 dark:border-orange-900" },
-    medium: { color: "text-yellow-700", bgColor: "bg-yellow-50 dark:bg-yellow-950/50", borderColor: "border-yellow-200 dark:border-yellow-900" },
-    low: { color: "text-blue-700", bgColor: "bg-blue-50 dark:bg-blue-950/50", borderColor: "border-blue-200 dark:border-blue-900" },
-    info: { color: "text-gray-700", bgColor: "bg-gray-50 dark:bg-gray-950/50", borderColor: "border-gray-200 dark:border-gray-800" },
-  };
+    critical: {
+      color: 'text-red-700',
+      bgColor: 'bg-red-50 dark:bg-red-950/50',
+      borderColor: 'border-red-200 dark:border-red-900',
+    },
+    high: {
+      color: 'text-orange-700',
+      bgColor: 'bg-orange-50 dark:bg-orange-950/50',
+      borderColor: 'border-orange-200 dark:border-orange-900',
+    },
+    medium: {
+      color: 'text-yellow-700',
+      bgColor: 'bg-yellow-50 dark:bg-yellow-950/50',
+      borderColor: 'border-yellow-200 dark:border-yellow-900',
+    },
+    low: {
+      color: 'text-blue-700',
+      bgColor: 'bg-blue-50 dark:bg-blue-950/50',
+      borderColor: 'border-blue-200 dark:border-blue-900',
+    },
+    info: {
+      color: 'text-gray-700',
+      bgColor: 'bg-gray-50 dark:bg-gray-950/50',
+      borderColor: 'border-gray-200 dark:border-gray-800',
+    },
+  }
 
-  const stateConfig: Record<ExposureState, { icon: typeof Shield; label: string; color: string; bgColor: string }> = {
-    active: { icon: AlertTriangle, label: "Active", color: "text-red-600", bgColor: "bg-red-100 dark:bg-red-900/30" },
-    resolved: { icon: ShieldCheck, label: "Resolved", color: "text-green-600", bgColor: "bg-green-100 dark:bg-green-900/30" },
-    accepted: { icon: Shield, label: "Accepted Risk", color: "text-yellow-600", bgColor: "bg-yellow-100 dark:bg-yellow-900/30" },
-    false_positive: { icon: ShieldX, label: "False Positive", color: "text-gray-500", bgColor: "bg-gray-100 dark:bg-gray-900/30" },
-  };
+  const stateConfig: Record<
+    ExposureState,
+    { icon: typeof Shield; label: string; color: string; bgColor: string }
+  > = {
+    active: {
+      icon: AlertTriangle,
+      label: 'Active',
+      color: 'text-red-600',
+      bgColor: 'bg-red-100 dark:bg-red-900/30',
+    },
+    resolved: {
+      icon: ShieldCheck,
+      label: 'Resolved',
+      color: 'text-green-600',
+      bgColor: 'bg-green-100 dark:bg-green-900/30',
+    },
+    accepted: {
+      icon: Shield,
+      label: 'Accepted Risk',
+      color: 'text-yellow-600',
+      bgColor: 'bg-yellow-100 dark:bg-yellow-900/30',
+    },
+    false_positive: {
+      icon: ShieldX,
+      label: 'False Positive',
+      color: 'text-gray-500',
+      bgColor: 'bg-gray-100 dark:bg-gray-900/30',
+    },
+  }
 
-  const StateIcon = stateConfig[exposure.state].icon;
-  const sevConfig = severityConfig[exposure.severity] || severityConfig.info;
+  const StateIcon = stateConfig[exposure.state].icon
+  const sevConfig = severityConfig[exposure.severity] || severityConfig.info
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-xl overflow-y-auto p-0">
         {/* Header with severity indicator */}
-        <div className={cn("px-6 pt-6 pb-4 border-b", sevConfig.bgColor, sevConfig.borderColor)}>
+        <div className={cn('px-6 pt-6 pb-4 border-b', sevConfig.bgColor, sevConfig.borderColor)}>
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-2">
                 <Badge className={getSeverityBadgeClass(exposure.severity)}>
                   {exposure.severity.toUpperCase()}
                 </Badge>
-                <Badge variant="outline" className={cn(stateConfig[exposure.state].color, "border-current")}>
+                <Badge
+                  variant="outline"
+                  className={cn(stateConfig[exposure.state].color, 'border-current')}
+                >
                   <StateIcon className="mr-1 h-3 w-3" />
                   {stateConfig[exposure.state].label}
                 </Badge>
               </div>
               <SheetHeader className="p-0 space-y-1">
-                <SheetTitle className="text-left text-lg leading-tight">{exposure.title}</SheetTitle>
+                <SheetTitle className="text-left text-lg leading-tight">
+                  {exposure.title}
+                </SheetTitle>
                 <SheetDescription className="text-left">
-                  {exposure.event_type.replace(/_/g, " ")} from {exposure.source}
+                  {exposure.event_type.replace(/_/g, ' ')} from {exposure.source}
                 </SheetDescription>
               </SheetHeader>
             </div>
           </div>
 
           {/* Quick Actions - prominent at top */}
-          {exposure.state === "active" && (
+          {exposure.state === 'active' && (
             <div className="flex flex-wrap gap-2 mt-4">
-              <Button size="sm" onClick={() => onAction("resolve")} className="bg-green-600 hover:bg-green-700">
+              <Button
+                size="sm"
+                onClick={() => onAction('resolve')}
+                className="bg-green-600 hover:bg-green-700"
+              >
                 <ShieldCheck className="mr-1.5 h-4 w-4" />
                 Resolve
               </Button>
-              <Button size="sm" variant="outline" onClick={() => onAction("accept")} className="bg-background">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onAction('accept')}
+                className="bg-background"
+              >
                 <Shield className="mr-1.5 h-4 w-4" />
                 Accept Risk
               </Button>
-              <Button size="sm" variant="outline" onClick={() => onAction("false_positive")} className="bg-background">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onAction('false_positive')}
+                className="bg-background"
+              >
                 <ShieldX className="mr-1.5 h-4 w-4" />
                 False Positive
               </Button>
             </div>
           )}
-          {exposure.state !== "active" && (
+          {exposure.state !== 'active' && (
             <div className="mt-4">
-              <Button size="sm" variant="outline" onClick={() => onAction("reactivate")} className="bg-background">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onAction('reactivate')}
+                className="bg-background"
+              >
                 <Activity className="mr-1.5 h-4 w-4" />
                 Reactivate
               </Button>
@@ -884,17 +957,27 @@ function ExposureDetailSheet({
             </div>
             <div className="grid grid-cols-2 divide-x">
               <div className="p-4">
-                <span className="text-xs text-muted-foreground uppercase tracking-wide">First Seen</span>
-                <p className="text-sm font-medium mt-1">{formatDistanceToNow(new Date(exposure.first_seen_at), { addSuffix: true })}</p>
+                <span className="text-xs text-muted-foreground uppercase tracking-wide">
+                  First Seen
+                </span>
+                <p className="text-sm font-medium mt-1">
+                  {formatDistanceToNow(new Date(exposure.first_seen_at), { addSuffix: true })}
+                </p>
               </div>
               <div className="p-4">
-                <span className="text-xs text-muted-foreground uppercase tracking-wide">Last Seen</span>
-                <p className="text-sm font-medium mt-1">{formatDistanceToNow(new Date(exposure.last_seen_at), { addSuffix: true })}</p>
+                <span className="text-xs text-muted-foreground uppercase tracking-wide">
+                  Last Seen
+                </span>
+                <p className="text-sm font-medium mt-1">
+                  {formatDistanceToNow(new Date(exposure.last_seen_at), { addSuffix: true })}
+                </p>
               </div>
             </div>
             {exposure.resolved_at && (
               <div className="p-4 border-t bg-green-50/50 dark:bg-green-950/20">
-                <span className="text-xs text-muted-foreground uppercase tracking-wide">Resolved</span>
+                <span className="text-xs text-muted-foreground uppercase tracking-wide">
+                  Resolved
+                </span>
                 <p className="text-sm font-medium mt-1 text-green-700 dark:text-green-400">
                   {formatDistanceToNow(new Date(exposure.resolved_at), { addSuffix: true })}
                 </p>
@@ -916,25 +999,25 @@ function ExposureDetailSheet({
         </div>
       </SheetContent>
     </Sheet>
-  );
+  )
 }
 
 // ============================================
 // STATE HISTORY SECTION COMPONENT
 // ============================================
 
-const INITIAL_HISTORY_COUNT = 3;
+const INITIAL_HISTORY_COUNT = 3
 
 interface StateHistorySectionProps {
-  history: import("@/lib/api/exposure-types").ExposureStateHistory[];
-  isLoading: boolean;
+  history: import('@/lib/api/exposure-types').ExposureStateHistory[]
+  isLoading: boolean
 }
 
 function StateHistorySection({ history, isLoading }: StateHistorySectionProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false)
 
-  const hasMore = history.length > INITIAL_HISTORY_COUNT;
-  const displayedHistory = isExpanded ? history : history.slice(0, INITIAL_HISTORY_COUNT);
+  const hasMore = history.length > INITIAL_HISTORY_COUNT
+  const displayedHistory = isExpanded ? history : history.slice(0, INITIAL_HISTORY_COUNT)
 
   return (
     <div className="rounded-lg border">
@@ -944,15 +1027,14 @@ function StateHistorySection({ history, isLoading }: StateHistorySectionProps) {
             <Activity className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm font-medium">State History</span>
             {history.length > 0 && (
-              <Badge variant="secondary" className="text-xs">{history.length}</Badge>
+              <Badge variant="secondary" className="text-xs">
+                {history.length}
+              </Badge>
             )}
           </div>
         </div>
       </div>
-      <div className={cn(
-        "p-4",
-        isExpanded && history.length > 5 && "max-h-80 overflow-y-auto"
-      )}>
+      <div className={cn('p-4', isExpanded && history.length > 5 && 'max-h-80 overflow-y-auto')}>
         {isLoading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -964,8 +1046,8 @@ function StateHistorySection({ history, isLoading }: StateHistorySectionProps) {
               <div
                 key={entry.id}
                 className={cn(
-                  "flex items-start gap-3 text-sm",
-                  index !== displayedHistory.length - 1 && "pb-3 border-b"
+                  'flex items-start gap-3 text-sm',
+                  index !== displayedHistory.length - 1 && 'pb-3 border-b'
                 )}
               >
                 <div className="mt-0.5 p-1 rounded-full bg-muted">
@@ -973,24 +1055,34 @@ function StateHistorySection({ history, isLoading }: StateHistorySectionProps) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-muted-foreground capitalize">{entry.previous_state.replace(/_/g, " ")}</span>
+                    <span className="text-muted-foreground capitalize">
+                      {entry.previous_state.replace(/_/g, ' ')}
+                    </span>
                     <span className="text-muted-foreground">→</span>
-                    <span className="font-medium capitalize">{entry.new_state.replace(/_/g, " ")}</span>
+                    <span className="font-medium capitalize">
+                      {entry.new_state.replace(/_/g, ' ')}
+                    </span>
                   </div>
                   {entry.reason && (
                     <div className="mt-1.5 pl-3 border-l-2 border-muted-foreground/30">
-                      <p className="text-xs text-foreground/80 italic">&ldquo;{entry.reason}&rdquo;</p>
+                      <p className="text-xs text-foreground/80 italic">
+                        &ldquo;{entry.reason}&rdquo;
+                      </p>
                     </div>
                   )}
                   <div className="flex items-center gap-2 mt-1.5 text-xs text-muted-foreground">
                     {entry.changed_by_user ? (
                       <div className="flex items-center gap-1.5">
                         <User className="h-3 w-3" />
-                        <span className="font-medium text-foreground">{entry.changed_by_user.name || entry.changed_by_user.email}</span>
+                        <span className="font-medium text-foreground">
+                          {entry.changed_by_user.name || entry.changed_by_user.email}
+                        </span>
                         <span>•</span>
                       </div>
                     ) : null}
-                    <span>{formatDistanceToNow(new Date(entry.created_at), { addSuffix: true })}</span>
+                    <span>
+                      {formatDistanceToNow(new Date(entry.created_at), { addSuffix: true })}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -1004,29 +1096,27 @@ function StateHistorySection({ history, isLoading }: StateHistorySectionProps) {
                 className="w-full text-muted-foreground hover:text-foreground"
                 onClick={() => setIsExpanded(!isExpanded)}
               >
-                {isExpanded ? (
-                  <>Show less</>
-                ) : (
-                  <>Show all {history.length} changes</>
-                )}
+                {isExpanded ? <>Show less</> : <>Show all {history.length} changes</>}
               </Button>
             )}
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground text-center py-2">No state changes recorded</p>
+          <p className="text-sm text-muted-foreground text-center py-2">
+            No state changes recorded
+          </p>
         )}
       </div>
     </div>
-  );
+  )
 }
 
 function getSeverityBadgeClass(severity: ExposureSeverity): string {
   const classes: Record<ExposureSeverity, string> = {
-    critical: "bg-red-500 text-white",
-    high: "bg-orange-500 text-white",
-    medium: "bg-yellow-500 text-black",
-    low: "bg-blue-500 text-white",
-    info: "bg-gray-500 text-white",
-  };
-  return classes[severity];
+    critical: 'bg-red-500 text-white',
+    high: 'bg-orange-500 text-white',
+    medium: 'bg-yellow-500 text-black',
+    low: 'bg-blue-500 text-white',
+    info: 'bg-gray-500 text-white',
+  }
+  return classes[severity]
 }

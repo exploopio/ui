@@ -1,16 +1,13 @@
-"use client";
+'use client'
 
-import { useState, useMemo } from "react";
-import { Header, Main } from "@/components/layout";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { PageHeader } from "@/features/shared";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
+import { useState, useMemo } from 'react'
+import { Header, Main } from '@/components/layout'
+import { PageHeader } from '@/features/shared'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { Progress } from '@/components/ui/progress'
 import {
   Globe,
   Plus,
@@ -32,20 +29,14 @@ import {
   X,
   Search as SearchIcon,
   ArrowUpRight,
-} from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+} from 'lucide-react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu'
 import {
   Dialog,
   DialogContent,
@@ -53,21 +44,21 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog'
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet";
+} from '@/components/ui/sheet'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from '@/components/ui/select'
 import {
   Table,
   TableBody,
@@ -75,247 +66,247 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { toast } from "sonner";
-import { Can, Permission } from "@/lib/permissions";
+} from '@/components/ui/table'
+import { toast } from 'sonner'
+import { Can, Permission } from '@/lib/permissions'
 
-type AssetStatus = "active" | "inactive" | "monitoring";
-type RiskLevel = "critical" | "high" | "medium" | "low";
-type AssetType = "domain" | "subdomain" | "service" | "certificate";
+type AssetStatus = 'active' | 'inactive' | 'monitoring'
+type RiskLevel = 'critical' | 'high' | 'medium' | 'low'
+type AssetType = 'domain' | 'subdomain' | 'service' | 'certificate'
 
 interface ExternalAsset {
-  id: string;
-  name: string;
-  type: AssetType;
-  parentDomain?: string;
-  ipAddress?: string;
-  port?: number;
-  status: AssetStatus;
-  riskLevel: RiskLevel;
-  sslExpiry?: string;
-  lastSeen: string;
-  discoveredAt: string;
-  findingsCount: number;
-  technologies?: string[];
-  notes?: string;
+  id: string
+  name: string
+  type: AssetType
+  parentDomain?: string
+  ipAddress?: string
+  port?: number
+  status: AssetStatus
+  riskLevel: RiskLevel
+  sslExpiry?: string
+  lastSeen: string
+  discoveredAt: string
+  findingsCount: number
+  technologies?: string[]
+  notes?: string
 }
 
 const daysAgo = (days: number) => {
-  const date = new Date();
-  date.setDate(date.getDate() - days);
-  return date.toISOString();
-};
+  const date = new Date()
+  date.setDate(date.getDate() - days)
+  return date.toISOString()
+}
 
 const daysFromNow = (days: number) => {
-  const date = new Date();
-  date.setDate(date.getDate() + days);
-  return date.toISOString();
-};
+  const date = new Date()
+  date.setDate(date.getDate() + days)
+  return date.toISOString()
+}
 
 const mockExternalAssets: ExternalAsset[] = [
   {
-    id: "ext-001",
-    name: "techcombank.com.vn",
-    type: "domain",
-    ipAddress: "203.162.4.100",
-    status: "active",
-    riskLevel: "low",
+    id: 'ext-001',
+    name: 'techcombank.com.vn',
+    type: 'domain',
+    ipAddress: '203.162.4.100',
+    status: 'active',
+    riskLevel: 'low',
     sslExpiry: daysFromNow(120),
     lastSeen: daysAgo(0),
     discoveredAt: daysAgo(365),
     findingsCount: 2,
-    technologies: ["Nginx", "React", "Node.js"],
+    technologies: ['Nginx', 'React', 'Node.js'],
   },
   {
-    id: "ext-002",
-    name: "api.techcombank.com.vn",
-    type: "subdomain",
-    parentDomain: "techcombank.com.vn",
-    ipAddress: "203.162.4.101",
+    id: 'ext-002',
+    name: 'api.techcombank.com.vn',
+    type: 'subdomain',
+    parentDomain: 'techcombank.com.vn',
+    ipAddress: '203.162.4.101',
     port: 443,
-    status: "active",
-    riskLevel: "medium",
+    status: 'active',
+    riskLevel: 'medium',
     sslExpiry: daysFromNow(90),
     lastSeen: daysAgo(0),
     discoveredAt: daysAgo(300),
     findingsCount: 5,
-    technologies: ["Kong Gateway", "Express.js"],
+    technologies: ['Kong Gateway', 'Express.js'],
   },
   {
-    id: "ext-003",
-    name: "mail.techcombank.com.vn",
-    type: "service",
-    parentDomain: "techcombank.com.vn",
-    ipAddress: "203.162.4.102",
+    id: 'ext-003',
+    name: 'mail.techcombank.com.vn',
+    type: 'service',
+    parentDomain: 'techcombank.com.vn',
+    ipAddress: '203.162.4.102',
     port: 25,
-    status: "active",
-    riskLevel: "critical",
+    status: 'active',
+    riskLevel: 'critical',
     lastSeen: daysAgo(0),
     discoveredAt: daysAgo(365),
     findingsCount: 8,
-    technologies: ["Postfix", "Dovecot"],
-    notes: "Open relay detected - requires immediate attention",
+    technologies: ['Postfix', 'Dovecot'],
+    notes: 'Open relay detected - requires immediate attention',
   },
   {
-    id: "ext-004",
-    name: "vpn.techcombank.com.vn",
-    type: "service",
-    parentDomain: "techcombank.com.vn",
-    ipAddress: "203.162.4.103",
+    id: 'ext-004',
+    name: 'vpn.techcombank.com.vn',
+    type: 'service',
+    parentDomain: 'techcombank.com.vn',
+    ipAddress: '203.162.4.103',
     port: 443,
-    status: "active",
-    riskLevel: "high",
+    status: 'active',
+    riskLevel: 'high',
     sslExpiry: daysFromNow(30),
     lastSeen: daysAgo(0),
     discoveredAt: daysAgo(200),
     findingsCount: 3,
-    technologies: ["OpenVPN", "FortiGate"],
-    notes: "SSL certificate expiring soon",
+    technologies: ['OpenVPN', 'FortiGate'],
+    notes: 'SSL certificate expiring soon',
   },
   {
-    id: "ext-005",
-    name: "cdn.techcombank.com.vn",
-    type: "subdomain",
-    parentDomain: "techcombank.com.vn",
-    ipAddress: "104.16.88.20",
-    status: "active",
-    riskLevel: "low",
+    id: 'ext-005',
+    name: 'cdn.techcombank.com.vn',
+    type: 'subdomain',
+    parentDomain: 'techcombank.com.vn',
+    ipAddress: '104.16.88.20',
+    status: 'active',
+    riskLevel: 'low',
     sslExpiry: daysFromNow(200),
     lastSeen: daysAgo(0),
     discoveredAt: daysAgo(180),
     findingsCount: 0,
-    technologies: ["Cloudflare"],
+    technologies: ['Cloudflare'],
   },
   {
-    id: "ext-006",
-    name: "staging.techcombank.com.vn",
-    type: "subdomain",
-    parentDomain: "techcombank.com.vn",
-    ipAddress: "10.0.5.50",
-    status: "monitoring",
-    riskLevel: "high",
+    id: 'ext-006',
+    name: 'staging.techcombank.com.vn',
+    type: 'subdomain',
+    parentDomain: 'techcombank.com.vn',
+    ipAddress: '10.0.5.50',
+    status: 'monitoring',
+    riskLevel: 'high',
     lastSeen: daysAgo(1),
     discoveredAt: daysAgo(30),
     findingsCount: 12,
-    technologies: ["Docker", "Kubernetes"],
-    notes: "Staging environment exposed to internet",
+    technologies: ['Docker', 'Kubernetes'],
+    notes: 'Staging environment exposed to internet',
   },
   {
-    id: "ext-007",
-    name: "dev.techcombank.com.vn",
-    type: "subdomain",
-    parentDomain: "techcombank.com.vn",
-    ipAddress: "10.0.5.51",
-    status: "inactive",
-    riskLevel: "medium",
+    id: 'ext-007',
+    name: 'dev.techcombank.com.vn',
+    type: 'subdomain',
+    parentDomain: 'techcombank.com.vn',
+    ipAddress: '10.0.5.51',
+    status: 'inactive',
+    riskLevel: 'medium',
     lastSeen: daysAgo(7),
     discoveredAt: daysAgo(60),
     findingsCount: 4,
   },
   {
-    id: "ext-008",
-    name: "ftp.techcombank.com.vn",
-    type: "service",
-    parentDomain: "techcombank.com.vn",
-    ipAddress: "203.162.4.110",
+    id: 'ext-008',
+    name: 'ftp.techcombank.com.vn',
+    type: 'service',
+    parentDomain: 'techcombank.com.vn',
+    ipAddress: '203.162.4.110',
     port: 21,
-    status: "active",
-    riskLevel: "critical",
+    status: 'active',
+    riskLevel: 'critical',
     lastSeen: daysAgo(0),
     discoveredAt: daysAgo(365),
     findingsCount: 15,
-    technologies: ["vsftpd"],
-    notes: "FTP should be replaced with SFTP",
+    technologies: ['vsftpd'],
+    notes: 'FTP should be replaced with SFTP',
   },
-];
+]
 
 const statusColors: Record<AssetStatus, string> = {
-  active: "bg-green-500/10 text-green-500 border-green-500/20",
-  inactive: "bg-gray-500/10 text-gray-500 border-gray-500/20",
-  monitoring: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-};
+  active: 'bg-green-500/10 text-green-500 border-green-500/20',
+  inactive: 'bg-gray-500/10 text-gray-500 border-gray-500/20',
+  monitoring: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
+}
 
 const riskColors: Record<RiskLevel, string> = {
-  critical: "bg-red-500/10 text-red-500 border-red-500/20",
-  high: "bg-orange-500/10 text-orange-500 border-orange-500/20",
-  medium: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
-  low: "bg-green-500/10 text-green-500 border-green-500/20",
-};
+  critical: 'bg-red-500/10 text-red-500 border-red-500/20',
+  high: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
+  medium: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
+  low: 'bg-green-500/10 text-green-500 border-green-500/20',
+}
 
 const typeIcons: Record<AssetType, React.ElementType> = {
   domain: Globe,
   subdomain: ArrowUpRight,
   service: Server,
   certificate: Lock,
-};
+}
 
 export default function ExternalSurfacePage() {
-  const [assets, setAssets] = useState<ExternalAsset[]>(mockExternalAssets);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filterType, setFilterType] = useState<AssetType | "all">("all");
-  const [filterRisk, setFilterRisk] = useState<RiskLevel | "all">("all");
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [viewAsset, setViewAsset] = useState<ExternalAsset | null>(null);
-  const [editAsset, setEditAsset] = useState<ExternalAsset | null>(null);
-  const [deleteAsset, setDeleteAsset] = useState<ExternalAsset | null>(null);
+  const [assets, setAssets] = useState<ExternalAsset[]>(mockExternalAssets)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [filterType, setFilterType] = useState<AssetType | 'all'>('all')
+  const [filterRisk, setFilterRisk] = useState<RiskLevel | 'all'>('all')
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [viewAsset, setViewAsset] = useState<ExternalAsset | null>(null)
+  const [editAsset, setEditAsset] = useState<ExternalAsset | null>(null)
+  const [deleteAsset, setDeleteAsset] = useState<ExternalAsset | null>(null)
 
   const [formData, setFormData] = useState({
-    name: "",
-    type: "subdomain" as AssetType,
-    parentDomain: "",
-    ipAddress: "",
-    port: "",
-    status: "active" as AssetStatus,
-    riskLevel: "medium" as RiskLevel,
-    notes: "",
-  });
+    name: '',
+    type: 'subdomain' as AssetType,
+    parentDomain: '',
+    ipAddress: '',
+    port: '',
+    status: 'active' as AssetStatus,
+    riskLevel: 'medium' as RiskLevel,
+    notes: '',
+  })
 
   // Use lazy state initialization for current time
-  const [currentTime] = useState(() => Date.now());
+  const [currentTime] = useState(() => Date.now())
 
   const stats = useMemo(() => {
-    const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+    const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000
     return {
       total: assets.length,
-      active: assets.filter((a) => a.status === "active").length,
-      critical: assets.filter((a) => a.riskLevel === "critical").length,
+      active: assets.filter((a) => a.status === 'active').length,
+      critical: assets.filter((a) => a.riskLevel === 'critical').length,
       totalFindings: assets.reduce((acc, a) => acc + a.findingsCount, 0),
       expiringCerts: assets.filter((a) => {
-        if (!a.sslExpiry) return false;
-        const expiryTime = new Date(a.sslExpiry).getTime();
-        return expiryTime - currentTime <= thirtyDaysMs;
+        if (!a.sslExpiry) return false
+        const expiryTime = new Date(a.sslExpiry).getTime()
+        return expiryTime - currentTime <= thirtyDaysMs
       }).length,
-    };
-  }, [assets, currentTime]);
+    }
+  }, [assets, currentTime])
 
   const filteredAssets = useMemo(() => {
     return assets.filter((asset) => {
       if (searchQuery && !asset.name.toLowerCase().includes(searchQuery.toLowerCase())) {
-        return false;
+        return false
       }
-      if (filterType !== "all" && asset.type !== filterType) return false;
-      if (filterRisk !== "all" && asset.riskLevel !== filterRisk) return false;
-      return true;
-    });
-  }, [assets, searchQuery, filterType, filterRisk]);
+      if (filterType !== 'all' && asset.type !== filterType) return false
+      if (filterRisk !== 'all' && asset.riskLevel !== filterRisk) return false
+      return true
+    })
+  }, [assets, searchQuery, filterType, filterRisk])
 
   const resetForm = () => {
     setFormData({
-      name: "",
-      type: "subdomain",
-      parentDomain: "",
-      ipAddress: "",
-      port: "",
-      status: "active",
-      riskLevel: "medium",
-      notes: "",
-    });
-  };
+      name: '',
+      type: 'subdomain',
+      parentDomain: '',
+      ipAddress: '',
+      port: '',
+      status: 'active',
+      riskLevel: 'medium',
+      notes: '',
+    })
+  }
 
   const handleCreate = () => {
     if (!formData.name) {
-      toast.error("Please enter an asset name");
-      return;
+      toast.error('Please enter an asset name')
+      return
     }
     const newAsset: ExternalAsset = {
       id: `ext-${Date.now()}`,
@@ -330,17 +321,17 @@ export default function ExternalSurfacePage() {
       discoveredAt: new Date().toISOString(),
       findingsCount: 0,
       notes: formData.notes || undefined,
-    };
-    setAssets((prev) => [...prev, newAsset]);
-    toast.success("External asset added successfully");
-    setIsCreateOpen(false);
-    resetForm();
-  };
+    }
+    setAssets((prev) => [...prev, newAsset])
+    toast.success('External asset added successfully')
+    setIsCreateOpen(false)
+    resetForm()
+  }
 
   const handleEdit = () => {
     if (!editAsset || !formData.name) {
-      toast.error("Please enter an asset name");
-      return;
+      toast.error('Please enter an asset name')
+      return
     }
     setAssets((prev) =>
       prev.map((a) =>
@@ -358,32 +349,32 @@ export default function ExternalSurfacePage() {
             }
           : a
       )
-    );
-    toast.success("External asset updated successfully");
-    setEditAsset(null);
-    resetForm();
-  };
+    )
+    toast.success('External asset updated successfully')
+    setEditAsset(null)
+    resetForm()
+  }
 
   const handleDelete = () => {
-    if (!deleteAsset) return;
-    setAssets((prev) => prev.filter((a) => a.id !== deleteAsset.id));
-    toast.success("External asset deleted successfully");
-    setDeleteAsset(null);
-  };
+    if (!deleteAsset) return
+    setAssets((prev) => prev.filter((a) => a.id !== deleteAsset.id))
+    toast.success('External asset deleted successfully')
+    setDeleteAsset(null)
+  }
 
   const openEdit = (asset: ExternalAsset) => {
     setFormData({
       name: asset.name,
       type: asset.type,
-      parentDomain: asset.parentDomain || "",
-      ipAddress: asset.ipAddress || "",
-      port: asset.port?.toString() || "",
+      parentDomain: asset.parentDomain || '',
+      ipAddress: asset.ipAddress || '',
+      port: asset.port?.toString() || '',
       status: asset.status,
       riskLevel: asset.riskLevel,
-      notes: asset.notes || "",
-    });
-    setEditAsset(asset);
-  };
+      notes: asset.notes || '',
+    })
+    setEditAsset(asset)
+  }
 
   const formFields = (
     <div className="space-y-4">
@@ -485,17 +476,11 @@ export default function ExternalSurfacePage() {
         />
       </div>
     </div>
-  );
+  )
 
   return (
     <>
-      <Header fixed>
-        <Search />
-        <div className="ms-auto flex items-center gap-2 sm:gap-4">
-          <ThemeSwitch />
-          <ProfileDropdown />
-        </div>
-      </Header>
+      <Header fixed />
 
       <Main>
         <PageHeader
@@ -591,7 +576,10 @@ export default function ExternalSurfacePage() {
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <Filter className="h-4 w-4 text-muted-foreground" />
-                <Select value={filterType} onValueChange={(v) => setFilterType(v as AssetType | "all")}>
+                <Select
+                  value={filterType}
+                  onValueChange={(v) => setFilterType(v as AssetType | 'all')}
+                >
                   <SelectTrigger className="w-32">
                     <SelectValue placeholder="Type" />
                   </SelectTrigger>
@@ -603,7 +591,10 @@ export default function ExternalSurfacePage() {
                     <SelectItem value="certificate">Certificate</SelectItem>
                   </SelectContent>
                 </Select>
-                <Select value={filterRisk} onValueChange={(v) => setFilterRisk(v as RiskLevel | "all")}>
+                <Select
+                  value={filterRisk}
+                  onValueChange={(v) => setFilterRisk(v as RiskLevel | 'all')}
+                >
                   <SelectTrigger className="w-32">
                     <SelectValue placeholder="Risk" />
                   </SelectTrigger>
@@ -615,14 +606,14 @@ export default function ExternalSurfacePage() {
                     <SelectItem value="low">Low</SelectItem>
                   </SelectContent>
                 </Select>
-                {(filterType !== "all" || filterRisk !== "all" || searchQuery) && (
+                {(filterType !== 'all' || filterRisk !== 'all' || searchQuery) && (
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => {
-                      setFilterType("all");
-                      setFilterRisk("all");
-                      setSearchQuery("");
+                      setFilterType('all')
+                      setFilterRisk('all')
+                      setSearchQuery('')
                     }}
                   >
                     <X className="mr-1 h-3 w-3" />
@@ -658,7 +649,7 @@ export default function ExternalSurfacePage() {
               </TableHeader>
               <TableBody>
                 {filteredAssets.map((asset) => {
-                  const TypeIcon = typeIcons[asset.type];
+                  const TypeIcon = typeIcons[asset.type]
                   return (
                     <TableRow
                       key={asset.id}
@@ -700,7 +691,9 @@ export default function ExternalSurfacePage() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <span className={asset.findingsCount > 0 ? "text-orange-500 font-medium" : ""}>
+                        <span
+                          className={asset.findingsCount > 0 ? 'text-orange-500 font-medium' : ''}
+                        >
                           {asset.findingsCount}
                         </span>
                       </TableCell>
@@ -740,7 +733,7 @@ export default function ExternalSurfacePage() {
                         </Can>
                       </TableCell>
                     </TableRow>
-                  );
+                  )
                 })}
               </TableBody>
             </Table>
@@ -788,7 +781,8 @@ export default function ExternalSurfacePage() {
           <DialogHeader>
             <DialogTitle>Delete Asset</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete &quot;{deleteAsset?.name}&quot;? This action cannot be undone.
+              Are you sure you want to delete &quot;{deleteAsset?.name}&quot;? This action cannot be
+              undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -863,7 +857,9 @@ export default function ExternalSurfacePage() {
                       <CardTitle className="text-sm">Findings</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className={`text-2xl font-bold ${viewAsset.findingsCount > 0 ? "text-orange-500" : ""}`}>
+                      <div
+                        className={`text-2xl font-bold ${viewAsset.findingsCount > 0 ? 'text-orange-500' : ''}`}
+                      >
                         {viewAsset.findingsCount}
                       </div>
                     </CardContent>
@@ -882,7 +878,7 @@ export default function ExternalSurfacePage() {
                         <span className="text-sm">
                           {viewAsset.sslExpiry
                             ? new Date(viewAsset.sslExpiry).toLocaleDateString()
-                            : "No SSL"}
+                            : 'No SSL'}
                         </span>
                       </div>
                     </CardContent>
@@ -949,5 +945,5 @@ export default function ExternalSurfacePage() {
         </SheetContent>
       </Sheet>
     </>
-  );
+  )
 }

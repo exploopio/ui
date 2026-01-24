@@ -1,4 +1,4 @@
-"use client";
+'use client'
 
 /**
  * Create Team Page
@@ -6,23 +6,14 @@
  * Page for creating a new team/tenant
  */
 
-import { Header, Main } from "@/components/layout";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { PageHeader } from "@/features/shared";
-import { CreateTeamForm } from "@/features/tenant";
+import { Header, Main } from '@/components/layout'
+import { PageHeader } from '@/features/shared'
+import { CreateTeamForm } from '@/features/tenant'
 
 export default function CreateTeamPage() {
   return (
     <>
-      <Header fixed>
-        <div className="ms-auto flex items-center gap-2 sm:gap-4">
-          <Search />
-          <ThemeSwitch />
-          <ProfileDropdown />
-        </div>
-      </Header>
+      <Header fixed />
 
       <Main>
         <PageHeader
@@ -35,5 +26,5 @@ export default function CreateTeamPage() {
         </div>
       </Main>
     </>
-  );
+  )
 }

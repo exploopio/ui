@@ -1,6 +1,6 @@
-"use client";
+'use client'
 
-import { useState, useMemo } from "react";
+import { useState, useMemo } from 'react'
 import {
   ColumnDef,
   flexRender,
@@ -10,18 +10,10 @@ import {
   getSortedRowModel,
   SortingState,
   useReactTable,
-} from "@tanstack/react-table";
-import { Header, Main } from "@/components/layout";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { PageHeader, StatusBadge, RiskScoreBadge } from "@/features/shared";
-import {
-  AssetDetailSheet,
-  StatCard,
-  StatsGrid,
-  SectionTitle,
-} from "@/features/assets";
+} from '@tanstack/react-table'
+import { Header, Main } from '@/components/layout'
+import { PageHeader, StatusBadge, RiskScoreBadge } from '@/features/shared'
+import { AssetDetailSheet, StatCard, StatsGrid, SectionTitle } from '@/features/assets'
 import {
   ScopeBadge,
   ScopeCoverageCard,
@@ -30,20 +22,14 @@ import {
   getActiveScopeTargets,
   getActiveScopeExclusions,
   type ScopeMatchResult,
-} from "@/features/scope";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+} from '@/features/scope'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Textarea } from '@/components/ui/textarea'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -51,7 +37,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from '@/components/ui/table'
 import {
   Dialog,
   DialogContent,
@@ -59,7 +45,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -69,23 +55,23 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+} from '@/components/ui/alert-dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "sonner";
+} from '@/components/ui/select'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { toast } from 'sonner'
 import {
   Plus,
   Database,
@@ -108,7 +94,7 @@ import {
   HardDrive,
   Lock,
   Save,
-} from "lucide-react";
+} from 'lucide-react'
 import {
   useAssets,
   createAsset,
@@ -117,142 +103,171 @@ import {
   bulkDeleteAssets,
   getAssetRelationships,
   ClassificationBadges,
-  type Asset
-} from "@/features/assets";
-import { Can, Permission, usePermissions } from "@/lib/permissions";
-import { mockAssetGroups } from "@/features/asset-groups";
-import type { Status } from "@/features/shared/types";
+  type Asset,
+} from '@/features/assets'
+import { Can, Permission, usePermissions } from '@/lib/permissions'
+import { mockAssetGroups } from '@/features/asset-groups'
+import type { Status } from '@/features/shared/types'
 
 // Filter types
-type StatusFilter = Status | "all";
-type EngineFilter = "all" | "mysql" | "postgresql" | "mongodb" | "redis" | "elasticsearch" | "mssql" | "oracle";
+type StatusFilter = Status | 'all'
+type EngineFilter =
+  | 'all'
+  | 'mysql'
+  | 'postgresql'
+  | 'mongodb'
+  | 'redis'
+  | 'elasticsearch'
+  | 'mssql'
+  | 'oracle'
 
 const statusFilters: { value: StatusFilter; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "active", label: "Active" },
-  { value: "inactive", label: "Inactive" },
-  { value: "pending", label: "Pending" },
-];
+  { value: 'all', label: 'All' },
+  { value: 'active', label: 'Active' },
+  { value: 'inactive', label: 'Inactive' },
+  { value: 'pending', label: 'Pending' },
+]
 
 const engineFilters: { value: EngineFilter; label: string }[] = [
-  { value: "all", label: "All Engines" },
-  { value: "mysql", label: "MySQL" },
-  { value: "postgresql", label: "PostgreSQL" },
-  { value: "mongodb", label: "MongoDB" },
-  { value: "redis", label: "Redis" },
-  { value: "elasticsearch", label: "Elasticsearch" },
-  { value: "mssql", label: "MS SQL" },
-  { value: "oracle", label: "Oracle" },
-];
+  { value: 'all', label: 'All Engines' },
+  { value: 'mysql', label: 'MySQL' },
+  { value: 'postgresql', label: 'PostgreSQL' },
+  { value: 'mongodb', label: 'MongoDB' },
+  { value: 'redis', label: 'Redis' },
+  { value: 'elasticsearch', label: 'Elasticsearch' },
+  { value: 'mssql', label: 'MS SQL' },
+  { value: 'oracle', label: 'Oracle' },
+]
 
 // Empty form state
 const emptyDatabaseForm = {
-  name: "",
-  description: "",
-  groupId: "",
-  engine: "postgresql" as "mysql" | "postgresql" | "mongodb" | "redis" | "elasticsearch" | "mssql" | "oracle" | "dynamodb" | "cosmosdb",
-  dbVersion: "",
-  dbHost: "",
-  dbPort: "",
-  sizeGB: "",
+  name: '',
+  description: '',
+  groupId: '',
+  engine: 'postgresql' as
+    | 'mysql'
+    | 'postgresql'
+    | 'mongodb'
+    | 'redis'
+    | 'elasticsearch'
+    | 'mssql'
+    | 'oracle'
+    | 'dynamodb'
+    | 'cosmosdb',
+  dbVersion: '',
+  dbHost: '',
+  dbPort: '',
+  sizeGB: '',
   encryption: false,
   backupEnabled: false,
-  replication: "single" as "single" | "replica-set" | "cluster",
-  tags: "",
-};
+  replication: 'single' as 'single' | 'replica-set' | 'cluster',
+  tags: '',
+}
 
 export default function DatabasesPage() {
   // Permission checks
-  const { can } = usePermissions();
-  const canWriteAssets = can(Permission.AssetsWrite);
-  const canDeleteAssets = can(Permission.AssetsDelete);
+  const { can } = usePermissions()
+  const canWriteAssets = can(Permission.AssetsWrite)
+  const canDeleteAssets = can(Permission.AssetsDelete)
 
   // Fetch databases from API
-  const { assets: databases, isLoading: _isLoading, isError: _isError, error: _fetchError, mutate } = useAssets({
+  const {
+    assets: databases,
+    isLoading: _isLoading,
+    isError: _isError,
+    error: _fetchError,
+    mutate,
+  } = useAssets({
     types: ['database'],
-  });
+  })
 
-  const [selectedDatabase, setSelectedDatabase] = useState<Asset | null>(null);
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [globalFilter, setGlobalFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [engineFilter, setEngineFilter] = useState<EngineFilter>("all");
-  const [rowSelection, setRowSelection] = useState({});
-  const [_isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedDatabase, setSelectedDatabase] = useState<Asset | null>(null)
+  const [sorting, setSorting] = useState<SortingState>([])
+  const [globalFilter, setGlobalFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [engineFilter, setEngineFilter] = useState<EngineFilter>('all')
+  const [rowSelection, setRowSelection] = useState({})
+  const [_isSubmitting, setIsSubmitting] = useState(false)
 
   // Dialog states
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [databaseToDelete, setDatabaseToDelete] = useState<Asset | null>(null);
+  const [addDialogOpen, setAddDialogOpen] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [databaseToDelete, setDatabaseToDelete] = useState<Asset | null>(null)
 
   // Form state
-  const [formData, setFormData] = useState(emptyDatabaseForm);
+  const [formData, setFormData] = useState(emptyDatabaseForm)
 
   // Filter data
   const filteredData = useMemo(() => {
-    let data = [...databases];
-    if (statusFilter !== "all") {
-      data = data.filter((d) => d.status === statusFilter);
+    let data = [...databases]
+    if (statusFilter !== 'all') {
+      data = data.filter((d) => d.status === statusFilter)
     }
-    if (engineFilter !== "all") {
-      data = data.filter((d) => d.metadata.engine === engineFilter);
+    if (engineFilter !== 'all') {
+      data = data.filter((d) => d.metadata.engine === engineFilter)
     }
-    return data;
-  }, [databases, statusFilter, engineFilter]);
+    return data
+  }, [databases, statusFilter, engineFilter])
 
   // Status counts
-  const statusCounts = useMemo(() => ({
-    all: databases.length,
-    active: databases.filter((d) => d.status === "active").length,
-    inactive: databases.filter((d) => d.status === "inactive").length,
-    pending: databases.filter((d) => d.status === "pending").length,
-  }), [databases]);
+  const statusCounts = useMemo(
+    () => ({
+      all: databases.length,
+      active: databases.filter((d) => d.status === 'active').length,
+      inactive: databases.filter((d) => d.status === 'inactive').length,
+      pending: databases.filter((d) => d.status === 'pending').length,
+    }),
+    [databases]
+  )
 
   // Additional stats
-  const stats = useMemo(() => ({
-    encrypted: databases.filter((d) => d.metadata.encryption).length,
-    withBackup: databases.filter((d) => d.metadata.backupEnabled).length,
-    withFindings: databases.filter((d) => d.findingCount > 0).length,
-  }), [databases]);
+  const stats = useMemo(
+    () => ({
+      encrypted: databases.filter((d) => d.metadata.encryption).length,
+      withBackup: databases.filter((d) => d.metadata.backupEnabled).length,
+      withFindings: databases.filter((d) => d.findingCount > 0).length,
+    }),
+    [databases]
+  )
 
   // Scope data
-  const scopeTargets = useMemo(() => getActiveScopeTargets(), []);
-  const scopeExclusions = useMemo(() => getActiveScopeExclusions(), []);
+  const scopeTargets = useMemo(() => getActiveScopeTargets(), [])
+  const scopeExclusions = useMemo(() => getActiveScopeExclusions(), [])
 
   // Compute scope matches for each database
   const scopeMatchesMap = useMemo(() => {
-    const map = new Map<string, ScopeMatchResult>();
+    const map = new Map<string, ScopeMatchResult>()
     databases.forEach((database) => {
       const match = getScopeMatchesForAsset(
-        { id: database.id, type: "database", name: database.metadata.dbHost || database.name },
+        { id: database.id, type: 'database', name: database.metadata.dbHost || database.name },
         scopeTargets,
         scopeExclusions
-      );
-      map.set(database.id, match);
-    });
-    return map;
-  }, [databases, scopeTargets, scopeExclusions]);
+      )
+      map.set(database.id, match)
+    })
+    return map
+  }, [databases, scopeTargets, scopeExclusions])
 
   // Calculate scope coverage
   const scopeCoverage = useMemo(() => {
     const assets = databases.map((d) => ({
       id: d.id,
       name: d.metadata.dbHost || d.name,
-      type: "database" as const,
-    }));
-    return calculateScopeCoverage(assets, scopeTargets, scopeExclusions);
-  }, [databases, scopeTargets, scopeExclusions]);
+      type: 'database' as const,
+    }))
+    return calculateScopeCoverage(assets, scopeTargets, scopeExclusions)
+  }, [databases, scopeTargets, scopeExclusions])
 
   // Table columns
   const columns: ColumnDef<Asset>[] = [
     {
-      id: "select",
+      id: 'select',
       header: ({ table }) => (
         <Checkbox
           checked={
             table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && "indeterminate")
+            (table.getIsSomePageRowsSelected() && 'indeterminate')
           }
           onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
           aria-label="Select all"
@@ -268,11 +283,11 @@ export default function DatabasesPage() {
       enableSorting: false,
     },
     {
-      accessorKey: "name",
+      accessorKey: 'name',
       header: ({ column }) => (
         <Button
           variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           className="-ml-4"
         >
           Database
@@ -284,55 +299,57 @@ export default function DatabasesPage() {
           <Database className="h-4 w-4 text-muted-foreground shrink-0" />
           <div className="min-w-0">
             <p className="font-medium truncate">{row.original.name}</p>
-            <p className="text-muted-foreground text-xs truncate">{row.original.metadata.dbHost}:{row.original.metadata.dbPort}</p>
+            <p className="text-muted-foreground text-xs truncate">
+              {row.original.metadata.dbHost}:{row.original.metadata.dbPort}
+            </p>
           </div>
         </div>
       ),
     },
     {
-      accessorKey: "metadata.engine",
-      header: "Engine",
+      accessorKey: 'metadata.engine',
+      header: 'Engine',
       cell: ({ row }) => {
-        const engine = row.original.metadata.engine;
-        const version = row.original.metadata.dbVersion;
+        const engine = row.original.metadata.engine
+        const version = row.original.metadata.dbVersion
         const colors: Record<string, string> = {
-          mysql: "bg-blue-500/10 text-blue-500",
-          postgresql: "bg-indigo-500/10 text-indigo-500",
-          mongodb: "bg-green-500/10 text-green-500",
-          redis: "bg-red-500/10 text-red-500",
-          elasticsearch: "bg-yellow-500/10 text-yellow-500",
-          mssql: "bg-purple-500/10 text-purple-500",
-          oracle: "bg-orange-500/10 text-orange-500",
-        };
+          mysql: 'bg-blue-500/10 text-blue-500',
+          postgresql: 'bg-indigo-500/10 text-indigo-500',
+          mongodb: 'bg-green-500/10 text-green-500',
+          redis: 'bg-red-500/10 text-red-500',
+          elasticsearch: 'bg-yellow-500/10 text-yellow-500',
+          mssql: 'bg-purple-500/10 text-purple-500',
+          oracle: 'bg-orange-500/10 text-orange-500',
+        }
         return (
           <div>
-            <Badge variant="secondary" className={colors[engine || "postgresql"]}>
-              {engine || "postgresql"}
+            <Badge variant="secondary" className={colors[engine || 'postgresql']}>
+              {engine || 'postgresql'}
             </Badge>
             {version && <p className="text-xs text-muted-foreground mt-1">{version}</p>}
           </div>
-        );
+        )
       },
     },
     {
-      accessorKey: "metadata.sizeGB",
-      header: "Size",
+      accessorKey: 'metadata.sizeGB',
+      header: 'Size',
       cell: ({ row }) => {
-        const size = row.original.metadata.sizeGB;
+        const size = row.original.metadata.sizeGB
         return (
           <div className="flex items-center gap-1">
             <HardDrive className="h-3 w-3 text-muted-foreground" />
-            <span className="text-sm">{size ? `${size} GB` : "-"}</span>
+            <span className="text-sm">{size ? `${size} GB` : '-'}</span>
           </div>
-        );
+        )
       },
     },
     {
-      accessorKey: "metadata.encryption",
-      header: "Security",
+      accessorKey: 'metadata.encryption',
+      header: 'Security',
       cell: ({ row }) => {
-        const encrypted = row.original.metadata.encryption;
-        const backup = row.original.metadata.backupEnabled;
+        const encrypted = row.original.metadata.encryption
+        const backup = row.original.metadata.backupEnabled
         return (
           <div className="flex items-center gap-1">
             {encrypted && (
@@ -347,17 +364,17 @@ export default function DatabasesPage() {
             )}
             {!encrypted && !backup && <span className="text-muted-foreground">-</span>}
           </div>
-        );
+        )
       },
     },
     {
-      accessorKey: "status",
-      header: "Status",
+      accessorKey: 'status',
+      header: 'Status',
       cell: ({ row }) => <StatusBadge status={row.original.status} />,
     },
     {
-      id: "classification",
-      header: "Classification",
+      id: 'classification',
+      header: 'Classification',
       cell: ({ row }) => (
         <ClassificationBadges
           scope={row.original.scope}
@@ -368,20 +385,20 @@ export default function DatabasesPage() {
       ),
     },
     {
-      id: "scope",
-      header: "Scope",
+      id: 'scope',
+      header: 'Scope',
       cell: ({ row }) => {
-        const match = scopeMatchesMap.get(row.original.id);
-        if (!match) return <span className="text-muted-foreground">-</span>;
-        return <ScopeBadge match={match} />;
+        const match = scopeMatchesMap.get(row.original.id)
+        if (!match) return <span className="text-muted-foreground">-</span>
+        return <ScopeBadge match={match} />
       },
     },
     {
-      accessorKey: "findingCount",
+      accessorKey: 'findingCount',
       header: ({ column }) => (
         <Button
           variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           className="-ml-4"
         >
           Findings
@@ -389,21 +406,17 @@ export default function DatabasesPage() {
         </Button>
       ),
       cell: ({ row }) => {
-        const count = row.original.findingCount;
-        if (count === 0) return <span className="text-muted-foreground">0</span>;
-        return (
-          <Badge variant={count > 5 ? "destructive" : "secondary"}>
-            {count}
-          </Badge>
-        );
+        const count = row.original.findingCount
+        if (count === 0) return <span className="text-muted-foreground">0</span>
+        return <Badge variant={count > 5 ? 'destructive' : 'secondary'}>{count}</Badge>
       },
     },
     {
-      accessorKey: "riskScore",
+      accessorKey: 'riskScore',
       header: ({ column }) => (
         <Button
           variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           className="-ml-4"
         >
           Risk
@@ -413,28 +426,48 @@ export default function DatabasesPage() {
       cell: ({ row }) => <RiskScoreBadge score={row.original.riskScore} size="sm" />,
     },
     {
-      id: "actions",
+      id: 'actions',
       cell: ({ row }) => {
-        const database = row.original;
+        const database = row.original
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSelectedDatabase(database); }}>
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setSelectedDatabase(database)
+                }}
+              >
                 <Eye className="mr-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
               <Can permission={Permission.AssetsWrite}>
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenEdit(database); }}>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleOpenEdit(database)
+                  }}
+                >
                   <Pencil className="mr-2 h-4 w-4" />
                   Edit
                 </DropdownMenuItem>
               </Can>
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleCopyConnection(database); }}>
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleCopyConnection(database)
+                }}
+              >
                 <Copy className="mr-2 h-4 w-4" />
                 Copy Connection
               </DropdownMenuItem>
@@ -443,9 +476,9 @@ export default function DatabasesPage() {
                 <DropdownMenuItem
                   className="text-red-400"
                   onClick={(e) => {
-                    e.stopPropagation();
-                    setDatabaseToDelete(database);
-                    setDeleteDialogOpen(true);
+                    e.stopPropagation()
+                    setDatabaseToDelete(database)
+                    setDeleteDialogOpen(true)
                   }}
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
@@ -454,10 +487,10 @@ export default function DatabasesPage() {
               </Can>
             </DropdownMenuContent>
           </DropdownMenu>
-        );
+        )
       },
     },
-  ];
+  ]
 
   const table = useReactTable({
     data: filteredData,
@@ -470,157 +503,168 @@ export default function DatabasesPage() {
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-  });
+  })
 
   // Handlers
   const handleCopyConnection = (database: Asset) => {
-    const conn = `${database.metadata.dbHost}:${database.metadata.dbPort}`;
-    navigator.clipboard.writeText(conn);
-    toast.success("Connection string copied");
-  };
+    const conn = `${database.metadata.dbHost}:${database.metadata.dbPort}`
+    navigator.clipboard.writeText(conn)
+    toast.success('Connection string copied')
+  }
 
   const handleOpenEdit = (database: Asset) => {
     setFormData({
       name: database.name,
-      description: database.description || "",
-      groupId: database.groupId || "",
-      engine: database.metadata.engine || "postgresql",
-      dbVersion: database.metadata.dbVersion || "",
-      dbHost: database.metadata.dbHost || "",
-      dbPort: database.metadata.dbPort?.toString() || "",
-      sizeGB: database.metadata.sizeGB?.toString() || "",
+      description: database.description || '',
+      groupId: database.groupId || '',
+      engine: database.metadata.engine || 'postgresql',
+      dbVersion: database.metadata.dbVersion || '',
+      dbHost: database.metadata.dbHost || '',
+      dbPort: database.metadata.dbPort?.toString() || '',
+      sizeGB: database.metadata.sizeGB?.toString() || '',
       encryption: database.metadata.encryption || false,
       backupEnabled: database.metadata.backupEnabled || false,
-      replication: database.metadata.replication || "single",
-      tags: database.tags?.join(", ") || "",
-    });
-    setSelectedDatabase(database);
-    setEditDialogOpen(true);
-  };
+      replication: database.metadata.replication || 'single',
+      tags: database.tags?.join(', ') || '',
+    })
+    setSelectedDatabase(database)
+    setEditDialogOpen(true)
+  }
 
   const handleAddDatabase = async () => {
     if (!formData.name) {
-      toast.error("Please fill in required fields");
-      return;
+      toast.error('Please fill in required fields')
+      return
     }
 
-    setIsSubmitting(true);
+    setIsSubmitting(true)
     try {
       await createAsset({
         name: formData.name,
-        type: "database",
-        criticality: "high",
+        type: 'database',
+        criticality: 'high',
         description: formData.description,
-        scope: "internal",
-        exposure: "private",
-        tags: formData.tags.split(",").map((s) => s.trim()).filter(Boolean),
-      });
-      await mutate();
-      setFormData(emptyDatabaseForm);
-      setAddDialogOpen(false);
-      toast.success("Database added successfully");
+        scope: 'internal',
+        exposure: 'private',
+        tags: formData.tags
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean),
+      })
+      await mutate()
+      setFormData(emptyDatabaseForm)
+      setAddDialogOpen(false)
+      toast.success('Database added successfully')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to add database");
+      toast.error(err instanceof Error ? err.message : 'Failed to add database')
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   const handleEditDatabase = async () => {
     if (!selectedDatabase || !formData.name) {
-      toast.error("Please fill in required fields");
-      return;
+      toast.error('Please fill in required fields')
+      return
     }
 
-    setIsSubmitting(true);
+    setIsSubmitting(true)
     try {
       await updateAsset(selectedDatabase.id, {
         name: formData.name,
         description: formData.description,
-        tags: formData.tags.split(",").map((s) => s.trim()).filter(Boolean),
-      });
-      await mutate();
-      setFormData(emptyDatabaseForm);
-      setEditDialogOpen(false);
-      setSelectedDatabase(null);
-      toast.success("Database updated successfully");
+        tags: formData.tags
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean),
+      })
+      await mutate()
+      setFormData(emptyDatabaseForm)
+      setEditDialogOpen(false)
+      setSelectedDatabase(null)
+      toast.success('Database updated successfully')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to update database");
+      toast.error(err instanceof Error ? err.message : 'Failed to update database')
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   const handleDeleteDatabase = async () => {
-    if (!databaseToDelete) return;
-    setIsSubmitting(true);
+    if (!databaseToDelete) return
+    setIsSubmitting(true)
     try {
-      await deleteAsset(databaseToDelete.id);
-      await mutate();
-      setDeleteDialogOpen(false);
-      setDatabaseToDelete(null);
-      toast.success("Database deleted successfully");
+      await deleteAsset(databaseToDelete.id)
+      await mutate()
+      setDeleteDialogOpen(false)
+      setDatabaseToDelete(null)
+      toast.success('Database deleted successfully')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete database");
+      toast.error(err instanceof Error ? err.message : 'Failed to delete database')
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   const handleBulkDelete = async () => {
-    const selectedDatabaseIds = table.getSelectedRowModel().rows.map((r) => r.original.id);
-    if (selectedDatabaseIds.length === 0) return;
+    const selectedDatabaseIds = table.getSelectedRowModel().rows.map((r) => r.original.id)
+    if (selectedDatabaseIds.length === 0) return
 
-    setIsSubmitting(true);
+    setIsSubmitting(true)
     try {
-      await bulkDeleteAssets(selectedDatabaseIds);
-      await mutate();
-      setRowSelection({});
-      toast.success(`Deleted ${selectedDatabaseIds.length} databases`);
+      await bulkDeleteAssets(selectedDatabaseIds)
+      await mutate()
+      setRowSelection({})
+      toast.success(`Deleted ${selectedDatabaseIds.length} databases`)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete databases");
+      toast.error(err instanceof Error ? err.message : 'Failed to delete databases')
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   const handleExport = () => {
     const csv = [
-      ["Name", "Engine", "Version", "Host", "Port", "Size (GB)", "Encrypted", "Backup", "Status", "Risk Score"].join(","),
+      [
+        'Name',
+        'Engine',
+        'Version',
+        'Host',
+        'Port',
+        'Size (GB)',
+        'Encrypted',
+        'Backup',
+        'Status',
+        'Risk Score',
+      ].join(','),
       ...databases.map((d) =>
         [
           d.name,
-          d.metadata.engine || "",
-          d.metadata.dbVersion || "",
-          d.metadata.dbHost || "",
-          d.metadata.dbPort || "",
-          d.metadata.sizeGB || "",
-          d.metadata.encryption ? "Yes" : "No",
-          d.metadata.backupEnabled ? "Yes" : "No",
+          d.metadata.engine || '',
+          d.metadata.dbVersion || '',
+          d.metadata.dbHost || '',
+          d.metadata.dbPort || '',
+          d.metadata.sizeGB || '',
+          d.metadata.encryption ? 'Yes' : 'No',
+          d.metadata.backupEnabled ? 'Yes' : 'No',
           d.status,
           d.riskScore,
-        ].join(",")
+        ].join(',')
       ),
-    ].join("\n");
+    ].join('\n')
 
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "databases.csv";
-    a.click();
-    toast.success("Databases exported");
-  };
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'databases.csv'
+    a.click()
+    toast.success('Databases exported')
+  }
 
   return (
     <>
-      <Header fixed>
-        <div className="ms-auto flex items-center gap-2 sm:gap-4">
-          <Search />
-          <ThemeSwitch />
-          <ProfileDropdown />
-        </div>
-      </Header>
+      <Header fixed />
 
       <Main>
         <PageHeader
@@ -633,10 +677,12 @@ export default function DatabasesPage() {
               Export
             </Button>
             <Can permission={Permission.AssetsWrite}>
-              <Button onClick={() => {
-                setFormData(emptyDatabaseForm);
-                setAddDialogOpen(true);
-              }}>
+              <Button
+                onClick={() => {
+                  setFormData(emptyDatabaseForm)
+                  setAddDialogOpen(true)
+                }}
+              >
                 <Plus className="mr-2 h-4 w-4" />
                 Add Database
               </Button>
@@ -646,7 +692,10 @@ export default function DatabasesPage() {
 
         {/* Stats Cards */}
         <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <Card className="cursor-pointer hover:border-primary transition-colors" onClick={() => setStatusFilter("all")}>
+          <Card
+            className="cursor-pointer hover:border-primary transition-colors"
+            onClick={() => setStatusFilter('all')}
+          >
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
                 <Database className="h-4 w-4" />
@@ -655,7 +704,10 @@ export default function DatabasesPage() {
               <CardTitle className="text-3xl">{statusCounts.all}</CardTitle>
             </CardHeader>
           </Card>
-          <Card className={`cursor-pointer hover:border-green-500 transition-colors ${statusFilter === "active" ? "border-green-500" : ""}`} onClick={() => setStatusFilter("active")}>
+          <Card
+            className={`cursor-pointer hover:border-green-500 transition-colors ${statusFilter === 'active' ? 'border-green-500' : ''}`}
+            onClick={() => setStatusFilter('active')}
+          >
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
                 <CheckCircle className="h-4 w-4 text-green-500" />
@@ -716,7 +768,10 @@ export default function DatabasesPage() {
                 </TabsList>
               </Tabs>
 
-              <Select value={engineFilter} onValueChange={(v) => setEngineFilter(v as EngineFilter)}>
+              <Select
+                value={engineFilter}
+                onValueChange={(v) => setEngineFilter(v as EngineFilter)}
+              >
                 <SelectTrigger className="w-[160px]">
                   <SelectValue placeholder="Filter by engine" />
                 </SelectTrigger>
@@ -751,7 +806,9 @@ export default function DatabasesPage() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => toast.info("Scanning selected databases...")}>
+                      <DropdownMenuItem
+                        onClick={() => toast.info('Scanning selected databases...')}
+                      >
                         <RefreshCw className="mr-2 h-4 w-4" />
                         Rescan Selected
                       </DropdownMenuItem>
@@ -789,14 +846,16 @@ export default function DatabasesPage() {
                     table.getRowModel().rows.map((row) => (
                       <TableRow
                         key={row.id}
-                        data-state={row.getIsSelected() && "selected"}
+                        data-state={row.getIsSelected() && 'selected'}
                         className="cursor-pointer"
                         onClick={(e) => {
-                          if ((e.target as HTMLElement).closest('[role="checkbox"]') ||
-                              (e.target as HTMLElement).closest('button')) {
-                            return;
+                          if (
+                            (e.target as HTMLElement).closest('[role="checkbox"]') ||
+                            (e.target as HTMLElement).closest('button')
+                          ) {
+                            return
                           }
-                          setSelectedDatabase(row.original);
+                          setSelectedDatabase(row.original)
                         }}
                       >
                         {row.getVisibleCells().map((cell) => (
@@ -820,7 +879,7 @@ export default function DatabasesPage() {
             {/* Pagination */}
             <div className="flex items-center justify-between mt-4">
               <p className="text-sm text-muted-foreground">
-                {table.getFilteredSelectedRowModel().rows.length} of{" "}
+                {table.getFilteredSelectedRowModel().rows.length} of{' '}
                 {table.getFilteredRowModel().rows.length} row(s) selected
               </p>
               <div className="flex flex-wrap items-center gap-2">
@@ -876,20 +935,28 @@ export default function DatabasesPage() {
         gradientVia="via-indigo-500/10"
         assetTypeName="Database"
         relationships={selectedDatabase ? getAssetRelationships(selectedDatabase.id) : []}
-        subtitle={selectedDatabase ? `${selectedDatabase.metadata.dbHost}:${selectedDatabase.metadata.dbPort}` : undefined}
+        subtitle={
+          selectedDatabase
+            ? `${selectedDatabase.metadata.dbHost}:${selectedDatabase.metadata.dbPort}`
+            : undefined
+        }
         onEdit={() => selectedDatabase && handleOpenEdit(selectedDatabase)}
         onDelete={() => {
           if (selectedDatabase) {
-            setDatabaseToDelete(selectedDatabase);
-            setDeleteDialogOpen(true);
-            setSelectedDatabase(null);
+            setDatabaseToDelete(selectedDatabase)
+            setDeleteDialogOpen(true)
+            setSelectedDatabase(null)
           }
         }}
         canEdit={canWriteAssets}
         canDelete={canDeleteAssets}
         quickActions={
           selectedDatabase && (
-            <Button size="sm" variant="outline" onClick={() => handleCopyConnection(selectedDatabase)}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleCopyConnection(selectedDatabase)}
+            >
               <Copy className="mr-2 h-4 w-4" />
               Copy Connection
             </Button>
@@ -924,19 +991,27 @@ export default function DatabasesPage() {
                 <div className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
                   <div>
                     <p className="text-muted-foreground">Engine</p>
-                    <p className="font-medium capitalize">{selectedDatabase.metadata.engine || "-"}</p>
+                    <p className="font-medium capitalize">
+                      {selectedDatabase.metadata.engine || '-'}
+                    </p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Version</p>
-                    <p className="font-medium">{selectedDatabase.metadata.dbVersion || "-"}</p>
+                    <p className="font-medium">{selectedDatabase.metadata.dbVersion || '-'}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Size</p>
-                    <p className="font-medium">{selectedDatabase.metadata.sizeGB ? `${selectedDatabase.metadata.sizeGB} GB` : "-"}</p>
+                    <p className="font-medium">
+                      {selectedDatabase.metadata.sizeGB
+                        ? `${selectedDatabase.metadata.sizeGB} GB`
+                        : '-'}
+                    </p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Replication</p>
-                    <p className="font-medium capitalize">{selectedDatabase.metadata.replication || "single"}</p>
+                    <p className="font-medium capitalize">
+                      {selectedDatabase.metadata.replication || 'single'}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -946,16 +1021,24 @@ export default function DatabasesPage() {
                 <SectionTitle>Security & Backup</SectionTitle>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex items-center gap-3">
-                    <Lock className={`h-5 w-5 ${selectedDatabase.metadata.encryption ? "text-green-500" : "text-muted-foreground"}`} />
+                    <Lock
+                      className={`h-5 w-5 ${selectedDatabase.metadata.encryption ? 'text-green-500' : 'text-muted-foreground'}`}
+                    />
                     <div>
-                      <p className="text-sm font-medium">{selectedDatabase.metadata.encryption ? "Encrypted" : "Not Encrypted"}</p>
+                      <p className="text-sm font-medium">
+                        {selectedDatabase.metadata.encryption ? 'Encrypted' : 'Not Encrypted'}
+                      </p>
                       <p className="text-xs text-muted-foreground">Encryption</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <Save className={`h-5 w-5 ${selectedDatabase.metadata.backupEnabled ? "text-blue-500" : "text-muted-foreground"}`} />
+                    <Save
+                      className={`h-5 w-5 ${selectedDatabase.metadata.backupEnabled ? 'text-blue-500' : 'text-muted-foreground'}`}
+                    />
                     <div>
-                      <p className="text-sm font-medium">{selectedDatabase.metadata.backupEnabled ? "Enabled" : "Disabled"}</p>
+                      <p className="text-sm font-medium">
+                        {selectedDatabase.metadata.backupEnabled ? 'Enabled' : 'Disabled'}
+                      </p>
                       <p className="text-xs text-muted-foreground">Backup</p>
                     </div>
                   </div>
@@ -974,9 +1057,7 @@ export default function DatabasesPage() {
               <Database className="h-5 w-5" />
               Add Database
             </DialogTitle>
-            <DialogDescription>
-              Add a new database to your asset inventory
-            </DialogDescription>
+            <DialogDescription>Add a new database to your asset inventory</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -993,7 +1074,9 @@ export default function DatabasesPage() {
                 <Label htmlFor="engine">Engine *</Label>
                 <Select
                   value={formData.engine}
-                  onValueChange={(value) => setFormData({ ...formData, engine: value as typeof formData.engine })}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, engine: value as typeof formData.engine })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select engine" />
@@ -1082,7 +1165,9 @@ export default function DatabasesPage() {
                 <Label htmlFor="replication">Replication</Label>
                 <Select
                   value={formData.replication}
-                  onValueChange={(value) => setFormData({ ...formData, replication: value as typeof formData.replication })}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, replication: value as typeof formData.replication })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select" />
@@ -1100,7 +1185,9 @@ export default function DatabasesPage() {
                 <Checkbox
                   id="encryption"
                   checked={formData.encryption}
-                  onCheckedChange={(checked) => setFormData({ ...formData, encryption: checked === true })}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, encryption: checked === true })
+                  }
                 />
                 <Label htmlFor="encryption">Encryption Enabled</Label>
               </div>
@@ -1108,7 +1195,9 @@ export default function DatabasesPage() {
                 <Checkbox
                   id="backupEnabled"
                   checked={formData.backupEnabled}
-                  onCheckedChange={(checked) => setFormData({ ...formData, backupEnabled: checked === true })}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, backupEnabled: checked === true })
+                  }
                 />
                 <Label htmlFor="backupEnabled">Backup Enabled</Label>
               </div>
@@ -1143,9 +1232,7 @@ export default function DatabasesPage() {
               <Pencil className="h-5 w-5" />
               Edit Database
             </DialogTitle>
-            <DialogDescription>
-              Update database information
-            </DialogDescription>
+            <DialogDescription>Update database information</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -1162,7 +1249,9 @@ export default function DatabasesPage() {
                 <Label htmlFor="edit-engine">Engine *</Label>
                 <Select
                   value={formData.engine}
-                  onValueChange={(value) => setFormData({ ...formData, engine: value as typeof formData.engine })}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, engine: value as typeof formData.engine })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select engine" />
@@ -1251,7 +1340,9 @@ export default function DatabasesPage() {
                 <Label htmlFor="edit-replication">Replication</Label>
                 <Select
                   value={formData.replication}
-                  onValueChange={(value) => setFormData({ ...formData, replication: value as typeof formData.replication })}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, replication: value as typeof formData.replication })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select" />
@@ -1269,7 +1360,9 @@ export default function DatabasesPage() {
                 <Checkbox
                   id="edit-encryption"
                   checked={formData.encryption}
-                  onCheckedChange={(checked) => setFormData({ ...formData, encryption: checked === true })}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, encryption: checked === true })
+                  }
                 />
                 <Label htmlFor="edit-encryption">Encryption Enabled</Label>
               </div>
@@ -1277,7 +1370,9 @@ export default function DatabasesPage() {
                 <Checkbox
                   id="edit-backupEnabled"
                   checked={formData.backupEnabled}
-                  onCheckedChange={(checked) => setFormData({ ...formData, backupEnabled: checked === true })}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, backupEnabled: checked === true })
+                  }
                 />
                 <Label htmlFor="edit-backupEnabled">Backup Enabled</Label>
               </div>
@@ -1310,8 +1405,8 @@ export default function DatabasesPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Database</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete <strong>{databaseToDelete?.name}</strong>?
-              This action cannot be undone.
+              Are you sure you want to delete <strong>{databaseToDelete?.name}</strong>? This action
+              cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1326,5 +1421,5 @@ export default function DatabasesPage() {
         </AlertDialogContent>
       </AlertDialog>
     </>
-  );
+  )
 }

@@ -1,6 +1,6 @@
-"use client";
+'use client'
 
-import { useState, useMemo } from "react";
+import { useState, useMemo } from 'react'
 import {
   ColumnDef,
   flexRender,
@@ -10,31 +10,17 @@ import {
   getSortedRowModel,
   SortingState,
   useReactTable,
-} from "@tanstack/react-table";
-import { Header, Main } from "@/components/layout";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { PageHeader, StatusBadge, RiskScoreBadge } from "@/features/shared";
-import {
-  AssetDetailSheet,
-  StatCardCentered,
-  StatsGrid,
-  SectionTitle,
-} from "@/features/assets";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+} from '@tanstack/react-table'
+import { Header, Main } from '@/components/layout'
+import { PageHeader, StatusBadge, RiskScoreBadge } from '@/features/shared'
+import { AssetDetailSheet, StatCardCentered, StatsGrid, SectionTitle } from '@/features/assets'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Textarea } from '@/components/ui/textarea'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -42,7 +28,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from '@/components/ui/table'
 import {
   Dialog,
   DialogContent,
@@ -50,7 +36,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -60,23 +46,23 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+} from '@/components/ui/alert-dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "sonner";
+} from '@/components/ui/select'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { toast } from 'sonner'
 import {
   Plus,
   Server,
@@ -97,7 +83,7 @@ import {
   Copy,
   RefreshCw,
   Network,
-} from "lucide-react";
+} from 'lucide-react'
 import {
   useAssets,
   createAsset,
@@ -106,124 +92,124 @@ import {
   bulkDeleteAssets,
   getAssetRelationships,
   ClassificationBadges,
-  type Asset
-} from "@/features/assets";
-import { Can, Permission, usePermissions } from "@/lib/permissions";
-import { mockAssetGroups } from "@/features/asset-groups";
-import type { Status } from "@/features/shared/types";
+  type Asset,
+} from '@/features/assets'
+import { Can, Permission, usePermissions } from '@/lib/permissions'
+import { mockAssetGroups } from '@/features/asset-groups'
+import type { Status } from '@/features/shared/types'
 
 // Filter types
-type StatusFilter = Status | "all";
-type ProtocolFilter = "all" | "tcp" | "udp";
+type StatusFilter = Status | 'all'
+type ProtocolFilter = 'all' | 'tcp' | 'udp'
 
 const statusFilters: { value: StatusFilter; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "active", label: "Active" },
-  { value: "inactive", label: "Inactive" },
-  { value: "pending", label: "Pending" },
-];
+  { value: 'all', label: 'All' },
+  { value: 'active', label: 'Active' },
+  { value: 'inactive', label: 'Inactive' },
+  { value: 'pending', label: 'Pending' },
+]
 
 // Common ports for quick selection
 const commonPorts = [
-  { port: 22, name: "SSH" },
-  { port: 80, name: "HTTP" },
-  { port: 443, name: "HTTPS" },
-  { port: 3306, name: "MySQL" },
-  { port: 5432, name: "PostgreSQL" },
-  { port: 6379, name: "Redis" },
-  { port: 27017, name: "MongoDB" },
-  { port: 8080, name: "HTTP Alt" },
-  { port: 3389, name: "RDP" },
-  { port: 21, name: "FTP" },
-];
+  { port: 22, name: 'SSH' },
+  { port: 80, name: 'HTTP' },
+  { port: 443, name: 'HTTPS' },
+  { port: 3306, name: 'MySQL' },
+  { port: 5432, name: 'PostgreSQL' },
+  { port: 6379, name: 'Redis' },
+  { port: 27017, name: 'MongoDB' },
+  { port: 8080, name: 'HTTP Alt' },
+  { port: 3389, name: 'RDP' },
+  { port: 21, name: 'FTP' },
+]
 
 // Empty form state
 const emptyServiceForm = {
-  name: "",
-  description: "",
-  groupId: "",
-  port: "",
-  protocol: "tcp",
-  version: "",
-  banner: "",
-  tags: "",
-};
+  name: '',
+  description: '',
+  groupId: '',
+  port: '',
+  protocol: 'tcp',
+  version: '',
+  banner: '',
+  tags: '',
+}
 
 export default function ServicesPage() {
   // Permission checks
-  const { can } = usePermissions();
-  const canWriteAssets = can(Permission.AssetsWrite);
-  const canDeleteAssets = can(Permission.AssetsDelete);
+  const { can } = usePermissions()
+  const canWriteAssets = can(Permission.AssetsWrite)
+  const canDeleteAssets = can(Permission.AssetsDelete)
 
   // Fetch services from API
-  const { assets: services, isLoading: _isLoading, isError: _isError, error: _fetchError, mutate } = useAssets({
+  const {
+    assets: services,
+    isLoading: _isLoading,
+    isError: _isError,
+    error: _fetchError,
+    mutate,
+  } = useAssets({
     types: ['service'],
-  });
+  })
 
-  const [selectedService, setSelectedService] = useState<Asset | null>(null);
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [globalFilter, setGlobalFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [protocolFilter, setProtocolFilter] = useState<ProtocolFilter>("all");
-  const [rowSelection, setRowSelection] = useState({});
-  const [_isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedService, setSelectedService] = useState<Asset | null>(null)
+  const [sorting, setSorting] = useState<SortingState>([])
+  const [globalFilter, setGlobalFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [protocolFilter, setProtocolFilter] = useState<ProtocolFilter>('all')
+  const [rowSelection, setRowSelection] = useState({})
+  const [_isSubmitting, setIsSubmitting] = useState(false)
 
   // Dialog states
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [serviceToDelete, setServiceToDelete] = useState<Asset | null>(null);
+  const [addDialogOpen, setAddDialogOpen] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [serviceToDelete, setServiceToDelete] = useState<Asset | null>(null)
 
   // Form state
-  const [formData, setFormData] = useState(emptyServiceForm);
+  const [formData, setFormData] = useState(emptyServiceForm)
 
   // Filter data
   const filteredData = useMemo(() => {
-    let data = [...services];
-    if (statusFilter !== "all") {
-      data = data.filter((s) => s.status === statusFilter);
+    let data = [...services]
+    if (statusFilter !== 'all') {
+      data = data.filter((s) => s.status === statusFilter)
     }
-    if (protocolFilter !== "all") {
-      data = data.filter(
-        (s) => s.metadata.protocol?.toLowerCase() === protocolFilter
-      );
+    if (protocolFilter !== 'all') {
+      data = data.filter((s) => s.metadata.protocol?.toLowerCase() === protocolFilter)
     }
-    return data;
-  }, [services, statusFilter, protocolFilter]);
+    return data
+  }, [services, statusFilter, protocolFilter])
 
   // Status counts
   const statusCounts = useMemo(
     () => ({
       all: services.length,
-      active: services.filter((s) => s.status === "active").length,
-      inactive: services.filter((s) => s.status === "inactive").length,
-      pending: services.filter((s) => s.status === "pending").length,
+      active: services.filter((s) => s.status === 'active').length,
+      inactive: services.filter((s) => s.status === 'inactive').length,
+      pending: services.filter((s) => s.status === 'pending').length,
     }),
     [services]
-  );
+  )
 
   // Protocol counts
   const protocolCounts = useMemo(
     () => ({
-      tcp: services.filter(
-        (s) => s.metadata.protocol?.toLowerCase() === "tcp"
-      ).length,
-      udp: services.filter(
-        (s) => s.metadata.protocol?.toLowerCase() === "udp"
-      ).length,
+      tcp: services.filter((s) => s.metadata.protocol?.toLowerCase() === 'tcp').length,
+      udp: services.filter((s) => s.metadata.protocol?.toLowerCase() === 'udp').length,
     }),
     [services]
-  );
+  )
 
   // Table columns
   const columns: ColumnDef<Asset>[] = [
     {
-      id: "select",
+      id: 'select',
       header: ({ table }) => (
         <Checkbox
           checked={
             table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && "indeterminate")
+            (table.getIsSomePageRowsSelected() && 'indeterminate')
           }
           onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
           aria-label="Select all"
@@ -239,11 +225,11 @@ export default function ServicesPage() {
       enableSorting: false,
     },
     {
-      accessorKey: "name",
+      accessorKey: 'name',
       header: ({ column }) => (
         <Button
           variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           className="-ml-4"
         >
           Service
@@ -255,19 +241,17 @@ export default function ServicesPage() {
           <Server className="h-4 w-4 text-muted-foreground shrink-0" />
           <div className="min-w-0">
             <p className="font-medium truncate">{row.original.name}</p>
-            <p className="text-muted-foreground text-xs truncate">
-              {row.original.groupName}
-            </p>
+            <p className="text-muted-foreground text-xs truncate">{row.original.groupName}</p>
           </div>
         </div>
       ),
     },
     {
-      accessorKey: "metadata.port",
+      accessorKey: 'metadata.port',
       header: ({ column }) => (
         <Button
           variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           className="-ml-4"
         >
           Port
@@ -281,39 +265,37 @@ export default function ServicesPage() {
       ),
     },
     {
-      accessorKey: "metadata.protocol",
-      header: "Protocol",
+      accessorKey: 'metadata.protocol',
+      header: 'Protocol',
       cell: ({ row }) => {
-        const protocol = row.original.metadata.protocol?.toUpperCase() || "TCP";
+        const protocol = row.original.metadata.protocol?.toUpperCase() || 'TCP'
         return (
           <Badge
             variant="secondary"
-            className={
-              protocol === "UDP" ? "bg-purple-500/10 text-purple-500" : ""
-            }
+            className={protocol === 'UDP' ? 'bg-purple-500/10 text-purple-500' : ''}
           >
             {protocol}
           </Badge>
-        );
+        )
       },
     },
     {
-      accessorKey: "metadata.version",
-      header: "Version",
+      accessorKey: 'metadata.version',
+      header: 'Version',
       cell: ({ row }) => (
         <span className="text-sm text-muted-foreground">
-          {row.original.metadata.version || "-"}
+          {row.original.metadata.version || '-'}
         </span>
       ),
     },
     {
-      accessorKey: "status",
-      header: "Status",
+      accessorKey: 'status',
+      header: 'Status',
       cell: ({ row }) => <StatusBadge status={row.original.status} />,
     },
     {
-      id: "classification",
-      header: "Classification",
+      id: 'classification',
+      header: 'Classification',
       cell: ({ row }) => (
         <ClassificationBadges
           scope={row.original.scope}
@@ -324,11 +306,11 @@ export default function ServicesPage() {
       ),
     },
     {
-      accessorKey: "findingCount",
+      accessorKey: 'findingCount',
       header: ({ column }) => (
         <Button
           variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           className="-ml-4"
         >
           Findings
@@ -336,55 +318,68 @@ export default function ServicesPage() {
         </Button>
       ),
       cell: ({ row }) => {
-        const count = row.original.findingCount;
-        if (count === 0)
-          return <span className="text-muted-foreground">0</span>;
-        return (
-          <Badge variant={count > 5 ? "destructive" : "secondary"}>
-            {count}
-          </Badge>
-        );
+        const count = row.original.findingCount
+        if (count === 0) return <span className="text-muted-foreground">0</span>
+        return <Badge variant={count > 5 ? 'destructive' : 'secondary'}>{count}</Badge>
       },
     },
     {
-      accessorKey: "riskScore",
+      accessorKey: 'riskScore',
       header: ({ column }) => (
         <Button
           variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           className="-ml-4"
         >
           Risk
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
-      cell: ({ row }) => (
-        <RiskScoreBadge score={row.original.riskScore} size="sm" />
-      ),
+      cell: ({ row }) => <RiskScoreBadge score={row.original.riskScore} size="sm" />,
     },
     {
-      id: "actions",
+      id: 'actions',
       cell: ({ row }) => {
-        const service = row.original;
+        const service = row.original
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSelectedService(service); }}>
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setSelectedService(service)
+                }}
+              >
                 <Eye className="mr-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
               <Can permission={Permission.AssetsWrite}>
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenEdit(service); }}>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleOpenEdit(service)
+                  }}
+                >
                   <Pencil className="mr-2 h-4 w-4" />
                   Edit
                 </DropdownMenuItem>
               </Can>
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleCopyService(service); }}>
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleCopyService(service)
+                }}
+              >
                 <Copy className="mr-2 h-4 w-4" />
                 Copy Info
               </DropdownMenuItem>
@@ -393,9 +388,9 @@ export default function ServicesPage() {
                 <DropdownMenuItem
                   className="text-red-400"
                   onClick={(e) => {
-                    e.stopPropagation();
-                    setServiceToDelete(service);
-                    setDeleteDialogOpen(true);
+                    e.stopPropagation()
+                    setServiceToDelete(service)
+                    setDeleteDialogOpen(true)
                   }}
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
@@ -404,10 +399,10 @@ export default function ServicesPage() {
               </Can>
             </DropdownMenuContent>
           </DropdownMenu>
-        );
+        )
       },
     },
-  ];
+  ]
 
   const table = useReactTable({
     data: filteredData,
@@ -420,150 +415,150 @@ export default function ServicesPage() {
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-  });
+  })
 
   // Handlers
   const handleCopyService = (service: Asset) => {
-    const info = `${service.name}:${service.metadata.port}/${service.metadata.protocol || "tcp"}`;
-    navigator.clipboard.writeText(info);
-    toast.success("Service info copied to clipboard");
-  };
+    const info = `${service.name}:${service.metadata.port}/${service.metadata.protocol || 'tcp'}`
+    navigator.clipboard.writeText(info)
+    toast.success('Service info copied to clipboard')
+  }
 
   const handleOpenEdit = (service: Asset) => {
     setFormData({
       name: service.name,
-      description: service.description || "",
-      groupId: service.groupId || "",
-      port: String(service.metadata.port || ""),
-      protocol: service.metadata.protocol || "tcp",
-      version: service.metadata.version || "",
-      banner: service.metadata.banner || "",
-      tags: service.tags?.join(", ") || "",
-    });
-    setSelectedService(service);
-    setEditDialogOpen(true);
-  };
+      description: service.description || '',
+      groupId: service.groupId || '',
+      port: String(service.metadata.port || ''),
+      protocol: service.metadata.protocol || 'tcp',
+      version: service.metadata.version || '',
+      banner: service.metadata.banner || '',
+      tags: service.tags?.join(', ') || '',
+    })
+    setSelectedService(service)
+    setEditDialogOpen(true)
+  }
 
   const handleAddService = async () => {
     if (!formData.name) {
-      toast.error("Please fill in required fields");
-      return;
+      toast.error('Please fill in required fields')
+      return
     }
 
-    setIsSubmitting(true);
+    setIsSubmitting(true)
     try {
       await createAsset({
         name: formData.name,
-        type: "service",
-        criticality: "medium",
+        type: 'service',
+        criticality: 'medium',
         description: formData.description,
-        scope: "internal",
-        exposure: "private",
-        tags: formData.tags.split(",").map((s) => s.trim()).filter(Boolean),
-      });
-      await mutate();
-      setFormData(emptyServiceForm);
-      setAddDialogOpen(false);
-      toast.success("Service added successfully");
+        scope: 'internal',
+        exposure: 'private',
+        tags: formData.tags
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean),
+      })
+      await mutate()
+      setFormData(emptyServiceForm)
+      setAddDialogOpen(false)
+      toast.success('Service added successfully')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to add service");
+      toast.error(err instanceof Error ? err.message : 'Failed to add service')
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   const handleEditService = async () => {
     if (!selectedService || !formData.name) {
-      toast.error("Please fill in required fields");
-      return;
+      toast.error('Please fill in required fields')
+      return
     }
 
-    setIsSubmitting(true);
+    setIsSubmitting(true)
     try {
       await updateAsset(selectedService.id, {
         name: formData.name,
         description: formData.description,
-        tags: formData.tags.split(",").map((s) => s.trim()).filter(Boolean),
-      });
-      await mutate();
-      setFormData(emptyServiceForm);
-      setEditDialogOpen(false);
-      setSelectedService(null);
-      toast.success("Service updated successfully");
+        tags: formData.tags
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean),
+      })
+      await mutate()
+      setFormData(emptyServiceForm)
+      setEditDialogOpen(false)
+      setSelectedService(null)
+      toast.success('Service updated successfully')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to update service");
+      toast.error(err instanceof Error ? err.message : 'Failed to update service')
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   const handleDeleteService = async () => {
-    if (!serviceToDelete) return;
-    setIsSubmitting(true);
+    if (!serviceToDelete) return
+    setIsSubmitting(true)
     try {
-      await deleteAsset(serviceToDelete.id);
-      await mutate();
-      setDeleteDialogOpen(false);
-      setServiceToDelete(null);
-      toast.success("Service deleted successfully");
+      await deleteAsset(serviceToDelete.id)
+      await mutate()
+      setDeleteDialogOpen(false)
+      setServiceToDelete(null)
+      toast.success('Service deleted successfully')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete service");
+      toast.error(err instanceof Error ? err.message : 'Failed to delete service')
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   const handleBulkDelete = async () => {
-    const selectedServiceIds = table.getSelectedRowModel().rows.map((r) => r.original.id);
-    if (selectedServiceIds.length === 0) return;
+    const selectedServiceIds = table.getSelectedRowModel().rows.map((r) => r.original.id)
+    if (selectedServiceIds.length === 0) return
 
-    setIsSubmitting(true);
+    setIsSubmitting(true)
     try {
-      await bulkDeleteAssets(selectedServiceIds);
-      await mutate();
-      setRowSelection({});
-      toast.success(`Deleted ${selectedServiceIds.length} services`);
+      await bulkDeleteAssets(selectedServiceIds)
+      await mutate()
+      setRowSelection({})
+      toast.success(`Deleted ${selectedServiceIds.length} services`)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete services");
+      toast.error(err instanceof Error ? err.message : 'Failed to delete services')
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   const handleExport = () => {
     const csv = [
-      ["Name", "Port", "Protocol", "Version", "Status", "Risk Score", "Findings"].join(","),
+      ['Name', 'Port', 'Protocol', 'Version', 'Status', 'Risk Score', 'Findings'].join(','),
       ...services.map((s) =>
         [
           s.name,
           s.metadata.port,
-          s.metadata.protocol || "tcp",
-          s.metadata.version || "",
+          s.metadata.protocol || 'tcp',
+          s.metadata.version || '',
           s.status,
           s.riskScore,
           s.findingCount,
-        ].join(",")
+        ].join(',')
       ),
-    ].join("\n");
+    ].join('\n')
 
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "services.csv";
-    a.click();
-    toast.success("Services exported");
-  };
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'services.csv'
+    a.click()
+    toast.success('Services exported')
+  }
 
   return (
     <>
-      <Header fixed>
-        <div className="ms-auto flex items-center gap-2 sm:gap-4">
-          <Search />
-          <ThemeSwitch />
-          <ProfileDropdown />
-        </div>
-      </Header>
+      <Header fixed />
 
       <Main>
         <PageHeader
@@ -578,8 +573,8 @@ export default function ServicesPage() {
             <Can permission={Permission.AssetsWrite}>
               <Button
                 onClick={() => {
-                  setFormData(emptyServiceForm);
-                  setAddDialogOpen(true);
+                  setFormData(emptyServiceForm)
+                  setAddDialogOpen(true)
                 }}
               >
                 <Plus className="mr-2 h-4 w-4" />
@@ -593,7 +588,7 @@ export default function ServicesPage() {
         <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
           <Card
             className="cursor-pointer hover:border-primary transition-colors"
-            onClick={() => setStatusFilter("all")}
+            onClick={() => setStatusFilter('all')}
           >
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
@@ -604,35 +599,27 @@ export default function ServicesPage() {
             </CardHeader>
           </Card>
           <Card
-            className={`cursor-pointer hover:border-green-500 transition-colors ${statusFilter === "active" ? "border-green-500" : ""}`}
-            onClick={() =>
-              setStatusFilter(statusFilter === "active" ? "all" : "active")
-            }
+            className={`cursor-pointer hover:border-green-500 transition-colors ${statusFilter === 'active' ? 'border-green-500' : ''}`}
+            onClick={() => setStatusFilter(statusFilter === 'active' ? 'all' : 'active')}
           >
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
                 <CheckCircle className="h-4 w-4 text-green-500" />
                 Active
               </CardDescription>
-              <CardTitle className="text-3xl text-green-500">
-                {statusCounts.active}
-              </CardTitle>
+              <CardTitle className="text-3xl text-green-500">{statusCounts.active}</CardTitle>
             </CardHeader>
           </Card>
           <Card
-            className={`cursor-pointer hover:border-blue-500 transition-colors ${protocolFilter === "tcp" ? "border-blue-500" : ""}`}
-            onClick={() =>
-              setProtocolFilter(protocolFilter === "tcp" ? "all" : "tcp")
-            }
+            className={`cursor-pointer hover:border-blue-500 transition-colors ${protocolFilter === 'tcp' ? 'border-blue-500' : ''}`}
+            onClick={() => setProtocolFilter(protocolFilter === 'tcp' ? 'all' : 'tcp')}
           >
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
                 <Network className="h-4 w-4 text-blue-500" />
                 TCP Services
               </CardDescription>
-              <CardTitle className="text-3xl text-blue-500">
-                {protocolCounts.tcp}
-              </CardTitle>
+              <CardTitle className="text-3xl text-blue-500">{protocolCounts.tcp}</CardTitle>
             </CardHeader>
           </Card>
           <Card>
@@ -657,9 +644,7 @@ export default function ServicesPage() {
                   <Server className="h-5 w-5" />
                   All Services
                 </CardTitle>
-                <CardDescription>
-                  Manage your network services and ports
-                </CardDescription>
+                <CardDescription>Manage your network services and ports</CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -672,11 +657,7 @@ export default function ServicesPage() {
             >
               <TabsList>
                 {statusFilters.map((filter) => (
-                  <TabsTrigger
-                    key={filter.value}
-                    value={filter.value}
-                    className="gap-1.5"
-                  >
+                  <TabsTrigger key={filter.value} value={filter.value} className="gap-1.5">
                     {filter.label}
                     <Badge variant="secondary" className="h-5 px-1.5 text-xs">
                       {statusCounts[filter.value as keyof typeof statusCounts] || 0}
@@ -707,18 +688,13 @@ export default function ServicesPage() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        onClick={() => toast.info("Scanning selected services...")}
-                      >
+                      <DropdownMenuItem onClick={() => toast.info('Scanning selected services...')}>
                         <RefreshCw className="mr-2 h-4 w-4" />
                         Rescan Selected
                       </DropdownMenuItem>
                       <Can permission={Permission.AssetsDelete}>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-red-400"
-                          onClick={handleBulkDelete}
-                        >
+                        <DropdownMenuItem className="text-red-400" onClick={handleBulkDelete}>
                           <Trash2 className="mr-2 h-4 w-4" />
                           Delete Selected
                         </DropdownMenuItem>
@@ -739,10 +715,7 @@ export default function ServicesPage() {
                         <TableHead key={header.id}>
                           {header.isPlaceholder
                             ? null
-                            : flexRender(
-                                header.column.columnDef.header,
-                                header.getContext()
-                              )}
+                            : flexRender(header.column.columnDef.header, header.getContext())}
                         </TableHead>
                       ))}
                     </TableRow>
@@ -753,24 +726,21 @@ export default function ServicesPage() {
                     table.getRowModel().rows.map((row) => (
                       <TableRow
                         key={row.id}
-                        data-state={row.getIsSelected() && "selected"}
+                        data-state={row.getIsSelected() && 'selected'}
                         className="cursor-pointer"
                         onClick={(e) => {
                           if (
                             (e.target as HTMLElement).closest('[role="checkbox"]') ||
-                            (e.target as HTMLElement).closest("button")
+                            (e.target as HTMLElement).closest('button')
                           ) {
-                            return;
+                            return
                           }
-                          setSelectedService(row.original);
+                          setSelectedService(row.original)
                         }}
                       >
                         {row.getVisibleCells().map((cell) => (
                           <TableCell key={cell.id}>
-                            {flexRender(
-                              cell.column.columnDef.cell,
-                              cell.getContext()
-                            )}
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
                           </TableCell>
                         ))}
                       </TableRow>
@@ -789,7 +759,7 @@ export default function ServicesPage() {
             {/* Pagination */}
             <div className="flex items-center justify-between mt-4">
               <p className="text-sm text-muted-foreground">
-                {table.getFilteredSelectedRowModel().rows.length} of{" "}
+                {table.getFilteredSelectedRowModel().rows.length} of{' '}
                 {table.getFilteredRowModel().rows.length} row(s) selected
               </p>
               <div className="flex flex-wrap items-center gap-2">
@@ -810,8 +780,7 @@ export default function ServicesPage() {
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
                 <span className="text-sm">
-                  Page {table.getState().pagination.pageIndex + 1} of{" "}
-                  {table.getPageCount()}
+                  Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
                 </span>
                 <Button
                   variant="outline"
@@ -849,20 +818,16 @@ export default function ServicesPage() {
         onEdit={() => selectedService && handleOpenEdit(selectedService)}
         onDelete={() => {
           if (selectedService) {
-            setServiceToDelete(selectedService);
-            setDeleteDialogOpen(true);
-            setSelectedService(null);
+            setServiceToDelete(selectedService)
+            setDeleteDialogOpen(true)
+            setSelectedService(null)
           }
         }}
         canEdit={canWriteAssets}
         canDelete={canDeleteAssets}
         quickActions={
           selectedService && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => handleCopyService(selectedService)}
-            >
+            <Button size="sm" variant="outline" onClick={() => handleCopyService(selectedService)}>
               <Copy className="mr-2 h-4 w-4" />
               Copy
             </Button>
@@ -875,7 +840,7 @@ export default function ServicesPage() {
                 icon={Network}
                 iconBg="bg-blue-500/10"
                 iconColor="text-blue-500"
-                value={selectedService.metadata.port || "-"}
+                value={selectedService.metadata.port || '-'}
                 label="Port"
               />
               <StatCardCentered
@@ -903,14 +868,12 @@ export default function ServicesPage() {
                 <div>
                   <p className="text-muted-foreground">Protocol</p>
                   <Badge variant="secondary">
-                    {selectedService.metadata.protocol?.toUpperCase() || "TCP"}
+                    {selectedService.metadata.protocol?.toUpperCase() || 'TCP'}
                   </Badge>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Version</p>
-                  <p className="font-medium">
-                    {selectedService.metadata.version || "-"}
-                  </p>
+                  <p className="font-medium">{selectedService.metadata.version || '-'}</p>
                 </div>
               </div>
               {selectedService.metadata.banner && (
@@ -934,9 +897,7 @@ export default function ServicesPage() {
               <Server className="h-5 w-5" />
               Add Service
             </DialogTitle>
-            <DialogDescription>
-              Add a new service to your asset inventory
-            </DialogDescription>
+            <DialogDescription>Add a new service to your asset inventory</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
             <div className="space-y-2">
@@ -945,18 +906,14 @@ export default function ServicesPage() {
                 id="name"
                 placeholder="e.g., api.example.com"
                 value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="groupId">Asset Group *</Label>
               <Select
                 value={formData.groupId}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, groupId: value })
-                }
+                onValueChange={(value) => setFormData({ ...formData, groupId: value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select group" />
@@ -978,9 +935,7 @@ export default function ServicesPage() {
                   type="number"
                   placeholder="443"
                   value={formData.port}
-                  onChange={(e) =>
-                    setFormData({ ...formData, port: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, port: e.target.value })}
                 />
                 <div className="flex flex-wrap gap-1">
                   {commonPorts.slice(0, 4).map((p) => (
@@ -990,9 +945,7 @@ export default function ServicesPage() {
                       variant="outline"
                       size="sm"
                       className="h-6 text-xs"
-                      onClick={() =>
-                        setFormData({ ...formData, port: String(p.port) })
-                      }
+                      onClick={() => setFormData({ ...formData, port: String(p.port) })}
                     >
                       {p.port}
                     </Button>
@@ -1003,9 +956,7 @@ export default function ServicesPage() {
                 <Label htmlFor="protocol">Protocol</Label>
                 <Select
                   value={formData.protocol}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, protocol: value })
-                  }
+                  onValueChange={(value) => setFormData({ ...formData, protocol: value })}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -1023,9 +974,7 @@ export default function ServicesPage() {
                 id="version"
                 placeholder="e.g., OpenSSH 8.4"
                 value={formData.version}
-                onChange={(e) =>
-                  setFormData({ ...formData, version: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, version: e.target.value })}
               />
             </div>
             <div className="space-y-2">
@@ -1034,9 +983,7 @@ export default function ServicesPage() {
                 id="banner"
                 placeholder="Service banner response"
                 value={formData.banner}
-                onChange={(e) =>
-                  setFormData({ ...formData, banner: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, banner: e.target.value })}
               />
             </div>
             <div className="space-y-2">
@@ -1045,9 +992,7 @@ export default function ServicesPage() {
                 id="description"
                 placeholder="Optional description"
                 value={formData.description}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               />
             </div>
             <div className="space-y-2">
@@ -1056,9 +1001,7 @@ export default function ServicesPage() {
                 id="tags"
                 placeholder="production, critical"
                 value={formData.tags}
-                onChange={(e) =>
-                  setFormData({ ...formData, tags: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
               />
             </div>
           </div>
@@ -1091,18 +1034,14 @@ export default function ServicesPage() {
                 id="edit-name"
                 placeholder="e.g., api.example.com"
                 value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-groupId">Asset Group *</Label>
               <Select
                 value={formData.groupId}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, groupId: value })
-                }
+                onValueChange={(value) => setFormData({ ...formData, groupId: value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select group" />
@@ -1124,18 +1063,14 @@ export default function ServicesPage() {
                   type="number"
                   placeholder="443"
                   value={formData.port}
-                  onChange={(e) =>
-                    setFormData({ ...formData, port: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, port: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-protocol">Protocol</Label>
                 <Select
                   value={formData.protocol}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, protocol: value })
-                  }
+                  onValueChange={(value) => setFormData({ ...formData, protocol: value })}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -1153,9 +1088,7 @@ export default function ServicesPage() {
                 id="edit-version"
                 placeholder="e.g., OpenSSH 8.4"
                 value={formData.version}
-                onChange={(e) =>
-                  setFormData({ ...formData, version: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, version: e.target.value })}
               />
             </div>
             <div className="space-y-2">
@@ -1164,9 +1097,7 @@ export default function ServicesPage() {
                 id="edit-banner"
                 placeholder="Service banner response"
                 value={formData.banner}
-                onChange={(e) =>
-                  setFormData({ ...formData, banner: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, banner: e.target.value })}
               />
             </div>
             <div className="space-y-2">
@@ -1175,9 +1106,7 @@ export default function ServicesPage() {
                 id="edit-description"
                 placeholder="Optional description"
                 value={formData.description}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               />
             </div>
             <div className="space-y-2">
@@ -1186,9 +1115,7 @@ export default function ServicesPage() {
                 id="edit-tags"
                 placeholder="production, critical"
                 value={formData.tags}
-                onChange={(e) =>
-                  setFormData({ ...formData, tags: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
               />
             </div>
           </div>
@@ -1210,9 +1137,8 @@ export default function ServicesPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Service</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete{" "}
-              <strong>{serviceToDelete?.name}</strong>? This action cannot be
-              undone.
+              Are you sure you want to delete <strong>{serviceToDelete?.name}</strong>? This action
+              cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1227,5 +1153,5 @@ export default function ServicesPage() {
         </AlertDialogContent>
       </AlertDialog>
     </>
-  );
+  )
 }

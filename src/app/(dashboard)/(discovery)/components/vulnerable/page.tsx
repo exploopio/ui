@@ -1,23 +1,14 @@
-"use client";
+'use client'
 
-import { useState, useMemo } from "react";
-import { Header, Main } from "@/components/layout";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { PageHeader } from "@/features/shared";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useState, useMemo } from 'react'
+import { Header, Main } from '@/components/layout'
+import { PageHeader } from '@/features/shared'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   AlertTriangle,
   Shield,
@@ -26,43 +17,43 @@ import {
   Search as SearchIcon,
   Download,
   Loader2,
-} from "lucide-react";
+} from 'lucide-react'
 import {
   ComponentTable,
   ComponentDetailSheet,
   transformVulnerableComponents,
-} from "@/features/components";
-import { useVulnerableComponentsApi } from "@/features/components/api/use-components-api";
-import type { Component } from "@/features/components";
-import { toast } from "sonner";
+} from '@/features/components'
+import { useVulnerableComponentsApi } from '@/features/components/api/use-components-api'
+import type { Component } from '@/features/components'
+import { toast } from 'sonner'
 
-type SeverityFilter = "all" | "critical" | "high" | "medium" | "kev";
+type SeverityFilter = 'all' | 'critical' | 'high' | 'medium' | 'kev'
 
 export default function VulnerableComponentsPage() {
   // Fetch vulnerable components from API (no limit to get all)
-  const { data: apiVulnerableComponents, isLoading } = useVulnerableComponentsApi(100);
+  const { data: apiVulnerableComponents, isLoading } = useVulnerableComponentsApi(100)
 
   // Transform API data to UI Component type
   const vulnerableComponents = useMemo(() => {
-    if (!apiVulnerableComponents) return [];
-    return transformVulnerableComponents(apiVulnerableComponents);
-  }, [apiVulnerableComponents]);
+    if (!apiVulnerableComponents) return []
+    return transformVulnerableComponents(apiVulnerableComponents)
+  }, [apiVulnerableComponents])
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [severityFilter, setSeverityFilter] = useState<SeverityFilter>("all");
-  const [selectedComponent, setSelectedComponent] = useState<Component | null>(null);
+  const [searchQuery, setSearchQuery] = useState('')
+  const [severityFilter, setSeverityFilter] = useState<SeverityFilter>('all')
+  const [selectedComponent, setSelectedComponent] = useState<Component | null>(null)
 
   // Calculate stats
   const stats = useMemo(() => {
-    let criticalCount = 0;
-    let highCount = 0;
-    let kevCount = 0;
+    let criticalCount = 0
+    let highCount = 0
+    let kevCount = 0
 
     vulnerableComponents.forEach((c) => {
-      if (c.vulnerabilityCount.critical > 0) criticalCount++;
-      if (c.vulnerabilityCount.high > 0) highCount++;
-      if (c.vulnerabilities.some((v) => v.inCisaKev)) kevCount++;
-    });
+      if (c.vulnerabilityCount.critical > 0) criticalCount++
+      if (c.vulnerabilityCount.high > 0) highCount++
+      if (c.vulnerabilities.some((v) => v.inCisaKev)) kevCount++
+    })
 
     return {
       total: vulnerableComponents.length,
@@ -71,45 +62,45 @@ export default function VulnerableComponentsPage() {
       // Note: exploitable count requires additional API data we don't have yet
       exploitable: 0,
       kev: kevCount,
-    };
-  }, [vulnerableComponents]);
+    }
+  }, [vulnerableComponents])
 
   // Filter components
   const filteredComponents = useMemo(() => {
-    let result = [...vulnerableComponents];
+    let result = [...vulnerableComponents]
 
     // Apply search
     if (searchQuery) {
-      const query = searchQuery.toLowerCase();
+      const query = searchQuery.toLowerCase()
       result = result.filter(
         (c) =>
           c.name.toLowerCase().includes(query) ||
           c.version.toLowerCase().includes(query) ||
           c.purl.toLowerCase().includes(query)
-      );
+      )
     }
 
     // Apply severity filter
     switch (severityFilter) {
-      case "critical":
-        result = result.filter((c) => c.vulnerabilityCount.critical > 0);
-        break;
-      case "high":
-        result = result.filter((c) => c.vulnerabilityCount.high > 0);
-        break;
-      case "medium":
-        result = result.filter((c) => c.vulnerabilityCount.medium > 0);
-        break;
-      case "kev":
-        result = result.filter((c) => c.vulnerabilities.some((v) => v.inCisaKev));
-        break;
+      case 'critical':
+        result = result.filter((c) => c.vulnerabilityCount.critical > 0)
+        break
+      case 'high':
+        result = result.filter((c) => c.vulnerabilityCount.high > 0)
+        break
+      case 'medium':
+        result = result.filter((c) => c.vulnerabilityCount.medium > 0)
+        break
+      case 'kev':
+        result = result.filter((c) => c.vulnerabilities.some((v) => v.inCisaKev))
+        break
     }
 
     // Sort by risk score
-    result.sort((a, b) => b.riskScore - a.riskScore);
+    result.sort((a, b) => b.riskScore - a.riskScore)
 
-    return result;
-  }, [vulnerableComponents, searchQuery, severityFilter]);
+    return result
+  }, [vulnerableComponents, searchQuery, severityFilter])
 
   // Filter counts
   const filterCounts = useMemo(
@@ -121,16 +112,27 @@ export default function VulnerableComponentsPage() {
       kev: vulnerableComponents.filter((c) => c.vulnerabilities.some((v) => v.inCisaKev)).length,
     }),
     [vulnerableComponents]
-  );
+  )
 
   const handleExport = () => {
     if (filteredComponents.length === 0) {
-      toast.error("No components to export");
-      return;
+      toast.error('No components to export')
+      return
     }
 
     const csv = [
-      ["Name", "Version", "Ecosystem", "PURL", "Critical", "High", "Medium", "Low", "Risk Score", "CISA KEV"].join(","),
+      [
+        'Name',
+        'Version',
+        'Ecosystem',
+        'PURL',
+        'Critical',
+        'High',
+        'Medium',
+        'Low',
+        'Risk Score',
+        'CISA KEV',
+      ].join(','),
       ...filteredComponents.map((c) =>
         [
           `"${c.name}"`,
@@ -142,37 +144,39 @@ export default function VulnerableComponentsPage() {
           c.vulnerabilityCount.medium,
           c.vulnerabilityCount.low,
           c.riskScore,
-          c.vulnerabilities.some((v) => v.inCisaKev) ? "Yes" : "No",
-        ].join(",")
+          c.vulnerabilities.some((v) => v.inCisaKev) ? 'Yes' : 'No',
+        ].join(',')
       ),
-    ].join("\n");
+    ].join('\n')
 
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "vulnerable-components.csv";
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success("Vulnerable components exported");
-  };
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'vulnerable-components.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+    toast.success('Vulnerable components exported')
+  }
 
   return (
     <>
-      <Header fixed>
-        <div className="ms-auto flex items-center gap-2 sm:gap-4">
-          <Search />
-          <ThemeSwitch />
-          <ProfileDropdown />
-        </div>
-      </Header>
+      <Header fixed />
 
       <Main>
         <PageHeader
           title="Vulnerable Components"
-          description={isLoading ? "Loading..." : `${stats.total} components with known security vulnerabilities`}
+          description={
+            isLoading
+              ? 'Loading...'
+              : `${stats.total} components with known security vulnerabilities`
+          }
         >
-          <Button variant="outline" onClick={handleExport} disabled={isLoading || filteredComponents.length === 0}>
+          <Button
+            variant="outline"
+            onClick={handleExport}
+            disabled={isLoading || filteredComponents.length === 0}
+          >
             <Download className="mr-2 h-4 w-4" />
             Export
           </Button>
@@ -182,9 +186,9 @@ export default function VulnerableComponentsPage() {
         <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
           <Card
             className={`cursor-pointer hover:border-red-500 transition-colors ${
-              severityFilter === "all" ? "border-red-500" : ""
+              severityFilter === 'all' ? 'border-red-500' : ''
             }`}
-            onClick={() => setSeverityFilter("all")}
+            onClick={() => setSeverityFilter('all')}
           >
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
@@ -198,17 +202,15 @@ export default function VulnerableComponentsPage() {
               )}
             </CardHeader>
             <CardContent>
-              <p className="text-xs text-muted-foreground">
-                Components with CVEs
-              </p>
+              <p className="text-xs text-muted-foreground">Components with CVEs</p>
             </CardContent>
           </Card>
 
           <Card
             className={`cursor-pointer hover:border-purple-500 transition-colors ${
-              severityFilter === "critical" ? "border-purple-500" : ""
+              severityFilter === 'critical' ? 'border-purple-500' : ''
             }`}
-            onClick={() => setSeverityFilter("critical")}
+            onClick={() => setSeverityFilter('critical')}
           >
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
@@ -222,15 +224,13 @@ export default function VulnerableComponentsPage() {
               )}
             </CardHeader>
             <CardContent>
-              <p className="text-xs text-muted-foreground">
-                CVSS 9.0+ vulnerabilities
-              </p>
+              <p className="text-xs text-muted-foreground">CVSS 9.0+ vulnerabilities</p>
             </CardContent>
           </Card>
 
           <Card
             className="cursor-pointer hover:border-orange-500 transition-colors"
-            onClick={() => toast.info("Filter by exploitable coming soon")}
+            onClick={() => toast.info('Filter by exploitable coming soon')}
           >
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
@@ -244,17 +244,15 @@ export default function VulnerableComponentsPage() {
               )}
             </CardHeader>
             <CardContent>
-              <p className="text-xs text-muted-foreground">
-                Public exploits available
-              </p>
+              <p className="text-xs text-muted-foreground">Public exploits available</p>
             </CardContent>
           </Card>
 
           <Card
             className={`cursor-pointer hover:border-red-600 transition-colors ${
-              severityFilter === "kev" ? "border-red-600 bg-red-500/5" : ""
+              severityFilter === 'kev' ? 'border-red-600 bg-red-500/5' : ''
             }`}
-            onClick={() => setSeverityFilter("kev")}
+            onClick={() => setSeverityFilter('kev')}
           >
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
@@ -268,15 +266,13 @@ export default function VulnerableComponentsPage() {
               )}
             </CardHeader>
             <CardContent>
-              <p className="text-xs text-muted-foreground">
-                Known Exploited Vulnerabilities
-              </p>
+              <p className="text-xs text-muted-foreground">Known Exploited Vulnerabilities</p>
             </CardContent>
           </Card>
         </div>
 
         {/* CISA KEV Alert */}
-        {!isLoading && stats.kev > 0 && severityFilter !== "kev" && (
+        {!isLoading && stats.kev > 0 && severityFilter !== 'kev' && (
           <Card className="mt-4 border-red-500/50 bg-red-500/5">
             <CardContent className="flex items-center justify-between py-4">
               <div className="flex items-center gap-3">
@@ -290,11 +286,7 @@ export default function VulnerableComponentsPage() {
                   </p>
                 </div>
               </div>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => setSeverityFilter("kev")}
-              >
+              <Button variant="destructive" size="sm" onClick={() => setSeverityFilter('kev')}>
                 View KEV Components
               </Button>
             </CardContent>
@@ -311,7 +303,9 @@ export default function VulnerableComponentsPage() {
                   Vulnerable Components
                 </CardTitle>
                 <CardDescription>
-                  {isLoading ? "Loading..." : `${filteredComponents.length} components requiring remediation`}
+                  {isLoading
+                    ? 'Loading...'
+                    : `${filteredComponents.length} components requiring remediation`}
                 </CardDescription>
               </div>
             </div>
@@ -327,31 +321,31 @@ export default function VulnerableComponentsPage() {
                 <TabsTrigger value="all" className="gap-1.5">
                   All
                   <Badge variant="secondary" className="h-5 px-1.5 text-xs">
-                    {isLoading ? "-" : filterCounts.all}
+                    {isLoading ? '-' : filterCounts.all}
                   </Badge>
                 </TabsTrigger>
                 <TabsTrigger value="critical" className="gap-1.5">
                   Critical
                   <Badge variant="destructive" className="h-5 px-1.5 text-xs">
-                    {isLoading ? "-" : filterCounts.critical}
+                    {isLoading ? '-' : filterCounts.critical}
                   </Badge>
                 </TabsTrigger>
                 <TabsTrigger value="high" className="gap-1.5">
                   High
                   <Badge className="h-5 px-1.5 text-xs bg-orange-500/15 text-orange-600">
-                    {isLoading ? "-" : filterCounts.high}
+                    {isLoading ? '-' : filterCounts.high}
                   </Badge>
                 </TabsTrigger>
                 <TabsTrigger value="medium" className="gap-1.5">
                   Medium
                   <Badge className="h-5 px-1.5 text-xs bg-yellow-500/15 text-yellow-600">
-                    {isLoading ? "-" : filterCounts.medium}
+                    {isLoading ? '-' : filterCounts.medium}
                   </Badge>
                 </TabsTrigger>
                 <TabsTrigger value="kev" className="gap-1.5">
                   CISA KEV
                   <Badge className="h-5 px-1.5 text-xs bg-red-600 text-white">
-                    {isLoading ? "-" : filterCounts.kev}
+                    {isLoading ? '-' : filterCounts.kev}
                   </Badge>
                 </TabsTrigger>
               </TabsList>
@@ -376,10 +370,7 @@ export default function VulnerableComponentsPage() {
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
             ) : (
-              <ComponentTable
-                data={filteredComponents}
-                onViewDetails={setSelectedComponent}
-              />
+              <ComponentTable data={filteredComponents} onViewDetails={setSelectedComponent} />
             )}
           </CardContent>
         </Card>
@@ -392,5 +383,5 @@ export default function VulnerableComponentsPage() {
         onOpenChange={() => setSelectedComponent(null)}
       />
     </>
-  );
+  )
 }

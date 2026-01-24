@@ -1,21 +1,11 @@
-"use client";
+'use client'
 
-import { useState, useMemo } from "react";
-import { Header, Main } from "@/components/layout";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { PageHeader } from "@/features/shared";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  ShieldCheck,
-  Plus,
-  AlertTriangle,
-  Clock,
-  CheckCircle,
-  XCircle,
-} from "lucide-react";
+import { useState, useMemo } from 'react'
+import { Header, Main } from '@/components/layout'
+import { PageHeader } from '@/features/shared'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ShieldCheck, Plus, AlertTriangle, Clock, CheckCircle, XCircle } from 'lucide-react'
 import {
   ScopeBadgeSimple,
   ScopeCoverageCard,
@@ -23,130 +13,124 @@ import {
   calculateScopeCoverage,
   getActiveScopeTargets,
   getActiveScopeExclusions,
-} from "@/features/scope";
+} from '@/features/scope'
 
 // Mock data for certificates
 const mockCertificates = [
   {
-    id: "cert-1",
-    name: "*.example.com",
+    id: 'cert-1',
+    name: '*.example.com',
     issuer: "Let's Encrypt",
-    subject: "*.example.com",
-    validFrom: "2024-01-15",
-    validTo: "2025-01-15",
+    subject: '*.example.com',
+    validFrom: '2024-01-15',
+    validTo: '2025-01-15',
     daysUntilExpiry: 180,
-    status: "valid" as const,
+    status: 'valid' as const,
     isWildcard: true,
-    sans: ["example.com", "*.example.com"],
+    sans: ['example.com', '*.example.com'],
   },
   {
-    id: "cert-2",
-    name: "api.example.com",
-    issuer: "DigiCert",
-    subject: "api.example.com",
-    validFrom: "2024-06-01",
-    validTo: "2024-12-01",
+    id: 'cert-2',
+    name: 'api.example.com',
+    issuer: 'DigiCert',
+    subject: 'api.example.com',
+    validFrom: '2024-06-01',
+    validTo: '2024-12-01',
     daysUntilExpiry: 15,
-    status: "expiring" as const,
+    status: 'expiring' as const,
     isWildcard: false,
-    sans: ["api.example.com"],
+    sans: ['api.example.com'],
   },
   {
-    id: "cert-3",
-    name: "old.example.com",
-    issuer: "Comodo",
-    subject: "old.example.com",
-    validFrom: "2023-01-01",
-    validTo: "2024-01-01",
+    id: 'cert-3',
+    name: 'old.example.com',
+    issuer: 'Comodo',
+    subject: 'old.example.com',
+    validFrom: '2023-01-01',
+    validTo: '2024-01-01',
     daysUntilExpiry: -30,
-    status: "expired" as const,
+    status: 'expired' as const,
     isWildcard: false,
-    sans: ["old.example.com"],
+    sans: ['old.example.com'],
   },
-];
+]
 
 const stats = {
   total: mockCertificates.length,
-  valid: mockCertificates.filter((c) => c.status === "valid").length,
-  expiring: mockCertificates.filter((c) => c.status === "expiring").length,
-  expired: mockCertificates.filter((c) => c.status === "expired").length,
-};
+  valid: mockCertificates.filter((c) => c.status === 'valid').length,
+  expiring: mockCertificates.filter((c) => c.status === 'expiring').length,
+  expired: mockCertificates.filter((c) => c.status === 'expired').length,
+}
 
 export default function CertificatesPage() {
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('')
 
   // Scope data
-  const scopeTargets = useMemo(() => getActiveScopeTargets(), []);
-  const scopeExclusions = useMemo(() => getActiveScopeExclusions(), []);
+  const scopeTargets = useMemo(() => getActiveScopeTargets(), [])
+  const scopeExclusions = useMemo(() => getActiveScopeExclusions(), [])
 
   // Compute scope matches for each certificate
   const scopeMatchesMap = useMemo(() => {
-    const map = new Map<string, { inScope: boolean; excluded: boolean }>();
+    const map = new Map<string, { inScope: boolean; excluded: boolean }>()
     mockCertificates.forEach((cert) => {
       const match = getScopeMatchesForAsset(
-        { id: cert.id, type: "certificate", name: cert.name },
+        { id: cert.id, type: 'certificate', name: cert.name },
         scopeTargets,
         scopeExclusions
-      );
+      )
       map.set(cert.id, {
         inScope: match.inScope,
         excluded: match.matchedExclusions.length > 0,
-      });
-    });
-    return map;
-  }, [scopeTargets, scopeExclusions]);
+      })
+    })
+    return map
+  }, [scopeTargets, scopeExclusions])
 
   // Calculate scope coverage
   const scopeCoverage = useMemo(() => {
     const assets = mockCertificates.map((cert) => ({
       id: cert.id,
       name: cert.name,
-      type: "certificate",
-    }));
-    return calculateScopeCoverage(assets, scopeTargets, scopeExclusions);
-  }, [scopeTargets, scopeExclusions]);
+      type: 'certificate',
+    }))
+    return calculateScopeCoverage(assets, scopeTargets, scopeExclusions)
+  }, [scopeTargets, scopeExclusions])
 
   const filteredCertificates = mockCertificates.filter(
     (cert) =>
       cert.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       cert.issuer.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  )
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "valid":
-        return "text-green-600 bg-green-500/15";
-      case "expiring":
-        return "text-yellow-600 bg-yellow-500/15";
-      case "expired":
-        return "text-red-600 bg-red-500/15";
+      case 'valid':
+        return 'text-green-600 bg-green-500/15'
+      case 'expiring':
+        return 'text-yellow-600 bg-yellow-500/15'
+      case 'expired':
+        return 'text-red-600 bg-red-500/15'
       default:
-        return "text-slate-600 bg-slate-500/15";
+        return 'text-slate-600 bg-slate-500/15'
     }
-  };
+  }
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "valid":
-        return <CheckCircle className="h-4 w-4" />;
-      case "expiring":
-        return <Clock className="h-4 w-4" />;
-      case "expired":
-        return <XCircle className="h-4 w-4" />;
+      case 'valid':
+        return <CheckCircle className="h-4 w-4" />
+      case 'expiring':
+        return <Clock className="h-4 w-4" />
+      case 'expired':
+        return <XCircle className="h-4 w-4" />
       default:
-        return <AlertTriangle className="h-4 w-4" />;
+        return <AlertTriangle className="h-4 w-4" />
     }
-  };
+  }
 
   return (
     <>
-      <Header>
-        <Search />
-        <div className="ml-auto flex items-center space-x-4">
-          <ThemeSwitch />
-          <ProfileDropdown />
-        </div>
-      </Header>
+      <Header fixed />
 
       <Main>
         <PageHeader
@@ -234,15 +218,15 @@ export default function CertificatesPage() {
                     <td className="p-4">
                       <div className="font-medium">{cert.name}</div>
                       <div className="text-sm text-muted-foreground">
-                        {cert.isWildcard && "Wildcard - "}
+                        {cert.isWildcard && 'Wildcard - '}
                         {cert.sans.length} SAN(s)
                       </div>
                     </td>
                     <td className="p-4 text-muted-foreground">{cert.issuer}</td>
                     <td className="p-4 text-muted-foreground">{cert.validTo}</td>
                     <td className="p-4">
-                      <span className={cert.daysUntilExpiry < 30 ? "text-red-600 font-medium" : ""}>
-                        {cert.daysUntilExpiry > 0 ? cert.daysUntilExpiry : "Expired"}
+                      <span className={cert.daysUntilExpiry < 30 ? 'text-red-600 font-medium' : ''}>
+                        {cert.daysUntilExpiry > 0 ? cert.daysUntilExpiry : 'Expired'}
                       </span>
                     </td>
                     <td className="p-4">
@@ -269,5 +253,5 @@ export default function CertificatesPage() {
         </Card>
       </Main>
     </>
-  );
+  )
 }

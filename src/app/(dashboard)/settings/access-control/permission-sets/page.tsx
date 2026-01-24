@@ -1,6 +1,6 @@
-"use client";
+'use client'
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback } from 'react'
 import {
   ColumnDef,
   flexRender,
@@ -10,25 +10,16 @@ import {
   getSortedRowModel,
   SortingState,
   useReactTable,
-} from "@tanstack/react-table";
-import { Header, Main } from "@/components/layout";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { PageHeader } from "@/features/shared";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+} from '@tanstack/react-table'
+import { Header, Main } from '@/components/layout'
+import { PageHeader } from '@/features/shared'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Textarea } from '@/components/ui/textarea'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -36,7 +27,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from '@/components/ui/table'
 import {
   Dialog,
   DialogContent,
@@ -44,16 +35,16 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "sonner";
+} from '@/components/ui/dropdown-menu'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { toast } from 'sonner'
 import {
   Shield,
   Plus,
@@ -72,7 +63,7 @@ import {
   Lock,
   KeyRound,
   Settings,
-} from "lucide-react";
+} from 'lucide-react'
 import {
   usePermissionSets,
   useCreatePermissionSet,
@@ -81,77 +72,80 @@ import {
   PermissionCategories,
   generateSlug,
   formatDate,
-} from "@/features/access-control";
-import { PermissionSetDetailSheet } from "@/features/access-control/components/permission-set-detail-sheet";
-import { Can, Permission } from "@/lib/permissions";
+} from '@/features/access-control'
+import { PermissionSetDetailSheet } from '@/features/access-control/components/permission-set-detail-sheet'
+import { Can, Permission } from '@/lib/permissions'
 
-type FilterType = "all" | "system" | "custom";
+type FilterType = 'all' | 'system' | 'custom'
 
 const typeFilters: { value: FilterType; label: string; icon: React.ReactNode }[] = [
-  { value: "all", label: "All", icon: <Shield className="h-4 w-4" /> },
-  { value: "system", label: "System", icon: <Lock className="h-4 w-4" /> },
-  { value: "custom", label: "Custom", icon: <Settings className="h-4 w-4" /> },
-];
-
-
+  { value: 'all', label: 'All', icon: <Shield className="h-4 w-4" /> },
+  { value: 'system', label: 'System', icon: <Lock className="h-4 w-4" /> },
+  { value: 'custom', label: 'Custom', icon: <Settings className="h-4 w-4" /> },
+]
 
 export default function PermissionSetsPage() {
   // API Hooks
-  const { permissionSets, isLoading, isError, mutate: mutatePermissionSets } = usePermissionSets();
-  const { createPermissionSet, isCreating } = useCreatePermissionSet();
+  const { permissionSets, isLoading, isError, mutate: mutatePermissionSets } = usePermissionSets()
+  const { createPermissionSet, isCreating } = useCreatePermissionSet()
 
   // UI State
-  const [selectedPermissionSetId, setSelectedPermissionSetId] = useState<string | null>(null);
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [permissionSetToDelete, setPermissionSetToDelete] = useState<PermissionSet | null>(null);
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [globalFilter, setGlobalFilter] = useState("");
-  const [typeFilter, setTypeFilter] = useState<FilterType>("all");
-  const [rowSelection, setRowSelection] = useState({});
+  const [selectedPermissionSetId, setSelectedPermissionSetId] = useState<string | null>(null)
+  const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [permissionSetToDelete, setPermissionSetToDelete] = useState<PermissionSet | null>(null)
+  const [sorting, setSorting] = useState<SortingState>([])
+  const [globalFilter, setGlobalFilter] = useState('')
+  const [typeFilter, setTypeFilter] = useState<FilterType>('all')
+  const [rowSelection, setRowSelection] = useState({})
   const [createForm, setCreateForm] = useState({
-    name: "",
-    description: "",
+    name: '',
+    description: '',
     permissions: [] as string[],
-  });
+  })
 
   // Delete hook
-  const { deletePermissionSet, isDeleting } = useDeletePermissionSet(permissionSetToDelete?.id || null);
+  const { deletePermissionSet, isDeleting } = useDeletePermissionSet(
+    permissionSetToDelete?.id || null
+  )
 
   // Refresh data
   const refreshData = useCallback(() => {
-    mutatePermissionSets();
-  }, [mutatePermissionSets]);
+    mutatePermissionSets()
+  }, [mutatePermissionSets])
 
   // Filter data
   const filteredData = useMemo(() => {
-    let data = [...permissionSets];
+    let data = [...permissionSets]
 
-    if (typeFilter === "system") {
-      data = data.filter((ps) => ps.is_system);
-    } else if (typeFilter === "custom") {
-      data = data.filter((ps) => !ps.is_system);
+    if (typeFilter === 'system') {
+      data = data.filter((ps) => ps.is_system)
+    } else if (typeFilter === 'custom') {
+      data = data.filter((ps) => !ps.is_system)
     }
 
-    return data;
-  }, [permissionSets, typeFilter]);
+    return data
+  }, [permissionSets, typeFilter])
 
   // Type counts
-  const typeCounts = useMemo(() => ({
-    all: permissionSets.length,
-    system: permissionSets.filter((ps) => ps.is_system).length,
-    custom: permissionSets.filter((ps) => !ps.is_system).length,
-  }), [permissionSets]);
+  const typeCounts = useMemo(
+    () => ({
+      all: permissionSets.length,
+      system: permissionSets.filter((ps) => ps.is_system).length,
+      custom: permissionSets.filter((ps) => !ps.is_system).length,
+    }),
+    [permissionSets]
+  )
 
   // Table columns
   const columns: ColumnDef<PermissionSet>[] = [
     {
-      id: "select",
+      id: 'select',
       header: ({ table }) => (
         <Checkbox
           checked={
             table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && "indeterminate")
+            (table.getIsSomePageRowsSelected() && 'indeterminate')
           }
           onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
           aria-label="Select all"
@@ -169,11 +163,11 @@ export default function PermissionSetsPage() {
       enableHiding: false,
     },
     {
-      accessorKey: "name",
+      accessorKey: 'name',
       header: ({ column }) => (
         <Button
           variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           className="-ml-4"
         >
           Permission Set
@@ -181,10 +175,10 @@ export default function PermissionSetsPage() {
         </Button>
       ),
       cell: ({ row }) => {
-        const isSystem = row.original.is_system;
+        const isSystem = row.original.is_system
         return (
           <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-lg ${isSystem ? "bg-purple-500/20" : "bg-blue-500/20"}`}>
+            <div className={`p-2 rounded-lg ${isSystem ? 'bg-purple-500/20' : 'bg-blue-500/20'}`}>
               {isSystem ? (
                 <Lock className={`h-4 w-4 text-purple-500`} />
               ) : (
@@ -195,29 +189,31 @@ export default function PermissionSetsPage() {
               <div className="flex items-center gap-2">
                 <p className="font-medium">{row.original.name}</p>
                 {isSystem && (
-                  <Badge variant="outline" className="text-xs">System</Badge>
+                  <Badge variant="outline" className="text-xs">
+                    System
+                  </Badge>
                 )}
               </div>
               {row.original.description && (
-                <p className="text-muted-foreground text-xs line-clamp-1">{row.original.description}</p>
+                <p className="text-muted-foreground text-xs line-clamp-1">
+                  {row.original.description}
+                </p>
               )}
             </div>
           </div>
-        );
+        )
       },
     },
     {
-      accessorKey: "permission_count",
-      header: "Permissions",
+      accessorKey: 'permission_count',
+      header: 'Permissions',
       cell: ({ row }) => (
-        <Badge variant="secondary">
-          {row.original.permission_count} permissions
-        </Badge>
+        <Badge variant="secondary">{row.original.permission_count} permissions</Badge>
       ),
     },
     {
-      accessorKey: "group_count",
-      header: "Groups",
+      accessorKey: 'group_count',
+      header: 'Groups',
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
           <Shield className="h-4 w-4 text-muted-foreground" />
@@ -226,17 +222,17 @@ export default function PermissionSetsPage() {
       ),
     },
     {
-      accessorKey: "created_at",
-      header: "Created",
+      accessorKey: 'created_at',
+      header: 'Created',
       cell: ({ row }) => (
         <span className="text-muted-foreground text-sm">{formatDate(row.original.created_at)}</span>
       ),
     },
     {
-      id: "actions",
+      id: 'actions',
       cell: ({ row }) => {
-        const permissionSet = row.original;
-        const isSystem = permissionSet.is_system;
+        const permissionSet = row.original
+        const isSystem = permissionSet.is_system
 
         return (
           <DropdownMenu>
@@ -263,8 +259,8 @@ export default function PermissionSetsPage() {
                     <DropdownMenuItem
                       className="text-red-400"
                       onClick={() => {
-                        setPermissionSetToDelete(permissionSet);
-                        setDeleteDialogOpen(true);
+                        setPermissionSetToDelete(permissionSet)
+                        setDeleteDialogOpen(true)
                       }}
                     >
                       <Trash2 className="mr-2 h-4 w-4" />
@@ -275,10 +271,10 @@ export default function PermissionSetsPage() {
               )}
             </DropdownMenuContent>
           </DropdownMenu>
-        );
+        )
       },
     },
-  ];
+  ]
 
   const table = useReactTable({
     data: filteredData,
@@ -296,7 +292,7 @@ export default function PermissionSetsPage() {
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     enableRowSelection: (row) => !row.original.is_system,
-  });
+  })
 
   // Toggle permission in create form
   const togglePermission = (permission: string) => {
@@ -305,19 +301,19 @@ export default function PermissionSetsPage() {
       permissions: prev.permissions.includes(permission)
         ? prev.permissions.filter((p) => p !== permission)
         : [...prev.permissions, permission],
-    }));
-  };
+    }))
+  }
 
   // Actions
   const handleCreatePermissionSet = async () => {
     if (!createForm.name) {
-      toast.error("Please enter a name");
-      return;
+      toast.error('Please enter a name')
+      return
     }
 
     if (createForm.permissions.length === 0) {
-      toast.error("Please select at least one permission");
-      return;
+      toast.error('Please select at least one permission')
+      return
     }
 
     try {
@@ -327,46 +323,44 @@ export default function PermissionSetsPage() {
         description: createForm.description || undefined,
         set_type: 'custom',
         permissions: createForm.permissions,
-      });
-      toast.success(`Permission set "${createForm.name}" created successfully`);
-      setCreateDialogOpen(false);
-      setCreateForm({ name: "", description: "", permissions: [] });
-      refreshData();
+      })
+      toast.success(`Permission set "${createForm.name}" created successfully`)
+      setCreateDialogOpen(false)
+      setCreateForm({ name: '', description: '', permissions: [] })
+      refreshData()
     } catch (error) {
-      toast.error(`Failed to create permission set: ${error instanceof Error ? error.message : "Unknown error"}`);
+      toast.error(
+        `Failed to create permission set: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
     }
-  };
+  }
 
   const handleDeletePermissionSet = async () => {
-    if (!permissionSetToDelete) return;
+    if (!permissionSetToDelete) return
 
     try {
-      await deletePermissionSet();
-      toast.success(`Permission set "${permissionSetToDelete.name}" deleted successfully`);
-      setDeleteDialogOpen(false);
-      setPermissionSetToDelete(null);
-      refreshData();
+      await deletePermissionSet()
+      toast.success(`Permission set "${permissionSetToDelete.name}" deleted successfully`)
+      setDeleteDialogOpen(false)
+      setPermissionSetToDelete(null)
+      refreshData()
     } catch (error) {
-      toast.error(`Failed to delete permission set: ${error instanceof Error ? error.message : "Unknown error"}`);
+      toast.error(
+        `Failed to delete permission set: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
     }
-  };
+  }
 
   // Active filters count
-  const activeFiltersCount = [typeFilter !== "all"].filter(Boolean).length;
+  const activeFiltersCount = [typeFilter !== 'all'].filter(Boolean).length
 
   const clearFilters = () => {
-    setTypeFilter("all");
-  };
+    setTypeFilter('all')
+  }
 
   return (
     <>
-      <Header fixed>
-        <div className="ms-auto flex items-center gap-2 sm:gap-4">
-          <Search />
-          <ThemeSwitch />
-          <ProfileDropdown />
-        </div>
-      </Header>
+      <Header fixed />
 
       <Main>
         <PageHeader
@@ -405,8 +399,8 @@ export default function PermissionSetsPage() {
             {/* Stats */}
             <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
               <Card
-                className={`cursor-pointer hover:border-primary transition-colors ${typeFilter === "all" ? "border-primary" : ""}`}
-                onClick={() => setTypeFilter("all")}
+                className={`cursor-pointer hover:border-primary transition-colors ${typeFilter === 'all' ? 'border-primary' : ''}`}
+                onClick={() => setTypeFilter('all')}
               >
                 <CardHeader className="pb-2">
                   <CardDescription className="flex items-center gap-2">
@@ -417,8 +411,8 @@ export default function PermissionSetsPage() {
                 </CardHeader>
               </Card>
               <Card
-                className={`cursor-pointer hover:border-purple-500 transition-colors ${typeFilter === "system" ? "border-purple-500" : ""}`}
-                onClick={() => setTypeFilter("system")}
+                className={`cursor-pointer hover:border-purple-500 transition-colors ${typeFilter === 'system' ? 'border-purple-500' : ''}`}
+                onClick={() => setTypeFilter('system')}
               >
                 <CardHeader className="pb-2">
                   <CardDescription className="flex items-center gap-2">
@@ -429,8 +423,8 @@ export default function PermissionSetsPage() {
                 </CardHeader>
               </Card>
               <Card
-                className={`cursor-pointer hover:border-blue-500 transition-colors ${typeFilter === "custom" ? "border-blue-500" : ""}`}
-                onClick={() => setTypeFilter("custom")}
+                className={`cursor-pointer hover:border-blue-500 transition-colors ${typeFilter === 'custom' ? 'border-blue-500' : ''}`}
+                onClick={() => setTypeFilter('custom')}
               >
                 <CardHeader className="pb-2">
                   <CardDescription className="flex items-center gap-2">
@@ -448,7 +442,9 @@ export default function PermissionSetsPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-base">All Permission Sets</CardTitle>
-                    <CardDescription>System permission sets are read-only and cannot be modified</CardDescription>
+                    <CardDescription>
+                      System permission sets are read-only and cannot be modified
+                    </CardDescription>
                   </div>
                 </div>
               </CardHeader>
@@ -501,7 +497,7 @@ export default function PermissionSetsPage() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
                             className="text-red-400"
-                            onClick={() => toast.info("Bulk delete not implemented yet")}
+                            onClick={() => toast.info('Bulk delete not implemented yet')}
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
                             Delete Selected
@@ -533,14 +529,16 @@ export default function PermissionSetsPage() {
                         table.getRowModel().rows.map((row) => (
                           <TableRow
                             key={row.id}
-                            data-state={row.getIsSelected() && "selected"}
+                            data-state={row.getIsSelected() && 'selected'}
                             className="cursor-pointer"
                             onClick={(e) => {
-                              if ((e.target as HTMLElement).closest('[role="checkbox"]') ||
-                                (e.target as HTMLElement).closest('button')) {
-                                return;
+                              if (
+                                (e.target as HTMLElement).closest('[role="checkbox"]') ||
+                                (e.target as HTMLElement).closest('button')
+                              ) {
+                                return
                               }
-                              setSelectedPermissionSetId(row.original.id);
+                              setSelectedPermissionSetId(row.original.id)
                             }}
                           >
                             {row.getVisibleCells().map((cell) => (
@@ -567,7 +565,7 @@ export default function PermissionSetsPage() {
                                 </Button>
                               </div>
                             ) : (
-                              "No permission sets found."
+                              'No permission sets found.'
                             )}
                           </TableCell>
                         </TableRow>
@@ -579,7 +577,7 @@ export default function PermissionSetsPage() {
                 {/* Pagination */}
                 <div className="flex items-center justify-between mt-4">
                   <p className="text-sm text-muted-foreground">
-                    {table.getFilteredSelectedRowModel().rows.length} of{" "}
+                    {table.getFilteredSelectedRowModel().rows.length} of{' '}
                     {table.getFilteredRowModel().rows.length} row(s) selected
                   </p>
                   <div className="flex flex-wrap items-center gap-2">
@@ -600,7 +598,8 @@ export default function PermissionSetsPage() {
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
                     <span className="text-sm">
-                      Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount() || 1}
+                      Page {table.getState().pagination.pageIndex + 1} of{' '}
+                      {table.getPageCount() || 1}
                     </span>
                     <Button
                       variant="outline"
@@ -683,21 +682,20 @@ export default function PermissionSetsPage() {
               <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
                 {PermissionCategories.map((category) => (
                   <div key={category.name} className="space-y-2">
-                    <h4 className="text-sm font-medium text-muted-foreground">
-                      {category.name}
-                    </h4>
+                    <h4 className="text-sm font-medium text-muted-foreground">{category.name}</h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {category.permissions.map((permission) => {
-                        const isSelected = createForm.permissions.includes(permission.key);
+                        const isSelected = createForm.permissions.includes(permission.key)
                         return (
                           <div
                             key={permission.key}
                             onClick={() => togglePermission(permission.key)}
                             className={`
                               flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all
-                              ${isSelected
-                                ? "border-primary bg-primary/5"
-                                : "border-border hover:border-muted-foreground/30"
+                              ${
+                                isSelected
+                                  ? 'border-primary bg-primary/5'
+                                  : 'border-border hover:border-muted-foreground/30'
                               }
                             `}
                           >
@@ -713,7 +711,7 @@ export default function PermissionSetsPage() {
                               </p>
                             </div>
                           </div>
-                        );
+                        )
                       })}
                     </div>
                   </div>
@@ -723,10 +721,7 @@ export default function PermissionSetsPage() {
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button
-              variant="ghost"
-              onClick={() => setCreateDialogOpen(false)}
-            >
+            <Button variant="ghost" onClick={() => setCreateDialogOpen(false)}>
               Cancel
             </Button>
             <Button
@@ -753,8 +748,9 @@ export default function PermissionSetsPage() {
               Delete Permission Set
             </DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete the permission set &quot;{permissionSetToDelete?.name}&quot;?
-              This action cannot be undone. Groups using this permission set will lose these permissions.
+              Are you sure you want to delete the permission set &quot;{permissionSetToDelete?.name}
+              &quot;? This action cannot be undone. Groups using this permission set will lose these
+              permissions.
             </DialogDescription>
           </DialogHeader>
 
@@ -762,17 +758,13 @@ export default function PermissionSetsPage() {
             <Button
               variant="ghost"
               onClick={() => {
-                setDeleteDialogOpen(false);
-                setPermissionSetToDelete(null);
+                setDeleteDialogOpen(false)
+                setPermissionSetToDelete(null)
               }}
             >
               Cancel
             </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDeletePermissionSet}
-              disabled={isDeleting}
-            >
+            <Button variant="destructive" onClick={handleDeletePermissionSet} disabled={isDeleting}>
               {isDeleting ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
@@ -784,5 +776,5 @@ export default function PermissionSetsPage() {
         </DialogContent>
       </Dialog>
     </>
-  );
+  )
 }

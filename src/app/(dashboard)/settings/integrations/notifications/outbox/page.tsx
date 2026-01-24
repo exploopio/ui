@@ -22,8 +22,6 @@ import {
 import { toast } from 'sonner'
 
 import { Header, Main } from '@/components/layout'
-import { ProfileDropdown } from '@/components/profile-dropdown'
-import { ThemeSwitch } from '@/components/theme-switch'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -286,12 +284,7 @@ export default function NotificationOutboxPage() {
 
   return (
     <>
-      <Header>
-        <div className="ml-auto flex items-center space-x-4">
-          <ThemeSwitch />
-          <ProfileDropdown />
-        </div>
-      </Header>
+      <Header fixed />
       <Main>
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">

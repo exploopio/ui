@@ -1,38 +1,29 @@
-"use client";
+'use client'
 
-import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { Header, Main } from "@/components/layout";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { PageHeader } from "@/features/shared";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
+import { Header, Main } from '@/components/layout'
+import { PageHeader } from '@/features/shared'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Progress } from '@/components/ui/progress'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet";
+} from '@/components/ui/sheet'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { ScrollArea } from "@/components/ui/scroll-area";
+} from '@/components/ui/select'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Table,
   TableBody,
@@ -40,18 +31,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+} from '@/components/ui/table'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import {
   Package,
   AlertTriangle,
@@ -71,171 +53,176 @@ import {
   LayoutGrid,
   List,
   ArrowUpDown,
-} from "lucide-react";
-import { Input } from "@/components/ui/input";
+} from 'lucide-react'
+import { Input } from '@/components/ui/input'
 import {
   useEcosystemStatsApi,
   useComponentStatsApi,
   useComponentsApi,
   EcosystemBadge,
   COMPONENT_ECOSYSTEM_LABELS,
-} from "@/features/components";
-import type { ComponentEcosystem } from "@/features/components";
+} from '@/features/components'
+import type { ComponentEcosystem } from '@/features/components'
 
-const ITEMS_PER_PAGE = 15;
-const TOP_ECOSYSTEMS_COUNT = 6; // Number of ecosystems to show as cards
+const ITEMS_PER_PAGE = 15
+const TOP_ECOSYSTEMS_COUNT = 6 // Number of ecosystems to show as cards
 
-type SortOption = "count" | "vulnerabilities" | "name";
-type ViewMode = "cards" | "table";
+type SortOption = 'count' | 'vulnerabilities' | 'name'
+type ViewMode = 'cards' | 'table'
 
 interface EcosystemData {
-  ecosystem: ComponentEcosystem;
-  count: number;
-  vulnerabilities: number;
-  outdated: number;
+  ecosystem: ComponentEcosystem
+  count: number
+  vulnerabilities: number
+  outdated: number
 }
 
 export default function EcosystemsPage() {
-  const { data: ecosystemStatsData, isLoading: isLoadingEcosystems } = useEcosystemStatsApi();
-  const { data: statsData, isLoading: isLoadingStats } = useComponentStatsApi();
-  const [selectedEcosystem, setSelectedEcosystem] = useState<ComponentEcosystem | null>(null);
+  const { data: ecosystemStatsData, isLoading: isLoadingEcosystems } = useEcosystemStatsApi()
+  const { data: statsData, isLoading: isLoadingStats } = useComponentStatsApi()
+  const [selectedEcosystem, setSelectedEcosystem] = useState<ComponentEcosystem | null>(null)
 
   // View and filter state
-  const [viewMode, setViewMode] = useState<ViewMode>("cards");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState<SortOption>("count");
-  const [showAllEcosystems, setShowAllEcosystems] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('cards')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [sortBy, setSortBy] = useState<SortOption>('count')
+  const [showAllEcosystems, setShowAllEcosystems] = useState(false)
 
   // Sheet state
-  const [sheetSearchQuery, setSheetSearchQuery] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [securityFilter, setSecurityFilter] = useState<"all" | "vulnerable" | "secure">("all");
+  const [sheetSearchQuery, setSheetSearchQuery] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [securityFilter, setSecurityFilter] = useState<'all' | 'vulnerable' | 'secure'>('all')
 
   // Reset sheet state when ecosystem changes
   const handleSelectEcosystem = (ecosystem: ComponentEcosystem) => {
-    setSelectedEcosystem(ecosystem);
-    setSheetSearchQuery("");
-    setCurrentPage(1);
-    setSecurityFilter("all");
-  };
+    setSelectedEcosystem(ecosystem)
+    setSheetSearchQuery('')
+    setCurrentPage(1)
+    setSecurityFilter('all')
+  }
 
   const handleCloseSheet = () => {
-    setSelectedEcosystem(null);
-    setSheetSearchQuery("");
-    setCurrentPage(1);
-    setSecurityFilter("all");
-  };
+    setSelectedEcosystem(null)
+    setSheetSearchQuery('')
+    setCurrentPage(1)
+    setSecurityFilter('all')
+  }
 
   // Fetch components when an ecosystem is selected
   const { data: ecosystemComponentsData, isLoading: isLoadingComponents } = useComponentsApi(
     selectedEcosystem
       ? { ecosystems: [selectedEcosystem as string] as never[], per_page: 100 }
       : undefined
-  );
+  )
 
   // Filter and paginate components in sheet
   const filteredComponents = useMemo(() => {
-    if (!ecosystemComponentsData?.data) return [];
+    if (!ecosystemComponentsData?.data) return []
 
-    let filtered = ecosystemComponentsData.data;
+    let filtered = ecosystemComponentsData.data
 
     // Apply search filter
     if (sheetSearchQuery.trim()) {
-      const query = sheetSearchQuery.toLowerCase();
-      filtered = filtered.filter(c =>
-        c.name.toLowerCase().includes(query) ||
-        c.version.toLowerCase().includes(query) ||
-        c.purl?.toLowerCase().includes(query)
-      );
+      const query = sheetSearchQuery.toLowerCase()
+      filtered = filtered.filter(
+        (c) =>
+          c.name.toLowerCase().includes(query) ||
+          c.version.toLowerCase().includes(query) ||
+          c.purl?.toLowerCase().includes(query)
+      )
     }
 
     // Apply security filter
-    if (securityFilter === "vulnerable") {
-      filtered = filtered.filter(c => c.vulnerability_count > 0);
-    } else if (securityFilter === "secure") {
-      filtered = filtered.filter(c => c.vulnerability_count === 0);
+    if (securityFilter === 'vulnerable') {
+      filtered = filtered.filter((c) => c.vulnerability_count > 0)
+    } else if (securityFilter === 'secure') {
+      filtered = filtered.filter((c) => c.vulnerability_count === 0)
     }
 
-    return filtered;
-  }, [ecosystemComponentsData?.data, sheetSearchQuery, securityFilter]);
+    return filtered
+  }, [ecosystemComponentsData?.data, sheetSearchQuery, securityFilter])
 
   // Pagination
-  const totalPages = Math.ceil(filteredComponents.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(filteredComponents.length / ITEMS_PER_PAGE)
   const paginatedComponents = useMemo(() => {
-    const start = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredComponents.slice(start, start + ITEMS_PER_PAGE);
-  }, [filteredComponents, currentPage]);
+    const start = (currentPage - 1) * ITEMS_PER_PAGE
+    return filteredComponents.slice(start, start + ITEMS_PER_PAGE)
+  }, [filteredComponents, currentPage])
 
   // Reset page when filters change
   useEffect(() => {
-    setCurrentPage(1);
-  }, [sheetSearchQuery, securityFilter]);
+    setCurrentPage(1)
+  }, [sheetSearchQuery, securityFilter])
 
   // Transform and sort API data
   const ecosystemStats = useMemo((): EcosystemData[] => {
-    if (!ecosystemStatsData) return [];
-    return ecosystemStatsData.map(e => ({
+    if (!ecosystemStatsData) return []
+    return ecosystemStatsData.map((e) => ({
       ecosystem: e.ecosystem as ComponentEcosystem,
       count: e.total,
       vulnerabilities: e.vulnerable,
       outdated: e.outdated,
-    }));
-  }, [ecosystemStatsData]);
+    }))
+  }, [ecosystemStatsData])
 
   // Filter and sort ecosystems
   const processedEcosystems = useMemo(() => {
-    let result = [...ecosystemStats];
+    let result = [...ecosystemStats]
 
     // Apply search filter
     if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(e => {
-        const label = COMPONENT_ECOSYSTEM_LABELS[e.ecosystem]?.toLowerCase() || e.ecosystem.toLowerCase();
-        return label.includes(query) || e.ecosystem.toLowerCase().includes(query);
-      });
+      const query = searchQuery.toLowerCase()
+      result = result.filter((e) => {
+        const label =
+          COMPONENT_ECOSYSTEM_LABELS[e.ecosystem]?.toLowerCase() || e.ecosystem.toLowerCase()
+        return label.includes(query) || e.ecosystem.toLowerCase().includes(query)
+      })
     }
 
     // Apply sorting
     switch (sortBy) {
-      case "count":
-        result.sort((a, b) => b.count - a.count);
-        break;
-      case "vulnerabilities":
-        result.sort((a, b) => b.vulnerabilities - a.vulnerabilities);
-        break;
-      case "name":
+      case 'count':
+        result.sort((a, b) => b.count - a.count)
+        break
+      case 'vulnerabilities':
+        result.sort((a, b) => b.vulnerabilities - a.vulnerabilities)
+        break
+      case 'name':
         result.sort((a, b) => {
-          const nameA = COMPONENT_ECOSYSTEM_LABELS[a.ecosystem] || a.ecosystem;
-          const nameB = COMPONENT_ECOSYSTEM_LABELS[b.ecosystem] || b.ecosystem;
-          return nameA.localeCompare(nameB);
-        });
-        break;
+          const nameA = COMPONENT_ECOSYSTEM_LABELS[a.ecosystem] || a.ecosystem
+          const nameB = COMPONENT_ECOSYSTEM_LABELS[b.ecosystem] || b.ecosystem
+          return nameA.localeCompare(nameB)
+        })
+        break
     }
 
-    return result;
-  }, [ecosystemStats, searchQuery, sortBy]);
+    return result
+  }, [ecosystemStats, searchQuery, sortBy])
 
   // Split into top ecosystems and remaining
   const topEcosystems = useMemo(() => {
-    return processedEcosystems.slice(0, TOP_ECOSYSTEMS_COUNT);
-  }, [processedEcosystems]);
+    return processedEcosystems.slice(0, TOP_ECOSYSTEMS_COUNT)
+  }, [processedEcosystems])
 
   const remainingEcosystems = useMemo(() => {
-    return processedEcosystems.slice(TOP_ECOSYSTEMS_COUNT);
-  }, [processedEcosystems]);
+    return processedEcosystems.slice(TOP_ECOSYSTEMS_COUNT)
+  }, [processedEcosystems])
 
-  const stats = useMemo(() => ({
-    totalComponents: statsData?.total_components ?? 0,
-    directDependencies: statsData?.direct_dependencies ?? 0,
-    transitiveDependencies: statsData?.transitive_dependencies ?? 0,
-    vulnerableComponents: statsData?.vulnerable_components ?? 0,
-  }), [statsData]);
+  const stats = useMemo(
+    () => ({
+      totalComponents: statsData?.total_components ?? 0,
+      directDependencies: statsData?.direct_dependencies ?? 0,
+      transitiveDependencies: statsData?.transitive_dependencies ?? 0,
+      vulnerableComponents: statsData?.vulnerable_components ?? 0,
+    }),
+    [statsData]
+  )
 
-  const isLoading = isLoadingEcosystems || isLoadingStats;
+  const isLoading = isLoadingEcosystems || isLoadingStats
 
   // Render ecosystem card
   const renderEcosystemCard = (eco: EcosystemData) => {
-    const percentage = stats.totalComponents > 0 ? (eco.count / stats.totalComponents) * 100 : 0;
+    const percentage = stats.totalComponents > 0 ? (eco.count / stats.totalComponents) * 100 : 0
     return (
       <Card
         key={eco.ecosystem}
@@ -250,9 +237,7 @@ export default function EcosystemsPage() {
           <CardTitle className="text-lg">
             {COMPONENT_ECOSYSTEM_LABELS[eco.ecosystem] || eco.ecosystem}
           </CardTitle>
-          <CardDescription>
-            {percentage.toFixed(1)}% of total components
-          </CardDescription>
+          <CardDescription>{percentage.toFixed(1)}% of total components</CardDescription>
         </CardHeader>
         <CardContent>
           <Progress value={percentage} className="h-2 mb-4" />
@@ -262,13 +247,17 @@ export default function EcosystemsPage() {
               <p className="text-xs text-muted-foreground">Total</p>
             </div>
             <div>
-              <p className={`text-2xl font-bold ${eco.vulnerabilities > 0 ? "text-red-500" : "text-green-500"}`}>
+              <p
+                className={`text-2xl font-bold ${eco.vulnerabilities > 0 ? 'text-red-500' : 'text-green-500'}`}
+              >
                 {eco.vulnerabilities}
               </p>
               <p className="text-xs text-muted-foreground">Vulnerable</p>
             </div>
             <div>
-              <p className={`text-2xl font-bold ${eco.outdated > 0 ? "text-yellow-500" : "text-green-500"}`}>
+              <p
+                className={`text-2xl font-bold ${eco.outdated > 0 ? 'text-yellow-500' : 'text-green-500'}`}
+              >
                 {eco.outdated}
               </p>
               <p className="text-xs text-muted-foreground">Outdated</p>
@@ -276,12 +265,12 @@ export default function EcosystemsPage() {
           </div>
         </CardContent>
       </Card>
-    );
-  };
+    )
+  }
 
   // Render ecosystem table row
   const renderEcosystemTableRow = (eco: EcosystemData) => {
-    const percentage = stats.totalComponents > 0 ? (eco.count / stats.totalComponents) * 100 : 0;
+    const percentage = stats.totalComponents > 0 ? (eco.count / stats.totalComponents) * 100 : 0
     return (
       <TableRow
         key={eco.ecosystem}
@@ -299,15 +288,17 @@ export default function EcosystemsPage() {
         <TableCell>
           <div className="flex items-center gap-2">
             <span className="font-medium">{eco.count}</span>
-            <span className="text-xs text-muted-foreground">
-              ({percentage.toFixed(1)}%)
-            </span>
+            <span className="text-xs text-muted-foreground">({percentage.toFixed(1)}%)</span>
           </div>
         </TableCell>
         <TableCell>
           <Badge
-            variant={eco.vulnerabilities > 0 ? "destructive" : "outline"}
-            className={eco.vulnerabilities === 0 ? "text-green-600 border-green-200 bg-green-50 dark:bg-green-950/30 dark:border-green-800" : ""}
+            variant={eco.vulnerabilities > 0 ? 'destructive' : 'outline'}
+            className={
+              eco.vulnerabilities === 0
+                ? 'text-green-600 border-green-200 bg-green-50 dark:bg-green-950/30 dark:border-green-800'
+                : ''
+            }
           >
             {eco.vulnerabilities}
           </Badge>
@@ -315,7 +306,11 @@ export default function EcosystemsPage() {
         <TableCell>
           <Badge
             variant="outline"
-            className={eco.outdated > 0 ? "text-yellow-600 border-yellow-200 bg-yellow-50 dark:bg-yellow-950/30 dark:border-yellow-800" : ""}
+            className={
+              eco.outdated > 0
+                ? 'text-yellow-600 border-yellow-200 bg-yellow-50 dark:bg-yellow-950/30 dark:border-yellow-800'
+                : ''
+            }
           >
             {eco.outdated}
           </Badge>
@@ -324,18 +319,12 @@ export default function EcosystemsPage() {
           <Progress value={percentage} className="h-2 w-24" />
         </TableCell>
       </TableRow>
-    );
-  };
+    )
+  }
 
   return (
     <>
-      <Header fixed>
-        <div className="ms-auto flex items-center gap-2 sm:gap-4">
-          <Search />
-          <ThemeSwitch />
-          <ProfileDropdown />
-        </div>
-      </Header>
+      <Header fixed />
 
       <Main>
         <PageHeader
@@ -365,9 +354,7 @@ export default function EcosystemsPage() {
               )}
             </CardHeader>
             <CardContent>
-              <p className="text-xs text-muted-foreground">
-                Unique package managers
-              </p>
+              <p className="text-xs text-muted-foreground">Unique package managers</p>
             </CardContent>
           </Card>
 
@@ -384,9 +371,7 @@ export default function EcosystemsPage() {
               )}
             </CardHeader>
             <CardContent>
-              <p className="text-xs text-muted-foreground">
-                Across all ecosystems
-              </p>
+              <p className="text-xs text-muted-foreground">Across all ecosystems</p>
             </CardContent>
           </Card>
 
@@ -405,9 +390,7 @@ export default function EcosystemsPage() {
               )}
             </CardHeader>
             <CardContent>
-              <p className="text-xs text-muted-foreground">
-                Total vulnerable components
-              </p>
+              <p className="text-xs text-muted-foreground">Total vulnerable components</p>
             </CardContent>
           </Card>
 
@@ -426,9 +409,7 @@ export default function EcosystemsPage() {
               )}
             </CardHeader>
             <CardContent>
-              <p className="text-xs text-muted-foreground">
-                Updates available
-              </p>
+              <p className="text-xs text-muted-foreground">Updates available</p>
             </CardContent>
           </Card>
         </div>
@@ -463,18 +444,18 @@ export default function EcosystemsPage() {
 
               <div className="flex items-center border rounded-md">
                 <Button
-                  variant={viewMode === "cards" ? "secondary" : "ghost"}
+                  variant={viewMode === 'cards' ? 'secondary' : 'ghost'}
                   size="sm"
                   className="rounded-r-none"
-                  onClick={() => setViewMode("cards")}
+                  onClick={() => setViewMode('cards')}
                 >
                   <LayoutGrid className="h-4 w-4" />
                 </Button>
                 <Button
-                  variant={viewMode === "table" ? "secondary" : "ghost"}
+                  variant={viewMode === 'table' ? 'secondary' : 'ghost'}
                   size="sm"
                   className="rounded-l-none"
-                  onClick={() => setViewMode("table")}
+                  onClick={() => setViewMode('table')}
                 >
                   <List className="h-4 w-4" />
                 </Button>
@@ -514,11 +495,7 @@ export default function EcosystemsPage() {
                   <p className="text-muted-foreground">
                     No ecosystems match &quot;{searchQuery}&quot;
                   </p>
-                  <Button
-                    variant="outline"
-                    className="mt-4"
-                    onClick={() => setSearchQuery("")}
-                  >
+                  <Button variant="outline" className="mt-4" onClick={() => setSearchQuery('')}>
                     Clear Search
                   </Button>
                 </>
@@ -533,7 +510,7 @@ export default function EcosystemsPage() {
               )}
             </CardContent>
           </Card>
-        ) : viewMode === "table" ? (
+        ) : viewMode === 'table' ? (
           /* Table View */
           <Card className="mt-6">
             <CardHeader>
@@ -555,9 +532,7 @@ export default function EcosystemsPage() {
                       <TableHead>Distribution</TableHead>
                     </TableRow>
                   </TableHeader>
-                  <TableBody>
-                    {processedEcosystems.map(renderEcosystemTableRow)}
-                  </TableBody>
+                  <TableBody>{processedEcosystems.map(renderEcosystemTableRow)}</TableBody>
                 </Table>
               </div>
             </CardContent>
@@ -578,12 +553,10 @@ export default function EcosystemsPage() {
                 className="mt-6"
               >
                 <CollapsibleTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-between"
-                  >
+                  <Button variant="outline" className="w-full justify-between">
                     <span>
-                      {showAllEcosystems ? "Hide" : "Show"} {remainingEcosystems.length} more ecosystem{remainingEcosystems.length !== 1 ? "s" : ""}
+                      {showAllEcosystems ? 'Hide' : 'Show'} {remainingEcosystems.length} more
+                      ecosystem{remainingEcosystems.length !== 1 ? 's' : ''}
                     </span>
                     {showAllEcosystems ? (
                       <ChevronUp className="h-4 w-4" />
@@ -606,22 +579,22 @@ export default function EcosystemsPage() {
                 <CardContent className="py-4">
                   <div className="flex items-center justify-between">
                     <div className="text-sm text-muted-foreground">
-                      <span className="font-medium text-foreground">{remainingEcosystems.length}</span> additional ecosystems with{" "}
+                      <span className="font-medium text-foreground">
+                        {remainingEcosystems.length}
+                      </span>{' '}
+                      additional ecosystems with{' '}
                       <span className="font-medium text-foreground">
                         {remainingEcosystems.reduce((acc, e) => acc + e.count, 0)}
-                      </span>{" "}
+                      </span>{' '}
                       total components
                       {remainingEcosystems.reduce((acc, e) => acc + e.vulnerabilities, 0) > 0 && (
                         <span className="text-red-500 ml-1">
-                          ({remainingEcosystems.reduce((acc, e) => acc + e.vulnerabilities, 0)} vulnerable)
+                          ({remainingEcosystems.reduce((acc, e) => acc + e.vulnerabilities, 0)}{' '}
+                          vulnerable)
                         </span>
                       )}
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowAllEcosystems(true)}
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => setShowAllEcosystems(true)}>
                       View All
                       <ChevronDown className="ml-2 h-4 w-4" />
                     </Button>
@@ -647,10 +620,12 @@ export default function EcosystemsPage() {
                     </div>
                     <div>
                       <SheetTitle className="flex items-center gap-2 text-xl">
-                        {COMPONENT_ECOSYSTEM_LABELS[selectedEcosystem] ?? selectedEcosystem} Components
+                        {COMPONENT_ECOSYSTEM_LABELS[selectedEcosystem] ?? selectedEcosystem}{' '}
+                        Components
                       </SheetTitle>
                       <SheetDescription className="mt-1">
-                        {ecosystemComponentsData?.data?.length ?? 0} components found in this ecosystem
+                        {ecosystemComponentsData?.data?.length ?? 0} components found in this
+                        ecosystem
                       </SheetDescription>
                     </div>
                   </div>
@@ -659,21 +634,27 @@ export default function EcosystemsPage() {
                 {/* Quick Stats */}
                 <div className="mt-4 grid grid-cols-3 gap-4">
                   <button
-                    onClick={() => setSecurityFilter("all")}
+                    onClick={() => setSecurityFilter('all')}
                     className={`rounded-lg border p-3 text-left transition-colors ${
-                      securityFilter === "all" ? "border-primary bg-primary/5" : "bg-card hover:bg-muted/50"
+                      securityFilter === 'all'
+                        ? 'border-primary bg-primary/5'
+                        : 'bg-card hover:bg-muted/50'
                     }`}
                   >
                     <div className="flex items-center gap-2">
                       <Package className="h-4 w-4 text-blue-500" />
                       <span className="text-sm text-muted-foreground">Total</span>
                     </div>
-                    <p className="mt-1 text-2xl font-bold">{ecosystemComponentsData?.data?.length ?? 0}</p>
+                    <p className="mt-1 text-2xl font-bold">
+                      {ecosystemComponentsData?.data?.length ?? 0}
+                    </p>
                   </button>
                   <button
-                    onClick={() => setSecurityFilter("vulnerable")}
+                    onClick={() => setSecurityFilter('vulnerable')}
                     className={`rounded-lg border p-3 text-left transition-colors ${
-                      securityFilter === "vulnerable" ? "border-red-500 bg-red-500/5" : "bg-card hover:bg-muted/50"
+                      securityFilter === 'vulnerable'
+                        ? 'border-red-500 bg-red-500/5'
+                        : 'bg-card hover:bg-muted/50'
                     }`}
                   >
                     <div className="flex items-center gap-2">
@@ -681,13 +662,16 @@ export default function EcosystemsPage() {
                       <span className="text-sm text-muted-foreground">Vulnerable</span>
                     </div>
                     <p className="mt-1 text-2xl font-bold text-red-500">
-                      {ecosystemComponentsData?.data?.filter(c => c.vulnerability_count > 0).length ?? 0}
+                      {ecosystemComponentsData?.data?.filter((c) => c.vulnerability_count > 0)
+                        .length ?? 0}
                     </p>
                   </button>
                   <button
-                    onClick={() => setSecurityFilter("secure")}
+                    onClick={() => setSecurityFilter('secure')}
                     className={`rounded-lg border p-3 text-left transition-colors ${
-                      securityFilter === "secure" ? "border-green-500 bg-green-500/5" : "bg-card hover:bg-muted/50"
+                      securityFilter === 'secure'
+                        ? 'border-green-500 bg-green-500/5'
+                        : 'bg-card hover:bg-muted/50'
                     }`}
                   >
                     <div className="flex items-center gap-2">
@@ -695,7 +679,8 @@ export default function EcosystemsPage() {
                       <span className="text-sm text-muted-foreground">Secure</span>
                     </div>
                     <p className="mt-1 text-2xl font-bold text-green-500">
-                      {ecosystemComponentsData?.data?.filter(c => c.vulnerability_count === 0).length ?? 0}
+                      {ecosystemComponentsData?.data?.filter((c) => c.vulnerability_count === 0)
+                        .length ?? 0}
                     </p>
                   </button>
                 </div>
@@ -784,12 +769,18 @@ export default function EcosystemsPage() {
                                       </Badge>
                                     </TooltipTrigger>
                                     <TooltipContent>
-                                      {comp.vulnerability_count} known {comp.vulnerability_count === 1 ? 'vulnerability' : 'vulnerabilities'}
+                                      {comp.vulnerability_count} known{' '}
+                                      {comp.vulnerability_count === 1
+                                        ? 'vulnerability'
+                                        : 'vulnerabilities'}
                                     </TooltipContent>
                                   </Tooltip>
                                 </TooltipProvider>
                               ) : (
-                                <Badge variant="outline" className="gap-1 text-green-600 border-green-200 bg-green-50 dark:bg-green-950/30 dark:border-green-800">
+                                <Badge
+                                  variant="outline"
+                                  className="gap-1 text-green-600 border-green-200 bg-green-50 dark:bg-green-950/30 dark:border-green-800"
+                                >
                                   <CheckCircle2 className="h-3 w-3" />
                                   Secure
                                 </Badge>
@@ -802,28 +793,30 @@ export default function EcosystemsPage() {
                   ) : (
                     <div className="flex flex-col items-center justify-center py-12 text-center">
                       <div className="rounded-full bg-muted p-4 mb-4">
-                        {sheetSearchQuery || securityFilter !== "all" ? (
+                        {sheetSearchQuery || securityFilter !== 'all' ? (
                           <SearchIcon className="h-8 w-8 text-muted-foreground" />
                         ) : (
                           <Package className="h-8 w-8 text-muted-foreground" />
                         )}
                       </div>
                       <h3 className="text-lg font-medium">
-                        {sheetSearchQuery || securityFilter !== "all" ? "No Matches Found" : "No Components Found"}
+                        {sheetSearchQuery || securityFilter !== 'all'
+                          ? 'No Matches Found'
+                          : 'No Components Found'}
                       </h3>
                       <p className="text-sm text-muted-foreground mt-1 max-w-sm">
-                        {sheetSearchQuery || securityFilter !== "all"
-                          ? "Try adjusting your search or filter criteria."
-                          : "No components have been discovered for this ecosystem yet."}
+                        {sheetSearchQuery || securityFilter !== 'all'
+                          ? 'Try adjusting your search or filter criteria.'
+                          : 'No components have been discovered for this ecosystem yet.'}
                       </p>
-                      {(sheetSearchQuery || securityFilter !== "all") && (
+                      {(sheetSearchQuery || securityFilter !== 'all') && (
                         <Button
                           variant="outline"
                           size="sm"
                           className="mt-4"
                           onClick={() => {
-                            setSheetSearchQuery("");
-                            setSecurityFilter("all");
+                            setSheetSearchQuery('')
+                            setSecurityFilter('all')
                           }}
                         >
                           Clear Filters
@@ -839,8 +832,10 @@ export default function EcosystemsPage() {
                 <div className="border-t px-6 py-4 bg-muted/30">
                   <div className="flex items-center justify-between">
                     <p className="text-sm text-muted-foreground">
-                      Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, filteredComponents.length)} of {filteredComponents.length}
-                      {(sheetSearchQuery || securityFilter !== "all") && (
+                      Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1}-
+                      {Math.min(currentPage * ITEMS_PER_PAGE, filteredComponents.length)} of{' '}
+                      {filteredComponents.length}
+                      {(sheetSearchQuery || securityFilter !== 'all') && (
                         <span className="ml-1">
                           (filtered from {ecosystemComponentsData?.data?.length ?? 0})
                         </span>
@@ -853,7 +848,7 @@ export default function EcosystemsPage() {
                             variant="outline"
                             size="icon"
                             className="h-8 w-8"
-                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                             disabled={currentPage === 1}
                           >
                             <ChevronLeft className="h-4 w-4" />
@@ -867,7 +862,7 @@ export default function EcosystemsPage() {
                             variant="outline"
                             size="icon"
                             className="h-8 w-8"
-                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                             disabled={currentPage === totalPages}
                           >
                             <ChevronRight className="h-4 w-4" />
@@ -889,5 +884,5 @@ export default function EcosystemsPage() {
         </SheetContent>
       </Sheet>
     </>
-  );
+  )
 }

@@ -1,19 +1,16 @@
-"use client";
+'use client'
 
-import { useState, useMemo } from "react";
-import { ColumnDef } from "@tanstack/react-table";
-import { Header, Main } from "@/components/layout";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { PageHeader, DataTable, DataTableColumnHeader, RiskScoreBadge } from "@/features/shared";
-import { Can, Permission } from "@/lib/permissions";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
+import { useState, useMemo } from 'react'
+import { ColumnDef } from '@tanstack/react-table'
+import { Header, Main } from '@/components/layout'
+import { PageHeader, DataTable, DataTableColumnHeader, RiskScoreBadge } from '@/features/shared'
+import { Can, Permission } from '@/lib/permissions'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Badge } from '@/components/ui/badge'
+import { Progress } from '@/components/ui/progress'
 import {
   Plus,
   Download,
@@ -30,21 +27,15 @@ import {
   Mail,
   ChevronRight,
   X,
-} from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+} from 'lucide-react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu'
 import {
   Dialog,
   DialogContent,
@@ -52,21 +43,21 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog'
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet";
+} from '@/components/ui/sheet'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from '@/components/ui/select'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -76,66 +67,66 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "sonner";
+} from '@/components/ui/alert-dialog'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { toast } from 'sonner'
 import {
   mockBusinessUnits,
   getChildBusinessUnits,
   type BusinessUnit,
   type Criticality,
   type RiskTolerance,
-} from "@/features/business-units";
+} from '@/features/business-units'
 
 const criticalityColors: Record<Criticality, string> = {
-  critical: "bg-red-500/10 text-red-500 border-red-500/20",
-  high: "bg-orange-500/10 text-orange-500 border-orange-500/20",
-  medium: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
-  low: "bg-green-500/10 text-green-500 border-green-500/20",
-};
+  critical: 'bg-red-500/10 text-red-500 border-red-500/20',
+  high: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
+  medium: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
+  low: 'bg-green-500/10 text-green-500 border-green-500/20',
+}
 
 const riskToleranceLabels: Record<RiskTolerance, string> = {
-  very_low: "Very Low",
-  low: "Low",
-  medium: "Medium",
-  high: "High",
-  very_high: "Very High",
-};
+  very_low: 'Very Low',
+  low: 'Low',
+  medium: 'Medium',
+  high: 'High',
+  very_high: 'Very High',
+}
 
 const riskToleranceColors: Record<RiskTolerance, string> = {
-  very_low: "bg-green-500/10 text-green-500 border-green-500/20",
-  low: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-  medium: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
-  high: "bg-orange-500/10 text-orange-500 border-orange-500/20",
-  very_high: "bg-red-500/10 text-red-500 border-red-500/20",
-};
+  very_low: 'bg-green-500/10 text-green-500 border-green-500/20',
+  low: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
+  medium: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
+  high: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
+  very_high: 'bg-red-500/10 text-red-500 border-red-500/20',
+}
 
 export default function BusinessUnitsPage() {
-  const [businessUnits, setBusinessUnits] = useState<BusinessUnit[]>(mockBusinessUnits);
-  const [viewUnit, setViewUnit] = useState<BusinessUnit | null>(null);
-  const [editUnit, setEditUnit] = useState<BusinessUnit | null>(null);
-  const [deleteUnit, setDeleteUnit] = useState<BusinessUnit | null>(null);
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [filterCriticality, setFilterCriticality] = useState<string>("all");
-  const [filterRiskTolerance, setFilterRiskTolerance] = useState<string>("all");
+  const [businessUnits, setBusinessUnits] = useState<BusinessUnit[]>(mockBusinessUnits)
+  const [viewUnit, setViewUnit] = useState<BusinessUnit | null>(null)
+  const [editUnit, setEditUnit] = useState<BusinessUnit | null>(null)
+  const [deleteUnit, setDeleteUnit] = useState<BusinessUnit | null>(null)
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [filterCriticality, setFilterCriticality] = useState<string>('all')
+  const [filterRiskTolerance, setFilterRiskTolerance] = useState<string>('all')
 
   // Form state
   const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-    parentId: "",
-    criticality: "medium" as Criticality,
-    riskTolerance: "medium" as RiskTolerance,
-    owner: "",
-    ownerEmail: "",
-    tags: "",
-  });
+    name: '',
+    description: '',
+    parentId: '',
+    criticality: 'medium' as Criticality,
+    riskTolerance: 'medium' as RiskTolerance,
+    owner: '',
+    ownerEmail: '',
+    tags: '',
+  })
 
   const stats = useMemo(() => {
     return {
       total: businessUnits.length,
-      active: businessUnits.filter((bu) => bu.status === "active").length,
-      inactive: businessUnits.filter((bu) => bu.status === "inactive").length,
+      active: businessUnits.filter((bu) => bu.status === 'active').length,
+      inactive: businessUnits.filter((bu) => bu.status === 'inactive').length,
       totalAssets: businessUnits.reduce((acc, bu) => acc + bu.assetCount, 0),
       averageRiskScore: Math.round(
         businessUnits.reduce((acc, bu) => acc + bu.riskScore, 0) / businessUnits.length
@@ -143,45 +134,45 @@ export default function BusinessUnitsPage() {
       averageComplianceScore: Math.round(
         businessUnits.reduce((acc, bu) => acc + bu.complianceScore, 0) / businessUnits.length
       ),
-    };
-  }, [businessUnits]);
+    }
+  }, [businessUnits])
 
   const rootUnits = useMemo(() => {
-    return businessUnits.filter((bu) => !bu.parentId);
-  }, [businessUnits]);
+    return businessUnits.filter((bu) => !bu.parentId)
+  }, [businessUnits])
 
   const filteredUnits = useMemo(() => {
     return businessUnits.filter((unit) => {
-      if (filterCriticality !== "all" && unit.criticality !== filterCriticality) return false;
-      if (filterRiskTolerance !== "all" && unit.riskTolerance !== filterRiskTolerance) return false;
-      return true;
-    });
-  }, [businessUnits, filterCriticality, filterRiskTolerance]);
+      if (filterCriticality !== 'all' && unit.criticality !== filterCriticality) return false
+      if (filterRiskTolerance !== 'all' && unit.riskTolerance !== filterRiskTolerance) return false
+      return true
+    })
+  }, [businessUnits, filterCriticality, filterRiskTolerance])
 
   const resetForm = () => {
     setFormData({
-      name: "",
-      description: "",
-      parentId: "",
-      criticality: "medium",
-      riskTolerance: "medium",
-      owner: "",
-      ownerEmail: "",
-      tags: "",
-    });
-  };
+      name: '',
+      description: '',
+      parentId: '',
+      criticality: 'medium',
+      riskTolerance: 'medium',
+      owner: '',
+      ownerEmail: '',
+      tags: '',
+    })
+  }
 
   const handleCreate = () => {
     if (!formData.name || !formData.owner || !formData.ownerEmail) {
-      toast.error("Please fill in all required fields");
-      return;
+      toast.error('Please fill in all required fields')
+      return
     }
     const newUnit: BusinessUnit = {
       id: `bu-${Date.now()}`,
       name: formData.name,
       description: formData.description || undefined,
       parentId: formData.parentId || undefined,
-      status: "active",
+      status: 'active',
       criticality: formData.criticality,
       riskTolerance: formData.riskTolerance,
       owner: formData.owner,
@@ -190,20 +181,20 @@ export default function BusinessUnitsPage() {
       employeeCount: 0,
       riskScore: 50,
       complianceScore: 80,
-      tags: formData.tags ? formData.tags.split(",").map((t) => t.trim()) : [],
+      tags: formData.tags ? formData.tags.split(',').map((t) => t.trim()) : [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-    };
-    setBusinessUnits((prev) => [...prev, newUnit]);
-    toast.success("Business unit created successfully");
-    setIsCreateOpen(false);
-    resetForm();
-  };
+    }
+    setBusinessUnits((prev) => [...prev, newUnit])
+    toast.success('Business unit created successfully')
+    setIsCreateOpen(false)
+    resetForm()
+  }
 
   const handleEdit = () => {
     if (!editUnit || !formData.name || !formData.owner || !formData.ownerEmail) {
-      toast.error("Please fill in all required fields");
-      return;
+      toast.error('Please fill in all required fields')
+      return
     }
     setBusinessUnits((prev) =>
       prev.map((unit) =>
@@ -217,45 +208,45 @@ export default function BusinessUnitsPage() {
               riskTolerance: formData.riskTolerance,
               owner: formData.owner,
               ownerEmail: formData.ownerEmail,
-              tags: formData.tags ? formData.tags.split(",").map((t) => t.trim()) : [],
+              tags: formData.tags ? formData.tags.split(',').map((t) => t.trim()) : [],
               updatedAt: new Date().toISOString(),
             }
           : unit
       )
-    );
-    toast.success("Business unit updated successfully");
-    setEditUnit(null);
-    resetForm();
-  };
+    )
+    toast.success('Business unit updated successfully')
+    setEditUnit(null)
+    resetForm()
+  }
 
   const handleDelete = () => {
-    if (!deleteUnit) return;
-    setBusinessUnits((prev) => prev.filter((unit) => unit.id !== deleteUnit.id));
-    toast.success("Business unit deleted successfully");
-    setDeleteUnit(null);
-  };
+    if (!deleteUnit) return
+    setBusinessUnits((prev) => prev.filter((unit) => unit.id !== deleteUnit.id))
+    toast.success('Business unit deleted successfully')
+    setDeleteUnit(null)
+  }
 
   const openEdit = (unit: BusinessUnit) => {
     setFormData({
       name: unit.name,
-      description: unit.description || "",
-      parentId: unit.parentId || "",
+      description: unit.description || '',
+      parentId: unit.parentId || '',
       criticality: unit.criticality,
       riskTolerance: unit.riskTolerance,
       owner: unit.owner,
       ownerEmail: unit.ownerEmail,
-      tags: unit.tags.join(", "),
-    });
-    setEditUnit(unit);
-  };
+      tags: unit.tags.join(', '),
+    })
+    setEditUnit(unit)
+  }
 
   const columns: ColumnDef<BusinessUnit>[] = [
     {
-      accessorKey: "name",
+      accessorKey: 'name',
       header: ({ column }) => <DataTableColumnHeader column={column} title="Business Unit" />,
       cell: ({ row }) => {
-        const unit = row.original;
-        const children = getChildBusinessUnits(unit.id);
+        const unit = row.original
+        const children = getChildBusinessUnits(unit.id)
         return (
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
@@ -265,7 +256,9 @@ export default function BusinessUnitsPage() {
               <div className="font-medium flex items-center gap-2">
                 {unit.name}
                 {unit.parentId && (
-                  <Badge variant="outline" className="text-xs">Sub-unit</Badge>
+                  <Badge variant="outline" className="text-xs">
+                    Sub-unit
+                  </Badge>
                 )}
               </div>
               <div className="text-xs text-muted-foreground">
@@ -274,11 +267,11 @@ export default function BusinessUnitsPage() {
               </div>
             </div>
           </div>
-        );
+        )
       },
     },
     {
-      accessorKey: "criticality",
+      accessorKey: 'criticality',
       header: ({ column }) => <DataTableColumnHeader column={column} title="Criticality" />,
       cell: ({ row }) => (
         <Badge variant="outline" className={criticalityColors[row.original.criticality]}>
@@ -288,7 +281,7 @@ export default function BusinessUnitsPage() {
       filterFn: (row, id, value) => value.includes(row.getValue(id)),
     },
     {
-      accessorKey: "riskTolerance",
+      accessorKey: 'riskTolerance',
       header: ({ column }) => <DataTableColumnHeader column={column} title="Risk Tolerance" />,
       cell: ({ row }) => (
         <Badge variant="outline" className={riskToleranceColors[row.original.riskTolerance]}>
@@ -297,32 +290,30 @@ export default function BusinessUnitsPage() {
       ),
     },
     {
-      accessorKey: "assetCount",
+      accessorKey: 'assetCount',
       header: ({ column }) => <DataTableColumnHeader column={column} title="Assets" />,
-      cell: ({ row }) => (
-        <span className="font-medium">{row.original.assetCount}</span>
-      ),
+      cell: ({ row }) => <span className="font-medium">{row.original.assetCount}</span>,
     },
     {
-      accessorKey: "riskScore",
+      accessorKey: 'riskScore',
       header: ({ column }) => <DataTableColumnHeader column={column} title="Risk Score" />,
       cell: ({ row }) => <RiskScoreBadge score={row.original.riskScore} />,
     },
     {
-      accessorKey: "complianceScore",
+      accessorKey: 'complianceScore',
       header: ({ column }) => <DataTableColumnHeader column={column} title="Compliance" />,
       cell: ({ row }) => {
-        const score = row.original.complianceScore;
+        const score = row.original.complianceScore
         return (
           <div className="flex flex-wrap items-center gap-2">
             <Progress value={score} className="w-16 h-2" />
             <span className="text-sm font-medium">{score}%</span>
           </div>
-        );
+        )
       },
     },
     {
-      accessorKey: "owner",
+      accessorKey: 'owner',
       header: ({ column }) => <DataTableColumnHeader column={column} title="Owner" />,
       cell: ({ row }) => (
         <div className="text-sm">
@@ -332,9 +323,9 @@ export default function BusinessUnitsPage() {
       ),
     },
     {
-      id: "actions",
+      id: 'actions',
       cell: ({ row }) => {
-        const unit = row.original;
+        const unit = row.original
         return (
           <Can permission={[Permission.ScopeWrite, Permission.ScopeDelete]}>
             <DropdownMenu>
@@ -367,10 +358,10 @@ export default function BusinessUnitsPage() {
               </DropdownMenuContent>
             </DropdownMenu>
           </Can>
-        );
+        )
       },
     },
-  ];
+  ]
 
   const formFields = (
     <div className="space-y-4">
@@ -421,7 +412,9 @@ export default function BusinessUnitsPage() {
           <Label htmlFor="criticality">Criticality *</Label>
           <Select
             value={formData.criticality}
-            onValueChange={(value) => setFormData({ ...formData, criticality: value as Criticality })}
+            onValueChange={(value) =>
+              setFormData({ ...formData, criticality: value as Criticality })
+            }
           >
             <SelectTrigger>
               <SelectValue />
@@ -438,7 +431,9 @@ export default function BusinessUnitsPage() {
           <Label htmlFor="riskTolerance">Risk Tolerance *</Label>
           <Select
             value={formData.riskTolerance}
-            onValueChange={(value) => setFormData({ ...formData, riskTolerance: value as RiskTolerance })}
+            onValueChange={(value) =>
+              setFormData({ ...formData, riskTolerance: value as RiskTolerance })
+            }
           >
             <SelectTrigger>
               <SelectValue />
@@ -486,17 +481,11 @@ export default function BusinessUnitsPage() {
         />
       </div>
     </div>
-  );
+  )
 
   return (
     <>
-      <Header fixed>
-        <Search />
-        <div className="ms-auto flex items-center gap-2 sm:gap-4">
-          <ThemeSwitch />
-          <ProfileDropdown />
-        </div>
-      </Header>
+      <Header fixed />
 
       <Main>
         <PageHeader
@@ -602,13 +591,13 @@ export default function BusinessUnitsPage() {
                   </SelectContent>
                 </Select>
               </div>
-              {(filterCriticality !== "all" || filterRiskTolerance !== "all") && (
+              {(filterCriticality !== 'all' || filterRiskTolerance !== 'all') && (
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => {
-                    setFilterCriticality("all");
-                    setFilterRiskTolerance("all");
+                    setFilterCriticality('all')
+                    setFilterRiskTolerance('all')
                   }}
                 >
                   <X className="mr-1 h-3 w-3" />
@@ -663,9 +652,7 @@ export default function BusinessUnitsPage() {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Edit Business Unit</DialogTitle>
-            <DialogDescription>
-              Update business unit details
-            </DialogDescription>
+            <DialogDescription>Update business unit details</DialogDescription>
           </DialogHeader>
           {formFields}
           <DialogFooter>
@@ -710,7 +697,10 @@ export default function BusinessUnitsPage() {
                     </div>
                     <div className="space-y-1">
                       <p className="text-sm text-muted-foreground">Risk Tolerance</p>
-                      <Badge variant="outline" className={riskToleranceColors[viewUnit.riskTolerance]}>
+                      <Badge
+                        variant="outline"
+                        className={riskToleranceColors[viewUnit.riskTolerance]}
+                      >
                         {riskToleranceLabels[viewUnit.riskTolerance]}
                       </Badge>
                     </div>
@@ -784,7 +774,9 @@ export default function BusinessUnitsPage() {
                       <p className="text-sm text-muted-foreground">Tags</p>
                       <div className="flex flex-wrap gap-2">
                         {viewUnit.tags.map((tag) => (
-                          <Badge key={tag} variant="secondary">{tag}</Badge>
+                          <Badge key={tag} variant="secondary">
+                            {tag}
+                          </Badge>
                         ))}
                       </div>
                     </div>
@@ -817,7 +809,10 @@ export default function BusinessUnitsPage() {
                                 <Building2 className="h-4 w-4 text-muted-foreground" />
                                 <span className="font-medium">{child.name}</span>
                               </div>
-                              <Badge variant="outline" className={criticalityColors[child.criticality]}>
+                              <Badge
+                                variant="outline"
+                                className={criticalityColors[child.criticality]}
+                              >
                                 {child.criticality}
                               </Badge>
                             </div>
@@ -840,8 +835,8 @@ export default function BusinessUnitsPage() {
                   variant="destructive"
                   className="flex-1"
                   onClick={() => {
-                    setViewUnit(null);
-                    setDeleteUnit(viewUnit);
+                    setViewUnit(null)
+                    setDeleteUnit(viewUnit)
                   }}
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
@@ -859,8 +854,9 @@ export default function BusinessUnitsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Business Unit?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete &quot;{deleteUnit?.name}&quot;? This action cannot be undone.
-              {getChildBusinessUnits(deleteUnit?.id || "").length > 0 && (
+              Are you sure you want to delete &quot;{deleteUnit?.name}&quot;? This action cannot be
+              undone.
+              {getChildBusinessUnits(deleteUnit?.id || '').length > 0 && (
                 <span className="block mt-2 text-destructive">
                   Warning: This unit has sub-units that will also be affected.
                 </span>
@@ -869,12 +865,15 @@ export default function BusinessUnitsPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground"
+            >
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </>
-  );
+  )
 }

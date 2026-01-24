@@ -1,21 +1,12 @@
-"use client";
+'use client'
 
-import { useState, useMemo } from "react";
-import { Header, Main } from "@/components/layout";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { PageHeader } from "@/features/shared";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import {
-  Network,
-  Plus,
-  Shield,
-  Layers,
-  Route,
-} from "lucide-react";
+import { useState, useMemo } from 'react'
+import { Header, Main } from '@/components/layout'
+import { PageHeader } from '@/features/shared'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Network, Plus, Shield, Layers, Route } from 'lucide-react'
 import {
   ScopeBadgeSimple,
   ScopeCoverageCard,
@@ -23,197 +14,188 @@ import {
   calculateScopeCoverage,
   getActiveScopeTargets,
   getActiveScopeExclusions,
-} from "@/features/scope";
+} from '@/features/scope'
 
 // Mock data for network assets
 const mockNetworks = [
   {
-    id: "net-1",
-    name: "production-vpc",
-    type: "vpc" as const,
-    provider: "AWS",
-    region: "us-east-1",
-    cidr: "10.0.0.0/16",
+    id: 'net-1',
+    name: 'production-vpc',
+    type: 'vpc' as const,
+    provider: 'AWS',
+    region: 'us-east-1',
+    cidr: '10.0.0.0/16',
     subnets: 6,
-    status: "active" as const,
+    status: 'active' as const,
     riskScore: 35,
   },
   {
-    id: "net-2",
-    name: "web-alb",
-    type: "load_balancer" as const,
-    provider: "AWS",
-    region: "us-east-1",
-    cidr: "-",
+    id: 'net-2',
+    name: 'web-alb',
+    type: 'load_balancer' as const,
+    provider: 'AWS',
+    region: 'us-east-1',
+    cidr: '-',
     subnets: 0,
-    status: "active" as const,
+    status: 'active' as const,
     riskScore: 25,
   },
   {
-    id: "net-3",
-    name: "main-firewall",
-    type: "firewall" as const,
-    provider: "GCP",
-    region: "us-central1",
-    cidr: "-",
+    id: 'net-3',
+    name: 'main-firewall',
+    type: 'firewall' as const,
+    provider: 'GCP',
+    region: 'us-central1',
+    cidr: '-',
     subnets: 0,
-    status: "active" as const,
+    status: 'active' as const,
     riskScore: 45,
   },
   {
-    id: "net-4",
-    name: "staging-vpc",
-    type: "vpc" as const,
-    provider: "AWS",
-    region: "us-west-2",
-    cidr: "10.1.0.0/16",
+    id: 'net-4',
+    name: 'staging-vpc',
+    type: 'vpc' as const,
+    provider: 'AWS',
+    region: 'us-west-2',
+    cidr: '10.1.0.0/16',
     subnets: 4,
-    status: "active" as const,
+    status: 'active' as const,
     riskScore: 20,
   },
   {
-    id: "net-5",
-    name: "dev-network",
-    type: "vpc" as const,
-    provider: "Azure",
-    region: "eastus",
-    cidr: "10.2.0.0/16",
+    id: 'net-5',
+    name: 'dev-network',
+    type: 'vpc' as const,
+    provider: 'Azure',
+    region: 'eastus',
+    cidr: '10.2.0.0/16',
     subnets: 3,
-    status: "inactive" as const,
+    status: 'inactive' as const,
     riskScore: 15,
   },
   {
-    id: "net-6",
-    name: "api-gateway-lb",
-    type: "load_balancer" as const,
-    provider: "AWS",
-    region: "eu-west-1",
-    cidr: "-",
+    id: 'net-6',
+    name: 'api-gateway-lb',
+    type: 'load_balancer' as const,
+    provider: 'AWS',
+    region: 'eu-west-1',
+    cidr: '-',
     subnets: 0,
-    status: "active" as const,
+    status: 'active' as const,
     riskScore: 30,
   },
   {
-    id: "net-7",
-    name: "ingress-firewall",
-    type: "firewall" as const,
-    provider: "AWS",
-    region: "us-east-1",
-    cidr: "-",
+    id: 'net-7',
+    name: 'ingress-firewall',
+    type: 'firewall' as const,
+    provider: 'AWS',
+    region: 'us-east-1',
+    cidr: '-',
     subnets: 0,
-    status: "active" as const,
+    status: 'active' as const,
     riskScore: 55,
   },
   {
-    id: "net-8",
-    name: "internal-route-table",
-    type: "route_table" as const,
-    provider: "AWS",
-    region: "us-east-1",
-    cidr: "-",
+    id: 'net-8',
+    name: 'internal-route-table',
+    type: 'route_table' as const,
+    provider: 'AWS',
+    region: 'us-east-1',
+    cidr: '-',
     subnets: 0,
-    status: "active" as const,
+    status: 'active' as const,
     riskScore: 10,
   },
-];
+]
 
 const stats = {
   total: mockNetworks.length,
-  vpcs: mockNetworks.filter((n) => n.type === "vpc").length,
-  loadBalancers: mockNetworks.filter((n) => n.type === "load_balancer").length,
-  firewalls: mockNetworks.filter((n) => n.type === "firewall").length,
-};
+  vpcs: mockNetworks.filter((n) => n.type === 'vpc').length,
+  loadBalancers: mockNetworks.filter((n) => n.type === 'load_balancer').length,
+  firewalls: mockNetworks.filter((n) => n.type === 'firewall').length,
+}
 
 export default function NetworksPage() {
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('')
 
   // Scope data
-  const scopeTargets = useMemo(() => getActiveScopeTargets(), []);
-  const scopeExclusions = useMemo(() => getActiveScopeExclusions(), []);
+  const scopeTargets = useMemo(() => getActiveScopeTargets(), [])
+  const scopeExclusions = useMemo(() => getActiveScopeExclusions(), [])
 
   // Compute scope matches for each network
   const scopeMatchesMap = useMemo(() => {
-    const map = new Map<string, { inScope: boolean; excluded: boolean }>();
+    const map = new Map<string, { inScope: boolean; excluded: boolean }>()
     mockNetworks.forEach((network) => {
       const match = getScopeMatchesForAsset(
-        { id: network.id, type: "network", name: network.name },
+        { id: network.id, type: 'network', name: network.name },
         scopeTargets,
         scopeExclusions
-      );
+      )
       map.set(network.id, {
         inScope: match.inScope,
         excluded: match.matchedExclusions.length > 0,
-      });
-    });
-    return map;
-  }, [scopeTargets, scopeExclusions]);
+      })
+    })
+    return map
+  }, [scopeTargets, scopeExclusions])
 
   // Calculate scope coverage
   const scopeCoverage = useMemo(() => {
     const assets = mockNetworks.map((network) => ({
       id: network.id,
       name: network.name,
-      type: "network",
-    }));
-    return calculateScopeCoverage(assets, scopeTargets, scopeExclusions);
-  }, [scopeTargets, scopeExclusions]);
+      type: 'network',
+    }))
+    return calculateScopeCoverage(assets, scopeTargets, scopeExclusions)
+  }, [scopeTargets, scopeExclusions])
 
   const filteredNetworks = mockNetworks.filter(
     (network) =>
       network.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       network.provider.toLowerCase().includes(searchQuery.toLowerCase()) ||
       network.region.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  )
 
   const getRiskColor = (score: number) => {
-    if (score >= 70) return "text-red-600 bg-red-500/15";
-    if (score >= 40) return "text-yellow-600 bg-yellow-500/15";
-    return "text-green-600 bg-green-500/15";
-  };
+    if (score >= 70) return 'text-red-600 bg-red-500/15'
+    if (score >= 40) return 'text-yellow-600 bg-yellow-500/15'
+    return 'text-green-600 bg-green-500/15'
+  }
 
   const getTypeLabel = (type: string) => {
     switch (type) {
-      case "vpc":
-        return "VPC";
-      case "load_balancer":
-        return "Load Balancer";
-      case "firewall":
-        return "Firewall";
-      case "route_table":
-        return "Route Table";
+      case 'vpc':
+        return 'VPC'
+      case 'load_balancer':
+        return 'Load Balancer'
+      case 'firewall':
+        return 'Firewall'
+      case 'route_table':
+        return 'Route Table'
       default:
-        return type;
+        return type
     }
-  };
+  }
 
-  const getTypeVariant = (type: string): "default" | "secondary" | "outline" => {
+  const getTypeVariant = (type: string): 'default' | 'secondary' | 'outline' => {
     switch (type) {
-      case "vpc":
-        return "default";
-      case "load_balancer":
-        return "secondary";
-      case "firewall":
-        return "outline";
+      case 'vpc':
+        return 'default'
+      case 'load_balancer':
+        return 'secondary'
+      case 'firewall':
+        return 'outline'
       default:
-        return "secondary";
+        return 'secondary'
     }
-  };
+  }
 
   return (
     <>
-      <Header>
-        <Search />
-        <div className="ml-auto flex items-center space-x-4">
-          <ThemeSwitch />
-          <ProfileDropdown />
-        </div>
-      </Header>
+      <Header fixed />
 
       <Main>
-        <PageHeader
-          title="Networks"
-          description="VPCs, firewalls, and load balancers"
-        />
+        <PageHeader title="Networks" description="VPCs, firewalls, and load balancers" />
 
         {/* Stats */}
         <div className="grid gap-4 md:grid-cols-5 mb-6">
@@ -312,7 +294,7 @@ export default function NetworksPage() {
                     </td>
                     <td className="p-4">
                       <span className="font-mono text-sm">
-                        {network.cidr !== "-" ? network.cidr : "-"}
+                        {network.cidr !== '-' ? network.cidr : '-'}
                       </span>
                     </td>
                     <td className="p-4">
@@ -324,12 +306,14 @@ export default function NetworksPage() {
                       )}
                     </td>
                     <td className="p-4">
-                      <Badge variant={network.status === "active" ? "default" : "secondary"}>
+                      <Badge variant={network.status === 'active' ? 'default' : 'secondary'}>
                         {network.status}
                       </Badge>
                     </td>
                     <td className="p-4">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getRiskColor(network.riskScore)}`}>
+                      <span
+                        className={`px-2.5 py-1 rounded-full text-xs font-medium ${getRiskColor(network.riskScore)}`}
+                      >
                         {network.riskScore}
                       </span>
                     </td>
@@ -341,5 +325,5 @@ export default function NetworksPage() {
         </Card>
       </Main>
     </>
-  );
+  )
 }

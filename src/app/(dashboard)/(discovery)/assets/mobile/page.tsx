@@ -1,6 +1,6 @@
-"use client";
+'use client'
 
-import { useState, useMemo } from "react";
+import { useState, useMemo } from 'react'
 import {
   ColumnDef,
   flexRender,
@@ -10,30 +10,16 @@ import {
   getSortedRowModel,
   SortingState,
   useReactTable,
-} from "@tanstack/react-table";
-import { Header, Main } from "@/components/layout";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { PageHeader, StatusBadge, RiskScoreBadge } from "@/features/shared";
-import {
-  AssetDetailSheet,
-  StatCard,
-  StatsGrid,
-  SectionTitle,
-} from "@/features/assets";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+} from '@tanstack/react-table'
+import { Header, Main } from '@/components/layout'
+import { PageHeader, StatusBadge, RiskScoreBadge } from '@/features/shared'
+import { AssetDetailSheet, StatCard, StatsGrid, SectionTitle } from '@/features/assets'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -41,7 +27,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from '@/components/ui/table'
 import {
   Dialog,
   DialogContent,
@@ -49,7 +35,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -59,23 +45,23 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+} from '@/components/ui/alert-dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "sonner";
+} from '@/components/ui/select'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { toast } from 'sonner'
 import {
   Plus,
   Smartphone,
@@ -98,7 +84,7 @@ import {
   RefreshCw,
   Star,
   ExternalLink,
-} from "lucide-react";
+} from 'lucide-react'
 import {
   useAssets,
   createAsset,
@@ -107,11 +93,11 @@ import {
   bulkDeleteAssets,
   getAssetRelationships,
   ClassificationBadges,
-  type Asset
-} from "@/features/assets";
-import { Can, Permission, usePermissions } from "@/lib/permissions";
-import { mockAssetGroups } from "@/features/asset-groups";
-import type { Status } from "@/features/shared/types";
+  type Asset,
+} from '@/features/assets'
+import { Can, Permission, usePermissions } from '@/lib/permissions'
+import { mockAssetGroups } from '@/features/asset-groups'
+import type { Status } from '@/features/shared/types'
 import {
   ScopeBadge,
   ScopeCoverageCard,
@@ -120,152 +106,164 @@ import {
   getActiveScopeTargets,
   getActiveScopeExclusions,
   type ScopeMatchResult,
-} from "@/features/scope";
+} from '@/features/scope'
 
 // Filter types
-type StatusFilter = Status | "all";
-type PlatformFilter = "all" | "ios" | "android" | "cross-platform";
+type StatusFilter = Status | 'all'
+type PlatformFilter = 'all' | 'ios' | 'android' | 'cross-platform'
 
 const statusFilters: { value: StatusFilter; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "active", label: "Active" },
-  { value: "inactive", label: "Inactive" },
-  { value: "pending", label: "Pending" },
-];
+  { value: 'all', label: 'All' },
+  { value: 'active', label: 'Active' },
+  { value: 'inactive', label: 'Inactive' },
+  { value: 'pending', label: 'Pending' },
+]
 
 const platformFilters: { value: PlatformFilter; label: string }[] = [
-  { value: "all", label: "All Platforms" },
-  { value: "ios", label: "iOS" },
-  { value: "android", label: "Android" },
-  { value: "cross-platform", label: "Cross-Platform" },
-];
+  { value: 'all', label: 'All Platforms' },
+  { value: 'ios', label: 'iOS' },
+  { value: 'android', label: 'Android' },
+  { value: 'cross-platform', label: 'Cross-Platform' },
+]
 
 const platformLabels: Record<string, string> = {
-  ios: "iOS",
-  android: "Android",
-  "cross-platform": "Cross-Platform",
-};
+  ios: 'iOS',
+  android: 'Android',
+  'cross-platform': 'Cross-Platform',
+}
 
 // Empty form state
 const emptyMobileForm = {
-  name: "",
-  bundleId: "",
-  platform: "android" as "ios" | "android" | "cross-platform",
-  appVersion: "",
-  storeUrl: "",
-  groupId: "",
-};
+  name: '',
+  bundleId: '',
+  platform: 'android' as 'ios' | 'android' | 'cross-platform',
+  appVersion: '',
+  storeUrl: '',
+  groupId: '',
+}
 
 const getPlatformIcon = (platform: string) => {
   switch (platform) {
-    case "ios":
-      return <Apple className="h-4 w-4" />;
-    case "android":
-    case "cross-platform":
+    case 'ios':
+      return <Apple className="h-4 w-4" />
+    case 'android':
+    case 'cross-platform':
     default:
-      return <Smartphone className="h-4 w-4" />;
+      return <Smartphone className="h-4 w-4" />
   }
-};
+}
 
 const formatDownloads = (downloads?: number) => {
-  if (!downloads) return "N/A";
-  if (downloads >= 1000000) return `${(downloads / 1000000).toFixed(1)}M`;
-  if (downloads >= 1000) return `${(downloads / 1000).toFixed(1)}K`;
-  return downloads.toString();
-};
+  if (!downloads) return 'N/A'
+  if (downloads >= 1000000) return `${(downloads / 1000000).toFixed(1)}M`
+  if (downloads >= 1000) return `${(downloads / 1000).toFixed(1)}K`
+  return downloads.toString()
+}
 
 export default function MobileAppsPage() {
   // Permission checks
-  const { can } = usePermissions();
-  const canWriteAssets = can(Permission.AssetsWrite);
-  const canDeleteAssets = can(Permission.AssetsDelete);
+  const { can } = usePermissions()
+  const canWriteAssets = can(Permission.AssetsWrite)
+  const canDeleteAssets = can(Permission.AssetsDelete)
 
   // Fetch mobile apps from API
-  const { assets: mobileApps, isLoading: _isLoading, isError: _isError, error: _fetchError, mutate } = useAssets({
+  const {
+    assets: mobileApps,
+    isLoading: _isLoading,
+    isError: _isError,
+    error: _fetchError,
+    mutate,
+  } = useAssets({
     types: ['mobile_app'],
-  });
+  })
 
-  const [selectedMobileApp, setSelectedMobileApp] = useState<Asset | null>(null);
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [globalFilter, setGlobalFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [platformFilter, setPlatformFilter] = useState<PlatformFilter>("all");
-  const [rowSelection, setRowSelection] = useState({});
-  const [_isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedMobileApp, setSelectedMobileApp] = useState<Asset | null>(null)
+  const [sorting, setSorting] = useState<SortingState>([])
+  const [globalFilter, setGlobalFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [platformFilter, setPlatformFilter] = useState<PlatformFilter>('all')
+  const [rowSelection, setRowSelection] = useState({})
+  const [_isSubmitting, setIsSubmitting] = useState(false)
 
   // Dialog states
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [mobileAppToDelete, setMobileAppToDelete] = useState<Asset | null>(null);
+  const [addDialogOpen, setAddDialogOpen] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [mobileAppToDelete, setMobileAppToDelete] = useState<Asset | null>(null)
 
   // Form state
-  const [formData, setFormData] = useState(emptyMobileForm);
+  const [formData, setFormData] = useState(emptyMobileForm)
 
   // Filter data
   const filteredData = useMemo(() => {
-    let data = [...mobileApps];
-    if (statusFilter !== "all") {
-      data = data.filter((d) => d.status === statusFilter);
+    let data = [...mobileApps]
+    if (statusFilter !== 'all') {
+      data = data.filter((d) => d.status === statusFilter)
     }
-    if (platformFilter !== "all") {
-      data = data.filter((d) => d.metadata.platform === platformFilter);
+    if (platformFilter !== 'all') {
+      data = data.filter((d) => d.metadata.platform === platformFilter)
     }
-    return data;
-  }, [mobileApps, statusFilter, platformFilter]);
+    return data
+  }, [mobileApps, statusFilter, platformFilter])
 
   // Status counts
-  const statusCounts = useMemo(() => ({
-    all: mobileApps.length,
-    active: mobileApps.filter((d) => d.status === "active").length,
-    inactive: mobileApps.filter((d) => d.status === "inactive").length,
-    pending: mobileApps.filter((d) => d.status === "pending").length,
-  }), [mobileApps]);
+  const statusCounts = useMemo(
+    () => ({
+      all: mobileApps.length,
+      active: mobileApps.filter((d) => d.status === 'active').length,
+      inactive: mobileApps.filter((d) => d.status === 'inactive').length,
+      pending: mobileApps.filter((d) => d.status === 'pending').length,
+    }),
+    [mobileApps]
+  )
 
   // Additional stats
-  const stats = useMemo(() => ({
-    ios: mobileApps.filter((a) => a.metadata.platform === "ios").length,
-    android: mobileApps.filter((a) => a.metadata.platform === "android").length,
-    withFindings: mobileApps.filter((a) => a.findingCount > 0).length,
-  }), [mobileApps]);
+  const stats = useMemo(
+    () => ({
+      ios: mobileApps.filter((a) => a.metadata.platform === 'ios').length,
+      android: mobileApps.filter((a) => a.metadata.platform === 'android').length,
+      withFindings: mobileApps.filter((a) => a.findingCount > 0).length,
+    }),
+    [mobileApps]
+  )
 
   // Scope data
-  const scopeTargets = useMemo(() => getActiveScopeTargets(), []);
-  const scopeExclusions = useMemo(() => getActiveScopeExclusions(), []);
+  const scopeTargets = useMemo(() => getActiveScopeTargets(), [])
+  const scopeExclusions = useMemo(() => getActiveScopeExclusions(), [])
 
   // Compute scope matches for each mobile app
   const scopeMatchesMap = useMemo(() => {
-    const map = new Map<string, ScopeMatchResult>();
+    const map = new Map<string, ScopeMatchResult>()
     mobileApps.forEach((app) => {
       const match = getScopeMatchesForAsset(
-        { id: app.id, type: "mobile_app", name: app.name },
+        { id: app.id, type: 'mobile_app', name: app.name },
         scopeTargets,
         scopeExclusions
-      );
-      map.set(app.id, match);
-    });
-    return map;
-  }, [mobileApps, scopeTargets, scopeExclusions]);
+      )
+      map.set(app.id, match)
+    })
+    return map
+  }, [mobileApps, scopeTargets, scopeExclusions])
 
   // Calculate scope coverage for all mobile apps
   const scopeCoverage = useMemo(() => {
     const assets = mobileApps.map((a) => ({
       id: a.id,
       name: a.name,
-      type: "mobile_app",
-    }));
-    return calculateScopeCoverage(assets, scopeTargets, scopeExclusions);
-  }, [mobileApps, scopeTargets, scopeExclusions]);
+      type: 'mobile_app',
+    }))
+    return calculateScopeCoverage(assets, scopeTargets, scopeExclusions)
+  }, [mobileApps, scopeTargets, scopeExclusions])
 
   // Table columns
   const columns: ColumnDef<Asset>[] = [
     {
-      id: "select",
+      id: 'select',
       header: ({ table }) => (
         <Checkbox
           checked={
             table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && "indeterminate")
+            (table.getIsSomePageRowsSelected() && 'indeterminate')
           }
           onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
           aria-label="Select all"
@@ -281,11 +279,11 @@ export default function MobileAppsPage() {
       enableSorting: false,
     },
     {
-      accessorKey: "name",
+      accessorKey: 'name',
       header: ({ column }) => (
         <Button
           variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           className="-ml-4"
         >
           App
@@ -295,46 +293,48 @@ export default function MobileAppsPage() {
       cell: ({ row }) => (
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted">
-            {getPlatformIcon(row.original.metadata.platform || "android")}
+            {getPlatformIcon(row.original.metadata.platform || 'android')}
           </div>
           <div className="min-w-0">
             <p className="font-medium truncate">{row.original.name}</p>
-            <p className="text-muted-foreground text-xs font-mono truncate">{row.original.metadata.bundleId}</p>
+            <p className="text-muted-foreground text-xs font-mono truncate">
+              {row.original.metadata.bundleId}
+            </p>
           </div>
         </div>
       ),
     },
     {
-      accessorKey: "metadata.appVersion",
-      header: "Version",
+      accessorKey: 'metadata.appVersion',
+      header: 'Version',
       cell: ({ row }) => {
-        const version = row.original.metadata.appVersion;
-        const build = row.original.metadata.buildNumber;
+        const version = row.original.metadata.appVersion
+        const build = row.original.metadata.buildNumber
         return (
           <div>
-            <span className="font-mono">{version || "N/A"}</span>
+            <span className="font-mono">{version || 'N/A'}</span>
             {build && <span className="text-muted-foreground text-sm"> ({build})</span>}
           </div>
-        );
+        )
       },
     },
     {
-      accessorKey: "status",
-      header: "Status",
+      accessorKey: 'status',
+      header: 'Status',
       cell: ({ row }) => <StatusBadge status={row.original.status} />,
     },
     {
-      id: "scope",
-      header: "Scope",
+      id: 'scope',
+      header: 'Scope',
       cell: ({ row }) => {
-        const match = scopeMatchesMap.get(row.original.id);
-        if (!match) return <span className="text-muted-foreground">-</span>;
-        return <ScopeBadge match={match} />;
+        const match = scopeMatchesMap.get(row.original.id)
+        if (!match) return <span className="text-muted-foreground">-</span>
+        return <ScopeBadge match={match} />
       },
     },
     {
-      id: "classification",
-      header: "Classification",
+      id: 'classification',
+      header: 'Classification',
       cell: ({ row }) => (
         <ClassificationBadges
           scope={row.original.scope}
@@ -345,11 +345,11 @@ export default function MobileAppsPage() {
       ),
     },
     {
-      accessorKey: "findingCount",
+      accessorKey: 'findingCount',
       header: ({ column }) => (
         <Button
           variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           className="-ml-4"
         >
           Findings
@@ -357,21 +357,17 @@ export default function MobileAppsPage() {
         </Button>
       ),
       cell: ({ row }) => {
-        const count = row.original.findingCount;
-        if (count === 0) return <span className="text-muted-foreground">0</span>;
-        return (
-          <Badge variant={count > 5 ? "destructive" : "secondary"}>
-            {count}
-          </Badge>
-        );
+        const count = row.original.findingCount
+        if (count === 0) return <span className="text-muted-foreground">0</span>
+        return <Badge variant={count > 5 ? 'destructive' : 'secondary'}>{count}</Badge>
       },
     },
     {
-      accessorKey: "riskScore",
+      accessorKey: 'riskScore',
       header: ({ column }) => (
         <Button
           variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           className="-ml-4"
         >
           Risk
@@ -381,35 +377,60 @@ export default function MobileAppsPage() {
       cell: ({ row }) => <RiskScoreBadge score={row.original.riskScore} size="sm" />,
     },
     {
-      id: "actions",
+      id: 'actions',
       cell: ({ row }) => {
-        const app = row.original;
+        const app = row.original
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSelectedMobileApp(app); }}>
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setSelectedMobileApp(app)
+                }}
+              >
                 <Eye className="mr-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
               <Can permission={Permission.AssetsWrite}>
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenEdit(app); }}>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleOpenEdit(app)
+                  }}
+                >
                   <Pencil className="mr-2 h-4 w-4" />
                   Edit
                 </DropdownMenuItem>
               </Can>
               {app.metadata.bundleId && (
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleCopyBundleId(app); }}>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleCopyBundleId(app)
+                  }}
+                >
                   <Copy className="mr-2 h-4 w-4" />
                   Copy Bundle ID
                 </DropdownMenuItem>
               )}
               {app.metadata.storeUrl && (
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); window.open(app.metadata.storeUrl, "_blank"); }}>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    window.open(app.metadata.storeUrl, '_blank')
+                  }}
+                >
                   <ExternalLink className="mr-2 h-4 w-4" />
                   Open Store
                 </DropdownMenuItem>
@@ -419,9 +440,9 @@ export default function MobileAppsPage() {
                 <DropdownMenuItem
                   className="text-red-400"
                   onClick={(e) => {
-                    e.stopPropagation();
-                    setMobileAppToDelete(app);
-                    setDeleteDialogOpen(true);
+                    e.stopPropagation()
+                    setMobileAppToDelete(app)
+                    setDeleteDialogOpen(true)
                   }}
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
@@ -430,10 +451,10 @@ export default function MobileAppsPage() {
               </Can>
             </DropdownMenuContent>
           </DropdownMenu>
-        );
+        )
       },
     },
-  ];
+  ]
 
   const table = useReactTable({
     data: filteredData,
@@ -446,66 +467,66 @@ export default function MobileAppsPage() {
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-  });
+  })
 
   // Handlers
   const handleCopyBundleId = (app: Asset) => {
-    navigator.clipboard.writeText(app.metadata.bundleId || app.name);
-    toast.success("Bundle ID copied to clipboard");
-  };
+    navigator.clipboard.writeText(app.metadata.bundleId || app.name)
+    toast.success('Bundle ID copied to clipboard')
+  }
 
   const handleOpenEdit = (app: Asset) => {
     setFormData({
       name: app.name,
-      bundleId: app.metadata.bundleId || "",
-      platform: app.metadata.platform || "android",
-      appVersion: app.metadata.appVersion || "",
-      storeUrl: app.metadata.storeUrl || "",
-      groupId: app.groupId || "",
-    });
-    setSelectedMobileApp(app);
-    setEditDialogOpen(true);
-  };
+      bundleId: app.metadata.bundleId || '',
+      platform: app.metadata.platform || 'android',
+      appVersion: app.metadata.appVersion || '',
+      storeUrl: app.metadata.storeUrl || '',
+      groupId: app.groupId || '',
+    })
+    setSelectedMobileApp(app)
+    setEditDialogOpen(true)
+  }
 
   const handleAddMobileApp = async () => {
     if (!formData.name || !formData.bundleId) {
-      toast.error("Please fill in required fields");
-      return;
+      toast.error('Please fill in required fields')
+      return
     }
 
-    setIsSubmitting(true);
+    setIsSubmitting(true)
     try {
       await createAsset({
         name: formData.name,
-        type: "mobile_app",
-        criticality: "medium",
-        scope: "external",
-        exposure: "public",
+        type: 'mobile_app',
+        criticality: 'medium',
+        scope: 'external',
+        exposure: 'public',
         metadata: {
           platform: formData.platform,
           bundleId: formData.bundleId,
           appVersion: formData.appVersion,
           storeUrl: formData.storeUrl,
         },
-      });
-      await mutate();
-      setFormData(emptyMobileForm);
-      setAddDialogOpen(false);
-      toast.success("Mobile app added successfully");
+      })
+      await mutate()
+      setFormData(emptyMobileForm)
+      setAddDialogOpen(false)
+      toast.success('Mobile app added successfully')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to add mobile app");
+      toast.error(err instanceof Error ? err.message : 'Failed to add mobile app')
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   const handleEditMobileApp = async () => {
     if (!selectedMobileApp || !formData.name || !formData.bundleId) {
-      toast.error("Please fill in required fields");
-      return;
+      toast.error('Please fill in required fields')
+      return
     }
 
-    setIsSubmitting(true);
+    setIsSubmitting(true)
     try {
       await updateAsset(selectedMobileApp.id, {
         name: formData.name,
@@ -516,85 +537,79 @@ export default function MobileAppsPage() {
           appVersion: formData.appVersion,
           storeUrl: formData.storeUrl,
         },
-      });
-      await mutate();
-      setFormData(emptyMobileForm);
-      setEditDialogOpen(false);
-      setSelectedMobileApp(null);
-      toast.success("Mobile app updated successfully");
+      })
+      await mutate()
+      setFormData(emptyMobileForm)
+      setEditDialogOpen(false)
+      setSelectedMobileApp(null)
+      toast.success('Mobile app updated successfully')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to update mobile app");
+      toast.error(err instanceof Error ? err.message : 'Failed to update mobile app')
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   const handleDeleteMobileApp = async () => {
-    if (!mobileAppToDelete) return;
-    setIsSubmitting(true);
+    if (!mobileAppToDelete) return
+    setIsSubmitting(true)
     try {
-      await deleteAsset(mobileAppToDelete.id);
-      await mutate();
-      setDeleteDialogOpen(false);
-      setMobileAppToDelete(null);
-      toast.success("Mobile app deleted successfully");
+      await deleteAsset(mobileAppToDelete.id)
+      await mutate()
+      setDeleteDialogOpen(false)
+      setMobileAppToDelete(null)
+      toast.success('Mobile app deleted successfully')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete mobile app");
+      toast.error(err instanceof Error ? err.message : 'Failed to delete mobile app')
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   const handleBulkDelete = async () => {
-    const selectedMobileAppIds = table.getSelectedRowModel().rows.map((r) => r.original.id);
-    if (selectedMobileAppIds.length === 0) return;
-    setIsSubmitting(true);
+    const selectedMobileAppIds = table.getSelectedRowModel().rows.map((r) => r.original.id)
+    if (selectedMobileAppIds.length === 0) return
+    setIsSubmitting(true)
     try {
-      await bulkDeleteAssets(selectedMobileAppIds);
-      await mutate();
-      setRowSelection({});
-      toast.success(`Deleted ${selectedMobileAppIds.length} mobile apps`);
+      await bulkDeleteAssets(selectedMobileAppIds)
+      await mutate()
+      setRowSelection({})
+      toast.success(`Deleted ${selectedMobileAppIds.length} mobile apps`)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete mobile apps");
+      toast.error(err instanceof Error ? err.message : 'Failed to delete mobile apps')
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   const handleExport = () => {
     const csv = [
-      ["Name", "Bundle ID", "Platform", "Version", "Status", "Risk Score", "Findings"].join(","),
+      ['Name', 'Bundle ID', 'Platform', 'Version', 'Status', 'Risk Score', 'Findings'].join(','),
       ...mobileApps.map((a) =>
         [
           a.name,
-          a.metadata.bundleId || "",
-          a.metadata.platform || "",
-          a.metadata.appVersion || "",
+          a.metadata.bundleId || '',
+          a.metadata.platform || '',
+          a.metadata.appVersion || '',
           a.status,
           a.riskScore,
           a.findingCount,
-        ].join(",")
+        ].join(',')
       ),
-    ].join("\n");
+    ].join('\n')
 
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "mobile-apps.csv";
-    link.click();
-    toast.success("Mobile apps exported");
-  };
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'mobile-apps.csv'
+    link.click()
+    toast.success('Mobile apps exported')
+  }
 
   return (
     <>
-      <Header fixed>
-        <div className="ms-auto flex items-center gap-2 sm:gap-4">
-          <Search />
-          <ThemeSwitch />
-          <ProfileDropdown />
-        </div>
-      </Header>
+      <Header fixed />
 
       <Main>
         <PageHeader
@@ -607,10 +622,12 @@ export default function MobileAppsPage() {
               Export
             </Button>
             <Can permission={Permission.AssetsWrite}>
-              <Button onClick={() => {
-                setFormData(emptyMobileForm);
-                setAddDialogOpen(true);
-              }}>
+              <Button
+                onClick={() => {
+                  setFormData(emptyMobileForm)
+                  setAddDialogOpen(true)
+                }}
+              >
                 <Plus className="mr-2 h-4 w-4" />
                 Add App
               </Button>
@@ -620,7 +637,10 @@ export default function MobileAppsPage() {
 
         {/* Stats Cards */}
         <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <Card className="cursor-pointer hover:border-primary transition-colors" onClick={() => setStatusFilter("all")}>
+          <Card
+            className="cursor-pointer hover:border-primary transition-colors"
+            onClick={() => setStatusFilter('all')}
+          >
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
                 <Smartphone className="h-4 w-4" />
@@ -629,7 +649,10 @@ export default function MobileAppsPage() {
               <CardTitle className="text-3xl">{statusCounts.all}</CardTitle>
             </CardHeader>
           </Card>
-          <Card className={`cursor-pointer hover:border-gray-500 transition-colors ${platformFilter === "ios" ? "border-gray-500" : ""}`} onClick={() => setPlatformFilter("ios")}>
+          <Card
+            className={`cursor-pointer hover:border-gray-500 transition-colors ${platformFilter === 'ios' ? 'border-gray-500' : ''}`}
+            onClick={() => setPlatformFilter('ios')}
+          >
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
                 <Apple className="h-4 w-4 text-gray-500" />
@@ -638,7 +661,10 @@ export default function MobileAppsPage() {
               <CardTitle className="text-3xl text-gray-500">{stats.ios}</CardTitle>
             </CardHeader>
           </Card>
-          <Card className={`cursor-pointer hover:border-green-500 transition-colors ${platformFilter === "android" ? "border-green-500" : ""}`} onClick={() => setPlatformFilter("android")}>
+          <Card
+            className={`cursor-pointer hover:border-green-500 transition-colors ${platformFilter === 'android' ? 'border-green-500' : ''}`}
+            onClick={() => setPlatformFilter('android')}
+          >
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
                 <Smartphone className="h-4 w-4 text-green-500" />
@@ -696,7 +722,10 @@ export default function MobileAppsPage() {
                 </TabsList>
               </Tabs>
 
-              <Select value={platformFilter} onValueChange={(v) => setPlatformFilter(v as PlatformFilter)}>
+              <Select
+                value={platformFilter}
+                onValueChange={(v) => setPlatformFilter(v as PlatformFilter)}
+              >
                 <SelectTrigger className="w-[160px]">
                   <SelectValue placeholder="Filter by platform" />
                 </SelectTrigger>
@@ -731,7 +760,7 @@ export default function MobileAppsPage() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => toast.info("Scanning selected apps...")}>
+                      <DropdownMenuItem onClick={() => toast.info('Scanning selected apps...')}>
                         <RefreshCw className="mr-2 h-4 w-4" />
                         Rescan Selected
                       </DropdownMenuItem>
@@ -769,14 +798,16 @@ export default function MobileAppsPage() {
                     table.getRowModel().rows.map((row) => (
                       <TableRow
                         key={row.id}
-                        data-state={row.getIsSelected() && "selected"}
+                        data-state={row.getIsSelected() && 'selected'}
                         className="cursor-pointer"
                         onClick={(e) => {
-                          if ((e.target as HTMLElement).closest('[role="checkbox"]') ||
-                              (e.target as HTMLElement).closest('button')) {
-                            return;
+                          if (
+                            (e.target as HTMLElement).closest('[role="checkbox"]') ||
+                            (e.target as HTMLElement).closest('button')
+                          ) {
+                            return
                           }
-                          setSelectedMobileApp(row.original);
+                          setSelectedMobileApp(row.original)
                         }}
                       >
                         {row.getVisibleCells().map((cell) => (
@@ -800,7 +831,7 @@ export default function MobileAppsPage() {
             {/* Pagination */}
             <div className="flex items-center justify-between mt-4">
               <p className="text-sm text-muted-foreground">
-                {table.getFilteredSelectedRowModel().rows.length} of{" "}
+                {table.getFilteredSelectedRowModel().rows.length} of{' '}
                 {table.getFilteredRowModel().rows.length} row(s) selected
               </p>
               <div className="flex flex-wrap items-center gap-2">
@@ -860,16 +891,20 @@ export default function MobileAppsPage() {
         onEdit={() => selectedMobileApp && handleOpenEdit(selectedMobileApp)}
         onDelete={() => {
           if (selectedMobileApp) {
-            setMobileAppToDelete(selectedMobileApp);
-            setDeleteDialogOpen(true);
-            setSelectedMobileApp(null);
+            setMobileAppToDelete(selectedMobileApp)
+            setDeleteDialogOpen(true)
+            setSelectedMobileApp(null)
           }
         }}
         canEdit={canWriteAssets}
         canDelete={canDeleteAssets}
         quickActions={
           selectedMobileApp?.metadata.bundleId && (
-            <Button size="sm" variant="outline" onClick={() => selectedMobileApp && handleCopyBundleId(selectedMobileApp)}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => selectedMobileApp && handleCopyBundleId(selectedMobileApp)}
+            >
               <Copy className="mr-2 h-4 w-4" />
               Copy Bundle ID
             </Button>
@@ -914,7 +949,9 @@ export default function MobileAppsPage() {
                             <Badge variant="outline" className="text-xs">
                               {target.pattern}
                             </Badge>
-                            <span className="text-xs text-muted-foreground">({target.matchType})</span>
+                            <span className="text-xs text-muted-foreground">
+                              ({target.matchType})
+                            </span>
                           </div>
                         ))}
                       </div>
@@ -924,16 +961,23 @@ export default function MobileAppsPage() {
                     <div className="text-sm">
                       <p className="text-muted-foreground mb-1">Exclusions Applied</p>
                       <div className="space-y-1">
-                        {scopeMatchesMap.get(selectedMobileApp.id)!.matchedExclusions.map((exclusion) => (
-                          <div key={exclusion.exclusionId} className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-xs border-orange-500/50 text-orange-500">
-                              {exclusion.pattern}
-                            </Badge>
-                            {exclusion.reason && (
-                              <span className="text-xs text-muted-foreground">{exclusion.reason}</span>
-                            )}
-                          </div>
-                        ))}
+                        {scopeMatchesMap
+                          .get(selectedMobileApp.id)!
+                          .matchedExclusions.map((exclusion) => (
+                            <div key={exclusion.exclusionId} className="flex items-center gap-2">
+                              <Badge
+                                variant="outline"
+                                className="text-xs border-orange-500/50 text-orange-500"
+                              >
+                                {exclusion.pattern}
+                              </Badge>
+                              {exclusion.reason && (
+                                <span className="text-xs text-muted-foreground">
+                                  {exclusion.reason}
+                                </span>
+                              )}
+                            </div>
+                          ))}
                       </div>
                     </div>
                   )}
@@ -947,29 +991,41 @@ export default function MobileAppsPage() {
                   <div>
                     <p className="text-muted-foreground">Platform</p>
                     <div className="flex items-center gap-2 font-medium">
-                      {getPlatformIcon(selectedMobileApp.metadata.platform || "android")}
-                      <span>{platformLabels[selectedMobileApp.metadata.platform || "android"]}</span>
+                      {getPlatformIcon(selectedMobileApp.metadata.platform || 'android')}
+                      <span>
+                        {platformLabels[selectedMobileApp.metadata.platform || 'android']}
+                      </span>
                     </div>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Version</p>
-                    <p className="font-mono font-medium">{selectedMobileApp.metadata.appVersion || "-"}</p>
+                    <p className="font-mono font-medium">
+                      {selectedMobileApp.metadata.appVersion || '-'}
+                    </p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Build Number</p>
-                    <p className="font-mono font-medium">{selectedMobileApp.metadata.buildNumber || "-"}</p>
+                    <p className="font-mono font-medium">
+                      {selectedMobileApp.metadata.buildNumber || '-'}
+                    </p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Bundle ID</p>
-                    <p className="font-mono font-medium text-xs break-all">{selectedMobileApp.metadata.bundleId || "-"}</p>
+                    <p className="font-mono font-medium text-xs break-all">
+                      {selectedMobileApp.metadata.bundleId || '-'}
+                    </p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Min SDK</p>
-                    <p className="font-mono font-medium">{selectedMobileApp.metadata.minSdkVersion || "-"}</p>
+                    <p className="font-mono font-medium">
+                      {selectedMobileApp.metadata.minSdkVersion || '-'}
+                    </p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Target SDK</p>
-                    <p className="font-mono font-medium">{selectedMobileApp.metadata.targetSdkVersion || "-"}</p>
+                    <p className="font-mono font-medium">
+                      {selectedMobileApp.metadata.targetSdkVersion || '-'}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -981,7 +1037,9 @@ export default function MobileAppsPage() {
                   <div className="flex items-center gap-3">
                     <Download className="h-5 w-5 text-blue-500" />
                     <div>
-                      <p className="text-lg font-bold">{formatDownloads(selectedMobileApp.metadata.downloads)}</p>
+                      <p className="text-lg font-bold">
+                        {formatDownloads(selectedMobileApp.metadata.downloads)}
+                      </p>
                       <p className="text-xs text-muted-foreground">Downloads</p>
                     </div>
                   </div>
@@ -989,7 +1047,7 @@ export default function MobileAppsPage() {
                     <Star className="h-5 w-5 text-yellow-500" />
                     <div>
                       <p className="text-lg font-bold">
-                        {selectedMobileApp.metadata.rating?.toFixed(1) || "-"}
+                        {selectedMobileApp.metadata.rating?.toFixed(1) || '-'}
                       </p>
                       <p className="text-xs text-muted-foreground">Rating</p>
                     </div>
@@ -1008,7 +1066,7 @@ export default function MobileAppsPage() {
                     variant="outline"
                     size="sm"
                     className="w-full mt-2"
-                    onClick={() => window.open(selectedMobileApp.metadata.storeUrl, "_blank")}
+                    onClick={() => window.open(selectedMobileApp.metadata.storeUrl, '_blank')}
                   >
                     <ExternalLink className="mr-2 h-4 w-4" />
                     Open in Store
@@ -1017,24 +1075,35 @@ export default function MobileAppsPage() {
               </div>
 
               {/* Permissions */}
-              {selectedMobileApp.metadata.permissions && selectedMobileApp.metadata.permissions.length > 0 && (
-                <div className="rounded-xl border p-4 bg-card">
-                  <SectionTitle>Permissions ({selectedMobileApp.metadata.permissions.length})</SectionTitle>
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {selectedMobileApp.metadata.permissions.map((permission: string, index: number) => (
-                      <Badge key={index} variant="outline" className="text-xs font-mono">{permission}</Badge>
-                    ))}
+              {selectedMobileApp.metadata.permissions &&
+                selectedMobileApp.metadata.permissions.length > 0 && (
+                  <div className="rounded-xl border p-4 bg-card">
+                    <SectionTitle>
+                      Permissions ({selectedMobileApp.metadata.permissions.length})
+                    </SectionTitle>
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {selectedMobileApp.metadata.permissions.map(
+                        (permission: string, index: number) => (
+                          <Badge key={index} variant="outline" className="text-xs font-mono">
+                            {permission}
+                          </Badge>
+                        )
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
               {/* SDKs */}
               {selectedMobileApp.metadata.sdks && selectedMobileApp.metadata.sdks.length > 0 && (
                 <div className="rounded-xl border p-4 bg-card">
-                  <SectionTitle>Third-party SDKs ({selectedMobileApp.metadata.sdks.length})</SectionTitle>
+                  <SectionTitle>
+                    Third-party SDKs ({selectedMobileApp.metadata.sdks.length})
+                  </SectionTitle>
                   <div className="flex flex-wrap gap-1 mt-2">
                     {selectedMobileApp.metadata.sdks.map((sdk: string, index: number) => (
-                      <Badge key={index} variant="secondary" className="text-xs">{sdk}</Badge>
+                      <Badge key={index} variant="secondary" className="text-xs">
+                        {sdk}
+                      </Badge>
                     ))}
                   </div>
                 </div>
@@ -1080,7 +1149,9 @@ export default function MobileAppsPage() {
                 <Label htmlFor="platform">Platform *</Label>
                 <Select
                   value={formData.platform}
-                  onValueChange={(value) => setFormData({ ...formData, platform: value as typeof formData.platform })}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, platform: value as typeof formData.platform })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select platform" />
@@ -1150,9 +1221,7 @@ export default function MobileAppsPage() {
               <Pencil className="h-5 w-5" />
               Edit Mobile App
             </DialogTitle>
-            <DialogDescription>
-              Update mobile application details
-            </DialogDescription>
+            <DialogDescription>Update mobile application details</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -1178,7 +1247,9 @@ export default function MobileAppsPage() {
                 <Label htmlFor="edit-platform">Platform *</Label>
                 <Select
                   value={formData.platform}
-                  onValueChange={(value) => setFormData({ ...formData, platform: value as typeof formData.platform })}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, platform: value as typeof formData.platform })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select platform" />
@@ -1246,8 +1317,8 @@ export default function MobileAppsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Mobile App</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete <strong>{mobileAppToDelete?.name}</strong>?
-              This action cannot be undone.
+              Are you sure you want to delete <strong>{mobileAppToDelete?.name}</strong>? This
+              action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1262,5 +1333,5 @@ export default function MobileAppsPage() {
         </AlertDialogContent>
       </AlertDialog>
     </>
-  );
+  )
 }

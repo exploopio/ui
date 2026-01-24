@@ -1,15 +1,12 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Header, Main } from "@/components/layout";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search as SearchComponent } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { cn } from "@/lib/utils";
+import { useState } from 'react'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Header, Main } from '@/components/layout'
+import { cn } from '@/lib/utils'
 import {
   TrendingUp,
   AlertOctagon,
@@ -19,26 +16,23 @@ import {
   Loader2,
   ExternalLink,
   Info,
-} from "lucide-react";
-import { toast } from "sonner";
-import { useTenant } from "@/context/tenant-provider";
+} from 'lucide-react'
+import { toast } from 'sonner'
+import { useTenant } from '@/context/tenant-provider'
 
-import {
-  useThreatIntelStats,
-  enrichCVE,
-} from "@/features/threat-intel/hooks";
+import { useThreatIntelStats, enrichCVE } from '@/features/threat-intel/hooks'
 import {
   ThreatIntelOverview,
   SyncStatusManager,
   CompactSyncStatus,
-} from "@/features/threat-intel/components";
-import { EPSSScoreBadge, EPSSScoreMeter } from "@/features/shared/components/epss-score-badge";
-import { KEVIndicatorBadge, KEVStatus } from "@/features/shared/components/kev-indicator-badge";
-import type { CVEEnrichment } from "@/lib/api/threatintel-types";
+} from '@/features/threat-intel/components'
+import { EPSSScoreBadge, EPSSScoreMeter } from '@/features/shared/components/epss-score-badge'
+import { KEVIndicatorBadge, KEVStatus } from '@/features/shared/components/kev-indicator-badge'
+import type { CVEEnrichment } from '@/lib/api/threatintel-types'
 
 export default function ThreatIntelPage() {
-  const { currentTenant } = useTenant();
-  const tenantId = currentTenant?.id || null;
+  const { currentTenant } = useTenant()
+  const tenantId = currentTenant?.id || null
 
   // Use unified stats hook - single API call for all data
   const {
@@ -47,23 +41,17 @@ export default function ThreatIntelPage() {
     syncStatuses,
     isLoading,
     mutate: refresh,
-  } = useThreatIntelStats(tenantId);
+  } = useThreatIntelStats(tenantId)
 
   const handleRefreshAll = () => {
-    refresh();
-  };
+    refresh()
+  }
 
-  const lastSync = syncStatuses.length > 0 ? syncStatuses[0].last_sync_at : undefined;
+  const lastSync = syncStatuses.length > 0 ? syncStatuses[0].last_sync_at : undefined
 
   return (
     <>
-      <Header fixed>
-        <div className="ms-auto flex items-center gap-2 sm:gap-4">
-          <SearchComponent />
-          <ThemeSwitch />
-          <ProfileDropdown />
-        </div>
-      </Header>
+      <Header fixed />
 
       <Main>
         <div className="space-y-6">
@@ -112,9 +100,7 @@ export default function ThreatIntelPage() {
                   icon={TrendingUp}
                   iconColor="text-orange-500"
                   description="The Exploit Prediction Scoring System (EPSS) provides a probability score (0-1) indicating the likelihood that a vulnerability will be exploited in the next 30 days."
-                  links={[
-                    { label: "FIRST EPSS", url: "https://www.first.org/epss/" },
-                  ]}
+                  links={[{ label: 'FIRST EPSS', url: 'https://www.first.org/epss/' }]}
                 />
                 <InfoCard
                   title="What is CISA KEV?"
@@ -122,7 +108,10 @@ export default function ThreatIntelPage() {
                   iconColor="text-red-500"
                   description="The CISA Known Exploited Vulnerabilities (KEV) catalog lists vulnerabilities that are being actively exploited in the wild and require immediate remediation attention."
                   links={[
-                    { label: "CISA KEV Catalog", url: "https://www.cisa.gov/known-exploited-vulnerabilities-catalog" },
+                    {
+                      label: 'CISA KEV Catalog',
+                      url: 'https://www.cisa.gov/known-exploited-vulnerabilities-catalog',
+                    },
                   ]}
                 />
               </div>
@@ -135,24 +124,21 @@ export default function ThreatIntelPage() {
 
             {/* Sync Status Tab */}
             <TabsContent value="sync" className="space-y-4">
-              <SyncStatusManager
-                statuses={syncStatuses}
-                onRefresh={refresh}
-              />
+              <SyncStatusManager statuses={syncStatuses} onRefresh={refresh} />
             </TabsContent>
           </Tabs>
         </div>
       </Main>
     </>
-  );
+  )
 }
 
 interface InfoCardProps {
-  title: string;
-  icon: typeof Shield;
-  iconColor: string;
-  description: string;
-  links?: Array<{ label: string; url: string }>;
+  title: string
+  icon: typeof Shield
+  iconColor: string
+  description: string
+  links?: Array<{ label: string; url: string }>
 }
 
 function InfoCard({ title, icon: Icon, iconColor, description, links }: InfoCardProps) {
@@ -160,7 +146,7 @@ function InfoCard({ title, icon: Icon, iconColor, description, links }: InfoCard
     <Card>
       <CardHeader>
         <CardTitle className="text-base flex items-center gap-2">
-          <Icon className={cn("h-4 w-4", iconColor)} />
+          <Icon className={cn('h-4 w-4', iconColor)} />
           {title}
         </CardTitle>
       </CardHeader>
@@ -184,42 +170,42 @@ function InfoCard({ title, icon: Icon, iconColor, description, links }: InfoCard
         )}
       </CardContent>
     </Card>
-  );
+  )
 }
 
 function CVELookup() {
-  const [cveId, setCveId] = useState("");
-  const [isLookingUp, setIsLookingUp] = useState(false);
-  const [result, setResult] = useState<CVEEnrichment | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [cveId, setCveId] = useState('')
+  const [isLookingUp, setIsLookingUp] = useState(false)
+  const [result, setResult] = useState<CVEEnrichment | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   const handleLookup = async () => {
     if (!cveId.trim()) {
-      toast.error("Please enter a CVE ID");
-      return;
+      toast.error('Please enter a CVE ID')
+      return
     }
 
     // Validate CVE format
-    const cveRegex = /^CVE-\d{4}-\d{4,}$/i;
+    const cveRegex = /^CVE-\d{4}-\d{4,}$/i
     if (!cveRegex.test(cveId.trim())) {
-      toast.error("Invalid CVE format. Expected: CVE-YYYY-NNNNN");
-      return;
+      toast.error('Invalid CVE format. Expected: CVE-YYYY-NNNNN')
+      return
     }
 
-    setIsLookingUp(true);
-    setError(null);
-    setResult(null);
+    setIsLookingUp(true)
+    setError(null)
+    setResult(null)
 
     try {
-      const enrichment = await enrichCVE(cveId.trim().toUpperCase());
-      setResult(enrichment);
+      const enrichment = await enrichCVE(cveId.trim().toUpperCase())
+      setResult(enrichment)
     } catch (err) {
-      setError("CVE not found or enrichment data unavailable");
-      console.error(err);
+      setError('CVE not found or enrichment data unavailable')
+      console.error(err)
     } finally {
-      setIsLookingUp(false);
+      setIsLookingUp(false)
     }
-  };
+  }
 
   return (
     <div className="space-y-6">
@@ -227,9 +213,7 @@ function CVELookup() {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">CVE Lookup</CardTitle>
-          <CardDescription>
-            Look up EPSS score and KEV status for any CVE
-          </CardDescription>
+          <CardDescription>Look up EPSS score and KEV status for any CVE</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex gap-3">
@@ -239,7 +223,7 @@ function CVELookup() {
                 placeholder="Enter CVE ID (e.g., CVE-2021-44228)"
                 value={cveId}
                 onChange={(e) => setCveId(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleLookup()}
+                onKeyDown={(e) => e.key === 'Enter' && handleLookup()}
                 className="pl-9"
               />
             </div>
@@ -286,12 +270,16 @@ function CVELookup() {
                   )}
                   <KEVIndicatorBadge
                     inKEV={!!result.kev}
-                    kevData={result.kev ? {
-                      date_added: result.kev.date_added,
-                      due_date: result.kev.due_date,
-                      ransomware_use: result.kev.known_ransomware_campaign_use,
-                      notes: result.kev.notes,
-                    } : null}
+                    kevData={
+                      result.kev
+                        ? {
+                            date_added: result.kev.date_added,
+                            due_date: result.kev.due_date,
+                            ransomware_use: result.kev.known_ransomware_campaign_use,
+                            notes: result.kev.notes,
+                          }
+                        : null
+                    }
                     size="lg"
                   />
                 </div>
@@ -315,21 +303,15 @@ function CVELookup() {
                 <div className="grid gap-4 md:grid-cols-3">
                   <div>
                     <p className="text-sm text-muted-foreground">Score</p>
-                    <p className="text-2xl font-bold">
-                      {(result.epss.score * 100).toFixed(2)}%
-                    </p>
+                    <p className="text-2xl font-bold">{(result.epss.score * 100).toFixed(2)}%</p>
                     <p className="text-xs text-muted-foreground">
                       Probability of exploitation in next 30 days
                     </p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Percentile</p>
-                    <p className="text-2xl font-bold">
-                      {result.epss.percentile.toFixed(1)}%
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Higher than this % of all CVEs
-                    </p>
+                    <p className="text-2xl font-bold">{result.epss.percentile.toFixed(1)}%</p>
+                    <p className="text-xs text-muted-foreground">Higher than this % of all CVEs</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Model Version</p>
@@ -373,21 +355,15 @@ function CVELookup() {
                   </div>
                   <div>
                     <p className="text-sm font-medium">Vulnerability Name</p>
-                    <p className="text-sm text-muted-foreground">
-                      {result.kev.vulnerability_name}
-                    </p>
+                    <p className="text-sm text-muted-foreground">{result.kev.vulnerability_name}</p>
                   </div>
                   <div>
                     <p className="text-sm font-medium">Description</p>
-                    <p className="text-sm text-muted-foreground">
-                      {result.kev.short_description}
-                    </p>
+                    <p className="text-sm text-muted-foreground">{result.kev.short_description}</p>
                   </div>
                   <div>
                     <p className="text-sm font-medium">Required Action</p>
-                    <p className="text-sm text-muted-foreground">
-                      {result.kev.required_action}
-                    </p>
+                    <p className="text-sm text-muted-foreground">{result.kev.required_action}</p>
                   </div>
                 </div>
               </CardContent>
@@ -417,5 +393,5 @@ function CVELookup() {
         </div>
       )}
     </div>
-  );
+  )
 }

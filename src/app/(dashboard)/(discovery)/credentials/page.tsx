@@ -1,6 +1,6 @@
-"use client";
+'use client'
 
-import { useState, useMemo } from "react";
+import { useState, useMemo } from 'react'
 import {
   ColumnDef,
   flexRender,
@@ -10,12 +10,9 @@ import {
   getSortedRowModel,
   SortingState,
   useReactTable,
-} from "@tanstack/react-table";
-import { Header, Main } from "@/components/layout";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { PageHeader, StatusBadge, RiskScoreBadge } from "@/features/shared";
+} from '@tanstack/react-table'
+import { Header, Main } from '@/components/layout'
+import { PageHeader, StatusBadge, RiskScoreBadge } from '@/features/shared'
 import {
   AssetDetailSheet,
   StatCard,
@@ -25,20 +22,14 @@ import {
   SectionTitle,
   ClassificationBadges,
   SecretValueField,
-} from "@/features/assets";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+} from '@/features/assets'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Textarea } from '@/components/ui/textarea'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -46,7 +37,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from '@/components/ui/table'
 import {
   Dialog,
   DialogContent,
@@ -54,7 +45,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -64,22 +55,22 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+} from '@/components/ui/alert-dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { toast } from "sonner";
+} from '@/components/ui/select'
+import { toast } from 'sonner'
 import {
   Plus,
   KeyRound,
@@ -107,10 +98,10 @@ import {
   List,
   ChevronDown,
   Mail,
-} from "lucide-react";
-import { type Asset } from "@/features/assets";
-import { mockAssetGroups } from "@/features/asset-groups";
-import type { Status } from "@/features/shared/types";
+} from 'lucide-react'
+import { type Asset } from '@/features/assets'
+import { mockAssetGroups } from '@/features/asset-groups'
+import type { Status } from '@/features/shared/types'
 import {
   useCredentialsApi,
   useCredentialStatsApi,
@@ -120,95 +111,99 @@ import {
   mapCredentialsToAssets,
   extractCredentialStats,
   invalidateCredentialsCache,
-} from "@/features/credentials";
-import type { ApiIdentityExposure, ApiCredential } from "@/features/credentials/api/credential-api.types";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Can, Permission } from "@/lib/permissions";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { Skeleton } from "@/components/ui/skeleton";
+} from '@/features/credentials'
+import type {
+  ApiIdentityExposure,
+  ApiCredential,
+} from '@/features/credentials/api/credential-api.types'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Can, Permission } from '@/lib/permissions'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { Skeleton } from '@/components/ui/skeleton'
 
 // Filter types
-type StatusFilter = Status | "all";
-type SourceFilter = "all" | "darkweb" | "github" | "phishing" | "breach" | "internal" | "other";
+type StatusFilter = Status | 'all'
+type SourceFilter = 'all' | 'darkweb' | 'github' | 'phishing' | 'breach' | 'internal' | 'other'
 
 const statusFilters: { value: StatusFilter; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "active", label: "Active" },
-  { value: "pending", label: "Pending" },
-  { value: "completed", label: "Resolved" },
-  { value: "inactive", label: "Inactive" },
-];
+  { value: 'all', label: 'All' },
+  { value: 'active', label: 'Active' },
+  { value: 'pending', label: 'Pending' },
+  { value: 'completed', label: 'Resolved' },
+  { value: 'inactive', label: 'Inactive' },
+]
 
 const sourceFilters: { value: SourceFilter; label: string }[] = [
-  { value: "all", label: "All Sources" },
-  { value: "darkweb", label: "Dark Web" },
-  { value: "github", label: "GitHub/GitLab" },
-  { value: "phishing", label: "Phishing" },
-  { value: "breach", label: "Data Breach" },
-  { value: "internal", label: "Internal" },
-  { value: "other", label: "Other" },
-];
+  { value: 'all', label: 'All Sources' },
+  { value: 'darkweb', label: 'Dark Web' },
+  { value: 'github', label: 'GitHub/GitLab' },
+  { value: 'phishing', label: 'Phishing' },
+  { value: 'breach', label: 'Data Breach' },
+  { value: 'internal', label: 'Internal' },
+  { value: 'other', label: 'Other' },
+]
 
 // Empty form state
 const emptyCredentialForm = {
-  name: "",
-  description: "",
-  groupId: "",
-  source: "",
-  username: "",
-  leakDate: "",
-  tags: "",
-};
+  name: '',
+  description: '',
+  groupId: '',
+  source: '',
+  username: '',
+  leakDate: '',
+  tags: '',
+}
 
 // Source categorization helper
 const categorizeSource = (source: string): SourceFilter => {
-  const s = source.toLowerCase();
-  if (s.includes("dark") || s.includes("darkweb")) return "darkweb";
-  if (s.includes("github") || s.includes("gitlab") || s.includes("gist") || s.includes("commit")) return "github";
-  if (s.includes("phishing")) return "phishing";
-  if (s.includes("breach") || s.includes("dump") || s.includes("compilation")) return "breach";
-  if (s.includes("internal") || s.includes("confluence") || s.includes("email")) return "internal";
-  return "other";
-};
+  const s = source.toLowerCase()
+  if (s.includes('dark') || s.includes('darkweb')) return 'darkweb'
+  if (s.includes('github') || s.includes('gitlab') || s.includes('gist') || s.includes('commit'))
+    return 'github'
+  if (s.includes('phishing')) return 'phishing'
+  if (s.includes('breach') || s.includes('dump') || s.includes('compilation')) return 'breach'
+  if (s.includes('internal') || s.includes('confluence') || s.includes('email')) return 'internal'
+  return 'other'
+}
 
 export default function CredentialsPage() {
   // API hooks
-  const [page, _setPage] = useState(1);
-  const pageSize = 20;
+  const [page, _setPage] = useState(1)
+  const pageSize = 20
 
   // Build API filters based on UI filters
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
-  const [globalFilter, setGlobalFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all')
+  const [globalFilter, setGlobalFilter] = useState('')
 
   // Map status filter to API state filter
   const apiStateFilter = useMemo(() => {
     const statusToState: Record<StatusFilter, string[]> = {
       all: [],
-      active: ["active"],
-      pending: ["active"], // Pending maps to active in API
-      completed: ["resolved"],
-      inactive: ["accepted", "false_positive"],
-      failed: ["active"], // Failed maps to active in API
-      archived: ["resolved"], // Archived maps to resolved in API
-    };
-    return statusToState[statusFilter];
-  }, [statusFilter]);
+      active: ['active'],
+      pending: ['active'], // Pending maps to active in API
+      completed: ['resolved'],
+      inactive: ['accepted', 'false_positive'],
+      failed: ['active'], // Failed maps to active in API
+      archived: ['resolved'], // Archived maps to resolved in API
+    }
+    return statusToState[statusFilter]
+  }, [statusFilter])
 
   // Fetch credentials from API
-  const { data: apiResponse, isLoading, mutate } = useCredentialsApi({
+  const {
+    data: apiResponse,
+    isLoading,
+    mutate,
+  } = useCredentialsApi({
     page,
     page_size: pageSize,
     state: apiStateFilter.length > 0 ? apiStateFilter : undefined,
     search: globalFilter || undefined,
-  });
+  })
 
   // Fetch stats from API
-  const { data: apiStats, isLoading: statsLoading } = useCredentialStatsApi();
+  const { data: apiStats, isLoading: statsLoading } = useCredentialStatsApi()
 
   // Fetch identities (grouped by username/email) for identity view
   const { data: identitiesResponse, isLoading: identitiesLoading } = useCredentialIdentitiesApi({
@@ -216,71 +211,77 @@ export default function CredentialsPage() {
     page_size: pageSize,
     state: apiStateFilter.length > 0 ? apiStateFilter : undefined,
     search: globalFilter || undefined,
-  });
+  })
 
   // Map API data to Asset type for UI compatibility
   const credentials = useMemo(() => {
-    if (!apiResponse?.items) return [];
-    return mapCredentialsToAssets(apiResponse.items);
-  }, [apiResponse]);
+    if (!apiResponse?.items) return []
+    return mapCredentialsToAssets(apiResponse.items)
+  }, [apiResponse])
 
   // Extract stats
-  const stats = useMemo(() => extractCredentialStats(apiStats), [apiStats]);
+  const stats = useMemo(() => extractCredentialStats(apiStats), [apiStats])
 
-  const [selectedCredential, setSelectedCredential] = useState<Asset | null>(null);
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [rowSelection, setRowSelection] = useState({});
-  const [alertDismissed, setAlertDismissed] = useState(false);
-  const [viewMode, setViewMode] = useState<"list" | "identity">("list");
-  const [expandedIdentities, setExpandedIdentities] = useState<Set<string>>(new Set());
+  const [selectedCredential, setSelectedCredential] = useState<Asset | null>(null)
+  const [sorting, setSorting] = useState<SortingState>([])
+  const [rowSelection, setRowSelection] = useState({})
+  const [alertDismissed, setAlertDismissed] = useState(false)
+  const [viewMode, setViewMode] = useState<'list' | 'identity'>('list')
+  const [expandedIdentities, setExpandedIdentities] = useState<Set<string>>(new Set())
 
   // Dialog states
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [credentialToDelete, setCredentialToDelete] = useState<Asset | null>(null);
+  const [addDialogOpen, setAddDialogOpen] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [credentialToDelete, setCredentialToDelete] = useState<Asset | null>(null)
 
   // Form state
-  const [formData, setFormData] = useState(emptyCredentialForm);
+  const [formData, setFormData] = useState(emptyCredentialForm)
 
   // Filter data (client-side filtering for source since API doesn't support it directly)
   const filteredData = useMemo(() => {
-    let data = [...credentials];
-    if (sourceFilter !== "all") {
+    let data = [...credentials]
+    if (sourceFilter !== 'all') {
       data = data.filter((c) => {
-        const source = c.metadata.source || "";
-        return categorizeSource(source) === sourceFilter;
-      });
+        const source = c.metadata.source || ''
+        return categorizeSource(source) === sourceFilter
+      })
     }
-    return data;
-  }, [credentials, sourceFilter]);
+    return data
+  }, [credentials, sourceFilter])
 
   // Status counts from API stats
-  const statusCounts = useMemo(() => ({
-    all: stats.total,
-    active: stats.active,
-    pending: 0, // API doesn't have pending state
-    completed: stats.resolved,
-    inactive: stats.accepted + stats.falsePositive,
-  }), [stats]);
+  const statusCounts = useMemo(
+    () => ({
+      all: stats.total,
+      active: stats.active,
+      pending: 0, // API doesn't have pending state
+      completed: stats.resolved,
+      inactive: stats.accepted + stats.falsePositive,
+    }),
+    [stats]
+  )
 
   // Risk stats from API stats
-  const riskStats = useMemo(() => ({
-    critical: stats.critical,
-    high: stats.high,
-    medium: stats.medium,
-    low: stats.low,
-  }), [stats]);
+  const riskStats = useMemo(
+    () => ({
+      critical: stats.critical,
+      high: stats.high,
+      medium: stats.medium,
+      low: stats.low,
+    }),
+    [stats]
+  )
 
   // Table columns
   const columns: ColumnDef<Asset>[] = [
     {
-      id: "select",
+      id: 'select',
       header: ({ table }) => (
         <Checkbox
           checked={
             table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && "indeterminate")
+            (table.getIsSomePageRowsSelected() && 'indeterminate')
           }
           onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
           aria-label="Select all"
@@ -296,11 +297,11 @@ export default function CredentialsPage() {
       enableSorting: false,
     },
     {
-      accessorKey: "name",
+      accessorKey: 'name',
       header: ({ column }) => (
         <Button
           variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           className="-ml-4"
         >
           Credential
@@ -318,66 +319,70 @@ export default function CredentialsPage() {
       ),
     },
     {
-      accessorKey: "metadata.source",
-      header: "Source",
+      accessorKey: 'metadata.source',
+      header: 'Source',
       cell: ({ row }) => {
-        const source = row.original.metadata.source || "-";
-        const category = categorizeSource(source);
+        const source = row.original.metadata.source || '-'
+        const category = categorizeSource(source)
         const categoryColors: Record<SourceFilter, string> = {
-          all: "",
-          darkweb: "bg-red-500/10 text-red-600 border-red-500/20",
-          github: "bg-purple-500/10 text-purple-600 border-purple-500/20",
-          phishing: "bg-orange-500/10 text-orange-600 border-orange-500/20",
-          breach: "bg-yellow-500/10 text-yellow-600 border-yellow-500/20",
-          internal: "bg-blue-500/10 text-blue-600 border-blue-500/20",
-          other: "bg-slate-500/10 text-slate-600 border-slate-500/20",
-        };
+          all: '',
+          darkweb: 'bg-red-500/10 text-red-600 border-red-500/20',
+          github: 'bg-purple-500/10 text-purple-600 border-purple-500/20',
+          phishing: 'bg-orange-500/10 text-orange-600 border-orange-500/20',
+          breach: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20',
+          internal: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
+          other: 'bg-slate-500/10 text-slate-600 border-slate-500/20',
+        }
         return (
           <Badge variant="outline" className={categoryColors[category]}>
             {source}
           </Badge>
-        );
+        )
       },
     },
     {
-      accessorKey: "metadata.username",
-      header: "Username",
+      accessorKey: 'metadata.username',
+      header: 'Username',
       cell: ({ row }) => (
         <div className="flex items-center gap-1">
           <User className="h-3 w-3 text-muted-foreground" />
-          <span className="text-sm font-mono">{row.original.metadata.username || "-"}</span>
+          <span className="text-sm font-mono">{row.original.metadata.username || '-'}</span>
         </div>
       ),
     },
     {
-      accessorKey: "metadata.leakDate",
-      header: "Leak Date",
+      accessorKey: 'metadata.leakDate',
+      header: 'Leak Date',
       cell: ({ row }) => {
-        const date = row.original.metadata.leakDate;
-        if (!date) return <span className="text-muted-foreground">-</span>;
-        const leakDate = new Date(date);
-        const now = new Date();
-        const daysAgo = Math.ceil((now.getTime() - leakDate.getTime()) / (1000 * 60 * 60 * 24));
-        const isRecent = daysAgo <= 30;
+        const date = row.original.metadata.leakDate
+        if (!date) return <span className="text-muted-foreground">-</span>
+        const leakDate = new Date(date)
+        const now = new Date()
+        const daysAgo = Math.ceil((now.getTime() - leakDate.getTime()) / (1000 * 60 * 60 * 24))
+        const isRecent = daysAgo <= 30
         return (
           <div className="flex items-center gap-1">
             <Calendar className="h-3 w-3 text-muted-foreground" />
-            <span className={isRecent ? "text-red-500 font-medium" : ""}>
+            <span className={isRecent ? 'text-red-500 font-medium' : ''}>
               {leakDate.toLocaleDateString()}
             </span>
-            {isRecent && <Badge variant="destructive" className="ml-1 text-xs">Recent</Badge>}
+            {isRecent && (
+              <Badge variant="destructive" className="ml-1 text-xs">
+                Recent
+              </Badge>
+            )}
           </div>
-        );
+        )
       },
     },
     {
-      accessorKey: "status",
-      header: "Status",
+      accessorKey: 'status',
+      header: 'Status',
       cell: ({ row }) => <StatusBadge status={row.original.status} />,
     },
     {
-      id: "classification",
-      header: "Classification",
+      id: 'classification',
+      header: 'Classification',
       cell: ({ row }) => (
         <ClassificationBadges
           scope={row.original.scope}
@@ -388,11 +393,11 @@ export default function CredentialsPage() {
       ),
     },
     {
-      accessorKey: "riskScore",
+      accessorKey: 'riskScore',
       header: ({ column }) => (
         <Button
           variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           className="-ml-4"
         >
           Risk
@@ -402,9 +407,9 @@ export default function CredentialsPage() {
       cell: ({ row }) => <RiskScoreBadge score={row.original.riskScore} size="sm" />,
     },
     {
-      id: "actions",
+      id: 'actions',
       cell: ({ row }) => {
-        const credential = row.original;
+        const credential = row.original
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -432,8 +437,8 @@ export default function CredentialsPage() {
                 <DropdownMenuItem
                   className="text-destructive"
                   onClick={() => {
-                    setCredentialToDelete(credential);
-                    setDeleteDialogOpen(true);
+                    setCredentialToDelete(credential)
+                    setDeleteDialogOpen(true)
                   }}
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
@@ -442,10 +447,10 @@ export default function CredentialsPage() {
               </Can>
             </DropdownMenuContent>
           </DropdownMenu>
-        );
+        )
       },
     },
-  ];
+  ]
 
   const table = useReactTable({
     data: filteredData,
@@ -467,61 +472,61 @@ export default function CredentialsPage() {
         pageSize: 10,
       },
     },
-  });
+  })
 
   // Handlers
   const handleOpenEdit = (credential: Asset) => {
     setFormData({
       name: credential.name,
-      description: credential.description || "",
-      groupId: credential.groupId || "",
-      source: credential.metadata.source || "",
-      username: credential.metadata.username || "",
-      leakDate: credential.metadata.leakDate || "",
-      tags: credential.tags?.join(", ") || "",
-    });
-    setSelectedCredential(credential);
-    setEditDialogOpen(true);
-  };
+      description: credential.description || '',
+      groupId: credential.groupId || '',
+      source: credential.metadata.source || '',
+      username: credential.metadata.username || '',
+      leakDate: credential.metadata.leakDate || '',
+      tags: credential.tags?.join(', ') || '',
+    })
+    setSelectedCredential(credential)
+    setEditDialogOpen(true)
+  }
 
   const handleAddCredential = () => {
     if (!formData.name || !formData.source) {
-      toast.error("Please fill in required fields");
-      return;
+      toast.error('Please fill in required fields')
+      return
     }
 
     // TODO: Call import API to add credential
-    toast.info("Use the Import feature to add credentials via API or CSV");
-    setFormData(emptyCredentialForm);
-    setAddDialogOpen(false);
-  };
+    toast.info('Use the Import feature to add credentials via API or CSV')
+    setFormData(emptyCredentialForm)
+    setAddDialogOpen(false)
+  }
 
   const handleUpdateCredential = () => {
     if (!selectedCredential || !formData.name || !formData.source) {
-      toast.error("Please fill in required fields");
-      return;
+      toast.error('Please fill in required fields')
+      return
     }
 
     // TODO: Implement update API endpoint
-    toast.info("Update functionality coming soon");
-    setFormData(emptyCredentialForm);
-    setEditDialogOpen(false);
-    setSelectedCredential(null);
-  };
+    toast.info('Update functionality coming soon')
+    setFormData(emptyCredentialForm)
+    setEditDialogOpen(false)
+    setSelectedCredential(null)
+  }
 
   const handleDeleteCredential = () => {
-    if (!credentialToDelete) return;
+    if (!credentialToDelete) return
 
     // TODO: Implement delete API endpoint
-    toast.info("Delete functionality coming soon");
-    setDeleteDialogOpen(false);
-    setCredentialToDelete(null);
-  };
+    toast.info('Delete functionality coming soon')
+    setDeleteDialogOpen(false)
+    setCredentialToDelete(null)
+  }
 
   const handleCopyCredential = (credential: Asset) => {
-    navigator.clipboard.writeText(credential.name);
-    toast.success("Credential name copied to clipboard");
-  };
+    navigator.clipboard.writeText(credential.name)
+    toast.success('Credential name copied to clipboard')
+  }
 
   const handleMarkResolved = async (credential: Asset) => {
     try {
@@ -532,37 +537,31 @@ export default function CredentialsPage() {
         },
         credentials: 'include',
         body: JSON.stringify({ notes: '' }),
-      });
+      })
 
       if (!response.ok) {
-        throw new Error('Failed to resolve credential');
+        throw new Error('Failed to resolve credential')
       }
 
-      toast.success("Credential marked as resolved");
-      setSelectedCredential(null); // Close sheet after success
-      void mutate(); // Refresh data after state change
-      void invalidateCredentialsCache(); // Invalidate all credential caches
+      toast.success('Credential marked as resolved')
+      setSelectedCredential(null) // Close sheet after success
+      void mutate() // Refresh data after state change
+      void invalidateCredentialsCache() // Invalidate all credential caches
     } catch (error) {
-      console.error('Error resolving credential:', error);
-      toast.error("Failed to resolve credential");
+      console.error('Error resolving credential:', error)
+      toast.error('Failed to resolve credential')
     }
-  };
+  }
 
   return (
     <>
-      <Header fixed>
-        <div className="ms-auto flex items-center gap-2 sm:gap-4">
-          <Search />
-          <ThemeSwitch />
-          <ProfileDropdown />
-        </div>
-      </Header>
+      <Header fixed />
 
       <Main>
         <div className="flex items-center justify-between">
           <PageHeader
             title="Credential Leaks"
-            description={statsLoading ? "Loading..." : `${stats.total} leaked credentials detected`}
+            description={statsLoading ? 'Loading...' : `${stats.total} leaked credentials detected`}
           />
           <Button onClick={() => setAddDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
@@ -579,7 +578,8 @@ export default function CredentialsPage() {
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-red-800 dark:text-red-200">
-                  {riskStats.critical} critical {riskStats.critical === 1 ? 'leak' : 'leaks'} require immediate attention
+                  {riskStats.critical} critical {riskStats.critical === 1 ? 'leak' : 'leaks'}{' '}
+                  require immediate attention
                 </span>
                 {riskStats.high > 0 && (
                   <span className="text-sm text-red-600/80 dark:text-red-300/80">
@@ -593,7 +593,7 @@ export default function CredentialsPage() {
                 size="sm"
                 variant="destructive"
                 className="h-8"
-                onClick={() => setStatusFilter("active")}
+                onClick={() => setStatusFilter('active')}
               >
                 Review Now
                 <ArrowRight className="ml-1 h-3 w-3" />
@@ -612,7 +612,7 @@ export default function CredentialsPage() {
 
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-          <Card className={statusCounts.active > 0 ? "border-red-200 dark:border-red-900/50" : ""}>
+          <Card className={statusCounts.active > 0 ? 'border-red-200 dark:border-red-900/50' : ''}>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -620,16 +620,20 @@ export default function CredentialsPage() {
                   {statsLoading ? (
                     <Skeleton className="h-8 w-12" />
                   ) : (
-                    <p className={`text-2xl font-bold ${statusCounts.active > 0 ? "text-red-600" : "text-muted-foreground"}`}>
+                    <p
+                      className={`text-2xl font-bold ${statusCounts.active > 0 ? 'text-red-600' : 'text-muted-foreground'}`}
+                    >
                       {statusCounts.active}
                     </p>
                   )}
                 </div>
-                <AlertTriangle className={`h-8 w-8 ${statusCounts.active > 0 ? "text-red-500/30" : "text-muted-foreground/20"}`} />
+                <AlertTriangle
+                  className={`h-8 w-8 ${statusCounts.active > 0 ? 'text-red-500/30' : 'text-muted-foreground/20'}`}
+                />
               </div>
             </CardContent>
           </Card>
-          <Card className={riskStats.critical > 0 ? "border-red-200 dark:border-red-900/50" : ""}>
+          <Card className={riskStats.critical > 0 ? 'border-red-200 dark:border-red-900/50' : ''}>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -637,16 +641,20 @@ export default function CredentialsPage() {
                   {statsLoading ? (
                     <Skeleton className="h-8 w-12" />
                   ) : (
-                    <p className={`text-2xl font-bold ${riskStats.critical > 0 ? "text-red-600" : "text-muted-foreground"}`}>
+                    <p
+                      className={`text-2xl font-bold ${riskStats.critical > 0 ? 'text-red-600' : 'text-muted-foreground'}`}
+                    >
                       {riskStats.critical}
                     </p>
                   )}
                 </div>
-                <Shield className={`h-8 w-8 ${riskStats.critical > 0 ? "text-red-500/30" : "text-muted-foreground/20"}`} />
+                <Shield
+                  className={`h-8 w-8 ${riskStats.critical > 0 ? 'text-red-500/30' : 'text-muted-foreground/20'}`}
+                />
               </div>
             </CardContent>
           </Card>
-          <Card className={riskStats.high > 0 ? "border-yellow-200 dark:border-yellow-900/50" : ""}>
+          <Card className={riskStats.high > 0 ? 'border-yellow-200 dark:border-yellow-900/50' : ''}>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -654,16 +662,24 @@ export default function CredentialsPage() {
                   {statsLoading ? (
                     <Skeleton className="h-8 w-12" />
                   ) : (
-                    <p className={`text-2xl font-bold ${riskStats.high > 0 ? "text-yellow-600" : "text-muted-foreground"}`}>
+                    <p
+                      className={`text-2xl font-bold ${riskStats.high > 0 ? 'text-yellow-600' : 'text-muted-foreground'}`}
+                    >
                       {riskStats.high}
                     </p>
                   )}
                 </div>
-                <Clock className={`h-8 w-8 ${riskStats.high > 0 ? "text-yellow-500/30" : "text-muted-foreground/20"}`} />
+                <Clock
+                  className={`h-8 w-8 ${riskStats.high > 0 ? 'text-yellow-500/30' : 'text-muted-foreground/20'}`}
+                />
               </div>
             </CardContent>
           </Card>
-          <Card className={statusCounts.completed > 0 ? "border-green-200 dark:border-green-900/50" : ""}>
+          <Card
+            className={
+              statusCounts.completed > 0 ? 'border-green-200 dark:border-green-900/50' : ''
+            }
+          >
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -671,12 +687,16 @@ export default function CredentialsPage() {
                   {statsLoading ? (
                     <Skeleton className="h-8 w-12" />
                   ) : (
-                    <p className={`text-2xl font-bold ${statusCounts.completed > 0 ? "text-green-600" : "text-muted-foreground"}`}>
+                    <p
+                      className={`text-2xl font-bold ${statusCounts.completed > 0 ? 'text-green-600' : 'text-muted-foreground'}`}
+                    >
                       {statusCounts.completed}
                     </p>
                   )}
                 </div>
-                <CheckCircle className={`h-8 w-8 ${statusCounts.completed > 0 ? "text-green-500/30" : "text-muted-foreground/20"}`} />
+                <CheckCircle
+                  className={`h-8 w-8 ${statusCounts.completed > 0 ? 'text-green-500/30' : 'text-muted-foreground/20'}`}
+                />
               </div>
             </CardContent>
           </Card>
@@ -692,13 +712,13 @@ export default function CredentialsPage() {
                   Credential Leaks
                 </CardTitle>
                 <CardDescription>
-                  {viewMode === "list"
+                  {viewMode === 'list'
                     ? `${filteredData.length} of ${credentials.length} credentials`
                     : `${identitiesResponse?.items?.length || 0} identities with exposures`}
                 </CardDescription>
               </div>
               <div className="flex items-center gap-3">
-                <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "list" | "identity")}>
+                <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'list' | 'identity')}>
                   <TabsList>
                     <TabsTrigger value="list" className="gap-1.5">
                       <List className="h-4 w-4" />
@@ -762,7 +782,7 @@ export default function CredentialsPage() {
             </div>
 
             {/* View Content */}
-            {viewMode === "identity" ? (
+            {viewMode === 'identity' ? (
               /* Identity View */
               <div className="space-y-3">
                 {identitiesLoading ? (
@@ -785,18 +805,18 @@ export default function CredentialsPage() {
                       isExpanded={expandedIdentities.has(identity.identity)}
                       onToggle={() => {
                         setExpandedIdentities((prev) => {
-                          const next = new Set(prev);
+                          const next = new Set(prev)
                           if (next.has(identity.identity)) {
-                            next.delete(identity.identity);
+                            next.delete(identity.identity)
                           } else {
-                            next.add(identity.identity);
+                            next.add(identity.identity)
                           }
-                          return next;
-                        });
+                          return next
+                        })
                       }}
                       onSelectCredential={(cred) => {
-                        const asset = mapCredentialsToAssets([cred])[0];
-                        setSelectedCredential(asset);
+                        const asset = mapCredentialsToAssets([cred])[0]
+                        setSelectedCredential(asset)
                       }}
                     />
                   ))
@@ -818,10 +838,7 @@ export default function CredentialsPage() {
                             <TableHead key={header.id}>
                               {header.isPlaceholder
                                 ? null
-                                : flexRender(
-                                  header.column.columnDef.header,
-                                  header.getContext()
-                                )}
+                                : flexRender(header.column.columnDef.header, header.getContext())}
                             </TableHead>
                           ))}
                         </TableRow>
@@ -832,22 +849,40 @@ export default function CredentialsPage() {
                         // Loading skeleton rows
                         Array.from({ length: 5 }).map((_, i) => (
                           <TableRow key={i}>
-                            <TableCell><Skeleton className="h-4 w-4" /></TableCell>
-                            <TableCell><Skeleton className="h-8 w-48" /></TableCell>
-                            <TableCell><Skeleton className="h-6 w-24" /></TableCell>
-                            <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                            <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                            <TableCell><Skeleton className="h-6 w-16" /></TableCell>
-                            <TableCell><Skeleton className="h-6 w-20" /></TableCell>
-                            <TableCell><Skeleton className="h-6 w-12" /></TableCell>
-                            <TableCell><Skeleton className="h-8 w-8" /></TableCell>
+                            <TableCell>
+                              <Skeleton className="h-4 w-4" />
+                            </TableCell>
+                            <TableCell>
+                              <Skeleton className="h-8 w-48" />
+                            </TableCell>
+                            <TableCell>
+                              <Skeleton className="h-6 w-24" />
+                            </TableCell>
+                            <TableCell>
+                              <Skeleton className="h-4 w-32" />
+                            </TableCell>
+                            <TableCell>
+                              <Skeleton className="h-4 w-24" />
+                            </TableCell>
+                            <TableCell>
+                              <Skeleton className="h-6 w-16" />
+                            </TableCell>
+                            <TableCell>
+                              <Skeleton className="h-6 w-20" />
+                            </TableCell>
+                            <TableCell>
+                              <Skeleton className="h-6 w-12" />
+                            </TableCell>
+                            <TableCell>
+                              <Skeleton className="h-8 w-8" />
+                            </TableCell>
                           </TableRow>
                         ))
                       ) : table.getRowModel().rows?.length ? (
                         table.getRowModel().rows.map((row) => (
                           <TableRow
                             key={row.id}
-                            data-state={row.getIsSelected() && "selected"}
+                            data-state={row.getIsSelected() && 'selected'}
                             className="cursor-pointer"
                             onClick={() => setSelectedCredential(row.original)}
                           >
@@ -855,28 +890,19 @@ export default function CredentialsPage() {
                               <TableCell
                                 key={cell.id}
                                 onClick={(e) => {
-                                  if (
-                                    cell.column.id === "select" ||
-                                    cell.column.id === "actions"
-                                  ) {
-                                    e.stopPropagation();
+                                  if (cell.column.id === 'select' || cell.column.id === 'actions') {
+                                    e.stopPropagation()
                                   }
                                 }}
                               >
-                                {flexRender(
-                                  cell.column.columnDef.cell,
-                                  cell.getContext()
-                                )}
+                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
                               </TableCell>
                             ))}
                           </TableRow>
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell
-                            colSpan={columns.length}
-                            className="h-24 text-center"
-                          >
+                          <TableCell colSpan={columns.length} className="h-24 text-center">
                             No credential leaks found.
                           </TableCell>
                         </TableRow>
@@ -888,7 +914,7 @@ export default function CredentialsPage() {
                 {/* Pagination - only for list view */}
                 <div className="flex items-center justify-between mt-4">
                   <div className="text-sm text-muted-foreground">
-                    {table.getFilteredSelectedRowModel().rows.length} of{" "}
+                    {table.getFilteredSelectedRowModel().rows.length} of{' '}
                     {table.getFilteredRowModel().rows.length} row(s) selected.
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
@@ -909,8 +935,7 @@ export default function CredentialsPage() {
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
                     <span className="text-sm">
-                      Page {table.getState().pagination.pageIndex + 1} of{" "}
-                      {table.getPageCount()}
+                      Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
                     </span>
                     <Button
                       variant="outline"
@@ -947,34 +972,38 @@ export default function CredentialsPage() {
         onEdit={() => selectedCredential && handleOpenEdit(selectedCredential)}
         onDelete={() => {
           if (selectedCredential) {
-            setCredentialToDelete(selectedCredential);
-            setDeleteDialogOpen(true);
+            setCredentialToDelete(selectedCredential)
+            setDeleteDialogOpen(true)
           }
         }}
         assetTypeName="Credential"
         showFindingsTab={false}
-        extraTabs={selectedCredential ? [
-          {
-            value: "related",
-            label: "Related",
-            content: (
-              <RelatedExposuresSection
-                credentialId={selectedCredential.id}
-                onSelectCredential={(cred) => {
-                  const asset = mapCredentialsToAssets([cred])[0];
-                  setSelectedCredential(asset);
-                }}
-              />
-            ),
-          },
-        ] : undefined}
+        extraTabs={
+          selectedCredential
+            ? [
+                {
+                  value: 'related',
+                  label: 'Related',
+                  content: (
+                    <RelatedExposuresSection
+                      credentialId={selectedCredential.id}
+                      onSelectCredential={(cred) => {
+                        const asset = mapCredentialsToAssets([cred])[0]
+                        setSelectedCredential(asset)
+                      }}
+                    />
+                  ),
+                },
+              ]
+            : undefined
+        }
         quickActions={
-          selectedCredential?.status === "active" ? (
+          selectedCredential?.status === 'active' ? (
             <Button
               size="sm"
               variant="outline"
               onClick={() => {
-                handleMarkResolved(selectedCredential);
+                handleMarkResolved(selectedCredential)
                 // Sheet will be closed by handleMarkResolved after success
               }}
             >
@@ -990,17 +1019,17 @@ export default function CredentialsPage() {
                 icon={AlertTriangle}
                 iconBg={
                   selectedCredential.riskScore >= 80
-                    ? "bg-red-100 dark:bg-red-900/30"
+                    ? 'bg-red-100 dark:bg-red-900/30'
                     : selectedCredential.riskScore >= 50
-                      ? "bg-yellow-100 dark:bg-yellow-900/30"
-                      : "bg-green-100 dark:bg-green-900/30"
+                      ? 'bg-yellow-100 dark:bg-yellow-900/30'
+                      : 'bg-green-100 dark:bg-green-900/30'
                 }
                 iconColor={
                   selectedCredential.riskScore >= 80
-                    ? "text-red-600"
+                    ? 'text-red-600'
                     : selectedCredential.riskScore >= 50
-                      ? "text-yellow-600"
-                      : "text-green-600"
+                      ? 'text-yellow-600'
+                      : 'text-green-600'
                 }
                 label="Risk Score"
                 value={selectedCredential.riskScore}
@@ -1010,7 +1039,7 @@ export default function CredentialsPage() {
                 iconBg="bg-blue-100 dark:bg-blue-900/30"
                 iconColor="text-blue-600"
                 label="Severity"
-                value={selectedCredential.criticality === "critical" ? "Critical" : "High"}
+                value={selectedCredential.criticality === 'critical' ? 'Critical' : 'High'}
               />
               <StatCard
                 icon={Clock}
@@ -1020,11 +1049,11 @@ export default function CredentialsPage() {
                 value={
                   selectedCredential.metadata.leakDate
                     ? Math.ceil(
-                      (new Date().getTime() -
-                        new Date(selectedCredential.metadata.leakDate).getTime()) /
-                      (1000 * 60 * 60 * 24)
-                    )
-                    : "-"
+                        (new Date().getTime() -
+                          new Date(selectedCredential.metadata.leakDate).getTime()) /
+                          (1000 * 60 * 60 * 24)
+                      )
+                    : '-'
                 }
               />
             </StatsGrid>
@@ -1037,7 +1066,7 @@ export default function CredentialsPage() {
               <SecretValueField
                 value={selectedCredential.metadata.secretValue}
                 label="Leaked Secret"
-                showWarning={selectedCredential.status === "active"}
+                showWarning={selectedCredential.status === 'active'}
               />
 
               <SectionTitle>Leak Details</SectionTitle>
@@ -1046,17 +1075,17 @@ export default function CredentialsPage() {
                 <MetadataRow label="Username" value={selectedCredential.metadata.username} />
                 <MetadataRow
                   label="Credential Type"
-                  value={selectedCredential.metadata.credentialType || "password"}
+                  value={selectedCredential.metadata.credentialType || 'password'}
                 />
                 <MetadataRow
                   label="Leak Date"
                   value={
                     selectedCredential.metadata.leakDate
                       ? new Date(selectedCredential.metadata.leakDate).toLocaleDateString()
-                      : "-"
+                      : '-'
                   }
                 />
-                <MetadataRow label="Group" value={selectedCredential.groupName || "Ungrouped"} />
+                <MetadataRow label="Group" value={selectedCredential.groupName || 'Ungrouped'} />
               </MetadataGrid>
             </>
           )
@@ -1068,9 +1097,7 @@ export default function CredentialsPage() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Add Credential Leak</DialogTitle>
-            <DialogDescription>
-              Add a new credential leak to track
-            </DialogDescription>
+            <DialogDescription>Add a new credential leak to track</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
@@ -1246,8 +1273,8 @@ export default function CredentialsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Credential?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete &quot;{credentialToDelete?.name}&quot;?
-              This action cannot be undone.
+              Are you sure you want to delete &quot;{credentialToDelete?.name}&quot;? This action
+              cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1262,7 +1289,7 @@ export default function CredentialsPage() {
         </AlertDialogContent>
       </AlertDialog>
     </>
-  );
+  )
 }
 
 // ============================================
@@ -1270,10 +1297,10 @@ export default function CredentialsPage() {
 // ============================================
 
 interface IdentityCardProps {
-  identity: ApiIdentityExposure;
-  isExpanded: boolean;
-  onToggle: () => void;
-  onSelectCredential: (cred: ApiCredential) => void;
+  identity: ApiIdentityExposure
+  isExpanded: boolean
+  onToggle: () => void
+  onSelectCredential: (cred: ApiCredential) => void
 }
 
 // ============================================
@@ -1281,12 +1308,15 @@ interface IdentityCardProps {
 // ============================================
 
 interface RelatedExposuresSectionProps {
-  credentialId: string;
-  onSelectCredential: (cred: ApiCredential) => void;
+  credentialId: string
+  onSelectCredential: (cred: ApiCredential) => void
 }
 
-function RelatedExposuresSection({ credentialId, onSelectCredential }: RelatedExposuresSectionProps) {
-  const { data: relatedCredentials, isLoading } = useRelatedCredentialsApi(credentialId);
+function RelatedExposuresSection({
+  credentialId,
+  onSelectCredential,
+}: RelatedExposuresSectionProps) {
+  const { data: relatedCredentials, isLoading } = useRelatedCredentialsApi(credentialId)
 
   if (isLoading) {
     return (
@@ -1297,26 +1327,24 @@ function RelatedExposuresSection({ credentialId, onSelectCredential }: RelatedEx
           <Skeleton className="h-12 w-full" />
         </div>
       </div>
-    );
+    )
   }
 
   if (!relatedCredentials || relatedCredentials.length === 0) {
-    return null; // Don't show section if no related exposures
+    return null // Don't show section if no related exposures
   }
 
   const severityColors: Record<string, string> = {
-    critical: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
-    high: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
-    medium: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
-    low: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-    info: "bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-400",
-  };
+    critical: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+    high: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+    medium: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+    low: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+    info: 'bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-400',
+  }
 
   return (
     <div className="mt-6">
-      <SectionTitle>
-        Related Exposures ({relatedCredentials.length})
-      </SectionTitle>
+      <SectionTitle>Related Exposures ({relatedCredentials.length})</SectionTitle>
       <p className="text-sm text-muted-foreground mb-3">
         Other credentials leaked for the same identity
       </p>
@@ -1348,7 +1376,7 @@ function RelatedExposuresSection({ credentialId, onSelectCredential }: RelatedEx
         ))}
       </div>
     </div>
-  );
+  )
 }
 
 function IdentityCard({ identity, isExpanded, onToggle, onSelectCredential }: IdentityCardProps) {
@@ -1356,28 +1384,30 @@ function IdentityCard({ identity, isExpanded, onToggle, onSelectCredential }: Id
   const { data: exposuresResponse, isLoading: exposuresLoading } = useIdentityExposuresApi(
     isExpanded ? identity.identity : null,
     { page_size: 50 }
-  );
+  )
 
   const severityColors: Record<string, string> = {
-    critical: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
-    high: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
-    medium: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
-    low: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-    info: "bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-400",
-  };
+    critical: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+    high: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+    medium: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+    low: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+    info: 'bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-400',
+  }
 
-  const activeCount = identity.states?.active || 0;
-  const resolvedCount = identity.states?.resolved || 0;
+  const activeCount = identity.states?.active || 0
+  const resolvedCount = identity.states?.resolved || 0
 
   return (
     <Collapsible open={isExpanded} onOpenChange={onToggle}>
-      <div className={`rounded-lg border ${activeCount > 0 ? "border-red-200 dark:border-red-900/50" : ""}`}>
+      <div
+        className={`rounded-lg border ${activeCount > 0 ? 'border-red-200 dark:border-red-900/50' : ''}`}
+      >
         <CollapsibleTrigger asChild>
           <button className="w-full p-4 text-left hover:bg-muted/50 transition-colors">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
-                  {identity.identity_type === "email" ? (
+                  {identity.identity_type === 'email' ? (
                     <Mail className="h-5 w-5 text-muted-foreground" />
                   ) : (
                     <User className="h-5 w-5 text-muted-foreground" />
@@ -1387,13 +1417,14 @@ function IdentityCard({ identity, isExpanded, onToggle, onSelectCredential }: Id
                   <div className="flex items-center gap-2">
                     <span className="font-medium">{identity.identity}</span>
                     <Badge variant="secondary" className="text-xs">
-                      {identity.exposure_count} {identity.exposure_count === 1 ? "exposure" : "exposures"}
+                      {identity.exposure_count}{' '}
+                      {identity.exposure_count === 1 ? 'exposure' : 'exposures'}
                     </Badge>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                    <span>Sources: {identity.sources.join(", ")}</span>
+                    <span>Sources: {identity.sources.join(', ')}</span>
                     <span className="text-muted-foreground/50">|</span>
-                    <span>Types: {identity.credential_types.join(", ")}</span>
+                    <span>Types: {identity.credential_types.join(', ')}</span>
                   </div>
                 </div>
               </div>
@@ -1405,7 +1436,10 @@ function IdentityCard({ identity, isExpanded, onToggle, onSelectCredential }: Id
                     </Badge>
                   )}
                   {resolvedCount > 0 && (
-                    <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                    <Badge
+                      variant="secondary"
+                      className="text-xs bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                    >
                       {resolvedCount} resolved
                     </Badge>
                   )}
@@ -1413,7 +1447,9 @@ function IdentityCard({ identity, isExpanded, onToggle, onSelectCredential }: Id
                 <Badge className={severityColors[identity.highest_severity] || severityColors.info}>
                   {identity.highest_severity}
                 </Badge>
-                <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                <ChevronDown
+                  className={`h-4 w-4 text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                />
               </div>
             </div>
           </button>
@@ -1471,5 +1507,5 @@ function IdentityCard({ identity, isExpanded, onToggle, onSelectCredential }: Id
         </CollapsibleContent>
       </div>
     </Collapsible>
-  );
+  )
 }

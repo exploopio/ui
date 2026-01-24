@@ -1,21 +1,12 @@
-"use client";
+'use client'
 
-import { useState, useMemo } from "react";
-import { Header, Main } from "@/components/layout";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { PageHeader } from "@/features/shared";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import {
-  Network,
-  Plus,
-  Globe,
-  Lock,
-  Server,
-} from "lucide-react";
+import { useState, useMemo } from 'react'
+import { Header, Main } from '@/components/layout'
+import { PageHeader } from '@/features/shared'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Network, Plus, Globe, Lock, Server } from 'lucide-react'
 import {
   ScopeBadgeSimple,
   ScopeCoverageCard,
@@ -23,122 +14,116 @@ import {
   calculateScopeCoverage,
   getActiveScopeTargets,
   getActiveScopeExclusions,
-} from "@/features/scope";
+} from '@/features/scope'
 
 // Mock data
 const mockIpAddresses = [
   {
-    id: "ip-1",
-    address: "203.0.113.50",
-    version: "ipv4" as const,
-    asn: "AS12345",
-    organization: "Example Corp",
-    country: "US",
+    id: 'ip-1',
+    address: '203.0.113.50',
+    version: 'ipv4' as const,
+    asn: 'AS12345',
+    organization: 'Example Corp',
+    country: 'US',
     isPublic: true,
     openPorts: [22, 80, 443],
-    services: ["SSH", "HTTP", "HTTPS"],
+    services: ['SSH', 'HTTP', 'HTTPS'],
     riskScore: 45,
   },
   {
-    id: "ip-2",
-    address: "198.51.100.25",
-    version: "ipv4" as const,
-    asn: "AS67890",
-    organization: "Cloud Provider Inc",
-    country: "US",
+    id: 'ip-2',
+    address: '198.51.100.25',
+    version: 'ipv4' as const,
+    asn: 'AS67890',
+    organization: 'Cloud Provider Inc',
+    country: 'US',
     isPublic: true,
     openPorts: [443, 8443],
-    services: ["HTTPS", "Alt-HTTPS"],
+    services: ['HTTPS', 'Alt-HTTPS'],
     riskScore: 25,
   },
   {
-    id: "ip-3",
-    address: "10.0.1.100",
-    version: "ipv4" as const,
-    asn: "-",
-    organization: "Internal",
-    country: "-",
+    id: 'ip-3',
+    address: '10.0.1.100',
+    version: 'ipv4' as const,
+    asn: '-',
+    organization: 'Internal',
+    country: '-',
     isPublic: false,
     openPorts: [22, 3306],
-    services: ["SSH", "MySQL"],
+    services: ['SSH', 'MySQL'],
     riskScore: 60,
   },
   {
-    id: "ip-4",
-    address: "2001:db8::1",
-    version: "ipv6" as const,
-    asn: "AS12345",
-    organization: "Example Corp",
-    country: "US",
+    id: 'ip-4',
+    address: '2001:db8::1',
+    version: 'ipv6' as const,
+    asn: 'AS12345',
+    organization: 'Example Corp',
+    country: 'US',
     isPublic: true,
     openPorts: [443],
-    services: ["HTTPS"],
+    services: ['HTTPS'],
     riskScore: 15,
   },
-];
+]
 
 const stats = {
   total: mockIpAddresses.length,
   public: mockIpAddresses.filter((ip) => ip.isPublic).length,
   private: mockIpAddresses.filter((ip) => !ip.isPublic).length,
-  ipv6: mockIpAddresses.filter((ip) => ip.version === "ipv6").length,
-};
+  ipv6: mockIpAddresses.filter((ip) => ip.version === 'ipv6').length,
+}
 
 export default function IpAddressesPage() {
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('')
 
   // Scope data
-  const scopeTargets = useMemo(() => getActiveScopeTargets(), []);
-  const scopeExclusions = useMemo(() => getActiveScopeExclusions(), []);
+  const scopeTargets = useMemo(() => getActiveScopeTargets(), [])
+  const scopeExclusions = useMemo(() => getActiveScopeExclusions(), [])
 
   // Compute scope matches for each IP
   const scopeMatchesMap = useMemo(() => {
-    const map = new Map<string, { inScope: boolean; excluded: boolean }>();
+    const map = new Map<string, { inScope: boolean; excluded: boolean }>()
     mockIpAddresses.forEach((ip) => {
       const match = getScopeMatchesForAsset(
-        { id: ip.id, type: "ip_address", name: ip.address },
+        { id: ip.id, type: 'ip_address', name: ip.address },
         scopeTargets,
         scopeExclusions
-      );
+      )
       map.set(ip.id, {
         inScope: match.inScope,
         excluded: match.matchedExclusions.length > 0,
-      });
-    });
-    return map;
-  }, [scopeTargets, scopeExclusions]);
+      })
+    })
+    return map
+  }, [scopeTargets, scopeExclusions])
 
   // Calculate scope coverage
   const scopeCoverage = useMemo(() => {
     const assets = mockIpAddresses.map((ip) => ({
       id: ip.id,
       name: ip.address,
-      type: "ip_address",
-    }));
-    return calculateScopeCoverage(assets, scopeTargets, scopeExclusions);
-  }, [scopeTargets, scopeExclusions]);
+      type: 'ip_address',
+    }))
+    return calculateScopeCoverage(assets, scopeTargets, scopeExclusions)
+  }, [scopeTargets, scopeExclusions])
 
   const filteredIps = mockIpAddresses.filter(
     (ip) =>
       ip.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
       ip.organization.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  )
 
   const getRiskColor = (score: number) => {
-    if (score >= 70) return "text-red-600 bg-red-500/15";
-    if (score >= 40) return "text-yellow-600 bg-yellow-500/15";
-    return "text-green-600 bg-green-500/15";
-  };
+    if (score >= 70) return 'text-red-600 bg-red-500/15'
+    if (score >= 40) return 'text-yellow-600 bg-yellow-500/15'
+    return 'text-green-600 bg-green-500/15'
+  }
 
   return (
     <>
-      <Header>
-        <Search />
-        <div className="ml-auto flex items-center space-x-4">
-          <ThemeSwitch />
-          <ProfileDropdown />
-        </div>
-      </Header>
+      <Header fixed />
 
       <Main>
         <PageHeader
@@ -225,15 +210,17 @@ export default function IpAddressesPage() {
                   <tr key={ip.id} className="border-b last:border-0 hover:bg-muted/50">
                     <td className="p-4">
                       <div className="font-mono font-medium">{ip.address}</div>
-                      <div className="text-sm text-muted-foreground">{ip.version.toUpperCase()}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {ip.version.toUpperCase()}
+                      </div>
                     </td>
                     <td className="p-4">
                       <div className="font-medium">{ip.asn}</div>
                       <div className="text-sm text-muted-foreground">{ip.organization}</div>
                     </td>
                     <td className="p-4">
-                      <Badge variant={ip.isPublic ? "default" : "secondary"}>
-                        {ip.isPublic ? "Public" : "Private"}
+                      <Badge variant={ip.isPublic ? 'default' : 'secondary'}>
+                        {ip.isPublic ? 'Public' : 'Private'}
                       </Badge>
                     </td>
                     <td className="p-4">
@@ -259,7 +246,9 @@ export default function IpAddressesPage() {
                       </div>
                     </td>
                     <td className="p-4">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getRiskColor(ip.riskScore)}`}>
+                      <span
+                        className={`px-2.5 py-1 rounded-full text-xs font-medium ${getRiskColor(ip.riskScore)}`}
+                      >
                         {ip.riskScore}
                       </span>
                     </td>
@@ -271,5 +260,5 @@ export default function IpAddressesPage() {
         </Card>
       </Main>
     </>
-  );
+  )
 }

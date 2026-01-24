@@ -1,6 +1,6 @@
-"use client";
+'use client'
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback } from 'react'
 import {
   ColumnDef,
   flexRender,
@@ -10,12 +10,9 @@ import {
   getSortedRowModel,
   SortingState,
   useReactTable,
-} from "@tanstack/react-table";
-import { Header, Main } from "@/components/layout";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { PageHeader, StatusBadge, RiskScoreBadge } from "@/features/shared";
+} from '@tanstack/react-table'
+import { Header, Main } from '@/components/layout'
+import { PageHeader, StatusBadge, RiskScoreBadge } from '@/features/shared'
 import {
   AssetDetailSheet,
   StatCard,
@@ -23,20 +20,14 @@ import {
   SectionTitle,
   flattenDomainTreeForTable,
   type DomainTableRow,
-} from "@/features/assets";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+} from '@/features/assets'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Textarea } from '@/components/ui/textarea'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -44,7 +35,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from '@/components/ui/table'
 import {
   Dialog,
   DialogContent,
@@ -52,7 +43,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -62,29 +53,24 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+} from '@/components/ui/alert-dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { toast } from "sonner";
+} from '@/components/ui/select'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { toast } from 'sonner'
 import {
   Plus,
   Globe,
@@ -111,7 +97,7 @@ import {
   List,
   Network,
   CornerDownRight,
-} from "lucide-react";
+} from 'lucide-react'
 import {
   useAssets,
   createAsset,
@@ -120,11 +106,11 @@ import {
   bulkDeleteAssets,
   getAssetRelationships,
   ClassificationBadges,
-  type Asset
-} from "@/features/assets";
-import { Can, Permission, usePermissions } from "@/lib/permissions";
-import { mockAssetGroups } from "@/features/asset-groups";
-import type { Status } from "@/features/shared/types";
+  type Asset,
+} from '@/features/assets'
+import { Can, Permission, usePermissions } from '@/lib/permissions'
+import { mockAssetGroups } from '@/features/asset-groups'
+import type { Status } from '@/features/shared/types'
 import {
   ScopeBadge,
   ScopeCoverageCard,
@@ -133,159 +119,168 @@ import {
   getActiveScopeTargets,
   getActiveScopeExclusions,
   type ScopeMatchResult,
-} from "@/features/scope";
+} from '@/features/scope'
 
 // View mode type
-type ViewMode = "list" | "tree";
+type ViewMode = 'list' | 'tree'
 
 // Filter types
-type StatusFilter = Status | "all";
+type StatusFilter = Status | 'all'
 
 const statusFilters: { value: StatusFilter; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "active", label: "Active" },
-  { value: "inactive", label: "Inactive" },
-  { value: "pending", label: "Pending" },
-];
+  { value: 'all', label: 'All' },
+  { value: 'active', label: 'Active' },
+  { value: 'inactive', label: 'Inactive' },
+  { value: 'pending', label: 'Pending' },
+]
 
 // Empty form state
 const emptyDomainForm = {
-  name: "",
-  description: "",
-  groupId: "",
-  registrar: "",
-  expiryDate: "",
-  nameservers: "",
-  tags: "",
-};
+  name: '',
+  description: '',
+  groupId: '',
+  registrar: '',
+  expiryDate: '',
+  nameservers: '',
+  tags: '',
+}
 
 export default function DomainsPage() {
   // Permission checks
-  const { can } = usePermissions();
-  const canWriteAssets = can(Permission.AssetsWrite);
-  const canDeleteAssets = can(Permission.AssetsDelete);
+  const { can } = usePermissions()
+  const canWriteAssets = can(Permission.AssetsWrite)
+  const canDeleteAssets = can(Permission.AssetsDelete)
 
   // Fetch domains from API
-  const { assets: domains, isLoading: _isLoading, isError: _isError, error: _fetchError, mutate } = useAssets({
+  const {
+    assets: domains,
+    isLoading: _isLoading,
+    isError: _isError,
+    error: _fetchError,
+    mutate,
+  } = useAssets({
     types: ['domain'],
-  });
+  })
 
-  const [selectedDomain, setSelectedDomain] = useState<Asset | null>(null);
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [globalFilter, setGlobalFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [rowSelection, setRowSelection] = useState({});
-  const [_isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedDomain, setSelectedDomain] = useState<Asset | null>(null)
+  const [sorting, setSorting] = useState<SortingState>([])
+  const [globalFilter, setGlobalFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [rowSelection, setRowSelection] = useState({})
+  const [_isSubmitting, setIsSubmitting] = useState(false)
 
   // View mode state
-  const [viewMode, setViewMode] = useState<ViewMode>("tree");
-  const [expandedRoots, setExpandedRoots] = useState<Set<string>>(new Set());
+  const [viewMode, setViewMode] = useState<ViewMode>('tree')
+  const [expandedRoots, setExpandedRoots] = useState<Set<string>>(new Set())
 
   // Dialog states
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [domainToDelete, setDomainToDelete] = useState<Asset | null>(null);
+  const [addDialogOpen, setAddDialogOpen] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [domainToDelete, setDomainToDelete] = useState<Asset | null>(null)
 
   // Form state
-  const [formData, setFormData] = useState(emptyDomainForm);
+  const [formData, setFormData] = useState(emptyDomainForm)
 
   // Tree data - flatten domains into hierarchical rows
   const treeData = useMemo(() => {
-    return flattenDomainTreeForTable(domains);
-  }, [domains]);
+    return flattenDomainTreeForTable(domains)
+  }, [domains])
 
   // Toggle root domain expansion
   const toggleRootExpansion = useCallback((rootDomain: string) => {
     setExpandedRoots((prev) => {
-      const next = new Set(prev);
+      const next = new Set(prev)
       if (next.has(rootDomain)) {
-        next.delete(rootDomain);
+        next.delete(rootDomain)
       } else {
-        next.add(rootDomain);
+        next.add(rootDomain)
       }
-      return next;
-    });
-  }, []);
+      return next
+    })
+  }, [])
 
   // Expand/collapse all
   const expandAll = useCallback(() => {
-    const allRoots = treeData.filter((d) => d._isRoot).map((d) => d._rootDomain);
-    setExpandedRoots(new Set(allRoots));
-  }, [treeData]);
+    const allRoots = treeData.filter((d) => d._isRoot).map((d) => d._rootDomain)
+    setExpandedRoots(new Set(allRoots))
+  }, [treeData])
 
   const collapseAll = useCallback(() => {
-    setExpandedRoots(new Set());
-  }, []);
+    setExpandedRoots(new Set())
+  }, [])
 
   // Filter data based on view mode
   const filteredData = useMemo(() => {
-    if (viewMode === "list") {
+    if (viewMode === 'list') {
       // List view - flat list
-      let data = [...domains];
-      if (statusFilter !== "all") {
-        data = data.filter((d) => d.status === statusFilter);
+      let data = [...domains]
+      if (statusFilter !== 'all') {
+        data = data.filter((d) => d.status === statusFilter)
       }
-      return data as (Asset | DomainTableRow)[];
+      return data as (Asset | DomainTableRow)[]
     } else {
       // Tree view - hierarchical list with expansion
-      let data = [...treeData];
-      if (statusFilter !== "all") {
-        data = data.filter((d) => d.status === statusFilter);
+      let data = [...treeData]
+      if (statusFilter !== 'all') {
+        data = data.filter((d) => d.status === statusFilter)
       }
       // Filter out collapsed children
       return data.filter((d) => {
-        if (d._isRoot) return true;
-        return expandedRoots.has(d._rootDomain);
-      }) as (Asset | DomainTableRow)[];
+        if (d._isRoot) return true
+        return expandedRoots.has(d._rootDomain)
+      }) as (Asset | DomainTableRow)[]
     }
-  }, [domains, treeData, statusFilter, viewMode, expandedRoots]);
+  }, [domains, treeData, statusFilter, viewMode, expandedRoots])
 
   // Status counts
-  const statusCounts = useMemo(() => ({
-    all: domains.length,
-    active: domains.filter((d) => d.status === "active").length,
-    inactive: domains.filter((d) => d.status === "inactive").length,
-    pending: domains.filter((d) => d.status === "pending").length,
-  }), [domains]);
+  const statusCounts = useMemo(
+    () => ({
+      all: domains.length,
+      active: domains.filter((d) => d.status === 'active').length,
+      inactive: domains.filter((d) => d.status === 'inactive').length,
+      pending: domains.filter((d) => d.status === 'pending').length,
+    }),
+    [domains]
+  )
 
   // Scope data
-  const scopeTargets = useMemo(() => getActiveScopeTargets(), []);
-  const scopeExclusions = useMemo(() => getActiveScopeExclusions(), []);
+  const scopeTargets = useMemo(() => getActiveScopeTargets(), [])
+  const scopeExclusions = useMemo(() => getActiveScopeExclusions(), [])
 
   // Compute scope matches for each domain
   const scopeMatchesMap = useMemo(() => {
-    const map = new Map<string, ScopeMatchResult>();
+    const map = new Map<string, ScopeMatchResult>()
     domains.forEach((domain) => {
       const match = getScopeMatchesForAsset(
-        { id: domain.id, type: "domain", name: domain.name },
+        { id: domain.id, type: 'domain', name: domain.name },
         scopeTargets,
         scopeExclusions
-      );
-      map.set(domain.id, match);
-    });
-    return map;
-  }, [domains, scopeTargets, scopeExclusions]);
+      )
+      map.set(domain.id, match)
+    })
+    return map
+  }, [domains, scopeTargets, scopeExclusions])
 
   // Calculate scope coverage for all domains
   const scopeCoverage = useMemo(() => {
     const assets = domains.map((d) => ({
       id: d.id,
       name: d.name,
-      type: "domain",
-    }));
-    return calculateScopeCoverage(assets, scopeTargets, scopeExclusions);
-  }, [domains, scopeTargets, scopeExclusions]);
+      type: 'domain',
+    }))
+    return calculateScopeCoverage(assets, scopeTargets, scopeExclusions)
+  }, [domains, scopeTargets, scopeExclusions])
 
   // Table columns - support both Asset and DomainTableRow
   const columns: ColumnDef<Asset | DomainTableRow>[] = [
     {
-      id: "select",
+      id: 'select',
       header: ({ table }) => (
         <Checkbox
           checked={
             table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && "indeterminate")
+            (table.getIsSomePageRowsSelected() && 'indeterminate')
           }
           onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
           aria-label="Select all"
@@ -301,11 +296,11 @@ export default function DomainsPage() {
       enableSorting: false,
     },
     {
-      accessorKey: "name",
+      accessorKey: 'name',
       header: ({ column }) => (
         <Button
           variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           className="-ml-4"
         >
           Domain
@@ -313,13 +308,13 @@ export default function DomainsPage() {
         </Button>
       ),
       cell: ({ row }) => {
-        const domain = row.original;
-        const treeRow = domain as DomainTableRow;
-        const isTreeView = viewMode === "tree" && "_isRoot" in domain;
-        const isRoot = isTreeView && treeRow._isRoot;
-        const hasChildren = isTreeView && treeRow._hasChildren;
-        const level = isTreeView ? treeRow._level : 0;
-        const isExpanded = isRoot && expandedRoots.has(treeRow._rootDomain);
+        const domain = row.original
+        const treeRow = domain as DomainTableRow
+        const isTreeView = viewMode === 'tree' && '_isRoot' in domain
+        const isRoot = isTreeView && treeRow._isRoot
+        const hasChildren = isTreeView && treeRow._hasChildren
+        const level = isTreeView ? treeRow._level : 0
+        const isExpanded = isRoot && expandedRoots.has(treeRow._rootDomain)
 
         return (
           <div className="flex items-center gap-2">
@@ -328,10 +323,7 @@ export default function DomainsPage() {
               <>
                 {/* Indentation spacer */}
                 {level > 0 && (
-                  <div
-                    className="flex items-center"
-                    style={{ width: `${level * 20}px` }}
-                  >
+                  <div className="flex items-center" style={{ width: `${level * 20}px` }}>
                     <CornerDownRight className="h-3 w-3 text-muted-foreground/50 ml-auto" />
                   </div>
                 )}
@@ -342,8 +334,8 @@ export default function DomainsPage() {
                     size="sm"
                     className="h-6 w-6 p-0"
                     onClick={(e) => {
-                      e.stopPropagation();
-                      toggleRootExpansion(treeRow._rootDomain);
+                      e.stopPropagation()
+                      toggleRootExpansion(treeRow._rootDomain)
                     }}
                   >
                     {isExpanded ? (
@@ -358,10 +350,12 @@ export default function DomainsPage() {
               </>
             )}
             {/* Domain icon and info */}
-            <Globe className={`h-4 w-4 ${isRoot ? "text-blue-500" : "text-muted-foreground"}`} />
+            <Globe className={`h-4 w-4 ${isRoot ? 'text-blue-500' : 'text-muted-foreground'}`} />
             <div>
               <div className="flex items-center gap-2">
-                <p className={`font-medium ${!isRoot && isTreeView ? "text-muted-foreground" : ""}`}>
+                <p
+                  className={`font-medium ${!isRoot && isTreeView ? 'text-muted-foreground' : ''}`}
+                >
                   {domain.name}
                 </p>
                 {isRoot && hasChildren && (
@@ -373,53 +367,51 @@ export default function DomainsPage() {
               <p className="text-muted-foreground text-xs">{domain.groupName}</p>
             </div>
           </div>
-        );
+        )
       },
     },
     {
-      accessorKey: "metadata.registrar",
-      header: "Registrar",
-      cell: ({ row }) => (
-        <span className="text-sm">{row.original.metadata.registrar || "-"}</span>
-      ),
+      accessorKey: 'metadata.registrar',
+      header: 'Registrar',
+      cell: ({ row }) => <span className="text-sm">{row.original.metadata.registrar || '-'}</span>,
     },
     {
-      accessorKey: "metadata.expiryDate",
-      header: "Expiry",
+      accessorKey: 'metadata.expiryDate',
+      header: 'Expiry',
       cell: ({ row }) => {
-        const date = row.original.metadata.expiryDate;
-        if (!date) return <span className="text-muted-foreground">-</span>;
-        const expiry = new Date(date);
-        const now = new Date();
-        const daysLeft = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-        const isExpiringSoon = daysLeft <= 30;
+        const date = row.original.metadata.expiryDate
+        if (!date) return <span className="text-muted-foreground">-</span>
+        const expiry = new Date(date)
+        const now = new Date()
+        const daysLeft = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+        const isExpiringSoon = daysLeft <= 30
         return (
           <div className="flex items-center gap-1">
-            <span className={isExpiringSoon ? "text-orange-500" : ""}>
+            <span className={isExpiringSoon ? 'text-orange-500' : ''}>
               {expiry.toLocaleDateString()}
             </span>
             {isExpiringSoon && <AlertTriangle className="h-3 w-3 text-orange-500" />}
           </div>
-        );
+        )
       },
     },
     {
-      accessorKey: "status",
-      header: "Status",
+      accessorKey: 'status',
+      header: 'Status',
       cell: ({ row }) => <StatusBadge status={row.original.status} />,
     },
     {
-      id: "scope",
-      header: "Scope",
+      id: 'scope',
+      header: 'Scope',
       cell: ({ row }) => {
-        const match = scopeMatchesMap.get(row.original.id);
-        if (!match) return <span className="text-muted-foreground">-</span>;
-        return <ScopeBadge match={match} />;
+        const match = scopeMatchesMap.get(row.original.id)
+        if (!match) return <span className="text-muted-foreground">-</span>
+        return <ScopeBadge match={match} />
       },
     },
     {
-      id: "classification",
-      header: "Classification",
+      id: 'classification',
+      header: 'Classification',
       cell: ({ row }) => (
         <ClassificationBadges
           scope={row.original.scope}
@@ -430,11 +422,11 @@ export default function DomainsPage() {
       ),
     },
     {
-      accessorKey: "findingCount",
+      accessorKey: 'findingCount',
       header: ({ column }) => (
         <Button
           variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           className="-ml-4"
         >
           Findings
@@ -442,21 +434,17 @@ export default function DomainsPage() {
         </Button>
       ),
       cell: ({ row }) => {
-        const count = row.original.findingCount;
-        if (count === 0) return <span className="text-muted-foreground">0</span>;
-        return (
-          <Badge variant={count > 5 ? "destructive" : "secondary"}>
-            {count}
-          </Badge>
-        );
+        const count = row.original.findingCount
+        if (count === 0) return <span className="text-muted-foreground">0</span>
+        return <Badge variant={count > 5 ? 'destructive' : 'secondary'}>{count}</Badge>
       },
     },
     {
-      accessorKey: "riskScore",
+      accessorKey: 'riskScore',
       header: ({ column }) => (
         <Button
           variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           className="-ml-4"
         >
           Risk
@@ -466,9 +454,9 @@ export default function DomainsPage() {
       cell: ({ row }) => <RiskScoreBadge score={row.original.riskScore} size="sm" />,
     },
     {
-      id: "actions",
+      id: 'actions',
       cell: ({ row }) => {
-        const domain = row.original;
+        const domain = row.original
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -482,21 +470,41 @@ export default function DomainsPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSelectedDomain(domain); }}>
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setSelectedDomain(domain)
+                }}
+              >
                 <Eye className="mr-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
               <Can permission={Permission.AssetsWrite}>
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenEdit(domain); }}>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleOpenEdit(domain)
+                  }}
+                >
                   <Pencil className="mr-2 h-4 w-4" />
                   Edit
                 </DropdownMenuItem>
               </Can>
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleCopyDomain(domain); }}>
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleCopyDomain(domain)
+                }}
+              >
                 <Copy className="mr-2 h-4 w-4" />
                 Copy Name
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); window.open(`https://${domain.name}`, "_blank"); }}>
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation()
+                  window.open(`https://${domain.name}`, '_blank')
+                }}
+              >
                 <ExternalLink className="mr-2 h-4 w-4" />
                 Open in Browser
               </DropdownMenuItem>
@@ -505,9 +513,9 @@ export default function DomainsPage() {
                 <DropdownMenuItem
                   className="text-red-400"
                   onClick={(e) => {
-                    e.stopPropagation();
-                    setDomainToDelete(domain);
-                    setDeleteDialogOpen(true);
+                    e.stopPropagation()
+                    setDomainToDelete(domain)
+                    setDeleteDialogOpen(true)
                   }}
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
@@ -516,10 +524,10 @@ export default function DomainsPage() {
               </Can>
             </DropdownMenuContent>
           </DropdownMenu>
-        );
+        )
       },
     },
-  ];
+  ]
 
   const table = useReactTable({
     data: filteredData,
@@ -532,147 +540,147 @@ export default function DomainsPage() {
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-  });
+  })
 
   // Handlers
   const handleCopyDomain = (domain: Asset) => {
-    navigator.clipboard.writeText(domain.name);
-    toast.success("Domain copied to clipboard");
-  };
+    navigator.clipboard.writeText(domain.name)
+    toast.success('Domain copied to clipboard')
+  }
 
   const handleOpenEdit = (domain: Asset) => {
     setFormData({
       name: domain.name,
-      description: domain.description || "",
-      groupId: domain.groupId || "",
-      registrar: domain.metadata.registrar || "",
-      expiryDate: domain.metadata.expiryDate || "",
-      nameservers: domain.metadata.nameservers?.join(", ") || "",
-      tags: domain.tags?.join(", ") || "",
-    });
-    setSelectedDomain(domain);
-    setEditDialogOpen(true);
-  };
+      description: domain.description || '',
+      groupId: domain.groupId || '',
+      registrar: domain.metadata.registrar || '',
+      expiryDate: domain.metadata.expiryDate || '',
+      nameservers: domain.metadata.nameservers?.join(', ') || '',
+      tags: domain.tags?.join(', ') || '',
+    })
+    setSelectedDomain(domain)
+    setEditDialogOpen(true)
+  }
 
   const handleAddDomain = async () => {
     if (!formData.name) {
-      toast.error("Please fill in required fields");
-      return;
+      toast.error('Please fill in required fields')
+      return
     }
 
-    setIsSubmitting(true);
+    setIsSubmitting(true)
     try {
       await createAsset({
         name: formData.name,
-        type: "domain",
-        criticality: "high",
+        type: 'domain',
+        criticality: 'high',
         description: formData.description,
-        scope: "external",
-        exposure: "public",
-        tags: formData.tags.split(",").map((s) => s.trim()).filter(Boolean),
-      });
-      await mutate();
-      setFormData(emptyDomainForm);
-      setAddDialogOpen(false);
-      toast.success("Domain added successfully");
+        scope: 'external',
+        exposure: 'public',
+        tags: formData.tags
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean),
+      })
+      await mutate()
+      setFormData(emptyDomainForm)
+      setAddDialogOpen(false)
+      toast.success('Domain added successfully')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to add domain");
+      toast.error(err instanceof Error ? err.message : 'Failed to add domain')
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   const handleEditDomain = async () => {
     if (!selectedDomain || !formData.name) {
-      toast.error("Please fill in required fields");
-      return;
+      toast.error('Please fill in required fields')
+      return
     }
 
-    setIsSubmitting(true);
+    setIsSubmitting(true)
     try {
       await updateAsset(selectedDomain.id, {
         name: formData.name,
         description: formData.description,
-        tags: formData.tags.split(",").map((s) => s.trim()).filter(Boolean),
-      });
-      await mutate();
-      setFormData(emptyDomainForm);
-      setEditDialogOpen(false);
-      setSelectedDomain(null);
-      toast.success("Domain updated successfully");
+        tags: formData.tags
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean),
+      })
+      await mutate()
+      setFormData(emptyDomainForm)
+      setEditDialogOpen(false)
+      setSelectedDomain(null)
+      toast.success('Domain updated successfully')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to update domain");
+      toast.error(err instanceof Error ? err.message : 'Failed to update domain')
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   const handleDeleteDomain = async () => {
-    if (!domainToDelete) return;
-    setIsSubmitting(true);
+    if (!domainToDelete) return
+    setIsSubmitting(true)
     try {
-      await deleteAsset(domainToDelete.id);
-      await mutate();
-      setDeleteDialogOpen(false);
-      setDomainToDelete(null);
-      toast.success("Domain deleted successfully");
+      await deleteAsset(domainToDelete.id)
+      await mutate()
+      setDeleteDialogOpen(false)
+      setDomainToDelete(null)
+      toast.success('Domain deleted successfully')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete domain");
+      toast.error(err instanceof Error ? err.message : 'Failed to delete domain')
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   const handleBulkDelete = async () => {
-    const selectedDomainIds = table.getSelectedRowModel().rows.map((r) => r.original.id);
-    if (selectedDomainIds.length === 0) return;
+    const selectedDomainIds = table.getSelectedRowModel().rows.map((r) => r.original.id)
+    if (selectedDomainIds.length === 0) return
 
-    setIsSubmitting(true);
+    setIsSubmitting(true)
     try {
-      await bulkDeleteAssets(selectedDomainIds);
-      await mutate();
-      setRowSelection({});
-      toast.success(`Deleted ${selectedDomainIds.length} domains`);
+      await bulkDeleteAssets(selectedDomainIds)
+      await mutate()
+      setRowSelection({})
+      toast.success(`Deleted ${selectedDomainIds.length} domains`)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete domains");
+      toast.error(err instanceof Error ? err.message : 'Failed to delete domains')
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   const handleExport = () => {
     const csv = [
-      ["Name", "Registrar", "Expiry", "Status", "Risk Score", "Findings"].join(","),
+      ['Name', 'Registrar', 'Expiry', 'Status', 'Risk Score', 'Findings'].join(','),
       ...domains.map((d) =>
         [
           d.name,
-          d.metadata.registrar || "",
-          d.metadata.expiryDate || "",
+          d.metadata.registrar || '',
+          d.metadata.expiryDate || '',
           d.status,
           d.riskScore,
           d.findingCount,
-        ].join(",")
+        ].join(',')
       ),
-    ].join("\n");
+    ].join('\n')
 
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "domains.csv";
-    a.click();
-    toast.success("Domains exported");
-  };
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'domains.csv'
+    a.click()
+    toast.success('Domains exported')
+  }
 
   return (
     <>
-      <Header fixed>
-        <div className="ms-auto flex items-center gap-2 sm:gap-4">
-          <Search />
-          <ThemeSwitch />
-          <ProfileDropdown />
-        </div>
-      </Header>
+      <Header fixed />
 
       <Main>
         <PageHeader
@@ -685,10 +693,12 @@ export default function DomainsPage() {
               Export
             </Button>
             <Can permission={Permission.AssetsWrite}>
-              <Button onClick={() => {
-                setFormData(emptyDomainForm);
-                setAddDialogOpen(true);
-              }}>
+              <Button
+                onClick={() => {
+                  setFormData(emptyDomainForm)
+                  setAddDialogOpen(true)
+                }}
+              >
                 <Plus className="mr-2 h-4 w-4" />
                 Add Domain
               </Button>
@@ -698,7 +708,10 @@ export default function DomainsPage() {
 
         {/* Stats Cards */}
         <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <Card className="cursor-pointer hover:border-primary transition-colors" onClick={() => setStatusFilter("all")}>
+          <Card
+            className="cursor-pointer hover:border-primary transition-colors"
+            onClick={() => setStatusFilter('all')}
+          >
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
                 <Globe className="h-4 w-4" />
@@ -707,7 +720,10 @@ export default function DomainsPage() {
               <CardTitle className="text-3xl">{statusCounts.all}</CardTitle>
             </CardHeader>
           </Card>
-          <Card className={`cursor-pointer hover:border-green-500 transition-colors ${statusFilter === "active" ? "border-green-500" : ""}`} onClick={() => setStatusFilter("active")}>
+          <Card
+            className={`cursor-pointer hover:border-green-500 transition-colors ${statusFilter === 'active' ? 'border-green-500' : ''}`}
+            onClick={() => setStatusFilter('active')}
+          >
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
                 <CheckCircle className="h-4 w-4 text-green-500" />
@@ -716,7 +732,10 @@ export default function DomainsPage() {
               <CardTitle className="text-3xl text-green-500">{statusCounts.active}</CardTitle>
             </CardHeader>
           </Card>
-          <Card className={`cursor-pointer hover:border-gray-500 transition-colors ${statusFilter === "inactive" ? "border-gray-500" : ""}`} onClick={() => setStatusFilter("inactive")}>
+          <Card
+            className={`cursor-pointer hover:border-gray-500 transition-colors ${statusFilter === 'inactive' ? 'border-gray-500' : ''}`}
+            onClick={() => setStatusFilter('inactive')}
+          >
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
                 <Clock className="h-4 w-4 text-gray-500" />
@@ -764,9 +783,9 @@ export default function DomainsPage() {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
-                        variant={viewMode === "list" ? "default" : "outline"}
+                        variant={viewMode === 'list' ? 'default' : 'outline'}
                         size="sm"
-                        onClick={() => setViewMode("list")}
+                        onClick={() => setViewMode('list')}
                       >
                         <List className="h-4 w-4" />
                       </Button>
@@ -778,9 +797,9 @@ export default function DomainsPage() {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
-                        variant={viewMode === "tree" ? "default" : "outline"}
+                        variant={viewMode === 'tree' ? 'default' : 'outline'}
                         size="sm"
-                        onClick={() => setViewMode("tree")}
+                        onClick={() => setViewMode('tree')}
                       >
                         <Network className="h-4 w-4" />
                       </Button>
@@ -788,7 +807,7 @@ export default function DomainsPage() {
                     <TooltipContent>Tree View (Hierarchy)</TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-                {viewMode === "tree" && (
+                {viewMode === 'tree' && (
                   <>
                     <div className="h-4 w-px bg-border mx-1" />
                     <TooltipProvider>
@@ -818,7 +837,11 @@ export default function DomainsPage() {
           </CardHeader>
           <CardContent>
             {/* Quick Filter Tabs */}
-            <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)} className="mb-4">
+            <Tabs
+              value={statusFilter}
+              onValueChange={(v) => setStatusFilter(v as StatusFilter)}
+              className="mb-4"
+            >
               <TabsList>
                 {statusFilters.map((filter) => (
                   <TabsTrigger key={filter.value} value={filter.value} className="gap-1.5">
@@ -852,7 +875,7 @@ export default function DomainsPage() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => toast.info("Scanning selected domains...")}>
+                      <DropdownMenuItem onClick={() => toast.info('Scanning selected domains...')}>
                         <RefreshCw className="mr-2 h-4 w-4" />
                         Rescan Selected
                       </DropdownMenuItem>
@@ -890,14 +913,16 @@ export default function DomainsPage() {
                     table.getRowModel().rows.map((row) => (
                       <TableRow
                         key={row.id}
-                        data-state={row.getIsSelected() && "selected"}
+                        data-state={row.getIsSelected() && 'selected'}
                         className="cursor-pointer"
                         onClick={(e) => {
-                          if ((e.target as HTMLElement).closest('[role="checkbox"]') ||
-                              (e.target as HTMLElement).closest('button')) {
-                            return;
+                          if (
+                            (e.target as HTMLElement).closest('[role="checkbox"]') ||
+                            (e.target as HTMLElement).closest('button')
+                          ) {
+                            return
                           }
-                          setSelectedDomain(row.original);
+                          setSelectedDomain(row.original)
                         }}
                       >
                         {row.getVisibleCells().map((cell) => (
@@ -921,7 +946,7 @@ export default function DomainsPage() {
             {/* Pagination */}
             <div className="flex items-center justify-between mt-4">
               <p className="text-sm text-muted-foreground">
-                {table.getFilteredSelectedRowModel().rows.length} of{" "}
+                {table.getFilteredSelectedRowModel().rows.length} of{' '}
                 {table.getFilteredRowModel().rows.length} row(s) selected
               </p>
               <div className="flex flex-wrap items-center gap-2">
@@ -980,9 +1005,9 @@ export default function DomainsPage() {
         onEdit={() => selectedDomain && handleOpenEdit(selectedDomain)}
         onDelete={() => {
           if (selectedDomain) {
-            setDomainToDelete(selectedDomain);
-            setDeleteDialogOpen(true);
-            setSelectedDomain(null);
+            setDomainToDelete(selectedDomain)
+            setDeleteDialogOpen(true)
+            setSelectedDomain(null)
           }
         }}
         canEdit={canWriteAssets}
@@ -993,16 +1018,12 @@ export default function DomainsPage() {
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => window.open(`https://${selectedDomain.name}`, "_blank")}
+                onClick={() => window.open(`https://${selectedDomain.name}`, '_blank')}
               >
                 <ExternalLink className="mr-2 h-4 w-4" />
                 Open
               </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handleCopyDomain(selectedDomain)}
-              >
+              <Button size="sm" variant="outline" onClick={() => handleCopyDomain(selectedDomain)}>
                 <Copy className="mr-2 h-4 w-4" />
                 Copy
               </Button>
@@ -1048,7 +1069,9 @@ export default function DomainsPage() {
                             <Badge variant="outline" className="text-xs">
                               {target.pattern}
                             </Badge>
-                            <span className="text-xs text-muted-foreground">({target.matchType})</span>
+                            <span className="text-xs text-muted-foreground">
+                              ({target.matchType})
+                            </span>
                           </div>
                         ))}
                       </div>
@@ -1058,16 +1081,23 @@ export default function DomainsPage() {
                     <div className="text-sm">
                       <p className="text-muted-foreground mb-1">Exclusions Applied</p>
                       <div className="space-y-1">
-                        {scopeMatchesMap.get(selectedDomain.id)!.matchedExclusions.map((exclusion) => (
-                          <div key={exclusion.exclusionId} className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-xs border-orange-500/50 text-orange-500">
-                              {exclusion.pattern}
-                            </Badge>
-                            {exclusion.reason && (
-                              <span className="text-xs text-muted-foreground">{exclusion.reason}</span>
-                            )}
-                          </div>
-                        ))}
+                        {scopeMatchesMap
+                          .get(selectedDomain.id)!
+                          .matchedExclusions.map((exclusion) => (
+                            <div key={exclusion.exclusionId} className="flex items-center gap-2">
+                              <Badge
+                                variant="outline"
+                                className="text-xs border-orange-500/50 text-orange-500"
+                              >
+                                {exclusion.pattern}
+                              </Badge>
+                              {exclusion.reason && (
+                                <span className="text-xs text-muted-foreground">
+                                  {exclusion.reason}
+                                </span>
+                              )}
+                            </div>
+                          ))}
                       </div>
                     </div>
                   )}
@@ -1080,27 +1110,30 @@ export default function DomainsPage() {
                 <div className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
                   <div>
                     <p className="text-muted-foreground">Registrar</p>
-                    <p className="font-medium">{selectedDomain.metadata.registrar || "-"}</p>
+                    <p className="font-medium">{selectedDomain.metadata.registrar || '-'}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Expiry Date</p>
                     <p className="font-medium">
                       {selectedDomain.metadata.expiryDate
                         ? new Date(selectedDomain.metadata.expiryDate).toLocaleDateString()
-                        : "-"}
+                        : '-'}
                     </p>
                   </div>
                 </div>
-                {selectedDomain.metadata.nameservers && selectedDomain.metadata.nameservers.length > 0 && (
-                  <div>
-                    <p className="text-muted-foreground text-sm mb-1">Nameservers</p>
-                    <div className="flex flex-wrap gap-1">
-                      {selectedDomain.metadata.nameservers.map((ns) => (
-                        <Badge key={ns} variant="outline" className="text-xs">{ns}</Badge>
-                      ))}
+                {selectedDomain.metadata.nameservers &&
+                  selectedDomain.metadata.nameservers.length > 0 && (
+                    <div>
+                      <p className="text-muted-foreground text-sm mb-1">Nameservers</p>
+                      <div className="flex flex-wrap gap-1">
+                        {selectedDomain.metadata.nameservers.map((ns) => (
+                          <Badge key={ns} variant="outline" className="text-xs">
+                            {ns}
+                          </Badge>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
               </div>
             </>
           )
@@ -1115,9 +1148,7 @@ export default function DomainsPage() {
               <Globe className="h-5 w-5" />
               Add Domain
             </DialogTitle>
-            <DialogDescription>
-              Add a new domain to your asset inventory
-            </DialogDescription>
+            <DialogDescription>Add a new domain to your asset inventory</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -1215,9 +1246,7 @@ export default function DomainsPage() {
               <Pencil className="h-5 w-5" />
               Edit Domain
             </DialogTitle>
-            <DialogDescription>
-              Update domain information
-            </DialogDescription>
+            <DialogDescription>Update domain information</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -1313,21 +1342,18 @@ export default function DomainsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Domain</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete <strong>{domainToDelete?.name}</strong>?
-              This action cannot be undone.
+              Are you sure you want to delete <strong>{domainToDelete?.name}</strong>? This action
+              cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-red-500 hover:bg-red-600"
-              onClick={handleDeleteDomain}
-            >
+            <AlertDialogAction className="bg-red-500 hover:bg-red-600" onClick={handleDeleteDomain}>
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </>
-  );
+  )
 }

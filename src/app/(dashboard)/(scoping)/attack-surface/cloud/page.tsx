@@ -1,16 +1,13 @@
-"use client";
+'use client'
 
-import { useState, useMemo } from "react";
-import { Header, Main } from "@/components/layout";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { PageHeader } from "@/features/shared";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
+import { useState, useMemo } from 'react'
+import { Header, Main } from '@/components/layout'
+import { PageHeader } from '@/features/shared'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { Progress } from '@/components/ui/progress'
 import {
   Cloud,
   Plus,
@@ -33,20 +30,14 @@ import {
   X,
   Search as SearchIcon,
   Box,
-} from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+} from 'lucide-react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu'
 import {
   Dialog,
   DialogContent,
@@ -54,21 +45,21 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog'
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet";
+} from '@/components/ui/sheet'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from '@/components/ui/select'
 import {
   Table,
   TableBody,
@@ -76,246 +67,246 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { toast } from "sonner";
-import { Can, Permission } from "@/lib/permissions";
+} from '@/components/ui/table'
+import { toast } from 'sonner'
+import { Can, Permission } from '@/lib/permissions'
 
-type CloudProvider = "aws" | "azure" | "gcp" | "other";
-type ResourceType = "compute" | "storage" | "database" | "network" | "iam" | "serverless";
-type RiskLevel = "critical" | "high" | "medium" | "low";
-type ResourceStatus = "running" | "stopped" | "terminated" | "unknown";
-type ExposureLevel = "public" | "private" | "internal";
+type CloudProvider = 'aws' | 'azure' | 'gcp' | 'other'
+type ResourceType = 'compute' | 'storage' | 'database' | 'network' | 'iam' | 'serverless'
+type RiskLevel = 'critical' | 'high' | 'medium' | 'low'
+type ResourceStatus = 'running' | 'stopped' | 'terminated' | 'unknown'
+type ExposureLevel = 'public' | 'private' | 'internal'
 
 interface CloudResource {
-  id: string;
-  name: string;
-  provider: CloudProvider;
-  resourceType: ResourceType;
-  region: string;
-  accountId: string;
-  accountName?: string;
-  status: ResourceStatus;
-  exposure: ExposureLevel;
-  riskLevel: RiskLevel;
-  lastSeen: string;
-  discoveredAt: string;
-  findingsCount: number;
-  tags?: Record<string, string>;
-  publicIp?: string;
-  privateIp?: string;
-  notes?: string;
+  id: string
+  name: string
+  provider: CloudProvider
+  resourceType: ResourceType
+  region: string
+  accountId: string
+  accountName?: string
+  status: ResourceStatus
+  exposure: ExposureLevel
+  riskLevel: RiskLevel
+  lastSeen: string
+  discoveredAt: string
+  findingsCount: number
+  tags?: Record<string, string>
+  publicIp?: string
+  privateIp?: string
+  notes?: string
 }
 
 const daysAgo = (days: number) => {
-  const date = new Date();
-  date.setDate(date.getDate() - days);
-  return date.toISOString();
-};
+  const date = new Date()
+  date.setDate(date.getDate() - days)
+  return date.toISOString()
+}
 
 const mockCloudResources: CloudResource[] = [
   {
-    id: "cloud-001",
-    name: "prod-api-server-01",
-    provider: "aws",
-    resourceType: "compute",
-    region: "ap-southeast-1",
-    accountId: "123456789012",
-    accountName: "TCB Production",
-    status: "running",
-    exposure: "public",
-    riskLevel: "high",
+    id: 'cloud-001',
+    name: 'prod-api-server-01',
+    provider: 'aws',
+    resourceType: 'compute',
+    region: 'ap-southeast-1',
+    accountId: '123456789012',
+    accountName: 'TCB Production',
+    status: 'running',
+    exposure: 'public',
+    riskLevel: 'high',
     lastSeen: daysAgo(0),
     discoveredAt: daysAgo(180),
     findingsCount: 4,
-    publicIp: "54.123.45.67",
-    privateIp: "10.0.1.50",
-    tags: { Environment: "Production", Team: "API" },
+    publicIp: '54.123.45.67',
+    privateIp: '10.0.1.50',
+    tags: { Environment: 'Production', Team: 'API' },
   },
   {
-    id: "cloud-002",
-    name: "prod-rds-mysql-01",
-    provider: "aws",
-    resourceType: "database",
-    region: "ap-southeast-1",
-    accountId: "123456789012",
-    accountName: "TCB Production",
-    status: "running",
-    exposure: "private",
-    riskLevel: "medium",
+    id: 'cloud-002',
+    name: 'prod-rds-mysql-01',
+    provider: 'aws',
+    resourceType: 'database',
+    region: 'ap-southeast-1',
+    accountId: '123456789012',
+    accountName: 'TCB Production',
+    status: 'running',
+    exposure: 'private',
+    riskLevel: 'medium',
     lastSeen: daysAgo(0),
     discoveredAt: daysAgo(200),
     findingsCount: 2,
-    privateIp: "10.0.2.100",
-    tags: { Environment: "Production", Team: "Database" },
-    notes: "Contains customer data",
+    privateIp: '10.0.2.100',
+    tags: { Environment: 'Production', Team: 'Database' },
+    notes: 'Contains customer data',
   },
   {
-    id: "cloud-003",
-    name: "public-assets-bucket",
-    provider: "aws",
-    resourceType: "storage",
-    region: "ap-southeast-1",
-    accountId: "123456789012",
-    accountName: "TCB Production",
-    status: "running",
-    exposure: "public",
-    riskLevel: "critical",
+    id: 'cloud-003',
+    name: 'public-assets-bucket',
+    provider: 'aws',
+    resourceType: 'storage',
+    region: 'ap-southeast-1',
+    accountId: '123456789012',
+    accountName: 'TCB Production',
+    status: 'running',
+    exposure: 'public',
+    riskLevel: 'critical',
     lastSeen: daysAgo(0),
     discoveredAt: daysAgo(150),
     findingsCount: 8,
-    tags: { Environment: "Production", Team: "Frontend" },
-    notes: "S3 bucket with public access - needs review",
+    tags: { Environment: 'Production', Team: 'Frontend' },
+    notes: 'S3 bucket with public access - needs review',
   },
   {
-    id: "cloud-004",
-    name: "tcb-webapp-vm",
-    provider: "azure",
-    resourceType: "compute",
-    region: "Southeast Asia",
-    accountId: "sub-abc123",
-    accountName: "TCB Azure Subscription",
-    status: "running",
-    exposure: "public",
-    riskLevel: "medium",
+    id: 'cloud-004',
+    name: 'tcb-webapp-vm',
+    provider: 'azure',
+    resourceType: 'compute',
+    region: 'Southeast Asia',
+    accountId: 'sub-abc123',
+    accountName: 'TCB Azure Subscription',
+    status: 'running',
+    exposure: 'public',
+    riskLevel: 'medium',
     lastSeen: daysAgo(0),
     discoveredAt: daysAgo(120),
     findingsCount: 3,
-    publicIp: "20.195.67.89",
-    privateIp: "10.1.0.10",
-    tags: { Environment: "Production", Application: "WebApp" },
+    publicIp: '20.195.67.89',
+    privateIp: '10.1.0.10',
+    tags: { Environment: 'Production', Application: 'WebApp' },
   },
   {
-    id: "cloud-005",
-    name: "tcb-cosmos-db",
-    provider: "azure",
-    resourceType: "database",
-    region: "Southeast Asia",
-    accountId: "sub-abc123",
-    accountName: "TCB Azure Subscription",
-    status: "running",
-    exposure: "private",
-    riskLevel: "low",
+    id: 'cloud-005',
+    name: 'tcb-cosmos-db',
+    provider: 'azure',
+    resourceType: 'database',
+    region: 'Southeast Asia',
+    accountId: 'sub-abc123',
+    accountName: 'TCB Azure Subscription',
+    status: 'running',
+    exposure: 'private',
+    riskLevel: 'low',
     lastSeen: daysAgo(0),
     discoveredAt: daysAgo(100),
     findingsCount: 0,
-    tags: { Environment: "Production", Team: "Backend" },
+    tags: { Environment: 'Production', Team: 'Backend' },
   },
   {
-    id: "cloud-006",
-    name: "gke-cluster-prod",
-    provider: "gcp",
-    resourceType: "compute",
-    region: "asia-southeast1",
-    accountId: "tcb-project-prod",
-    accountName: "TCB GCP Production",
-    status: "running",
-    exposure: "internal",
-    riskLevel: "high",
+    id: 'cloud-006',
+    name: 'gke-cluster-prod',
+    provider: 'gcp',
+    resourceType: 'compute',
+    region: 'asia-southeast1',
+    accountId: 'tcb-project-prod',
+    accountName: 'TCB GCP Production',
+    status: 'running',
+    exposure: 'internal',
+    riskLevel: 'high',
     lastSeen: daysAgo(0),
     discoveredAt: daysAgo(90),
     findingsCount: 6,
-    tags: { Environment: "Production", Type: "Kubernetes" },
-    notes: "Main Kubernetes cluster",
+    tags: { Environment: 'Production', Type: 'Kubernetes' },
+    notes: 'Main Kubernetes cluster',
   },
   {
-    id: "cloud-007",
-    name: "cloud-storage-backup",
-    provider: "gcp",
-    resourceType: "storage",
-    region: "asia-southeast1",
-    accountId: "tcb-project-prod",
-    accountName: "TCB GCP Production",
-    status: "running",
-    exposure: "private",
-    riskLevel: "low",
+    id: 'cloud-007',
+    name: 'cloud-storage-backup',
+    provider: 'gcp',
+    resourceType: 'storage',
+    region: 'asia-southeast1',
+    accountId: 'tcb-project-prod',
+    accountName: 'TCB GCP Production',
+    status: 'running',
+    exposure: 'private',
+    riskLevel: 'low',
     lastSeen: daysAgo(0),
     discoveredAt: daysAgo(60),
     findingsCount: 1,
-    tags: { Environment: "Production", Purpose: "Backup" },
+    tags: { Environment: 'Production', Purpose: 'Backup' },
   },
   {
-    id: "cloud-008",
-    name: "api-gateway-function",
-    provider: "aws",
-    resourceType: "serverless",
-    region: "ap-southeast-1",
-    accountId: "123456789012",
-    accountName: "TCB Production",
-    status: "running",
-    exposure: "public",
-    riskLevel: "medium",
+    id: 'cloud-008',
+    name: 'api-gateway-function',
+    provider: 'aws',
+    resourceType: 'serverless',
+    region: 'ap-southeast-1',
+    accountId: '123456789012',
+    accountName: 'TCB Production',
+    status: 'running',
+    exposure: 'public',
+    riskLevel: 'medium',
     lastSeen: daysAgo(0),
     discoveredAt: daysAgo(45),
     findingsCount: 2,
-    tags: { Environment: "Production", Type: "Lambda" },
+    tags: { Environment: 'Production', Type: 'Lambda' },
   },
   {
-    id: "cloud-009",
-    name: "staging-vpc",
-    provider: "aws",
-    resourceType: "network",
-    region: "ap-southeast-1",
-    accountId: "987654321098",
-    accountName: "TCB Staging",
-    status: "running",
-    exposure: "internal",
-    riskLevel: "low",
+    id: 'cloud-009',
+    name: 'staging-vpc',
+    provider: 'aws',
+    resourceType: 'network',
+    region: 'ap-southeast-1',
+    accountId: '987654321098',
+    accountName: 'TCB Staging',
+    status: 'running',
+    exposure: 'internal',
+    riskLevel: 'low',
     lastSeen: daysAgo(0),
     discoveredAt: daysAgo(200),
     findingsCount: 1,
-    tags: { Environment: "Staging" },
+    tags: { Environment: 'Staging' },
   },
   {
-    id: "cloud-010",
-    name: "admin-role",
-    provider: "aws",
-    resourceType: "iam",
-    region: "global",
-    accountId: "123456789012",
-    accountName: "TCB Production",
-    status: "running",
-    exposure: "internal",
-    riskLevel: "critical",
+    id: 'cloud-010',
+    name: 'admin-role',
+    provider: 'aws',
+    resourceType: 'iam',
+    region: 'global',
+    accountId: '123456789012',
+    accountName: 'TCB Production',
+    status: 'running',
+    exposure: 'internal',
+    riskLevel: 'critical',
     lastSeen: daysAgo(0),
     discoveredAt: daysAgo(365),
     findingsCount: 5,
-    notes: "Overly permissive IAM role",
+    notes: 'Overly permissive IAM role',
   },
-];
+]
 
 const providerColors: Record<CloudProvider, string> = {
-  aws: "bg-orange-500/10 text-orange-500 border-orange-500/20",
-  azure: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-  gcp: "bg-red-500/10 text-red-500 border-red-500/20",
-  other: "bg-gray-500/10 text-gray-500 border-gray-500/20",
-};
+  aws: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
+  azure: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
+  gcp: 'bg-red-500/10 text-red-500 border-red-500/20',
+  other: 'bg-gray-500/10 text-gray-500 border-gray-500/20',
+}
 
 const providerLabels: Record<CloudProvider, string> = {
-  aws: "AWS",
-  azure: "Azure",
-  gcp: "GCP",
-  other: "Other",
-};
+  aws: 'AWS',
+  azure: 'Azure',
+  gcp: 'GCP',
+  other: 'Other',
+}
 
 const statusColors: Record<ResourceStatus, string> = {
-  running: "bg-green-500/10 text-green-500 border-green-500/20",
-  stopped: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
-  terminated: "bg-gray-500/10 text-gray-500 border-gray-500/20",
-  unknown: "bg-gray-500/10 text-gray-500 border-gray-500/20",
-};
+  running: 'bg-green-500/10 text-green-500 border-green-500/20',
+  stopped: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
+  terminated: 'bg-gray-500/10 text-gray-500 border-gray-500/20',
+  unknown: 'bg-gray-500/10 text-gray-500 border-gray-500/20',
+}
 
 const exposureColors: Record<ExposureLevel, string> = {
-  public: "bg-red-500/10 text-red-500 border-red-500/20",
-  private: "bg-green-500/10 text-green-500 border-green-500/20",
-  internal: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-};
+  public: 'bg-red-500/10 text-red-500 border-red-500/20',
+  private: 'bg-green-500/10 text-green-500 border-green-500/20',
+  internal: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
+}
 
 const riskColors: Record<RiskLevel, string> = {
-  critical: "bg-red-500/10 text-red-500 border-red-500/20",
-  high: "bg-orange-500/10 text-orange-500 border-orange-500/20",
-  medium: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
-  low: "bg-green-500/10 text-green-500 border-green-500/20",
-};
+  critical: 'bg-red-500/10 text-red-500 border-red-500/20',
+  high: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
+  medium: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
+  low: 'bg-green-500/10 text-green-500 border-green-500/20',
+}
 
 const typeIcons: Record<ResourceType, React.ElementType> = {
   compute: Server,
@@ -324,86 +315,86 @@ const typeIcons: Record<ResourceType, React.ElementType> = {
   network: Globe,
   iam: Key,
   serverless: Box,
-};
+}
 
 export default function CloudSurfacePage() {
-  const [resources, setResources] = useState<CloudResource[]>(mockCloudResources);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filterProvider, setFilterProvider] = useState<CloudProvider | "all">("all");
-  const [filterType, setFilterType] = useState<ResourceType | "all">("all");
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [viewResource, setViewResource] = useState<CloudResource | null>(null);
-  const [editResource, setEditResource] = useState<CloudResource | null>(null);
-  const [deleteResource, setDeleteResource] = useState<CloudResource | null>(null);
+  const [resources, setResources] = useState<CloudResource[]>(mockCloudResources)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [filterProvider, setFilterProvider] = useState<CloudProvider | 'all'>('all')
+  const [filterType, setFilterType] = useState<ResourceType | 'all'>('all')
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [viewResource, setViewResource] = useState<CloudResource | null>(null)
+  const [editResource, setEditResource] = useState<CloudResource | null>(null)
+  const [deleteResource, setDeleteResource] = useState<CloudResource | null>(null)
 
   const [formData, setFormData] = useState({
-    name: "",
-    provider: "aws" as CloudProvider,
-    resourceType: "compute" as ResourceType,
-    region: "",
-    accountId: "",
-    accountName: "",
-    status: "running" as ResourceStatus,
-    exposure: "private" as ExposureLevel,
-    riskLevel: "medium" as RiskLevel,
-    publicIp: "",
-    privateIp: "",
-    notes: "",
-  });
+    name: '',
+    provider: 'aws' as CloudProvider,
+    resourceType: 'compute' as ResourceType,
+    region: '',
+    accountId: '',
+    accountName: '',
+    status: 'running' as ResourceStatus,
+    exposure: 'private' as ExposureLevel,
+    riskLevel: 'medium' as RiskLevel,
+    publicIp: '',
+    privateIp: '',
+    notes: '',
+  })
 
   const stats = useMemo(() => {
     return {
       total: resources.length,
-      running: resources.filter((r) => r.status === "running").length,
-      publicExposure: resources.filter((r) => r.exposure === "public").length,
-      critical: resources.filter((r) => r.riskLevel === "critical").length,
+      running: resources.filter((r) => r.status === 'running').length,
+      publicExposure: resources.filter((r) => r.exposure === 'public').length,
+      critical: resources.filter((r) => r.riskLevel === 'critical').length,
       totalFindings: resources.reduce((acc, r) => acc + r.findingsCount, 0),
       byProvider: {
-        aws: resources.filter((r) => r.provider === "aws").length,
-        azure: resources.filter((r) => r.provider === "azure").length,
-        gcp: resources.filter((r) => r.provider === "gcp").length,
+        aws: resources.filter((r) => r.provider === 'aws').length,
+        azure: resources.filter((r) => r.provider === 'azure').length,
+        gcp: resources.filter((r) => r.provider === 'gcp').length,
       },
-    };
-  }, [resources]);
+    }
+  }, [resources])
 
   const filteredResources = useMemo(() => {
     return resources.filter((resource) => {
       if (searchQuery) {
-        const query = searchQuery.toLowerCase();
+        const query = searchQuery.toLowerCase()
         if (
           !resource.name.toLowerCase().includes(query) &&
           !resource.accountId.toLowerCase().includes(query)
         ) {
-          return false;
+          return false
         }
       }
-      if (filterProvider !== "all" && resource.provider !== filterProvider) return false;
-      if (filterType !== "all" && resource.resourceType !== filterType) return false;
-      return true;
-    });
-  }, [resources, searchQuery, filterProvider, filterType]);
+      if (filterProvider !== 'all' && resource.provider !== filterProvider) return false
+      if (filterType !== 'all' && resource.resourceType !== filterType) return false
+      return true
+    })
+  }, [resources, searchQuery, filterProvider, filterType])
 
   const resetForm = () => {
     setFormData({
-      name: "",
-      provider: "aws",
-      resourceType: "compute",
-      region: "",
-      accountId: "",
-      accountName: "",
-      status: "running",
-      exposure: "private",
-      riskLevel: "medium",
-      publicIp: "",
-      privateIp: "",
-      notes: "",
-    });
-  };
+      name: '',
+      provider: 'aws',
+      resourceType: 'compute',
+      region: '',
+      accountId: '',
+      accountName: '',
+      status: 'running',
+      exposure: 'private',
+      riskLevel: 'medium',
+      publicIp: '',
+      privateIp: '',
+      notes: '',
+    })
+  }
 
   const handleCreate = () => {
     if (!formData.name || !formData.accountId || !formData.region) {
-      toast.error("Please fill in all required fields");
-      return;
+      toast.error('Please fill in all required fields')
+      return
     }
     const newResource: CloudResource = {
       id: `cloud-${Date.now()}`,
@@ -422,17 +413,17 @@ export default function CloudSurfacePage() {
       publicIp: formData.publicIp || undefined,
       privateIp: formData.privateIp || undefined,
       notes: formData.notes || undefined,
-    };
-    setResources((prev) => [...prev, newResource]);
-    toast.success("Cloud resource added successfully");
-    setIsCreateOpen(false);
-    resetForm();
-  };
+    }
+    setResources((prev) => [...prev, newResource])
+    toast.success('Cloud resource added successfully')
+    setIsCreateOpen(false)
+    resetForm()
+  }
 
   const handleEdit = () => {
     if (!editResource || !formData.name || !formData.accountId || !formData.region) {
-      toast.error("Please fill in all required fields");
-      return;
+      toast.error('Please fill in all required fields')
+      return
     }
     setResources((prev) =>
       prev.map((r) =>
@@ -454,18 +445,18 @@ export default function CloudSurfacePage() {
             }
           : r
       )
-    );
-    toast.success("Cloud resource updated successfully");
-    setEditResource(null);
-    resetForm();
-  };
+    )
+    toast.success('Cloud resource updated successfully')
+    setEditResource(null)
+    resetForm()
+  }
 
   const handleDelete = () => {
-    if (!deleteResource) return;
-    setResources((prev) => prev.filter((r) => r.id !== deleteResource.id));
-    toast.success("Cloud resource deleted successfully");
-    setDeleteResource(null);
-  };
+    if (!deleteResource) return
+    setResources((prev) => prev.filter((r) => r.id !== deleteResource.id))
+    toast.success('Cloud resource deleted successfully')
+    setDeleteResource(null)
+  }
 
   const openEdit = (resource: CloudResource) => {
     setFormData({
@@ -474,16 +465,16 @@ export default function CloudSurfacePage() {
       resourceType: resource.resourceType,
       region: resource.region,
       accountId: resource.accountId,
-      accountName: resource.accountName || "",
+      accountName: resource.accountName || '',
       status: resource.status,
       exposure: resource.exposure,
       riskLevel: resource.riskLevel,
-      publicIp: resource.publicIp || "",
-      privateIp: resource.privateIp || "",
-      notes: resource.notes || "",
-    });
-    setEditResource(resource);
-  };
+      publicIp: resource.publicIp || '',
+      privateIp: resource.privateIp || '',
+      notes: resource.notes || '',
+    })
+    setEditResource(resource)
+  }
 
   const formFields = (
     <div className="space-y-4">
@@ -640,17 +631,11 @@ export default function CloudSurfacePage() {
         />
       </div>
     </div>
-  );
+  )
 
   return (
     <>
-      <Header fixed>
-        <Search />
-        <div className="ms-auto flex items-center gap-2 sm:gap-4">
-          <ThemeSwitch />
-          <ProfileDropdown />
-        </div>
-      </Header>
+      <Header fixed />
 
       <Main>
         <PageHeader
@@ -737,15 +722,21 @@ export default function CloudSurfacePage() {
           <CardContent>
             <div className="flex gap-6">
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="outline" className={providerColors.aws}>AWS</Badge>
+                <Badge variant="outline" className={providerColors.aws}>
+                  AWS
+                </Badge>
                 <span className="text-sm font-medium">{stats.byProvider.aws} resources</span>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="outline" className={providerColors.azure}>Azure</Badge>
+                <Badge variant="outline" className={providerColors.azure}>
+                  Azure
+                </Badge>
                 <span className="text-sm font-medium">{stats.byProvider.azure} resources</span>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="outline" className={providerColors.gcp}>GCP</Badge>
+                <Badge variant="outline" className={providerColors.gcp}>
+                  GCP
+                </Badge>
                 <span className="text-sm font-medium">{stats.byProvider.gcp} resources</span>
               </div>
             </div>
@@ -769,7 +760,10 @@ export default function CloudSurfacePage() {
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <Filter className="h-4 w-4 text-muted-foreground" />
-                <Select value={filterProvider} onValueChange={(v) => setFilterProvider(v as CloudProvider | "all")}>
+                <Select
+                  value={filterProvider}
+                  onValueChange={(v) => setFilterProvider(v as CloudProvider | 'all')}
+                >
                   <SelectTrigger className="w-28">
                     <SelectValue placeholder="Provider" />
                   </SelectTrigger>
@@ -781,7 +775,10 @@ export default function CloudSurfacePage() {
                     <SelectItem value="other">Other</SelectItem>
                   </SelectContent>
                 </Select>
-                <Select value={filterType} onValueChange={(v) => setFilterType(v as ResourceType | "all")}>
+                <Select
+                  value={filterType}
+                  onValueChange={(v) => setFilterType(v as ResourceType | 'all')}
+                >
                   <SelectTrigger className="w-32">
                     <SelectValue placeholder="Type" />
                   </SelectTrigger>
@@ -795,14 +792,14 @@ export default function CloudSurfacePage() {
                     <SelectItem value="serverless">Serverless</SelectItem>
                   </SelectContent>
                 </Select>
-                {(filterProvider !== "all" || filterType !== "all" || searchQuery) && (
+                {(filterProvider !== 'all' || filterType !== 'all' || searchQuery) && (
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => {
-                      setFilterProvider("all");
-                      setFilterType("all");
-                      setSearchQuery("");
+                      setFilterProvider('all')
+                      setFilterType('all')
+                      setSearchQuery('')
                     }}
                   >
                     <X className="mr-1 h-3 w-3" />
@@ -838,7 +835,7 @@ export default function CloudSurfacePage() {
               </TableHeader>
               <TableBody>
                 {filteredResources.map((resource) => {
-                  const TypeIcon = typeIcons[resource.resourceType];
+                  const TypeIcon = typeIcons[resource.resourceType]
                   return (
                     <TableRow
                       key={resource.id}
@@ -852,7 +849,9 @@ export default function CloudSurfacePage() {
                           </div>
                           <div>
                             <p className="font-medium">{resource.name}</p>
-                            <p className="text-xs text-muted-foreground">{resource.accountName || resource.accountId}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {resource.accountName || resource.accountId}
+                            </p>
                           </div>
                         </div>
                       </TableCell>
@@ -880,7 +879,11 @@ export default function CloudSurfacePage() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <span className={resource.findingsCount > 0 ? "text-orange-500 font-medium" : ""}>
+                        <span
+                          className={
+                            resource.findingsCount > 0 ? 'text-orange-500 font-medium' : ''
+                          }
+                        >
                           {resource.findingsCount}
                         </span>
                       </TableCell>
@@ -917,7 +920,7 @@ export default function CloudSurfacePage() {
                         </Can>
                       </TableCell>
                     </TableRow>
-                  );
+                  )
                 })}
               </TableBody>
             </Table>
@@ -965,7 +968,8 @@ export default function CloudSurfacePage() {
           <DialogHeader>
             <DialogTitle>Delete Resource</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete &quot;{deleteResource?.name}&quot;? This action cannot be undone.
+              Are you sure you want to delete &quot;{deleteResource?.name}&quot;? This action cannot
+              be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -991,7 +995,9 @@ export default function CloudSurfacePage() {
                   </div>
                   <div>
                     <SheetTitle>{viewResource.name}</SheetTitle>
-                    <SheetDescription>{viewResource.accountName || viewResource.accountId}</SheetDescription>
+                    <SheetDescription>
+                      {viewResource.accountName || viewResource.accountId}
+                    </SheetDescription>
                   </div>
                 </div>
               </SheetHeader>
@@ -1101,7 +1107,9 @@ export default function CloudSurfacePage() {
                       <CardTitle className="text-sm">Findings</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className={`text-2xl font-bold ${viewResource.findingsCount > 0 ? "text-orange-500" : ""}`}>
+                      <div
+                        className={`text-2xl font-bold ${viewResource.findingsCount > 0 ? 'text-orange-500' : ''}`}
+                      >
                         {viewResource.findingsCount}
                       </div>
                     </CardContent>
@@ -1111,7 +1119,9 @@ export default function CloudSurfacePage() {
                       <CardTitle className="text-sm">Last Seen</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-sm">{new Date(viewResource.lastSeen).toLocaleDateString()}</p>
+                      <p className="text-sm">
+                        {new Date(viewResource.lastSeen).toLocaleDateString()}
+                      </p>
                     </CardContent>
                   </Card>
                 </div>
@@ -1143,5 +1153,5 @@ export default function CloudSurfacePage() {
         </SheetContent>
       </Sheet>
     </>
-  );
+  )
 }

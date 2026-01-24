@@ -1,71 +1,53 @@
-"use client";
+'use client'
 
-import { Header, Main } from "@/components/layout";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { PageHeader } from "@/features/shared";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Bot, CheckCircle, AlertTriangle, Shield } from "lucide-react";
+import { Header, Main } from '@/components/layout'
+import { PageHeader } from '@/features/shared'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Bot, CheckCircle, AlertTriangle, Shield } from 'lucide-react'
 
 // Mock stats data
 const serviceAccountStats = [
   {
-    title: "Total Service Accounts",
-    value: "89",
-    description: "All non-human identities",
+    title: 'Total Service Accounts',
+    value: '89',
+    description: 'All non-human identities',
     icon: Bot,
-    iconColor: "text-purple-500",
-    iconBg: "bg-purple-500/10",
+    iconColor: 'text-purple-500',
+    iconBg: 'bg-purple-500/10',
   },
   {
-    title: "Active",
-    value: "72",
-    description: "Currently in use",
+    title: 'Active',
+    value: '72',
+    description: 'Currently in use',
     icon: CheckCircle,
-    iconColor: "text-green-500",
-    iconBg: "bg-green-500/10",
+    iconColor: 'text-green-500',
+    iconBg: 'bg-green-500/10',
   },
   {
-    title: "Over-Privileged",
-    value: "15",
-    description: "Excessive permissions",
+    title: 'Over-Privileged',
+    value: '15',
+    description: 'Excessive permissions',
     icon: AlertTriangle,
-    iconColor: "text-orange-500",
-    iconBg: "bg-orange-500/10",
+    iconColor: 'text-orange-500',
+    iconBg: 'bg-orange-500/10',
   },
   {
-    title: "Admin Access",
-    value: "8",
-    description: "With admin privileges",
+    title: 'Admin Access',
+    value: '8',
+    description: 'With admin privileges',
     icon: Shield,
-    iconColor: "text-red-500",
-    iconBg: "bg-red-500/10",
+    iconColor: 'text-red-500',
+    iconBg: 'bg-red-500/10',
   },
-];
+]
 
 export default function ServiceAccountsPage() {
   return (
     <>
-      <Header fixed>
-        <div className="ms-auto flex items-center gap-2 sm:gap-4">
-          <Search />
-          <ThemeSwitch />
-          <ProfileDropdown />
-        </div>
-      </Header>
+      <Header fixed />
 
       <Main>
-        <PageHeader
-          title="Service Accounts"
-          description="Non-human service accounts"
-        />
+        <PageHeader title="Service Accounts" description="Non-human service accounts" />
 
         <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
           {serviceAccountStats.map((stat) => (
@@ -80,14 +62,12 @@ export default function ServiceAccountsPage() {
                 <CardTitle className="text-3xl">{stat.value}</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  {stat.description}
-                </p>
+                <p className="text-sm text-muted-foreground">{stat.description}</p>
               </CardContent>
             </Card>
           ))}
         </div>
       </Main>
     </>
-  );
+  )
 }

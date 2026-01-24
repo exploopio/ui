@@ -1,6 +1,6 @@
-"use client";
+'use client'
 
-import { useState, useMemo } from "react";
+import { useState, useMemo } from 'react'
 import {
   ColumnDef,
   flexRender,
@@ -10,23 +10,14 @@ import {
   getSortedRowModel,
   SortingState,
   useReactTable,
-} from "@tanstack/react-table";
-import { Header, Main } from "@/components/layout";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { PageHeader, StatusBadge, RiskScoreBadge } from "@/features/shared";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+} from '@tanstack/react-table'
+import { Header, Main } from '@/components/layout'
+import { PageHeader, StatusBadge, RiskScoreBadge } from '@/features/shared'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -34,23 +25,23 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from '@/components/ui/table'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "sonner";
+} from '@/components/ui/select'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { toast } from 'sonner'
 import {
   Server,
   Search as SearchIcon,
@@ -70,8 +61,8 @@ import {
   Play,
   Square,
   Pause,
-} from "lucide-react";
-import type { Status } from "@/features/shared/types";
+} from 'lucide-react'
+import type { Status } from '@/features/shared/types'
 import {
   ScopeBadge,
   ScopeCoverageCard,
@@ -80,285 +71,294 @@ import {
   getActiveScopeTargets,
   getActiveScopeExclusions,
   type ScopeMatchResult,
-} from "@/features/scope";
+} from '@/features/scope'
 
 // Compute instance type
 interface ComputeInstance {
-  id: string;
-  name: string;
-  instanceId: string;
-  provider: "aws" | "gcp" | "azure";
-  instanceType: string;
-  state: "running" | "stopped" | "terminated" | "pending";
-  status: Status;
-  region: string;
-  availabilityZone: string;
-  privateIp: string;
-  publicIp?: string;
-  vpcId: string;
-  os: string;
-  riskScore: number;
-  findingCount: number;
-  launchTime: string;
-  tags?: string[];
+  id: string
+  name: string
+  instanceId: string
+  provider: 'aws' | 'gcp' | 'azure'
+  instanceType: string
+  state: 'running' | 'stopped' | 'terminated' | 'pending'
+  status: Status
+  region: string
+  availabilityZone: string
+  privateIp: string
+  publicIp?: string
+  vpcId: string
+  os: string
+  riskScore: number
+  findingCount: number
+  launchTime: string
+  tags?: string[]
 }
 
 // Mock compute instances data
 const mockComputeInstances: ComputeInstance[] = [
   {
-    id: "compute-1",
-    name: "prod-web-server-01",
-    instanceId: "i-0a1b2c3d4e5f6g7h8",
-    provider: "aws",
-    instanceType: "t3.large",
-    state: "running",
-    status: "active",
-    region: "us-east-1",
-    availabilityZone: "us-east-1a",
-    privateIp: "10.0.1.100",
-    publicIp: "54.123.45.67",
-    vpcId: "vpc-12345678",
-    os: "Amazon Linux 2",
+    id: 'compute-1',
+    name: 'prod-web-server-01',
+    instanceId: 'i-0a1b2c3d4e5f6g7h8',
+    provider: 'aws',
+    instanceType: 't3.large',
+    state: 'running',
+    status: 'active',
+    region: 'us-east-1',
+    availabilityZone: 'us-east-1a',
+    privateIp: '10.0.1.100',
+    publicIp: '54.123.45.67',
+    vpcId: 'vpc-12345678',
+    os: 'Amazon Linux 2',
     riskScore: 35,
     findingCount: 3,
-    launchTime: "2024-01-15T10:30:00Z",
-    tags: ["production", "web"],
+    launchTime: '2024-01-15T10:30:00Z',
+    tags: ['production', 'web'],
   },
   {
-    id: "compute-2",
-    name: "prod-api-server-01",
-    instanceId: "i-1b2c3d4e5f6g7h8i",
-    provider: "aws",
-    instanceType: "m5.xlarge",
-    state: "running",
-    status: "active",
-    region: "us-east-1",
-    availabilityZone: "us-east-1b",
-    privateIp: "10.0.2.100",
-    publicIp: "54.234.56.78",
-    vpcId: "vpc-12345678",
-    os: "Ubuntu 22.04 LTS",
+    id: 'compute-2',
+    name: 'prod-api-server-01',
+    instanceId: 'i-1b2c3d4e5f6g7h8i',
+    provider: 'aws',
+    instanceType: 'm5.xlarge',
+    state: 'running',
+    status: 'active',
+    region: 'us-east-1',
+    availabilityZone: 'us-east-1b',
+    privateIp: '10.0.2.100',
+    publicIp: '54.234.56.78',
+    vpcId: 'vpc-12345678',
+    os: 'Ubuntu 22.04 LTS',
     riskScore: 25,
     findingCount: 1,
-    launchTime: "2024-02-01T14:00:00Z",
-    tags: ["production", "api"],
+    launchTime: '2024-02-01T14:00:00Z',
+    tags: ['production', 'api'],
   },
   {
-    id: "compute-3",
-    name: "dev-test-instance",
-    instanceId: "i-2c3d4e5f6g7h8i9j",
-    provider: "aws",
-    instanceType: "t3.medium",
-    state: "stopped",
-    status: "inactive",
-    region: "us-west-2",
-    availabilityZone: "us-west-2a",
-    privateIp: "10.1.1.50",
-    vpcId: "vpc-87654321",
-    os: "Windows Server 2022",
+    id: 'compute-3',
+    name: 'dev-test-instance',
+    instanceId: 'i-2c3d4e5f6g7h8i9j',
+    provider: 'aws',
+    instanceType: 't3.medium',
+    state: 'stopped',
+    status: 'inactive',
+    region: 'us-west-2',
+    availabilityZone: 'us-west-2a',
+    privateIp: '10.1.1.50',
+    vpcId: 'vpc-87654321',
+    os: 'Windows Server 2022',
     riskScore: 45,
     findingCount: 5,
-    launchTime: "2024-03-10T09:00:00Z",
-    tags: ["development", "testing"],
+    launchTime: '2024-03-10T09:00:00Z',
+    tags: ['development', 'testing'],
   },
   {
-    id: "compute-4",
-    name: "gcp-backend-vm",
-    instanceId: "gcp-vm-12345678",
-    provider: "gcp",
-    instanceType: "n2-standard-4",
-    state: "running",
-    status: "active",
-    region: "us-central1",
-    availabilityZone: "us-central1-a",
-    privateIp: "10.128.0.10",
-    publicIp: "35.192.123.45",
-    vpcId: "vpc-gcp-prod",
-    os: "Debian 11",
+    id: 'compute-4',
+    name: 'gcp-backend-vm',
+    instanceId: 'gcp-vm-12345678',
+    provider: 'gcp',
+    instanceType: 'n2-standard-4',
+    state: 'running',
+    status: 'active',
+    region: 'us-central1',
+    availabilityZone: 'us-central1-a',
+    privateIp: '10.128.0.10',
+    publicIp: '35.192.123.45',
+    vpcId: 'vpc-gcp-prod',
+    os: 'Debian 11',
     riskScore: 20,
     findingCount: 2,
-    launchTime: "2024-01-20T08:00:00Z",
-    tags: ["production", "backend"],
+    launchTime: '2024-01-20T08:00:00Z',
+    tags: ['production', 'backend'],
   },
   {
-    id: "compute-5",
-    name: "azure-db-server",
-    instanceId: "azure-vm-abcdef12",
-    provider: "azure",
-    instanceType: "Standard_D4s_v3",
-    state: "running",
-    status: "active",
-    region: "eastus",
-    availabilityZone: "eastus-1",
-    privateIp: "10.200.1.20",
-    vpcId: "vnet-prod-001",
-    os: "RHEL 8",
+    id: 'compute-5',
+    name: 'azure-db-server',
+    instanceId: 'azure-vm-abcdef12',
+    provider: 'azure',
+    instanceType: 'Standard_D4s_v3',
+    state: 'running',
+    status: 'active',
+    region: 'eastus',
+    availabilityZone: 'eastus-1',
+    privateIp: '10.200.1.20',
+    vpcId: 'vnet-prod-001',
+    os: 'RHEL 8',
     riskScore: 55,
     findingCount: 7,
-    launchTime: "2023-12-01T12:00:00Z",
-    tags: ["production", "database"],
+    launchTime: '2023-12-01T12:00:00Z',
+    tags: ['production', 'database'],
   },
   {
-    id: "compute-6",
-    name: "staging-app-server",
-    instanceId: "i-3d4e5f6g7h8i9j0k",
-    provider: "aws",
-    instanceType: "t3.small",
-    state: "running",
-    status: "active",
-    region: "eu-west-1",
-    availabilityZone: "eu-west-1a",
-    privateIp: "10.2.1.30",
-    publicIp: "52.18.123.45",
-    vpcId: "vpc-staging",
-    os: "Amazon Linux 2023",
+    id: 'compute-6',
+    name: 'staging-app-server',
+    instanceId: 'i-3d4e5f6g7h8i9j0k',
+    provider: 'aws',
+    instanceType: 't3.small',
+    state: 'running',
+    status: 'active',
+    region: 'eu-west-1',
+    availabilityZone: 'eu-west-1a',
+    privateIp: '10.2.1.30',
+    publicIp: '52.18.123.45',
+    vpcId: 'vpc-staging',
+    os: 'Amazon Linux 2023',
     riskScore: 30,
     findingCount: 2,
-    launchTime: "2024-04-01T16:00:00Z",
-    tags: ["staging", "application"],
+    launchTime: '2024-04-01T16:00:00Z',
+    tags: ['staging', 'application'],
   },
   {
-    id: "compute-7",
-    name: "build-runner-01",
-    instanceId: "i-4e5f6g7h8i9j0k1l",
-    provider: "aws",
-    instanceType: "c5.2xlarge",
-    state: "running",
-    status: "active",
-    region: "us-east-1",
-    availabilityZone: "us-east-1c",
-    privateIp: "10.0.3.100",
-    vpcId: "vpc-12345678",
-    os: "Ubuntu 20.04 LTS",
+    id: 'compute-7',
+    name: 'build-runner-01',
+    instanceId: 'i-4e5f6g7h8i9j0k1l',
+    provider: 'aws',
+    instanceType: 'c5.2xlarge',
+    state: 'running',
+    status: 'active',
+    region: 'us-east-1',
+    availabilityZone: 'us-east-1c',
+    privateIp: '10.0.3.100',
+    vpcId: 'vpc-12345678',
+    os: 'Ubuntu 20.04 LTS',
     riskScore: 15,
     findingCount: 0,
-    launchTime: "2024-03-15T11:00:00Z",
-    tags: ["ci-cd", "build"],
+    launchTime: '2024-03-15T11:00:00Z',
+    tags: ['ci-cd', 'build'],
   },
   {
-    id: "compute-8",
-    name: "legacy-server",
-    instanceId: "i-5f6g7h8i9j0k1l2m",
-    provider: "aws",
-    instanceType: "t2.medium",
-    state: "running",
-    status: "pending",
-    region: "us-east-1",
-    availabilityZone: "us-east-1a",
-    privateIp: "10.0.1.200",
-    vpcId: "vpc-legacy",
-    os: "CentOS 7",
+    id: 'compute-8',
+    name: 'legacy-server',
+    instanceId: 'i-5f6g7h8i9j0k1l2m',
+    provider: 'aws',
+    instanceType: 't2.medium',
+    state: 'running',
+    status: 'pending',
+    region: 'us-east-1',
+    availabilityZone: 'us-east-1a',
+    privateIp: '10.0.1.200',
+    vpcId: 'vpc-legacy',
+    os: 'CentOS 7',
     riskScore: 75,
     findingCount: 12,
-    launchTime: "2022-06-01T10:00:00Z",
-    tags: ["legacy", "deprecated"],
+    launchTime: '2022-06-01T10:00:00Z',
+    tags: ['legacy', 'deprecated'],
   },
-];
+]
 
 // Provider config
-const providerConfig: Record<ComputeInstance["provider"], { label: string; color: string }> = {
-  aws: { label: "AWS EC2", color: "bg-orange-500/10 text-orange-500" },
-  gcp: { label: "GCP GCE", color: "bg-blue-500/10 text-blue-500" },
-  azure: { label: "Azure VM", color: "bg-cyan-500/10 text-cyan-500" },
-};
+const providerConfig: Record<ComputeInstance['provider'], { label: string; color: string }> = {
+  aws: { label: 'AWS EC2', color: 'bg-orange-500/10 text-orange-500' },
+  gcp: { label: 'GCP GCE', color: 'bg-blue-500/10 text-blue-500' },
+  azure: { label: 'Azure VM', color: 'bg-cyan-500/10 text-cyan-500' },
+}
 
 // State config
-const stateConfig: Record<ComputeInstance["state"], { label: string; color: string; icon: typeof Play }> = {
-  running: { label: "Running", color: "text-green-500 bg-green-500/10", icon: Play },
-  stopped: { label: "Stopped", color: "text-gray-500 bg-gray-500/10", icon: Square },
-  pending: { label: "Pending", color: "text-yellow-500 bg-yellow-500/10", icon: Pause },
-  terminated: { label: "Terminated", color: "text-red-500 bg-red-500/10", icon: Square },
-};
+const stateConfig: Record<
+  ComputeInstance['state'],
+  { label: string; color: string; icon: typeof Play }
+> = {
+  running: { label: 'Running', color: 'text-green-500 bg-green-500/10', icon: Play },
+  stopped: { label: 'Stopped', color: 'text-gray-500 bg-gray-500/10', icon: Square },
+  pending: { label: 'Pending', color: 'text-yellow-500 bg-yellow-500/10', icon: Pause },
+  terminated: { label: 'Terminated', color: 'text-red-500 bg-red-500/10', icon: Square },
+}
 
 // Filter types
-type StatusFilter = Status | "all";
-type ProviderFilter = "all" | ComputeInstance["provider"];
+type StatusFilter = Status | 'all'
+type ProviderFilter = 'all' | ComputeInstance['provider']
 
 const statusFilters: { value: StatusFilter; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "active", label: "Active" },
-  { value: "inactive", label: "Inactive" },
-  { value: "pending", label: "Pending" },
-];
+  { value: 'all', label: 'All' },
+  { value: 'active', label: 'Active' },
+  { value: 'inactive', label: 'Inactive' },
+  { value: 'pending', label: 'Pending' },
+]
 
 const providerFilters: { value: ProviderFilter; label: string }[] = [
-  { value: "all", label: "All Providers" },
-  { value: "aws", label: "AWS" },
-  { value: "gcp", label: "GCP" },
-  { value: "azure", label: "Azure" },
-];
+  { value: 'all', label: 'All Providers' },
+  { value: 'aws', label: 'AWS' },
+  { value: 'gcp', label: 'GCP' },
+  { value: 'azure', label: 'Azure' },
+]
 
 export default function ComputePage() {
-  const [instances] = useState<ComputeInstance[]>(mockComputeInstances);
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [globalFilter, setGlobalFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [providerFilter, setProviderFilter] = useState<ProviderFilter>("all");
-  const [rowSelection, setRowSelection] = useState({});
+  const [instances] = useState<ComputeInstance[]>(mockComputeInstances)
+  const [sorting, setSorting] = useState<SortingState>([])
+  const [globalFilter, setGlobalFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [providerFilter, setProviderFilter] = useState<ProviderFilter>('all')
+  const [rowSelection, setRowSelection] = useState({})
 
   // Filter data
   const filteredData = useMemo(() => {
-    let data = [...instances];
-    if (statusFilter !== "all") {
-      data = data.filter((d) => d.status === statusFilter);
+    let data = [...instances]
+    if (statusFilter !== 'all') {
+      data = data.filter((d) => d.status === statusFilter)
     }
-    if (providerFilter !== "all") {
-      data = data.filter((d) => d.provider === providerFilter);
+    if (providerFilter !== 'all') {
+      data = data.filter((d) => d.provider === providerFilter)
     }
-    return data;
-  }, [instances, statusFilter, providerFilter]);
+    return data
+  }, [instances, statusFilter, providerFilter])
 
   // Status counts
-  const statusCounts = useMemo(() => ({
-    all: instances.length,
-    active: instances.filter((d) => d.status === "active").length,
-    inactive: instances.filter((d) => d.status === "inactive").length,
-    pending: instances.filter((d) => d.status === "pending").length,
-  }), [instances]);
+  const statusCounts = useMemo(
+    () => ({
+      all: instances.length,
+      active: instances.filter((d) => d.status === 'active').length,
+      inactive: instances.filter((d) => d.status === 'inactive').length,
+      pending: instances.filter((d) => d.status === 'pending').length,
+    }),
+    [instances]
+  )
 
   // Additional stats
-  const stats = useMemo(() => ({
-    running: instances.filter((i) => i.state === "running").length,
-    withFindings: instances.filter((i) => i.findingCount > 0).length,
-  }), [instances]);
+  const stats = useMemo(
+    () => ({
+      running: instances.filter((i) => i.state === 'running').length,
+      withFindings: instances.filter((i) => i.findingCount > 0).length,
+    }),
+    [instances]
+  )
 
   // Scope data
-  const scopeTargets = useMemo(() => getActiveScopeTargets(), []);
-  const scopeExclusions = useMemo(() => getActiveScopeExclusions(), []);
+  const scopeTargets = useMemo(() => getActiveScopeTargets(), [])
+  const scopeExclusions = useMemo(() => getActiveScopeExclusions(), [])
 
   // Compute scope matches for each instance (using "host" type for compute instances)
   const scopeMatchesMap = useMemo(() => {
-    const map = new Map<string, ScopeMatchResult>();
+    const map = new Map<string, ScopeMatchResult>()
     instances.forEach((instance) => {
       const match = getScopeMatchesForAsset(
-        { id: instance.id, type: "host", name: instance.name },
+        { id: instance.id, type: 'host', name: instance.name },
         scopeTargets,
         scopeExclusions
-      );
-      map.set(instance.id, match);
-    });
-    return map;
-  }, [instances, scopeTargets, scopeExclusions]);
+      )
+      map.set(instance.id, match)
+    })
+    return map
+  }, [instances, scopeTargets, scopeExclusions])
 
   // Calculate scope coverage for all instances
   const scopeCoverage = useMemo(() => {
     const assets = instances.map((i) => ({
       id: i.id,
       name: i.name,
-      type: "host",
-    }));
-    return calculateScopeCoverage(assets, scopeTargets, scopeExclusions);
-  }, [instances, scopeTargets, scopeExclusions]);
+      type: 'host',
+    }))
+    return calculateScopeCoverage(assets, scopeTargets, scopeExclusions)
+  }, [instances, scopeTargets, scopeExclusions])
 
   // Table columns
   const columns: ColumnDef<ComputeInstance>[] = [
     {
-      id: "select",
+      id: 'select',
       header: ({ table }) => (
         <Checkbox
           checked={
             table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && "indeterminate")
+            (table.getIsSomePageRowsSelected() && 'indeterminate')
           }
           onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
           aria-label="Select all"
@@ -374,11 +374,11 @@ export default function ComputePage() {
       enableSorting: false,
     },
     {
-      accessorKey: "name",
+      accessorKey: 'name',
       header: ({ column }) => (
         <Button
           variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           className="-ml-4"
         >
           Instance
@@ -390,47 +390,47 @@ export default function ComputePage() {
           <Server className="h-4 w-4 text-muted-foreground shrink-0" />
           <div className="min-w-0">
             <p className="font-medium truncate">{row.original.name}</p>
-            <p className="text-muted-foreground text-xs font-mono truncate">{row.original.instanceId}</p>
+            <p className="text-muted-foreground text-xs font-mono truncate">
+              {row.original.instanceId}
+            </p>
           </div>
         </div>
       ),
     },
     {
-      accessorKey: "provider",
-      header: "Provider",
+      accessorKey: 'provider',
+      header: 'Provider',
       cell: ({ row }) => {
-        const provider = providerConfig[row.original.provider];
+        const provider = providerConfig[row.original.provider]
         return (
           <Badge variant="secondary" className={provider.color}>
             {provider.label}
           </Badge>
-        );
+        )
       },
     },
     {
-      accessorKey: "instanceType",
-      header: "Type",
-      cell: ({ row }) => (
-        <span className="text-sm font-mono">{row.original.instanceType}</span>
-      ),
+      accessorKey: 'instanceType',
+      header: 'Type',
+      cell: ({ row }) => <span className="text-sm font-mono">{row.original.instanceType}</span>,
     },
     {
-      accessorKey: "state",
-      header: "State",
+      accessorKey: 'state',
+      header: 'State',
       cell: ({ row }) => {
-        const state = stateConfig[row.original.state];
-        const Icon = state.icon;
+        const state = stateConfig[row.original.state]
+        const Icon = state.icon
         return (
           <Badge variant="secondary" className={state.color}>
             <Icon className="h-3 w-3 mr-1" />
             {state.label}
           </Badge>
-        );
+        )
       },
     },
     {
-      accessorKey: "region",
-      header: "Region",
+      accessorKey: 'region',
+      header: 'Region',
       cell: ({ row }) => (
         <div>
           <p className="text-sm">{row.original.region}</p>
@@ -439,25 +439,25 @@ export default function ComputePage() {
       ),
     },
     {
-      accessorKey: "status",
-      header: "Status",
+      accessorKey: 'status',
+      header: 'Status',
       cell: ({ row }) => <StatusBadge status={row.original.status} />,
     },
     {
-      id: "scope",
-      header: "Scope",
+      id: 'scope',
+      header: 'Scope',
       cell: ({ row }) => {
-        const match = scopeMatchesMap.get(row.original.id);
-        if (!match) return <span className="text-muted-foreground">-</span>;
-        return <ScopeBadge match={match} />;
+        const match = scopeMatchesMap.get(row.original.id)
+        if (!match) return <span className="text-muted-foreground">-</span>
+        return <ScopeBadge match={match} />
       },
     },
     {
-      accessorKey: "findingCount",
+      accessorKey: 'findingCount',
       header: ({ column }) => (
         <Button
           variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           className="-ml-4"
         >
           Findings
@@ -465,21 +465,17 @@ export default function ComputePage() {
         </Button>
       ),
       cell: ({ row }) => {
-        const count = row.original.findingCount;
-        if (count === 0) return <span className="text-muted-foreground">0</span>;
-        return (
-          <Badge variant={count > 5 ? "destructive" : "secondary"}>
-            {count}
-          </Badge>
-        );
+        const count = row.original.findingCount
+        if (count === 0) return <span className="text-muted-foreground">0</span>
+        return <Badge variant={count > 5 ? 'destructive' : 'secondary'}>{count}</Badge>
       },
     },
     {
-      accessorKey: "riskScore",
+      accessorKey: 'riskScore',
       header: ({ column }) => (
         <Button
           variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           className="-ml-4"
         >
           Risk
@@ -489,40 +485,57 @@ export default function ComputePage() {
       cell: ({ row }) => <RiskScoreBadge score={row.original.riskScore} size="sm" />,
     },
     {
-      id: "actions",
+      id: 'actions',
       cell: ({ row }) => {
-        const instance = row.original;
+        const instance = row.original
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); toast.info(`Viewing ${instance.name}`); }}>
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation()
+                  toast.info(`Viewing ${instance.name}`)
+                }}
+              >
                 <Eye className="mr-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={(e) => {
-                e.stopPropagation();
-                navigator.clipboard.writeText(instance.instanceId);
-                toast.success("Instance ID copied");
-              }}>
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation()
+                  navigator.clipboard.writeText(instance.instanceId)
+                  toast.success('Instance ID copied')
+                }}
+              >
                 <Copy className="mr-2 h-4 w-4" />
                 Copy Instance ID
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); toast.info("Scanning instance..."); }}>
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation()
+                  toast.info('Scanning instance...')
+                }}
+              >
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Rescan
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        );
+        )
       },
     },
-  ];
+  ]
 
   const table = useReactTable({
     data: filteredData,
@@ -535,11 +548,24 @@ export default function ComputePage() {
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-  });
+  })
 
   const handleExport = () => {
     const csv = [
-      ["Name", "Instance ID", "Provider", "Type", "State", "Region", "Private IP", "Public IP", "OS", "Status", "Risk Score", "Findings"].join(","),
+      [
+        'Name',
+        'Instance ID',
+        'Provider',
+        'Type',
+        'State',
+        'Region',
+        'Private IP',
+        'Public IP',
+        'OS',
+        'Status',
+        'Risk Score',
+        'Findings',
+      ].join(','),
       ...instances.map((i) =>
         [
           i.name,
@@ -549,33 +575,27 @@ export default function ComputePage() {
           i.state,
           i.region,
           i.privateIp,
-          i.publicIp || "",
+          i.publicIp || '',
           i.os,
           i.status,
           i.riskScore,
           i.findingCount,
-        ].join(",")
+        ].join(',')
       ),
-    ].join("\n");
+    ].join('\n')
 
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "compute-instances.csv";
-    a.click();
-    toast.success("Compute instances exported");
-  };
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'compute-instances.csv'
+    a.click()
+    toast.success('Compute instances exported')
+  }
 
   return (
     <>
-      <Header fixed>
-        <div className="ms-auto flex items-center gap-2 sm:gap-4">
-          <Search />
-          <ThemeSwitch />
-          <ProfileDropdown />
-        </div>
-      </Header>
+      <Header fixed />
 
       <Main>
         <PageHeader
@@ -590,7 +610,10 @@ export default function ComputePage() {
 
         {/* Stats Cards */}
         <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <Card className="cursor-pointer hover:border-primary transition-colors" onClick={() => setStatusFilter("all")}>
+          <Card
+            className="cursor-pointer hover:border-primary transition-colors"
+            onClick={() => setStatusFilter('all')}
+          >
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
                 <Server className="h-4 w-4" />
@@ -599,7 +622,10 @@ export default function ComputePage() {
               <CardTitle className="text-3xl">{statusCounts.all}</CardTitle>
             </CardHeader>
           </Card>
-          <Card className={`cursor-pointer hover:border-green-500 transition-colors ${statusFilter === "active" ? "border-green-500" : ""}`} onClick={() => setStatusFilter("active")}>
+          <Card
+            className={`cursor-pointer hover:border-green-500 transition-colors ${statusFilter === 'active' ? 'border-green-500' : ''}`}
+            onClick={() => setStatusFilter('active')}
+          >
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
                 <CheckCircle className="h-4 w-4 text-green-500" />
@@ -666,7 +692,10 @@ export default function ComputePage() {
                 </TabsList>
               </Tabs>
 
-              <Select value={providerFilter} onValueChange={(v) => setProviderFilter(v as ProviderFilter)}>
+              <Select
+                value={providerFilter}
+                onValueChange={(v) => setProviderFilter(v as ProviderFilter)}
+              >
                 <SelectTrigger className="w-[160px]">
                   <SelectValue placeholder="Filter by Provider" />
                 </SelectTrigger>
@@ -694,7 +723,11 @@ export default function ComputePage() {
 
               <div className="flex flex-wrap items-center gap-2">
                 {Object.keys(rowSelection).length > 0 && (
-                  <Button variant="outline" size="sm" onClick={() => toast.info("Scanning selected instances...")}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => toast.info('Scanning selected instances...')}
+                  >
                     <RefreshCw className="mr-2 h-4 w-4" />
                     Rescan ({Object.keys(rowSelection).length})
                   </Button>
@@ -723,14 +756,16 @@ export default function ComputePage() {
                     table.getRowModel().rows.map((row) => (
                       <TableRow
                         key={row.id}
-                        data-state={row.getIsSelected() && "selected"}
+                        data-state={row.getIsSelected() && 'selected'}
                         className="cursor-pointer"
                         onClick={(e) => {
-                          if ((e.target as HTMLElement).closest('[role="checkbox"]') ||
-                              (e.target as HTMLElement).closest('button')) {
-                            return;
+                          if (
+                            (e.target as HTMLElement).closest('[role="checkbox"]') ||
+                            (e.target as HTMLElement).closest('button')
+                          ) {
+                            return
                           }
-                          toast.info(`Viewing ${row.original.name}`);
+                          toast.info(`Viewing ${row.original.name}`)
                         }}
                       >
                         {row.getVisibleCells().map((cell) => (
@@ -754,7 +789,7 @@ export default function ComputePage() {
             {/* Pagination */}
             <div className="flex items-center justify-between mt-4">
               <p className="text-sm text-muted-foreground">
-                {table.getFilteredSelectedRowModel().rows.length} of{" "}
+                {table.getFilteredSelectedRowModel().rows.length} of{' '}
                 {table.getFilteredRowModel().rows.length} row(s) selected
               </p>
               <div className="flex flex-wrap items-center gap-2">
@@ -799,5 +834,5 @@ export default function ComputePage() {
         </Card>
       </Main>
     </>
-  );
+  )
 }

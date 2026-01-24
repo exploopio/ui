@@ -1,31 +1,22 @@
-"use client";
+'use client'
 
-import { useState, useMemo } from "react";
-import { Header, Main } from "@/components/layout";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { PageHeader } from "@/features/shared";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { useState, useMemo } from 'react'
+import { Header, Main } from '@/components/layout'
+import { PageHeader } from '@/features/shared'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Separator } from "@/components/ui/separator";
+} from '@/components/ui/select'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Separator } from '@/components/ui/separator'
 import {
   Download,
   FileJson,
@@ -36,45 +27,41 @@ import {
   Scale,
   Clock,
   AlertTriangle,
-} from "lucide-react";
-import {
-  getComponentStats,
-  getComponents,
-  SBOM_FORMAT_LABELS,
-} from "@/features/components";
-import type { SbomFormat } from "@/features/components";
-import { toast } from "sonner";
+} from 'lucide-react'
+import { getComponentStats, getComponents, SBOM_FORMAT_LABELS } from '@/features/components'
+import type { SbomFormat } from '@/features/components'
+import { toast } from 'sonner'
 
-type FileFormat = "json" | "xml";
+type FileFormat = 'json' | 'xml'
 
 export default function SBOMExportPage() {
-  const stats = useMemo(() => getComponentStats(), []);
-  const components = useMemo(() => getComponents(), []);
-  const [exportFormat, setExportFormat] = useState<SbomFormat>("cyclonedx-json");
-  const [fileFormat, setFileFormat] = useState<FileFormat>("json");
-  const [includeVulnerabilities, setIncludeVulnerabilities] = useState(true);
-  const [includeLicenses, setIncludeLicenses] = useState(true);
-  const [includeMetadata, setIncludeMetadata] = useState(true);
-  const [isExporting, setIsExporting] = useState(false);
+  const stats = useMemo(() => getComponentStats(), [])
+  const components = useMemo(() => getComponents(), [])
+  const [exportFormat, setExportFormat] = useState<SbomFormat>('cyclonedx-json')
+  const [fileFormat, setFileFormat] = useState<FileFormat>('json')
+  const [includeVulnerabilities, setIncludeVulnerabilities] = useState(true)
+  const [includeLicenses, setIncludeLicenses] = useState(true)
+  const [includeMetadata, setIncludeMetadata] = useState(true)
+  const [isExporting, setIsExporting] = useState(false)
 
   const handleExport = async () => {
-    setIsExporting(true);
+    setIsExporting(true)
 
     // Simulate export delay
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    await new Promise((resolve) => setTimeout(resolve, 1500))
 
     // Build SBOM data based on format
     const sbomData = {
-      bomFormat: exportFormat.includes("cyclonedx") ? "CycloneDX" : "SPDX",
-      specVersion: exportFormat.split("-")[1] || "1.5",
+      bomFormat: exportFormat.includes('cyclonedx') ? 'CycloneDX' : 'SPDX',
+      specVersion: exportFormat.split('-')[1] || '1.5',
       version: 1,
       metadata: includeMetadata
         ? {
             timestamp: new Date().toISOString(),
-            tools: [{ name: "Rediver Security Platform", version: "1.0.0" }],
+            tools: [{ name: 'Rediver Security Platform', version: '1.0.0' }],
             component: {
-              type: "application",
-              name: "Organization Assets",
+              type: 'application',
+              name: 'Organization Assets',
             },
           }
         : undefined,
@@ -83,9 +70,7 @@ export default function SBOMExportPage() {
         name: c.name,
         version: c.version,
         purl: c.purl,
-        licenses: includeLicenses
-          ? [{ license: { id: c.licenseId, name: c.license } }]
-          : undefined,
+        licenses: includeLicenses ? [{ license: { id: c.licenseId, name: c.license } }] : undefined,
         vulnerabilities:
           includeVulnerabilities && c.vulnerabilities.length > 0
             ? c.vulnerabilities.map((v) => ({
@@ -96,17 +81,17 @@ export default function SBOMExportPage() {
               }))
             : undefined,
       })),
-    };
+    }
 
     // Generate file
-    let content: string;
-    let filename: string;
-    let mimeType: string;
+    let content: string
+    let filename: string
+    let mimeType: string
 
-    if (fileFormat === "json") {
-      content = JSON.stringify(sbomData, null, 2);
-      filename = `sbom-${exportFormat}.json`;
-      mimeType = "application/json";
+    if (fileFormat === 'json') {
+      content = JSON.stringify(sbomData, null, 2)
+      filename = `sbom-${exportFormat}.json`
+      mimeType = 'application/json'
     } else {
       // Simple XML conversion (in production, use proper XML library)
       content = `<?xml version="1.0" encoding="UTF-8"?>
@@ -123,35 +108,29 @@ ${components
       <purl>${c.purl}</purl>
     </component>`
   )
-  .join("\n")}
+  .join('\n')}
   </components>
-</bom>`;
-      filename = `sbom-${exportFormat}.xml`;
-      mimeType = "application/xml";
+</bom>`
+      filename = `sbom-${exportFormat}.xml`
+      mimeType = 'application/xml'
     }
 
     // Download file
-    const blob = new Blob([content], { type: mimeType });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
+    const blob = new Blob([content], { type: mimeType })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    a.click()
+    URL.revokeObjectURL(url)
 
-    setIsExporting(false);
-    toast.success(`SBOM exported as ${filename}`);
-  };
+    setIsExporting(false)
+    toast.success(`SBOM exported as ${filename}`)
+  }
 
   return (
     <>
-      <Header fixed>
-        <div className="ms-auto flex items-center gap-2 sm:gap-4">
-          <Search />
-          <ThemeSwitch />
-          <ProfileDropdown />
-        </div>
-      </Header>
+      <Header fixed />
 
       <Main>
         <PageHeader
@@ -170,9 +149,7 @@ ${components
               <CardTitle className="text-3xl">{stats.totalComponents}</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-xs text-muted-foreground">
-                To be included
-              </p>
+              <p className="text-xs text-muted-foreground">To be included</p>
             </CardContent>
           </Card>
 
@@ -186,7 +163,7 @@ ${components
             </CardHeader>
             <CardContent>
               <p className="text-xs text-muted-foreground">
-                {includeVulnerabilities ? "Included" : "Excluded"}
+                {includeVulnerabilities ? 'Included' : 'Excluded'}
               </p>
             </CardContent>
           </Card>
@@ -197,11 +174,13 @@ ${components
                 <Scale className="h-4 w-4 text-blue-500" />
                 Licenses
               </CardDescription>
-              <CardTitle className="text-3xl text-blue-500">{Object.keys(stats.byLicenseCategory || {}).length}</CardTitle>
+              <CardTitle className="text-3xl text-blue-500">
+                {Object.keys(stats.byLicenseCategory || {}).length}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-xs text-muted-foreground">
-                {includeLicenses ? "Included" : "Excluded"}
+                {includeLicenses ? 'Included' : 'Excluded'}
               </p>
             </CardContent>
           </Card>
@@ -217,9 +196,7 @@ ${components
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-xs text-muted-foreground">
-                {fileFormat.toUpperCase()} output
-              </p>
+              <p className="text-xs text-muted-foreground">{fileFormat.toUpperCase()} output</p>
             </CardContent>
           </Card>
         </div>
@@ -229,15 +206,16 @@ ${components
           <Card className="lg:col-span-2">
             <CardHeader>
               <CardTitle>Export Configuration</CardTitle>
-              <CardDescription>
-                Customize your SBOM export settings
-              </CardDescription>
+              <CardDescription>Customize your SBOM export settings</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Format Selection */}
               <div className="space-y-3">
                 <Label>SBOM Format</Label>
-                <Select value={exportFormat} onValueChange={(v) => setExportFormat(v as SbomFormat)}>
+                <Select
+                  value={exportFormat}
+                  onValueChange={(v) => setExportFormat(v as SbomFormat)}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -245,7 +223,7 @@ ${components
                     {Object.entries(SBOM_FORMAT_LABELS).map(([value, label]) => (
                       <SelectItem key={value} value={value}>
                         <div className="flex flex-wrap items-center gap-2">
-                          {value.includes("cyclonedx") ? (
+                          {value.includes('cyclonedx') ? (
                             <FileJson className="h-4 w-4 text-blue-500" />
                           ) : (
                             <FileText className="h-4 w-4 text-green-500" />
@@ -257,9 +235,9 @@ ${components
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
-                  {exportFormat.includes("cyclonedx")
-                    ? "CycloneDX is widely supported by security tools and CI/CD pipelines"
-                    : "SPDX is an ISO standard format for software bill of materials"}
+                  {exportFormat.includes('cyclonedx')
+                    ? 'CycloneDX is widely supported by security tools and CI/CD pipelines'
+                    : 'SPDX is an ISO standard format for software bill of materials'}
                 </p>
               </div>
 
@@ -352,12 +330,7 @@ ${components
               <Separator />
 
               {/* Export Button */}
-              <Button
-                onClick={handleExport}
-                disabled={isExporting}
-                className="w-full"
-                size="lg"
-              >
+              <Button onClick={handleExport} disabled={isExporting} className="w-full" size="lg">
                 {isExporting ? (
                   <>
                     <Clock className="mr-2 h-4 w-4 animate-spin" />
@@ -377,9 +350,7 @@ ${components
           <Card>
             <CardHeader>
               <CardTitle>About SBOM Formats</CardTitle>
-              <CardDescription>
-                Industry-standard formats for software transparency
-              </CardDescription>
+              <CardDescription>Industry-standard formats for software transparency</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="p-4 rounded-lg border bg-blue-500/5 border-blue-500/20">
@@ -392,8 +363,12 @@ ${components
                   licensing, and supply chain metadata.
                 </p>
                 <div className="flex flex-wrap gap-1 mt-2">
-                  <Badge variant="secondary" className="text-xs">OWASP</Badge>
-                  <Badge variant="secondary" className="text-xs">ECMA</Badge>
+                  <Badge variant="secondary" className="text-xs">
+                    OWASP
+                  </Badge>
+                  <Badge variant="secondary" className="text-xs">
+                    ECMA
+                  </Badge>
                 </div>
               </div>
 
@@ -403,12 +378,16 @@ ${components
                   <h4 className="font-medium">SPDX</h4>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  ISO/IEC 5962:2021 standard format focused on license compliance
-                  and software composition analysis.
+                  ISO/IEC 5962:2021 standard format focused on license compliance and software
+                  composition analysis.
                 </p>
                 <div className="flex flex-wrap gap-1 mt-2">
-                  <Badge variant="secondary" className="text-xs">ISO Standard</Badge>
-                  <Badge variant="secondary" className="text-xs">Linux Foundation</Badge>
+                  <Badge variant="secondary" className="text-xs">
+                    ISO Standard
+                  </Badge>
+                  <Badge variant="secondary" className="text-xs">
+                    Linux Foundation
+                  </Badge>
                 </div>
               </div>
 
@@ -418,8 +397,8 @@ ${components
                   Compliance Ready
                 </h4>
                 <p className="text-sm text-muted-foreground">
-                  Both formats meet requirements for Executive Order 14028 and
-                  other regulatory frameworks requiring software transparency.
+                  Both formats meet requirements for Executive Order 14028 and other regulatory
+                  frameworks requiring software transparency.
                 </p>
               </div>
 
@@ -430,8 +409,8 @@ ${components
                     <h4 className="font-medium text-red-600">CISA KEV Notice</h4>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    {stats.componentsInCisaKev} component(s) contain vulnerabilities
-                    from CISA Known Exploited Vulnerabilities catalog.
+                    {stats.componentsInCisaKev} component(s) contain vulnerabilities from CISA Known
+                    Exploited Vulnerabilities catalog.
                   </p>
                 </div>
               )}
@@ -440,5 +419,5 @@ ${components
         </div>
       </Main>
     </>
-  );
+  )
 }

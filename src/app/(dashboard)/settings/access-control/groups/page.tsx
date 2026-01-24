@@ -1,6 +1,6 @@
-"use client";
+'use client'
 
-import { useState, useCallback } from "react";
+import { useState, useCallback } from 'react'
 import {
   ColumnDef,
   flexRender,
@@ -10,24 +10,15 @@ import {
   getSortedRowModel,
   SortingState,
   useReactTable,
-} from "@tanstack/react-table";
-import { Header, Main } from "@/components/layout";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { PageHeader } from "@/features/shared";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+} from '@tanstack/react-table'
+import { Header, Main } from '@/components/layout'
+import { PageHeader } from '@/features/shared'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Textarea } from '@/components/ui/textarea'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -35,7 +26,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from '@/components/ui/table'
 import {
   Dialog,
   DialogContent,
@@ -43,15 +34,15 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { toast } from "sonner";
+} from '@/components/ui/dropdown-menu'
+import { toast } from 'sonner'
 import {
   Users,
   Plus,
@@ -69,68 +60,68 @@ import {
   AlertCircle,
   FolderKey,
   Box,
-} from "lucide-react";
-import { useSWRConfig } from "swr";
+} from 'lucide-react'
+import { useSWRConfig } from 'swr'
 import {
   useGroups,
   useCreateGroup,
   useDeleteGroup,
   type Group,
   generateSlug,
-} from "@/features/access-control";
-import { GroupDetailSheet } from "@/features/access-control/components/group-detail-sheet";
-import { Can, Permission } from "@/lib/permissions";
+} from '@/features/access-control'
+import { GroupDetailSheet } from '@/features/access-control/components/group-detail-sheet'
+import { Can, Permission } from '@/lib/permissions'
 
 const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-};
+  return new Date(dateString).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
+}
 
 export default function GroupsPage() {
-  const { mutate } = useSWRConfig();
+  const { mutate } = useSWRConfig()
 
   // API Hooks
-  const { groups, isLoading, isError, mutate: mutateGroups } = useGroups();
-  const { createGroup, isCreating } = useCreateGroup();
+  const { groups, isLoading, isError, mutate: mutateGroups } = useGroups()
+  const { createGroup, isCreating } = useCreateGroup()
 
   // UI State
-  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [groupToDelete, setGroupToDelete] = useState<Group | null>(null);
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [globalFilter, setGlobalFilter] = useState("");
-  const [rowSelection, setRowSelection] = useState({});
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null)
+  const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [groupToDelete, setGroupToDelete] = useState<Group | null>(null)
+  const [sorting, setSorting] = useState<SortingState>([])
+  const [globalFilter, setGlobalFilter] = useState('')
+  const [rowSelection, setRowSelection] = useState({})
   const [createForm, setCreateForm] = useState({
-    name: "",
-    description: "",
-  });
+    name: '',
+    description: '',
+  })
 
   // Delete hook - need to pass groupId
-  const { deleteGroup, isDeleting } = useDeleteGroup(groupToDelete?.id || null);
+  const { deleteGroup, isDeleting } = useDeleteGroup(groupToDelete?.id || null)
 
   // Refresh data
   const refreshData = useCallback(() => {
-    mutateGroups();
-  }, [mutateGroups]);
+    mutateGroups()
+  }, [mutateGroups])
 
   // Calculate stats
-  const totalGroups = groups.length;
-  const totalMembers = groups.reduce((acc, g) => acc + (g.member_count ?? 0), 0);
-  const totalAssets = groups.reduce((acc, g) => acc + (g.asset_count ?? 0), 0);
+  const totalGroups = groups.length
+  const totalMembers = groups.reduce((acc, g) => acc + (g.member_count ?? 0), 0)
+  const totalAssets = groups.reduce((acc, g) => acc + (g.asset_count ?? 0), 0)
 
   // Table columns
   const columns: ColumnDef<Group>[] = [
     {
-      id: "select",
+      id: 'select',
       header: ({ table }) => (
         <Checkbox
           checked={
             table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && "indeterminate")
+            (table.getIsSomePageRowsSelected() && 'indeterminate')
           }
           onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
           aria-label="Select all"
@@ -147,11 +138,11 @@ export default function GroupsPage() {
       enableHiding: false,
     },
     {
-      accessorKey: "name",
+      accessorKey: 'name',
       header: ({ column }) => (
         <Button
           variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           className="-ml-4"
         >
           Team
@@ -167,16 +158,18 @@ export default function GroupsPage() {
             <div>
               <p className="font-medium">{row.original.name}</p>
               {row.original.description && (
-                <p className="text-muted-foreground text-xs line-clamp-1">{row.original.description}</p>
+                <p className="text-muted-foreground text-xs line-clamp-1">
+                  {row.original.description}
+                </p>
               )}
             </div>
           </div>
-        );
+        )
       },
     },
     {
-      accessorKey: "member_count",
-      header: "Members",
+      accessorKey: 'member_count',
+      header: 'Members',
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
           <Users className="h-4 w-4 text-muted-foreground" />
@@ -185,8 +178,8 @@ export default function GroupsPage() {
       ),
     },
     {
-      accessorKey: "asset_count",
-      header: "Assets",
+      accessorKey: 'asset_count',
+      header: 'Assets',
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
           <Box className="h-4 w-4 text-muted-foreground" />
@@ -195,16 +188,16 @@ export default function GroupsPage() {
       ),
     },
     {
-      accessorKey: "created_at",
-      header: "Created",
+      accessorKey: 'created_at',
+      header: 'Created',
       cell: ({ row }) => (
         <span className="text-muted-foreground text-sm">{formatDate(row.original.created_at)}</span>
       ),
     },
     {
-      id: "actions",
+      id: 'actions',
       cell: ({ row }) => {
-        const group = row.original;
+        const group = row.original
 
         return (
           <DropdownMenu>
@@ -229,8 +222,8 @@ export default function GroupsPage() {
                 <DropdownMenuItem
                   className="text-red-400"
                   onClick={() => {
-                    setGroupToDelete(group);
-                    setDeleteDialogOpen(true);
+                    setGroupToDelete(group)
+                    setDeleteDialogOpen(true)
                   }}
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
@@ -239,10 +232,10 @@ export default function GroupsPage() {
               </Can>
             </DropdownMenuContent>
           </DropdownMenu>
-        );
+        )
       },
     },
-  ];
+  ]
 
   const table = useReactTable({
     data: groups,
@@ -259,13 +252,13 @@ export default function GroupsPage() {
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-  });
+  })
 
   // Actions
   const handleCreateGroup = async () => {
     if (!createForm.name) {
-      toast.error("Please enter a team name");
-      return;
+      toast.error('Please enter a team name')
+      return
     }
 
     try {
@@ -273,42 +266,44 @@ export default function GroupsPage() {
         slug: generateSlug(createForm.name),
         name: createForm.name,
         description: createForm.description || undefined,
-        group_type: "team", // Default type for data scoping groups
-      });
-      toast.success(`Team "${createForm.name}" created successfully`);
-      setCreateDialogOpen(false);
-      setCreateForm({ name: "", description: "" });
-      refreshData();
+        group_type: 'team', // Default type for data scoping groups
+      })
+      toast.success(`Team "${createForm.name}" created successfully`)
+      setCreateDialogOpen(false)
+      setCreateForm({ name: '', description: '' })
+      refreshData()
     } catch (error) {
-      toast.error(`Failed to create team: ${error instanceof Error ? error.message : "Unknown error"}`);
+      toast.error(
+        `Failed to create team: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
     }
-  };
+  }
 
   const handleDeleteGroup = async () => {
-    if (!groupToDelete) return;
+    if (!groupToDelete) return
 
     try {
-      await deleteGroup();
-      toast.success(`Team "${groupToDelete.name}" deleted successfully`);
-      setDeleteDialogOpen(false);
-      setGroupToDelete(null);
+      await deleteGroup()
+      toast.success(`Team "${groupToDelete.name}" deleted successfully`)
+      setDeleteDialogOpen(false)
+      setGroupToDelete(null)
       // Invalidate all group-related caches
-      mutate((key: string) => typeof key === 'string' && key.startsWith('/api/v1/groups'), undefined, { revalidate: true });
-      refreshData();
+      mutate(
+        (key: string) => typeof key === 'string' && key.startsWith('/api/v1/groups'),
+        undefined,
+        { revalidate: true }
+      )
+      refreshData()
     } catch (error) {
-      toast.error(`Failed to delete team: ${error instanceof Error ? error.message : "Unknown error"}`);
+      toast.error(
+        `Failed to delete team: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
     }
-  };
+  }
 
   return (
     <>
-      <Header fixed>
-        <div className="ms-auto flex items-center gap-2 sm:gap-4">
-          <Search />
-          <ThemeSwitch />
-          <ProfileDropdown />
-        </div>
-      </Header>
+      <Header fixed />
 
       <Main>
         <PageHeader
@@ -409,7 +404,7 @@ export default function GroupsPage() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
                             className="text-red-400"
-                            onClick={() => toast.info("Bulk delete not implemented yet")}
+                            onClick={() => toast.info('Bulk delete not implemented yet')}
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
                             Delete Selected
@@ -441,14 +436,16 @@ export default function GroupsPage() {
                         table.getRowModel().rows.map((row) => (
                           <TableRow
                             key={row.id}
-                            data-state={row.getIsSelected() && "selected"}
+                            data-state={row.getIsSelected() && 'selected'}
                             className="cursor-pointer"
                             onClick={(e) => {
-                              if ((e.target as HTMLElement).closest('[role="checkbox"]') ||
-                                (e.target as HTMLElement).closest('button')) {
-                                return;
+                              if (
+                                (e.target as HTMLElement).closest('[role="checkbox"]') ||
+                                (e.target as HTMLElement).closest('button')
+                              ) {
+                                return
                               }
-                              setSelectedGroupId(row.original.id);
+                              setSelectedGroupId(row.original.id)
                             }}
                           >
                             {row.getVisibleCells().map((cell) => (
@@ -475,7 +472,7 @@ export default function GroupsPage() {
                                 </Button>
                               </div>
                             ) : (
-                              "No teams found."
+                              'No teams found.'
                             )}
                           </TableCell>
                         </TableRow>
@@ -487,7 +484,7 @@ export default function GroupsPage() {
                 {/* Pagination */}
                 <div className="flex items-center justify-between mt-4">
                   <p className="text-sm text-muted-foreground">
-                    {table.getFilteredSelectedRowModel().rows.length} of{" "}
+                    {table.getFilteredSelectedRowModel().rows.length} of{' '}
                     {table.getFilteredRowModel().rows.length} row(s) selected
                   </p>
                   <div className="flex flex-wrap items-center gap-2">
@@ -508,7 +505,8 @@ export default function GroupsPage() {
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
                     <span className="text-sm">
-                      Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount() || 1}
+                      Page {table.getState().pagination.pageIndex + 1} of{' '}
+                      {table.getPageCount() || 1}
                     </span>
                     <Button
                       variant="outline"
@@ -583,16 +581,10 @@ export default function GroupsPage() {
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button
-              variant="ghost"
-              onClick={() => setCreateDialogOpen(false)}
-            >
+            <Button variant="ghost" onClick={() => setCreateDialogOpen(false)}>
               Cancel
             </Button>
-            <Button
-              onClick={handleCreateGroup}
-              disabled={isCreating || !createForm.name}
-            >
+            <Button onClick={handleCreateGroup} disabled={isCreating || !createForm.name}>
               {isCreating ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
@@ -613,8 +605,8 @@ export default function GroupsPage() {
               Delete Team
             </DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete the team &quot;{groupToDelete?.name}&quot;?
-              This action cannot be undone. Members will lose access to assets owned by this team.
+              Are you sure you want to delete the team &quot;{groupToDelete?.name}&quot;? This
+              action cannot be undone. Members will lose access to assets owned by this team.
             </DialogDescription>
           </DialogHeader>
 
@@ -622,17 +614,13 @@ export default function GroupsPage() {
             <Button
               variant="ghost"
               onClick={() => {
-                setDeleteDialogOpen(false);
-                setGroupToDelete(null);
+                setDeleteDialogOpen(false)
+                setGroupToDelete(null)
               }}
             >
               Cancel
             </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDeleteGroup}
-              disabled={isDeleting}
-            >
+            <Button variant="destructive" onClick={handleDeleteGroup} disabled={isDeleting}>
               {isDeleting ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
@@ -644,5 +632,5 @@ export default function GroupsPage() {
         </DialogContent>
       </Dialog>
     </>
-  );
+  )
 }

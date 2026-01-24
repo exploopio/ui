@@ -1,6 +1,6 @@
-"use client";
+'use client'
 
-import { useState, useCallback } from "react";
+import { useState, useCallback } from 'react'
 import {
   ReactFlow,
   Background,
@@ -15,34 +15,25 @@ import {
   Handle,
   Position,
   NodeProps,
-} from "@xyflow/react";
-import "@xyflow/react/dist/style.css";
+} from '@xyflow/react'
+import '@xyflow/react/dist/style.css'
 
-import { Header, Main } from "@/components/layout";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { PageHeader } from "@/features/shared";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Header, Main } from '@/components/layout'
+import { PageHeader } from '@/features/shared'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Switch } from '@/components/ui/switch'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
   SheetDescription,
-} from "@/components/ui/sheet";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
+} from '@/components/ui/sheet'
+import { Label } from '@/components/ui/label'
+import { Separator } from '@/components/ui/separator'
 import {
   Workflow,
   Play,
@@ -60,16 +51,16 @@ import {
   Pencil,
   Copy,
   Clock,
-} from "lucide-react";
+} from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { toast } from "sonner";
-import { Can, Permission } from "@/lib/permissions";
+} from '@/components/ui/dropdown-menu'
+import { toast } from 'sonner'
+import { Can, Permission } from '@/lib/permissions'
 
 // Mock data
 const workflowStats = {
@@ -77,84 +68,104 @@ const workflowStats = {
   active: 8,
   triggered: 156,
   successRate: 94,
-};
+}
 
 const workflows = [
   {
-    id: "wf-001",
-    name: "Critical Finding Auto-Assign",
-    description: "Automatically assign critical findings to senior security engineers",
-    trigger: "New Critical Finding",
-    actions: ["Assign to Team Lead", "Send Slack Alert", "Create Jira Ticket"],
-    status: "active",
-    lastTriggered: "10 mins ago",
+    id: 'wf-001',
+    name: 'Critical Finding Auto-Assign',
+    description: 'Automatically assign critical findings to senior security engineers',
+    trigger: 'New Critical Finding',
+    actions: ['Assign to Team Lead', 'Send Slack Alert', 'Create Jira Ticket'],
+    status: 'active',
+    lastTriggered: '10 mins ago',
     triggerCount: 45,
     successRate: 98,
   },
   {
-    id: "wf-002",
-    name: "Weekly Scan Schedule",
-    description: "Run comprehensive security scans every Monday at 2 AM",
-    trigger: "Schedule: Every Monday 2:00 AM",
-    actions: ["Full Asset Scan", "Generate Report", "Email to Security Team"],
-    status: "active",
-    lastTriggered: "2 days ago",
+    id: 'wf-002',
+    name: 'Weekly Scan Schedule',
+    description: 'Run comprehensive security scans every Monday at 2 AM',
+    trigger: 'Schedule: Every Monday 2:00 AM',
+    actions: ['Full Asset Scan', 'Generate Report', 'Email to Security Team'],
+    status: 'active',
+    lastTriggered: '2 days ago',
     triggerCount: 24,
     successRate: 100,
   },
   {
-    id: "wf-003",
-    name: "High-Risk Alert Escalation",
-    description: "Escalate high-risk findings not addressed within 48 hours",
-    trigger: "Finding Age > 48 hours",
-    actions: ["Escalate to Manager", "Send Email Reminder", "Update Priority"],
-    status: "active",
-    lastTriggered: "3 hours ago",
+    id: 'wf-003',
+    name: 'High-Risk Alert Escalation',
+    description: 'Escalate high-risk findings not addressed within 48 hours',
+    trigger: 'Finding Age > 48 hours',
+    actions: ['Escalate to Manager', 'Send Email Reminder', 'Update Priority'],
+    status: 'active',
+    lastTriggered: '3 hours ago',
     triggerCount: 18,
     successRate: 95,
   },
   {
-    id: "wf-004",
-    name: "New Asset Discovery Notification",
-    description: "Notify team when new external assets are discovered",
-    trigger: "New Asset Discovered",
-    actions: ["Slack Notification", "Add to Inventory", "Schedule Scan"],
-    status: "active",
-    lastTriggered: "1 hour ago",
+    id: 'wf-004',
+    name: 'New Asset Discovery Notification',
+    description: 'Notify team when new external assets are discovered',
+    trigger: 'New Asset Discovered',
+    actions: ['Slack Notification', 'Add to Inventory', 'Schedule Scan'],
+    status: 'active',
+    lastTriggered: '1 hour ago',
     triggerCount: 32,
     successRate: 92,
   },
   {
-    id: "wf-005",
-    name: "Compliance Report Generation",
-    description: "Generate monthly compliance reports for PCI-DSS",
-    trigger: "Schedule: 1st of Month",
-    actions: ["Generate Report", "Email to Compliance", "Archive Report"],
-    status: "paused",
-    lastTriggered: "1 month ago",
+    id: 'wf-005',
+    name: 'Compliance Report Generation',
+    description: 'Generate monthly compliance reports for PCI-DSS',
+    trigger: 'Schedule: 1st of Month',
+    actions: ['Generate Report', 'Email to Compliance', 'Archive Report'],
+    status: 'paused',
+    lastTriggered: '1 month ago',
     triggerCount: 6,
     successRate: 100,
   },
-];
+]
 
 const recentExecutions = [
-  { workflow: "Critical Finding Auto-Assign", status: "success", duration: "1.2s", timestamp: "10 mins ago" },
-  { workflow: "New Asset Discovery Notification", status: "success", duration: "0.8s", timestamp: "1 hour ago" },
-  { workflow: "High-Risk Alert Escalation", status: "success", duration: "2.1s", timestamp: "3 hours ago" },
-  { workflow: "Vulnerability Remediation Reminder", status: "failed", duration: "0.5s", timestamp: "5 hours ago" },
-];
+  {
+    workflow: 'Critical Finding Auto-Assign',
+    status: 'success',
+    duration: '1.2s',
+    timestamp: '10 mins ago',
+  },
+  {
+    workflow: 'New Asset Discovery Notification',
+    status: 'success',
+    duration: '0.8s',
+    timestamp: '1 hour ago',
+  },
+  {
+    workflow: 'High-Risk Alert Escalation',
+    status: 'success',
+    duration: '2.1s',
+    timestamp: '3 hours ago',
+  },
+  {
+    workflow: 'Vulnerability Remediation Reminder',
+    status: 'failed',
+    duration: '0.5s',
+    timestamp: '5 hours ago',
+  },
+]
 
 const statusConfig: Record<string, { color: string; bgColor: string }> = {
-  active: { color: "text-green-400", bgColor: "bg-green-500/20" },
-  paused: { color: "text-yellow-400", bgColor: "bg-yellow-500/20" },
-  error: { color: "text-red-400", bgColor: "bg-red-500/20" },
-};
+  active: { color: 'text-green-400', bgColor: 'bg-green-500/20' },
+  paused: { color: 'text-yellow-400', bgColor: 'bg-yellow-500/20' },
+  error: { color: 'text-red-400', bgColor: 'bg-red-500/20' },
+}
 
 const executionStatusConfig: Record<string, string> = {
-  success: "bg-green-500/20 text-green-400",
-  failed: "bg-red-500/20 text-red-400",
-  running: "bg-blue-500/20 text-blue-400",
-};
+  success: 'bg-green-500/20 text-green-400',
+  failed: 'bg-red-500/20 text-red-400',
+  running: 'bg-blue-500/20 text-blue-400',
+}
 
 // Custom Node Components
 function TriggerNode({ data }: NodeProps) {
@@ -172,7 +183,7 @@ function TriggerNode({ data }: NodeProps) {
       )}
       <Handle type="source" position={Position.Bottom} className="!bg-green-500 !w-3 !h-3" />
     </div>
-  );
+  )
 }
 
 function ConditionNode({ data }: NodeProps) {
@@ -189,10 +200,20 @@ function ConditionNode({ data }: NodeProps) {
       {Boolean(data.description) && (
         <p className="text-xs text-muted-foreground mt-1">{data.description as string}</p>
       )}
-      <Handle type="source" position={Position.Bottom} id="yes" className="!bg-green-500 !w-3 !h-3 !left-[30%]" />
-      <Handle type="source" position={Position.Bottom} id="no" className="!bg-red-500 !w-3 !h-3 !left-[70%]" />
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        id="yes"
+        className="!bg-green-500 !w-3 !h-3 !left-[30%]"
+      />
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        id="no"
+        className="!bg-red-500 !w-3 !h-3 !left-[70%]"
+      />
     </div>
-  );
+  )
 }
 
 function ActionNode({ data }: NodeProps) {
@@ -211,7 +232,7 @@ function ActionNode({ data }: NodeProps) {
       )}
       <Handle type="source" position={Position.Bottom} className="!bg-blue-500 !w-3 !h-3" />
     </div>
-  );
+  )
 }
 
 function NotificationNode({ data }: NodeProps) {
@@ -230,136 +251,144 @@ function NotificationNode({ data }: NodeProps) {
       )}
       <Handle type="source" position={Position.Bottom} className="!bg-purple-500 !w-3 !h-3" />
     </div>
-  );
+  )
 }
 
 // Initial nodes and edges for demo
 const initialNodes: Node[] = [
   {
-    id: "1",
-    type: "trigger",
+    id: '1',
+    type: 'trigger',
     position: { x: 250, y: 50 },
-    data: { label: "New Critical Finding", description: "Severity >= Critical" },
+    data: { label: 'New Critical Finding', description: 'Severity >= Critical' },
   },
   {
-    id: "2",
-    type: "condition",
+    id: '2',
+    type: 'condition',
     position: { x: 250, y: 180 },
-    data: { label: "Check Asset Criticality", description: "Is Production Asset?" },
+    data: { label: 'Check Asset Criticality', description: 'Is Production Asset?' },
   },
   {
-    id: "3",
-    type: "action",
+    id: '3',
+    type: 'action',
     position: { x: 100, y: 320 },
-    data: { label: "Assign to Senior Engineer", description: "Auto-assign based on expertise" },
+    data: { label: 'Assign to Senior Engineer', description: 'Auto-assign based on expertise' },
   },
   {
-    id: "4",
-    type: "action",
+    id: '4',
+    type: 'action',
     position: { x: 400, y: 320 },
-    data: { label: "Assign to Regular Queue", description: "Standard assignment flow" },
+    data: { label: 'Assign to Regular Queue', description: 'Standard assignment flow' },
   },
   {
-    id: "5",
-    type: "notification",
+    id: '5',
+    type: 'notification',
     position: { x: 100, y: 460 },
-    data: { label: "Send Slack Alert", description: "#security-critical channel" },
+    data: { label: 'Send Slack Alert', description: '#security-critical channel' },
   },
   {
-    id: "6",
-    type: "action",
+    id: '6',
+    type: 'action',
     position: { x: 100, y: 600 },
-    data: { label: "Create Jira Ticket", description: "Priority: P1" },
+    data: { label: 'Create Jira Ticket', description: 'Priority: P1' },
   },
-];
+]
 
 const initialEdges: Edge[] = [
-  { id: "e1-2", source: "1", target: "2", animated: true },
-  { id: "e2-3", source: "2", target: "3", sourceHandle: "yes", label: "Yes", style: { stroke: "#22c55e" } },
-  { id: "e2-4", source: "2", target: "4", sourceHandle: "no", label: "No", style: { stroke: "#ef4444" } },
-  { id: "e3-5", source: "3", target: "5", animated: true },
-  { id: "e5-6", source: "5", target: "6", animated: true },
-];
+  { id: 'e1-2', source: '1', target: '2', animated: true },
+  {
+    id: 'e2-3',
+    source: '2',
+    target: '3',
+    sourceHandle: 'yes',
+    label: 'Yes',
+    style: { stroke: '#22c55e' },
+  },
+  {
+    id: 'e2-4',
+    source: '2',
+    target: '4',
+    sourceHandle: 'no',
+    label: 'No',
+    style: { stroke: '#ef4444' },
+  },
+  { id: 'e3-5', source: '3', target: '5', animated: true },
+  { id: 'e5-6', source: '5', target: '6', animated: true },
+]
 
 const nodeTypes = {
   trigger: TriggerNode,
   condition: ConditionNode,
   action: ActionNode,
   notification: NotificationNode,
-};
+}
 
 // Draggable node components for sidebar
 const nodeTemplates = [
-  { type: "trigger", label: "Trigger", icon: Zap, color: "green" },
-  { type: "condition", label: "Condition", icon: GitBranch, color: "yellow" },
-  { type: "action", label: "Action", icon: Play, color: "blue" },
-  { type: "notification", label: "Notification", icon: Mail, color: "purple" },
-];
+  { type: 'trigger', label: 'Trigger', icon: Zap, color: 'green' },
+  { type: 'condition', label: 'Condition', icon: GitBranch, color: 'yellow' },
+  { type: 'action', label: 'Action', icon: Play, color: 'blue' },
+  { type: 'notification', label: 'Notification', icon: Mail, color: 'purple' },
+]
 
 export default function WorkflowsPage() {
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-  const [selectedWorkflow, setSelectedWorkflow] = useState<typeof workflows[0] | null>(null);
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
+  const [selectedWorkflow, setSelectedWorkflow] = useState<(typeof workflows)[0] | null>(null)
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge({ ...params, animated: true }, eds)),
     [setEdges]
-  );
+  )
 
   const onDragStart = (event: React.DragEvent, nodeType: string) => {
-    event.dataTransfer.setData("application/reactflow", nodeType);
-    event.dataTransfer.effectAllowed = "move";
-  };
+    event.dataTransfer.setData('application/reactflow', nodeType)
+    event.dataTransfer.effectAllowed = 'move'
+  }
 
   const onDrop = useCallback(
     (event: React.DragEvent) => {
-      event.preventDefault();
-      const type = event.dataTransfer.getData("application/reactflow");
-      if (!type) return;
+      event.preventDefault()
+      const type = event.dataTransfer.getData('application/reactflow')
+      if (!type) return
 
       const position = {
         x: event.clientX - 250,
         y: event.clientY - 100,
-      };
+      }
 
       const newNode: Node = {
         id: `${type}-${Date.now()}`,
         type,
         position,
-        data: { label: `New ${type}`, description: "Configure this node" },
-      };
+        data: { label: `New ${type}`, description: 'Configure this node' },
+      }
 
-      setNodes((nds) => [...nds, newNode]);
+      setNodes((nds) => [...nds, newNode])
     },
     [setNodes]
-  );
+  )
 
   const onDragOver = useCallback((event: React.DragEvent) => {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = "move";
-  }, []);
+    event.preventDefault()
+    event.dataTransfer.dropEffect = 'move'
+  }, [])
 
   const handleSaveWorkflow = () => {
-    toast.success("Workflow saved successfully");
-  };
+    toast.success('Workflow saved successfully')
+  }
 
-  const handleRunWorkflow = (workflow: typeof workflows[0]) => {
-    toast.success(`Running workflow: ${workflow.name}`);
-  };
+  const handleRunWorkflow = (workflow: (typeof workflows)[0]) => {
+    toast.success(`Running workflow: ${workflow.name}`)
+  }
 
-  const handleDeleteWorkflow = (workflow: typeof workflows[0]) => {
-    toast.success(`Deleted workflow: ${workflow.name}`);
-  };
+  const handleDeleteWorkflow = (workflow: (typeof workflows)[0]) => {
+    toast.success(`Deleted workflow: ${workflow.name}`)
+  }
 
   return (
     <>
-      <Header fixed>
-        <div className="ms-auto flex items-center gap-2 sm:gap-4">
-          <Search />
-          <ThemeSwitch />
-          <ProfileDropdown />
-        </div>
-      </Header>
+      <Header fixed />
 
       <Main>
         <PageHeader
@@ -409,7 +438,9 @@ export default function WorkflowsPage() {
                 <CheckCircle className="h-4 w-4" />
                 Success Rate
               </CardDescription>
-              <CardTitle className="text-3xl text-green-500">{workflowStats.successRate}%</CardTitle>
+              <CardTitle className="text-3xl text-green-500">
+                {workflowStats.successRate}%
+              </CardTitle>
             </CardHeader>
           </Card>
         </div>
@@ -430,7 +461,7 @@ export default function WorkflowsPage() {
               <CardContent>
                 <div className="space-y-4">
                   {workflows.map((workflow) => {
-                    const status = statusConfig[workflow.status];
+                    const status = statusConfig[workflow.status]
                     return (
                       <div
                         key={workflow.id}
@@ -466,7 +497,7 @@ export default function WorkflowsPage() {
                           </div>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
-                          <Switch checked={workflow.status === "active"} />
+                          <Switch checked={workflow.status === 'active'} />
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
@@ -503,7 +534,7 @@ export default function WorkflowsPage() {
                           </DropdownMenu>
                         </div>
                       </div>
-                    );
+                    )
                   })}
                 </div>
               </CardContent>
@@ -519,7 +550,10 @@ export default function WorkflowsPage() {
               <CardContent>
                 <div className="space-y-3">
                   {recentExecutions.map((exec, idx) => (
-                    <div key={idx} className="flex items-center justify-between rounded-lg border p-4">
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between rounded-lg border p-4"
+                    >
                       <div className="space-y-1">
                         <p className="font-medium">{exec.workflow}</p>
                         <div className="text-muted-foreground flex items-center gap-2 text-sm">
@@ -530,7 +564,7 @@ export default function WorkflowsPage() {
                         </div>
                       </div>
                       <Badge className={`${executionStatusConfig[exec.status]} border-0`}>
-                        {exec.status === "success" ? (
+                        {exec.status === 'success' ? (
                           <CheckCircle className="mr-1 h-3 w-3" />
                         ) : (
                           <XCircle className="mr-1 h-3 w-3" />
@@ -576,18 +610,26 @@ export default function WorkflowsPage() {
                           draggable
                           onDragStart={(e) => onDragStart(e, template.type)}
                           className={`flex items-center gap-3 p-3 rounded-lg border cursor-grab hover:shadow-md transition-shadow bg-card ${
-                            template.color === "green" ? "border-green-500/50 hover:border-green-500" :
-                            template.color === "yellow" ? "border-yellow-500/50 hover:border-yellow-500" :
-                            template.color === "blue" ? "border-blue-500/50 hover:border-blue-500" :
-                            "border-purple-500/50 hover:border-purple-500"
+                            template.color === 'green'
+                              ? 'border-green-500/50 hover:border-green-500'
+                              : template.color === 'yellow'
+                                ? 'border-yellow-500/50 hover:border-yellow-500'
+                                : template.color === 'blue'
+                                  ? 'border-blue-500/50 hover:border-blue-500'
+                                  : 'border-purple-500/50 hover:border-purple-500'
                           }`}
                         >
-                          <div className={`h-8 w-8 rounded flex items-center justify-center ${
-                            template.color === "green" ? "bg-green-500" :
-                            template.color === "yellow" ? "bg-yellow-500" :
-                            template.color === "blue" ? "bg-blue-500" :
-                            "bg-purple-500"
-                          }`}>
+                          <div
+                            className={`h-8 w-8 rounded flex items-center justify-center ${
+                              template.color === 'green'
+                                ? 'bg-green-500'
+                                : template.color === 'yellow'
+                                  ? 'bg-yellow-500'
+                                  : template.color === 'blue'
+                                    ? 'bg-blue-500'
+                                    : 'bg-purple-500'
+                            }`}
+                          >
                             <template.icon className="h-4 w-4 text-white" />
                           </div>
                           <span className="text-sm font-medium">{template.label}</span>
@@ -621,11 +663,16 @@ export default function WorkflowsPage() {
                       <MiniMap
                         nodeColor={(node) => {
                           switch (node.type) {
-                            case "trigger": return "#22c55e";
-                            case "condition": return "#eab308";
-                            case "action": return "#3b82f6";
-                            case "notification": return "#a855f7";
-                            default: return "#64748b";
+                            case 'trigger':
+                              return '#22c55e'
+                            case 'condition':
+                              return '#eab308'
+                            case 'action':
+                              return '#3b82f6'
+                            case 'notification':
+                              return '#a855f7'
+                            default:
+                              return '#64748b'
                           }
                         }}
                       />
@@ -651,7 +698,9 @@ export default function WorkflowsPage() {
           {selectedWorkflow && (
             <div className="mt-6 space-y-6">
               <div className="flex flex-wrap items-center gap-2">
-                <Badge className={`${statusConfig[selectedWorkflow.status].bgColor} ${statusConfig[selectedWorkflow.status].color} border-0`}>
+                <Badge
+                  className={`${statusConfig[selectedWorkflow.status].bgColor} ${statusConfig[selectedWorkflow.status].color} border-0`}
+                >
                   {selectedWorkflow.status}
                 </Badge>
                 <Badge variant="outline">{selectedWorkflow.triggerCount} runs</Badge>
@@ -688,7 +737,9 @@ export default function WorkflowsPage() {
                   <p className="text-xs text-muted-foreground">Total Runs</p>
                 </div>
                 <div className="rounded-lg border p-4 text-center">
-                  <p className="text-2xl font-bold text-green-500">{selectedWorkflow.successRate}%</p>
+                  <p className="text-2xl font-bold text-green-500">
+                    {selectedWorkflow.successRate}%
+                  </p>
                   <p className="text-xs text-muted-foreground">Success Rate</p>
                 </div>
               </div>
@@ -708,5 +759,5 @@ export default function WorkflowsPage() {
         </SheetContent>
       </Sheet>
     </>
-  );
+  )
 }

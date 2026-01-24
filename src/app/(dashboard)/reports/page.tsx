@@ -1,19 +1,10 @@
-"use client";
+'use client'
 
-import { Header, Main } from "@/components/layout";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { PageHeader } from "@/features/shared";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Header, Main } from '@/components/layout'
+import { PageHeader } from '@/features/shared'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   Table,
   TableBody,
@@ -21,7 +12,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from '@/components/ui/table'
 import {
   FileText,
   Download,
@@ -35,7 +26,7 @@ import {
   Eye,
   MoreHorizontal,
   TrendingUp,
-} from "lucide-react";
+} from 'lucide-react'
 
 // Mock data for reports
 const reportStats = {
@@ -43,140 +34,134 @@ const reportStats = {
   scheduled: 6,
   generatedThisMonth: 18,
   sharedExternal: 4,
-};
+}
 
 const reportTemplates = [
   {
-    id: "tpl-001",
-    name: "Executive Summary",
-    description: "High-level security posture overview for leadership",
+    id: 'tpl-001',
+    name: 'Executive Summary',
+    description: 'High-level security posture overview for leadership',
     icon: FileBarChart,
-    lastUsed: "2 days ago",
+    lastUsed: '2 days ago',
     usageCount: 12,
   },
   {
-    id: "tpl-002",
-    name: "PCI-DSS Compliance",
-    description: "Detailed compliance status for PCI-DSS requirements",
+    id: 'tpl-002',
+    name: 'PCI-DSS Compliance',
+    description: 'Detailed compliance status for PCI-DSS requirements',
     icon: FileCheck,
-    lastUsed: "1 week ago",
+    lastUsed: '1 week ago',
     usageCount: 6,
   },
   {
-    id: "tpl-003",
-    name: "Technical Assessment",
-    description: "Detailed technical findings with remediation guidance",
+    id: 'tpl-003',
+    name: 'Technical Assessment',
+    description: 'Detailed technical findings with remediation guidance',
     icon: FileText,
-    lastUsed: "3 days ago",
+    lastUsed: '3 days ago',
     usageCount: 15,
   },
   {
-    id: "tpl-004",
-    name: "Vulnerability Report",
-    description: "Comprehensive vulnerability inventory and trends",
+    id: 'tpl-004',
+    name: 'Vulnerability Report',
+    description: 'Comprehensive vulnerability inventory and trends',
     icon: FileSpreadsheet,
-    lastUsed: "1 day ago",
+    lastUsed: '1 day ago',
     usageCount: 24,
   },
-];
+]
 
 const recentReports = [
   {
-    id: "rpt-001",
-    name: "Q1 2024 Executive Summary",
-    template: "Executive Summary",
-    generatedBy: "Nguyen Van An",
-    generatedAt: "2024-03-10",
-    status: "completed",
-    format: "PDF",
-    size: "2.4 MB",
+    id: 'rpt-001',
+    name: 'Q1 2024 Executive Summary',
+    template: 'Executive Summary',
+    generatedBy: 'Nguyen Van An',
+    generatedAt: '2024-03-10',
+    status: 'completed',
+    format: 'PDF',
+    size: '2.4 MB',
   },
   {
-    id: "rpt-002",
-    name: "March Vulnerability Assessment",
-    template: "Vulnerability Report",
-    generatedBy: "Tran Thi Binh",
-    generatedAt: "2024-03-08",
-    status: "completed",
-    format: "PDF",
-    size: "5.1 MB",
+    id: 'rpt-002',
+    name: 'March Vulnerability Assessment',
+    template: 'Vulnerability Report',
+    generatedBy: 'Tran Thi Binh',
+    generatedAt: '2024-03-08',
+    status: 'completed',
+    format: 'PDF',
+    size: '5.1 MB',
   },
   {
-    id: "rpt-003",
-    name: "PCI-DSS Q1 Compliance",
-    template: "PCI-DSS Compliance",
-    generatedBy: "Le Van Cuong",
-    generatedAt: "2024-03-05",
-    status: "completed",
-    format: "PDF",
-    size: "3.8 MB",
+    id: 'rpt-003',
+    name: 'PCI-DSS Q1 Compliance',
+    template: 'PCI-DSS Compliance',
+    generatedBy: 'Le Van Cuong',
+    generatedAt: '2024-03-05',
+    status: 'completed',
+    format: 'PDF',
+    size: '3.8 MB',
   },
   {
-    id: "rpt-004",
-    name: "Weekly Technical Report #10",
-    template: "Technical Assessment",
-    generatedBy: "Pham Thi Dung",
-    generatedAt: "2024-03-04",
-    status: "completed",
-    format: "PDF",
-    size: "4.2 MB",
+    id: 'rpt-004',
+    name: 'Weekly Technical Report #10',
+    template: 'Technical Assessment',
+    generatedBy: 'Pham Thi Dung',
+    generatedAt: '2024-03-04',
+    status: 'completed',
+    format: 'PDF',
+    size: '4.2 MB',
   },
   {
-    id: "rpt-005",
-    name: "Monthly Security Posture",
-    template: "Executive Summary",
-    generatedBy: "System",
-    generatedAt: "2024-03-01",
-    status: "scheduled",
-    format: "PDF",
-    size: "--",
+    id: 'rpt-005',
+    name: 'Monthly Security Posture',
+    template: 'Executive Summary',
+    generatedBy: 'System',
+    generatedAt: '2024-03-01',
+    status: 'scheduled',
+    format: 'PDF',
+    size: '--',
   },
-];
+]
 
 const scheduledReports = [
   {
-    name: "Weekly Vulnerability Summary",
-    schedule: "Every Monday 8:00 AM",
+    name: 'Weekly Vulnerability Summary',
+    schedule: 'Every Monday 8:00 AM',
     recipients: 5,
-    nextRun: "Tomorrow",
+    nextRun: 'Tomorrow',
   },
   {
-    name: "Monthly Executive Report",
-    schedule: "1st of month 9:00 AM",
+    name: 'Monthly Executive Report',
+    schedule: '1st of month 9:00 AM',
     recipients: 3,
-    nextRun: "Apr 1, 2024",
+    nextRun: 'Apr 1, 2024',
   },
   {
-    name: "Daily Scan Results",
-    schedule: "Daily 6:00 AM",
+    name: 'Daily Scan Results',
+    schedule: 'Daily 6:00 AM',
     recipients: 8,
-    nextRun: "Tomorrow",
+    nextRun: 'Tomorrow',
   },
   {
-    name: "Quarterly Compliance Report",
-    schedule: "Quarterly",
+    name: 'Quarterly Compliance Report',
+    schedule: 'Quarterly',
     recipients: 4,
-    nextRun: "Apr 1, 2024",
+    nextRun: 'Apr 1, 2024',
   },
-];
+]
 
 const statusConfig: Record<string, { color: string; bgColor: string }> = {
-  completed: { color: "text-green-400", bgColor: "bg-green-500/20" },
-  scheduled: { color: "text-blue-400", bgColor: "bg-blue-500/20" },
-  generating: { color: "text-yellow-400", bgColor: "bg-yellow-500/20" },
-  failed: { color: "text-red-400", bgColor: "bg-red-500/20" },
-};
+  completed: { color: 'text-green-400', bgColor: 'bg-green-500/20' },
+  scheduled: { color: 'text-blue-400', bgColor: 'bg-blue-500/20' },
+  generating: { color: 'text-yellow-400', bgColor: 'bg-yellow-500/20' },
+  failed: { color: 'text-red-400', bgColor: 'bg-red-500/20' },
+}
 
 export default function ReportsPage() {
   return (
     <>
-      <Header fixed>
-        <div className="ms-auto flex items-center gap-2 sm:gap-4">
-          <Search />
-          <ThemeSwitch />
-          <ProfileDropdown />
-        </div>
-      </Header>
+      <Header fixed />
 
       <Main>
         <PageHeader
@@ -210,7 +195,9 @@ export default function ReportsPage() {
                 <TrendingUp className="h-4 w-4" />
                 This Month
               </CardDescription>
-              <CardTitle className="text-3xl text-green-500">{reportStats.generatedThisMonth}</CardTitle>
+              <CardTitle className="text-3xl text-green-500">
+                {reportStats.generatedThisMonth}
+              </CardTitle>
             </CardHeader>
           </Card>
           <Card>
@@ -284,9 +271,7 @@ export default function ReportsPage() {
                       {report.recipients} recipients
                     </Badge>
                   </div>
-                  <p className="text-muted-foreground mt-2 text-xs">
-                    Next: {report.nextRun}
-                  </p>
+                  <p className="text-muted-foreground mt-2 text-xs">Next: {report.nextRun}</p>
                 </div>
               ))}
               <Button variant="outline" className="w-full" size="sm">
@@ -327,7 +312,7 @@ export default function ReportsPage() {
               </TableHeader>
               <TableBody>
                 {recentReports.map((report) => {
-                  const status = statusConfig[report.status];
+                  const status = statusConfig[report.status]
                   return (
                     <TableRow key={report.id} className="cursor-pointer hover:bg-muted/50">
                       <TableCell>
@@ -352,9 +337,7 @@ export default function ReportsPage() {
                           {report.format}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
-                        {report.size}
-                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm">{report.size}</TableCell>
                       <TableCell>
                         <Badge className={`${status.bgColor} ${status.color} border-0`}>
                           {report.status}
@@ -362,7 +345,7 @@ export default function ReportsPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
-                          {report.status === "completed" && (
+                          {report.status === 'completed' && (
                             <>
                               <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                                 <Eye className="h-4 w-4" />
@@ -378,7 +361,7 @@ export default function ReportsPage() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  );
+                  )
                 })}
               </TableBody>
             </Table>
@@ -386,5 +369,5 @@ export default function ReportsPage() {
         </Card>
       </Main>
     </>
-  );
+  )
 }

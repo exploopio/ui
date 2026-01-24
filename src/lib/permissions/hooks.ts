@@ -14,13 +14,7 @@ import { useMemo } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
 import { useTenant } from '@/context/tenant-provider'
 import { usePermissionsSafe } from '@/context/permission-provider'
-import {
-  type PermissionString,
-  type RoleString,
-  Role,
-  isRoleAtLeast,
-  RolePermissions,
-} from './constants'
+import { type PermissionString, type RoleString, Role, isRoleAtLeast } from './constants'
 
 // Cookie-based permissions removed - now using PermissionProvider for real-time sync
 

@@ -1,28 +1,12 @@
-"use client";
+'use client'
 
-import { useState, useMemo } from "react";
-import { Header, Main } from "@/components/layout";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { PageHeader } from "@/features/shared";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import {
-  HardDrive,
-  Plus,
-  Globe,
-  Lock,
-  AlertTriangle,
-  Database,
-} from "lucide-react";
+import { useState, useMemo } from 'react'
+import { Header, Main } from '@/components/layout'
+import { PageHeader } from '@/features/shared'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { HardDrive, Plus, Globe, Lock, AlertTriangle, Database } from 'lucide-react'
 import {
   ScopeBadge,
   ScopeCoverageCard,
@@ -31,14 +15,14 @@ import {
   getActiveScopeTargets,
   getActiveScopeExclusions,
   type ScopeMatchResult,
-} from "@/features/scope";
+} from '@/features/scope'
 
 const mockStorageBuckets = [
   {
-    id: "storage-1",
-    name: "prod-assets-bucket",
-    provider: "aws" as const,
-    region: "us-east-1",
+    id: 'storage-1',
+    name: 'prod-assets-bucket',
+    provider: 'aws' as const,
+    region: 'us-east-1',
     sizeGB: 1250,
     objectCount: 45000,
     isPublic: false,
@@ -47,10 +31,10 @@ const mockStorageBuckets = [
     riskScore: 15,
   },
   {
-    id: "storage-2",
-    name: "dev-uploads-bucket",
-    provider: "aws" as const,
-    region: "us-west-2",
+    id: 'storage-2',
+    name: 'dev-uploads-bucket',
+    provider: 'aws' as const,
+    region: 'us-west-2',
     sizeGB: 320,
     objectCount: 12500,
     isPublic: false,
@@ -59,10 +43,10 @@ const mockStorageBuckets = [
     riskScore: 35,
   },
   {
-    id: "storage-3",
-    name: "public-cdn-assets",
-    provider: "gcp" as const,
-    region: "us-central1",
+    id: 'storage-3',
+    name: 'public-cdn-assets',
+    provider: 'gcp' as const,
+    region: 'us-central1',
     sizeGB: 890,
     objectCount: 28000,
     isPublic: true,
@@ -71,10 +55,10 @@ const mockStorageBuckets = [
     riskScore: 55,
   },
   {
-    id: "storage-4",
-    name: "backup-storage-prod",
-    provider: "azure" as const,
-    region: "eastus",
+    id: 'storage-4',
+    name: 'backup-storage-prod',
+    provider: 'azure' as const,
+    region: 'eastus',
     sizeGB: 4500,
     objectCount: 156000,
     isPublic: false,
@@ -83,10 +67,10 @@ const mockStorageBuckets = [
     riskScore: 10,
   },
   {
-    id: "storage-5",
-    name: "staging-media-bucket",
-    provider: "gcp" as const,
-    region: "europe-west1",
+    id: 'storage-5',
+    name: 'staging-media-bucket',
+    provider: 'gcp' as const,
+    region: 'europe-west1',
     sizeGB: 180,
     objectCount: 5600,
     isPublic: false,
@@ -94,84 +78,75 @@ const mockStorageBuckets = [
     versioningEnabled: false,
     riskScore: 65,
   },
-];
+]
 
 const providerColors = {
-  aws: "bg-orange-500/15 text-orange-600",
-  gcp: "bg-blue-500/15 text-blue-600",
-  azure: "bg-sky-500/15 text-sky-600",
-};
+  aws: 'bg-orange-500/15 text-orange-600',
+  gcp: 'bg-blue-500/15 text-blue-600',
+  azure: 'bg-sky-500/15 text-sky-600',
+}
 
 const providerLabels = {
-  aws: "S3",
-  gcp: "GCS",
-  azure: "Blob",
-};
+  aws: 'S3',
+  gcp: 'GCS',
+  azure: 'Blob',
+}
 
 export default function StoragePage() {
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('')
 
   const filteredBuckets = mockStorageBuckets.filter(
     (bucket) =>
       bucket.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       bucket.region.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  )
 
   const getRiskColor = (score: number) => {
-    if (score >= 70) return "text-red-600 bg-red-500/15";
-    if (score >= 40) return "text-yellow-600 bg-yellow-500/15";
-    return "text-green-600 bg-green-500/15";
-  };
+    if (score >= 70) return 'text-red-600 bg-red-500/15'
+    if (score >= 40) return 'text-yellow-600 bg-yellow-500/15'
+    return 'text-green-600 bg-green-500/15'
+  }
 
   // Scope data
-  const scopeTargets = useMemo(() => getActiveScopeTargets(), []);
-  const scopeExclusions = useMemo(() => getActiveScopeExclusions(), []);
+  const scopeTargets = useMemo(() => getActiveScopeTargets(), [])
+  const scopeExclusions = useMemo(() => getActiveScopeExclusions(), [])
 
   // Compute scope matches for each storage bucket
   const scopeMatchesMap = useMemo(() => {
-    const map = new Map<string, ScopeMatchResult>();
+    const map = new Map<string, ScopeMatchResult>()
     mockStorageBuckets.forEach((bucket) => {
       const match = getScopeMatchesForAsset(
-        { id: bucket.id, type: "cloud_resource", name: bucket.name },
+        { id: bucket.id, type: 'cloud_resource', name: bucket.name },
         scopeTargets,
         scopeExclusions
-      );
-      map.set(bucket.id, match);
-    });
-    return map;
-  }, [scopeTargets, scopeExclusions]);
+      )
+      map.set(bucket.id, match)
+    })
+    return map
+  }, [scopeTargets, scopeExclusions])
 
   // Calculate scope coverage for all storage buckets
   const scopeCoverage = useMemo(() => {
     const assets = mockStorageBuckets.map((b) => ({
       id: b.id,
       name: b.name,
-      type: "cloud_resource",
-    }));
-    return calculateScopeCoverage(assets, scopeTargets, scopeExclusions);
-  }, [scopeTargets, scopeExclusions]);
+      type: 'cloud_resource',
+    }))
+    return calculateScopeCoverage(assets, scopeTargets, scopeExclusions)
+  }, [scopeTargets, scopeExclusions])
 
   // Stats calculations
-  const totalSize = mockStorageBuckets.reduce((acc, b) => acc + b.sizeGB, 0);
-  const totalObjects = mockStorageBuckets.reduce((acc, b) => acc + b.objectCount, 0);
-  const publicBuckets = mockStorageBuckets.filter((b) => b.isPublic).length;
-  const unencryptedBuckets = mockStorageBuckets.filter((b) => !b.encryptionEnabled).length;
+  const totalSize = mockStorageBuckets.reduce((acc, b) => acc + b.sizeGB, 0)
+  const totalObjects = mockStorageBuckets.reduce((acc, b) => acc + b.objectCount, 0)
+  const publicBuckets = mockStorageBuckets.filter((b) => b.isPublic).length
+  const unencryptedBuckets = mockStorageBuckets.filter((b) => !b.encryptionEnabled).length
 
   return (
     <>
-      <Header fixed>
-        <div className="ms-auto flex items-center gap-2 sm:gap-4">
-          <Search />
-          <ThemeSwitch />
-          <ProfileDropdown />
-        </div>
-      </Header>
+      <Header fixed />
 
       <Main>
-        <PageHeader
-          title="Storage"
-          description="S3 buckets, Azure Blobs, and GCS buckets"
-        />
+        <PageHeader title="Storage" description="S3 buckets, Azure Blobs, and GCS buckets" />
 
         {/* Stats */}
         <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -184,9 +159,7 @@ export default function StoragePage() {
               <CardTitle className="text-3xl">{mockStorageBuckets.length}</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">
-                S3, GCS, Azure Blob Storage
-              </p>
+              <p className="text-sm text-muted-foreground">S3, GCS, Azure Blob Storage</p>
             </CardContent>
           </Card>
 
@@ -216,9 +189,7 @@ export default function StoragePage() {
               <CardTitle className="text-3xl text-yellow-500">{publicBuckets}</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Publicly accessible
-              </p>
+              <p className="text-sm text-muted-foreground">Publicly accessible</p>
             </CardContent>
           </Card>
 
@@ -231,9 +202,7 @@ export default function StoragePage() {
               <CardTitle className="text-3xl text-red-500">{unencryptedBuckets}</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Missing encryption
-              </p>
+              <p className="text-sm text-muted-foreground">Missing encryption</p>
             </CardContent>
           </Card>
         </div>
@@ -310,7 +279,9 @@ export default function StoragePage() {
                           </Badge>
                         )}
                         {bucket.encryptionEnabled && (
-                          <Badge variant="outline" className="text-xs">Encrypted</Badge>
+                          <Badge variant="outline" className="text-xs">
+                            Encrypted
+                          </Badge>
                         )}
                       </div>
                     </td>
@@ -322,7 +293,9 @@ export default function StoragePage() {
                       )}
                     </td>
                     <td className="p-4">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getRiskColor(bucket.riskScore)}`}>
+                      <span
+                        className={`px-2.5 py-1 rounded-full text-xs font-medium ${getRiskColor(bucket.riskScore)}`}
+                      >
                         {bucket.riskScore}
                       </span>
                     </td>
@@ -334,5 +307,5 @@ export default function StoragePage() {
         </Card>
       </Main>
     </>
-  );
+  )
 }

@@ -1,6 +1,6 @@
-"use client";
+'use client'
 
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import {
   Loader2,
   Search,
@@ -14,10 +14,10 @@ import {
   Square,
   MinusSquare,
   RefreshCw,
-} from "lucide-react";
-import { toast } from "sonner";
+} from 'lucide-react'
+import { toast } from 'sonner'
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -25,38 +25,38 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Progress } from "@/components/ui/progress";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Progress } from '@/components/ui/progress'
+import { cn } from '@/lib/utils'
 
-import { ProviderIcon } from "./provider-icon";
-import type { Integration, SCMRepository } from "@/features/integrations";
-import { useIntegrationRepositoriesApi } from "@/features/integrations";
+import { ProviderIcon } from './provider-icon'
+import type { Integration, SCMRepository } from '@/features/integrations'
+import { useIntegrationRepositoriesApi } from '@/features/integrations'
 import {
   useCreateRepository,
   useRepositories,
   useBulkSyncRepositories,
   invalidateRepositoriesCache,
-} from "@/features/repositories/hooks/use-repositories";
-import type { SCMProvider } from "@/features/assets/types/asset.types";
+} from '@/features/repositories/hooks/use-repositories'
+import type { SCMProvider } from '@/features/assets/types/asset.types'
 
 interface SyncRepositoriesDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  connection: Integration;
-  onSuccess?: () => void;
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  connection: Integration
+  onSuccess?: () => void
 }
 
 interface ImportProgress {
-  total: number;
-  completed: number;
-  failed: number;
-  current: string;
-  phase: "importing" | "syncing";
+  total: number
+  completed: number
+  failed: number
+  current: string
+  phase: 'importing' | 'syncing'
 }
 
 export function SyncRepositoriesDialog({
@@ -65,12 +65,12 @@ export function SyncRepositoriesDialog({
   connection,
   onSuccess,
 }: SyncRepositoriesDialogProps) {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedRepos, setSelectedRepos] = useState<Set<string>>(new Set());
-  const [page, setPage] = useState(1);
-  const [isImporting, setIsImporting] = useState(false);
-  const [importProgress, setImportProgress] = useState<ImportProgress | null>(null);
-  const perPage = 50;
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedRepos, setSelectedRepos] = useState<Set<string>>(new Set())
+  const [page, setPage] = useState(1)
+  const [isImporting, setIsImporting] = useState(false)
+  const [importProgress, setImportProgress] = useState<ImportProgress | null>(null)
+  const perPage = 50
 
   // Fetch repositories from SCM
   const {
@@ -82,147 +82,151 @@ export function SyncRepositoriesDialog({
     open ? connection.id : null,
     { search: searchQuery, page, per_page: perPage },
     { revalidateOnFocus: false }
-  );
+  )
 
   // Fetch existing repositories to check which are already imported
   const { data: existingRepos, mutate: mutateExistingRepos } = useRepositories(
     { perPage: 100 },
     { revalidateOnFocus: false }
-  );
+  )
 
   // Create a set of already imported repository full names for quick lookup
   // Check both camelCase (frontend type) and snake_case (API response) field names
   const importedRepoNames = useMemo(() => {
-    const names = new Set<string>();
+    const names = new Set<string>()
     if (existingRepos?.data) {
       existingRepos.data.forEach((asset) => {
         // Check camelCase field (frontend type definition)
         if (asset.repository?.fullName) {
-          names.add(asset.repository.fullName.toLowerCase());
+          names.add(asset.repository.fullName.toLowerCase())
         }
         // Also check snake_case field (API might return this directly)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const repo = asset.repository as any;
+        const repo = asset.repository as any
         if (repo?.full_name) {
-          names.add(repo.full_name.toLowerCase());
+          names.add(repo.full_name.toLowerCase())
         }
         // Also check asset name as fallback (repo name without org)
         if (asset.name) {
-          names.add(asset.name.toLowerCase());
+          names.add(asset.name.toLowerCase())
         }
-      });
+      })
     }
-    return names;
-  }, [existingRepos]);
+    return names
+  }, [existingRepos])
 
-  const { trigger: createRepository } = useCreateRepository();
-  const { trigger: bulkSync } = useBulkSyncRepositories();
+  const { trigger: createRepository } = useCreateRepository()
+  const { trigger: bulkSync } = useBulkSyncRepositories()
 
   // Reset state when dialog opens
   useEffect(() => {
     if (open) {
-      setSearchQuery("");
-      setSelectedRepos(new Set());
-      setPage(1);
-      setIsImporting(false);
-      setImportProgress(null);
+      setSearchQuery('')
+      setSelectedRepos(new Set())
+      setPage(1)
+      setIsImporting(false)
+      setImportProgress(null)
     }
-  }, [open]);
+  }, [open])
 
   // Filter repositories based on search (client-side for already loaded repos)
   const filteredRepos = useMemo(() => {
-    if (!repoData?.repositories) return [];
-    return repoData.repositories;
-  }, [repoData]);
+    if (!repoData?.repositories) return []
+    return repoData.repositories
+  }, [repoData])
 
   // Check if a repo is already imported
   // Check both full_name (org/repo) and just repo name
-  const isRepoImported = useCallback((repo: SCMRepository) => {
-    const fullNameLower = repo.full_name.toLowerCase();
-    const nameLower = repo.name.toLowerCase();
-    return importedRepoNames.has(fullNameLower) || importedRepoNames.has(nameLower);
-  }, [importedRepoNames]);
+  const isRepoImported = useCallback(
+    (repo: SCMRepository) => {
+      const fullNameLower = repo.full_name.toLowerCase()
+      const nameLower = repo.name.toLowerCase()
+      return importedRepoNames.has(fullNameLower) || importedRepoNames.has(nameLower)
+    },
+    [importedRepoNames]
+  )
 
   // Count of repos available to import (not already imported)
   const availableToImport = useMemo(() => {
-    return filteredRepos.filter((repo) => !isRepoImported(repo)).length;
-  }, [filteredRepos, isRepoImported]);
+    return filteredRepos.filter((repo) => !isRepoImported(repo)).length
+  }, [filteredRepos, isRepoImported])
 
   // Create a map for quick lookup
   const reposMap = useMemo(() => {
-    const map = new Map<string, SCMRepository>();
-    filteredRepos.forEach((repo) => map.set(repo.id, repo));
-    return map;
-  }, [filteredRepos]);
+    const map = new Map<string, SCMRepository>()
+    filteredRepos.forEach((repo) => map.set(repo.id, repo))
+    return map
+  }, [filteredRepos])
 
   // Select all / deselect all logic - only consider repos that are NOT already imported
-  const selectableRepos = filteredRepos.filter((repo) => !isRepoImported(repo));
-  const allSelected = selectableRepos.length > 0 && selectableRepos.every((repo) => selectedRepos.has(repo.id));
-  const someSelected = selectableRepos.some((repo) => selectedRepos.has(repo.id));
-  const indeterminate = someSelected && !allSelected;
+  const selectableRepos = filteredRepos.filter((repo) => !isRepoImported(repo))
+  const allSelected =
+    selectableRepos.length > 0 && selectableRepos.every((repo) => selectedRepos.has(repo.id))
+  const someSelected = selectableRepos.some((repo) => selectedRepos.has(repo.id))
+  const indeterminate = someSelected && !allSelected
 
   const handleSelectAll = () => {
     if (allSelected) {
       // Deselect all
-      setSelectedRepos(new Set());
+      setSelectedRepos(new Set())
     } else {
       // Select all that are NOT already imported
-      const allIds = new Set(selectableRepos.map((repo) => repo.id));
-      setSelectedRepos(allIds);
+      const allIds = new Set(selectableRepos.map((repo) => repo.id))
+      setSelectedRepos(allIds)
     }
-  };
+  }
 
   const handleSelectRepo = (repoId: string) => {
     // Prevent selecting already imported repos
-    const repo = reposMap.get(repoId);
+    const repo = reposMap.get(repoId)
     if (repo && isRepoImported(repo)) {
-      return;
+      return
     }
 
-    const newSelected = new Set(selectedRepos);
+    const newSelected = new Set(selectedRepos)
     if (newSelected.has(repoId)) {
-      newSelected.delete(repoId);
+      newSelected.delete(repoId)
     } else {
-      newSelected.add(repoId);
+      newSelected.add(repoId)
     }
-    setSelectedRepos(newSelected);
-  };
+    setSelectedRepos(newSelected)
+  }
 
   const handleImport = useCallback(async () => {
     if (selectedRepos.size === 0) {
-      toast.error("Please select at least one repository to import");
-      return;
+      toast.error('Please select at least one repository to import')
+      return
     }
 
-    const selectedIds = Array.from(selectedRepos);
+    const selectedIds = Array.from(selectedRepos)
     const reposToImport = selectedIds
       .map((id) => reposMap.get(id))
-      .filter((repo): repo is SCMRepository => repo !== undefined);
+      .filter((repo): repo is SCMRepository => repo !== undefined)
 
     if (reposToImport.length === 0) {
-      toast.error("No valid repositories selected");
-      return;
+      toast.error('No valid repositories selected')
+      return
     }
 
-    setIsImporting(true);
+    setIsImporting(true)
     setImportProgress({
       total: reposToImport.length,
       completed: 0,
       failed: 0,
-      current: "",
-      phase: "importing",
-    });
+      current: '',
+      phase: 'importing',
+    })
 
-    let successCount = 0;
-    let failCount = 0;
-    const importedAssetIds: string[] = [];
+    let successCount = 0
+    let failCount = 0
+    const importedAssetIds: string[] = []
 
     // Phase 1: Import repositories
     for (const repo of reposToImport) {
       setImportProgress((prev) => ({
         ...prev!,
         current: repo.name,
-      }));
+      }))
 
       try {
         const result = await createRepository({
@@ -230,7 +234,7 @@ export function SyncRepositoriesDialog({
           name: repo.name,
           fullName: repo.full_name,
           description: repo.description,
-          criticality: "medium",
+          criticality: 'medium',
           // SCM connection info
           provider: connection.provider as SCMProvider,
           externalId: repo.id,
@@ -242,7 +246,7 @@ export function SyncRepositoriesDialog({
           sshUrl: repo.ssh_url,
           // Repository settings
           defaultBranch: repo.default_branch,
-          visibility: repo.is_private ? "private" : "public",
+          visibility: repo.is_private ? 'private' : 'public',
           language: repo.language,
           languages: repo.languages, // Include languages if available
           topics: repo.topics,
@@ -254,22 +258,22 @@ export function SyncRepositoriesDialog({
           repoCreatedAt: repo.created_at,
           repoUpdatedAt: repo.updated_at,
           repoPushedAt: repo.pushed_at,
-        });
-        successCount++;
+        })
+        successCount++
         // Collect asset ID for syncing
         if (result?.id) {
-          importedAssetIds.push(result.id);
+          importedAssetIds.push(result.id)
         }
       } catch (error) {
-        failCount++;
-        console.error(`Failed to import ${repo.name}:`, error);
+        failCount++
+        console.error(`Failed to import ${repo.name}:`, error)
       }
 
       setImportProgress((prev) => ({
         ...prev!,
         completed: successCount,
         failed: failCount,
-      }));
+      }))
     }
 
     // Phase 2: Bulk sync imported repos to get full data (languages, etc.)
@@ -278,65 +282,74 @@ export function SyncRepositoriesDialog({
         total: importedAssetIds.length,
         completed: 0,
         failed: 0,
-        current: "Syncing all repositories...",
-        phase: "syncing",
-      });
+        current: 'Syncing all repositories...',
+        phase: 'syncing',
+      })
 
       try {
-        const syncResult = await bulkSync({ asset_ids: importedAssetIds });
+        const syncResult = await bulkSync({ asset_ids: importedAssetIds })
         if (syncResult) {
           setImportProgress({
             total: syncResult.total_count,
             completed: syncResult.success_count,
             failed: syncResult.failed_count,
-            current: "Completed",
-            phase: "syncing",
-          });
+            current: 'Completed',
+            phase: 'syncing',
+          })
         }
       } catch (error) {
         // Sync failures are not critical
-        console.warn("Failed to bulk sync repositories:", error);
+        console.warn('Failed to bulk sync repositories:', error)
         setImportProgress((prev) => ({
           ...prev!,
           completed: importedAssetIds.length,
-          current: "Sync completed with errors",
-        }));
+          current: 'Sync completed with errors',
+        }))
       }
     }
 
-    setIsImporting(false);
+    setIsImporting(false)
 
     if (failCount === 0) {
-      toast.success(`Successfully imported ${successCount} repositories`);
+      toast.success(`Successfully imported ${successCount} repositories`)
     } else if (successCount > 0) {
-      toast.warning(`Imported ${successCount} repositories, ${failCount} failed`);
+      toast.warning(`Imported ${successCount} repositories, ${failCount} failed`)
     } else {
-      toast.error(`Failed to import repositories`);
+      toast.error(`Failed to import repositories`)
     }
 
     // Invalidate all repositories caches to refresh the main list
-    await invalidateRepositoriesCache();
+    await invalidateRepositoriesCache()
     // Also refresh local existing repos data to update "Imported" badges
-    await mutateExistingRepos();
+    await mutateExistingRepos()
 
     if (successCount > 0) {
-      onOpenChange(false);
-      onSuccess?.();
+      onOpenChange(false)
+      onSuccess?.()
     }
-  }, [selectedRepos, reposMap, createRepository, connection, onOpenChange, onSuccess, mutateExistingRepos]);
+  }, [
+    selectedRepos,
+    reposMap,
+    createRepository,
+    connection,
+    onOpenChange,
+    onSuccess,
+    mutateExistingRepos,
+    bulkSync,
+  ])
 
   const handleClose = () => {
-    if (isImporting) return; // Don't close while importing
-    setSearchQuery("");
-    setSelectedRepos(new Set());
-    setPage(1);
-    setImportProgress(null);
-    onOpenChange(false);
-  };
+    if (isImporting) return // Don't close while importing
+    setSearchQuery('')
+    setSelectedRepos(new Set())
+    setPage(1)
+    setImportProgress(null)
+    onOpenChange(false)
+  }
 
   const progressPercent = importProgress
     ? ((importProgress.completed + importProgress.failed) / importProgress.total) * 100
-    : 0;
+    : 0
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -361,18 +374,14 @@ export function SyncRepositoriesDialog({
         {isImporting && importProgress && (
           <div className="space-y-2 py-2">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">
-                Importing: {importProgress.current}
-              </span>
+              <span className="text-muted-foreground">Importing: {importProgress.current}</span>
               <span className="text-muted-foreground">
                 {importProgress.completed + importProgress.failed} / {importProgress.total}
               </span>
             </div>
             <Progress value={progressPercent} className="h-2" />
             {importProgress.failed > 0 && (
-              <p className="text-xs text-red-500">
-                {importProgress.failed} failed
-              </p>
+              <p className="text-xs text-red-500">{importProgress.failed} failed</p>
             )}
           </div>
         )}
@@ -385,8 +394,8 @@ export function SyncRepositoriesDialog({
               placeholder="Search repositories..."
               value={searchQuery}
               onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setPage(1);
+                setSearchQuery(e.target.value)
+                setPage(1)
               }}
               className="pl-9"
               disabled={isImporting}
@@ -423,7 +432,7 @@ export function SyncRepositoriesDialog({
                 <Square className="h-4 w-4" />
               )}
               <span className="text-sm font-medium">
-                {allSelected ? "Deselect All" : "Select All"}
+                {allSelected ? 'Deselect All' : 'Select All'}
               </span>
             </button>
             <span className="text-sm text-muted-foreground ml-auto">
@@ -447,14 +456,9 @@ export function SyncRepositoriesDialog({
             ) : error ? (
               <div className="flex flex-col items-center justify-center h-full py-12 text-center">
                 <p className="text-sm text-red-500">
-                  {error instanceof Error ? error.message : "Failed to load repositories"}
+                  {error instanceof Error ? error.message : 'Failed to load repositories'}
                 </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => refetch()}
-                  className="mt-4"
-                >
+                <Button variant="outline" size="sm" onClick={() => refetch()} className="mt-4">
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Retry
                 </Button>
@@ -462,13 +466,13 @@ export function SyncRepositoriesDialog({
             ) : filteredRepos.length === 0 ? (
               <div className="flex items-center justify-center h-full py-12">
                 <p className="text-sm text-muted-foreground">
-                  {searchQuery ? "No repositories match your search" : "No repositories found"}
+                  {searchQuery ? 'No repositories match your search' : 'No repositories found'}
                 </p>
               </div>
             ) : (
               <div className="divide-y">
                 {filteredRepos.map((repo) => {
-                  const alreadyImported = isRepoImported(repo);
+                  const alreadyImported = isRepoImported(repo)
                   return (
                     <RepositoryItem
                       key={repo.id}
@@ -478,7 +482,7 @@ export function SyncRepositoriesDialog({
                       disabled={isImporting || alreadyImported}
                       isImported={alreadyImported}
                     />
-                  );
+                  )
                 })}
               </div>
             )}
@@ -512,39 +516,34 @@ export function SyncRepositoriesDialog({
           <Button variant="outline" onClick={handleClose} disabled={isImporting}>
             Cancel
           </Button>
-          <Button
-            onClick={handleImport}
-            disabled={isImporting || selectedRepos.size === 0}
-          >
-            {isImporting ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : null}
-            Import {selectedRepos.size > 0 ? `${selectedRepos.size} ` : ""}
-            {selectedRepos.size === 1 ? "Repository" : "Repositories"}
+          <Button onClick={handleImport} disabled={isImporting || selectedRepos.size === 0}>
+            {isImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            Import {selectedRepos.size > 0 ? `${selectedRepos.size} ` : ''}
+            {selectedRepos.size === 1 ? 'Repository' : 'Repositories'}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  )
 }
 
 interface RepositoryItemProps {
-  repo: SCMRepository;
-  selected: boolean;
-  onSelect: () => void;
-  disabled?: boolean;
-  isImported?: boolean;
+  repo: SCMRepository
+  selected: boolean
+  onSelect: () => void
+  disabled?: boolean
+  isImported?: boolean
 }
 
 function RepositoryItem({ repo, selected, onSelect, disabled, isImported }: RepositoryItemProps) {
   return (
     <div
       className={cn(
-        "flex items-center gap-3 px-4 py-3 transition-colors",
-        !isImported && "hover:bg-muted/50 cursor-pointer",
-        selected && "bg-primary/5",
-        isImported && "opacity-60 bg-muted/20",
-        disabled && !isImported && "opacity-50 pointer-events-none"
+        'flex items-center gap-3 px-4 py-3 transition-colors',
+        !isImported && 'hover:bg-muted/50 cursor-pointer',
+        selected && 'bg-primary/5',
+        isImported && 'opacity-60 bg-muted/20',
+        disabled && !isImported && 'opacity-50 pointer-events-none'
       )}
       onClick={disabled || isImported ? undefined : onSelect}
     >
@@ -555,15 +554,15 @@ function RepositoryItem({ repo, selected, onSelect, disabled, isImported }: Repo
       />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className={cn("font-medium truncate", isImported && "text-muted-foreground")}>{repo.name}</span>
+          <span className={cn('font-medium truncate', isImported && 'text-muted-foreground')}>
+            {repo.name}
+          </span>
           {repo.is_private ? (
             <Lock className="h-3.5 w-3.5 text-muted-foreground" />
           ) : (
             <Globe className="h-3.5 w-3.5 text-muted-foreground" />
           )}
-          {repo.is_fork && (
-            <GitFork className="h-3.5 w-3.5 text-muted-foreground" />
-          )}
+          {repo.is_fork && <GitFork className="h-3.5 w-3.5 text-muted-foreground" />}
           {isImported && (
             <Badge variant="outline" className="text-xs text-green-600 border-green-600/30">
               Imported
@@ -577,9 +576,7 @@ function RepositoryItem({ repo, selected, onSelect, disabled, isImported }: Repo
           )}
         </div>
         {repo.description && (
-          <p className="text-xs text-muted-foreground truncate mt-0.5">
-            {repo.description}
-          </p>
+          <p className="text-xs text-muted-foreground truncate mt-0.5">{repo.description}</p>
         )}
         <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
           {repo.language && (
@@ -603,5 +600,5 @@ function RepositoryItem({ repo, selected, onSelect, disabled, isImported }: Repo
         </div>
       </div>
     </div>
-  );
+  )
 }

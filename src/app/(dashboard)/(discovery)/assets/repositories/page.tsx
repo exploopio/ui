@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { useState, useMemo, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useMemo, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   ColumnDef,
   flexRender,
@@ -11,24 +11,15 @@ import {
   getSortedRowModel,
   SortingState,
   useReactTable,
-} from "@tanstack/react-table";
-import { Header, Main } from "@/components/layout";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { PageHeader, RiskScoreBadge } from "@/features/shared";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Progress } from "@/components/ui/progress";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+} from '@tanstack/react-table'
+import { Header, Main } from '@/components/layout'
+import { PageHeader, RiskScoreBadge } from '@/features/shared'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Progress } from '@/components/ui/progress'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -36,7 +27,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from '@/components/ui/table'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,35 +37,27 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+} from '@/components/ui/alert-dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import {
-  Sheet,
-  SheetContent,
-} from "@/components/ui/sheet";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Skeleton } from "@/components/ui/skeleton";
-import { toast } from "sonner";
+} from '@/components/ui/select'
+import { Sheet, SheetContent } from '@/components/ui/sheet'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Separator } from '@/components/ui/separator'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Skeleton } from '@/components/ui/skeleton'
+import { toast } from 'sonner'
 import {
   Plus,
   GitBranch,
@@ -114,7 +97,7 @@ import {
   Loader2,
   Link2,
   ArrowRight,
-} from "lucide-react";
+} from 'lucide-react'
 import {
   useRepositories,
   invalidateRepositoriesCache,
@@ -128,72 +111,72 @@ import {
   type RepositoryFilters,
   SCM_PROVIDER_LABELS,
   SYNC_STATUS_LABELS,
-} from "@/features/repositories";
-import { useSCMConnections } from "@/features/repositories/hooks/use-repositories";
-import type { AssetWithRepository } from "@/features/assets/types/asset.types";
-import type { Status } from "@/features/shared/types";
+} from '@/features/repositories'
+import { useSCMConnections } from '@/features/repositories/hooks/use-repositories'
+import type { AssetWithRepository } from '@/features/assets/types/asset.types'
+import type { Status } from '@/features/shared/types'
 
 // Alias for compatibility
-type Repository = RepositoryView;
-type RepositoryStatus = Status;
-import { cn } from "@/lib/utils";
+type Repository = RepositoryView
+type RepositoryStatus = Status
+import { cn } from '@/lib/utils'
 
 // ============================================
 // API Response Types (snake_case from backend)
 // ============================================
 
 interface ApiAssetResponse {
-  id: string;
-  tenant_id?: string;
-  name: string;
-  type: string;
-  provider?: string;
-  external_id?: string;
-  criticality: string;
-  status: string;
-  scope: string;
-  exposure: string;
-  risk_score: number;
-  finding_count: number;
-  description?: string;
-  tags?: string[];
-  metadata?: Record<string, unknown>;
-  first_seen: string;
-  last_seen: string;
-  created_at: string;
-  updated_at: string;
+  id: string
+  tenant_id?: string
+  name: string
+  type: string
+  provider?: string
+  external_id?: string
+  criticality: string
+  status: string
+  scope: string
+  exposure: string
+  risk_score: number
+  finding_count: number
+  description?: string
+  tags?: string[]
+  metadata?: Record<string, unknown>
+  first_seen: string
+  last_seen: string
+  created_at: string
+  updated_at: string
   // Repository extension (when available from /full endpoint)
   repository?: {
-    asset_id: string;
-    repo_id?: string;
-    full_name: string;
-    scm_organization?: string;
-    clone_url?: string;
-    web_url?: string;
-    ssh_url?: string;
-    default_branch?: string;
-    visibility: string;
-    language?: string;
-    languages?: Record<string, number>;
-    topics?: string[];
-    stars: number;
-    forks: number;
-    watchers: number;
-    open_issues: number;
-    contributors_count: number;
-    size_kb: number;
-    branch_count: number;
-    protected_branch_count: number;
-    component_count: number;
-    vulnerable_component_count: number;
-    finding_count: number;
-    scan_enabled: boolean;
-    scan_schedule?: string;
-    last_scanned_at?: string;
-    repo_created_at?: string;
-    repo_updated_at?: string;
-    repo_pushed_at?: string;
-  };
+    asset_id: string
+    repo_id?: string
+    full_name: string
+    scm_organization?: string
+    clone_url?: string
+    web_url?: string
+    ssh_url?: string
+    default_branch?: string
+    visibility: string
+    language?: string
+    languages?: Record<string, number>
+    topics?: string[]
+    stars: number
+    forks: number
+    watchers: number
+    open_issues: number
+    contributors_count: number
+    size_kb: number
+    branch_count: number
+    protected_branch_count: number
+    component_count: number
+    vulnerable_component_count: number
+    finding_count: number
+    scan_enabled: boolean
+    scan_schedule?: string
+    last_scanned_at?: string
+    repo_created_at?: string
+    repo_updated_at?: string
+    repo_pushed_at?: string
+  }
 }
 
 // ============================================
@@ -201,36 +184,36 @@ interface ApiAssetResponse {
 // ============================================
 
 function transformToRepositoryView(asset: ApiAssetResponse): RepositoryView {
-  const repo = asset.repository;
+  const repo = asset.repository
 
   // Use provider from API response, fallback to detection from full_name if not available
-  let scmProvider: SCMProvider = "github";
-  if (asset.provider && asset.provider !== "other" && asset.provider !== "") {
+  let scmProvider: SCMProvider = 'github'
+  if (asset.provider && asset.provider !== 'other' && asset.provider !== '') {
     // Use the provider from the API response
-    scmProvider = asset.provider as SCMProvider;
+    scmProvider = asset.provider as SCMProvider
   } else if (repo?.full_name) {
     // Fallback: detect from full_name or web_url for backward compatibility
-    const fullNameLower = repo.full_name.toLowerCase();
-    const webUrlLower = (repo.web_url || "").toLowerCase();
-    if (fullNameLower.includes("gitlab") || webUrlLower.includes("gitlab")) {
-      scmProvider = "gitlab";
-    } else if (fullNameLower.includes("bitbucket") || webUrlLower.includes("bitbucket")) {
-      scmProvider = "bitbucket";
-    } else if (fullNameLower.includes("dev.azure") || webUrlLower.includes("dev.azure")) {
-      scmProvider = "azure_devops";
+    const fullNameLower = repo.full_name.toLowerCase()
+    const webUrlLower = (repo.web_url || '').toLowerCase()
+    if (fullNameLower.includes('gitlab') || webUrlLower.includes('gitlab')) {
+      scmProvider = 'gitlab'
+    } else if (fullNameLower.includes('bitbucket') || webUrlLower.includes('bitbucket')) {
+      scmProvider = 'bitbucket'
+    } else if (fullNameLower.includes('dev.azure') || webUrlLower.includes('dev.azure')) {
+      scmProvider = 'azure_devops'
     }
   }
 
   return {
     // Base asset fields (API uses snake_case, we need to map to our camelCase types)
     id: asset.id,
-    type: asset.type as AssetWithRepository["type"],
+    type: asset.type as AssetWithRepository['type'],
     name: asset.name,
     description: asset.description,
     criticality: asset.criticality as Criticality,
     status: asset.status as RepositoryStatus,
-    scope: asset.scope as AssetWithRepository["scope"],
-    exposure: asset.exposure as AssetWithRepository["exposure"],
+    scope: asset.scope as AssetWithRepository['scope'],
+    exposure: asset.exposure as AssetWithRepository['exposure'],
     riskScore: asset.risk_score,
     findingCount: asset.finding_count,
     tags: asset.tags,
@@ -240,47 +223,49 @@ function transformToRepositoryView(asset: ApiAssetResponse): RepositoryView {
     createdAt: asset.created_at,
     updatedAt: asset.updated_at,
     // Repository extension (map to camelCase if available)
-    repository: repo ? {
-      assetId: repo.asset_id,
-      repoId: repo.repo_id,
-      fullName: repo.full_name,
-      scmOrganization: repo.scm_organization,
-      cloneUrl: repo.clone_url,
-      webUrl: repo.web_url,
-      sshUrl: repo.ssh_url,
-      defaultBranch: repo.default_branch,
-      visibility: repo.visibility as "public" | "private" | "internal",
-      language: repo.language,
-      languages: repo.languages,
-      topics: repo.topics,
-      stars: repo.stars,
-      forks: repo.forks,
-      watchers: repo.watchers,
-      openIssues: repo.open_issues,
-      contributorsCount: repo.contributors_count,
-      sizeKb: repo.size_kb,
-      branchCount: repo.branch_count,
-      protectedBranchCount: repo.protected_branch_count,
-      componentCount: repo.component_count,
-      vulnerableComponentCount: repo.vulnerable_component_count,
-      findingCount: repo.finding_count,
-      scanEnabled: repo.scan_enabled,
-      scanSchedule: repo.scan_schedule,
-      lastScannedAt: repo.last_scanned_at,
-      repoCreatedAt: repo.repo_created_at,
-      repoUpdatedAt: repo.repo_updated_at,
-      repoPushedAt: repo.repo_pushed_at,
-    } : undefined,
+    repository: repo
+      ? {
+          assetId: repo.asset_id,
+          repoId: repo.repo_id,
+          fullName: repo.full_name,
+          scmOrganization: repo.scm_organization,
+          cloneUrl: repo.clone_url,
+          webUrl: repo.web_url,
+          sshUrl: repo.ssh_url,
+          defaultBranch: repo.default_branch,
+          visibility: repo.visibility as 'public' | 'private' | 'internal',
+          language: repo.language,
+          languages: repo.languages,
+          topics: repo.topics,
+          stars: repo.stars,
+          forks: repo.forks,
+          watchers: repo.watchers,
+          openIssues: repo.open_issues,
+          contributorsCount: repo.contributors_count,
+          sizeKb: repo.size_kb,
+          branchCount: repo.branch_count,
+          protectedBranchCount: repo.protected_branch_count,
+          componentCount: repo.component_count,
+          vulnerableComponentCount: repo.vulnerable_component_count,
+          findingCount: repo.finding_count,
+          scanEnabled: repo.scan_enabled,
+          scanSchedule: repo.scan_schedule,
+          lastScannedAt: repo.last_scanned_at,
+          repoCreatedAt: repo.repo_created_at,
+          repoUpdatedAt: repo.repo_updated_at,
+          repoPushedAt: repo.repo_pushed_at,
+        }
+      : undefined,
     // UI-specific snake_case fields for legacy compatibility
     scm_provider: scmProvider,
     scm_organization: repo?.scm_organization,
-    default_branch: repo?.default_branch || "main",
-    visibility: (repo?.visibility || "private") as RepositoryView["visibility"],
+    default_branch: repo?.default_branch || 'main',
+    visibility: (repo?.visibility || 'private') as RepositoryView['visibility'],
     primary_language: repo?.language,
     risk_score: asset.risk_score,
-    sync_status: "synced" as SyncStatus,
-    compliance_status: "not_assessed" as ComplianceStatus,
-    quality_gate_status: "not_computed" as QualityGateStatus,
+    sync_status: 'synced' as SyncStatus,
+    compliance_status: 'not_assessed' as ComplianceStatus,
+    quality_gate_status: 'not_computed' as QualityGateStatus,
     findings_summary: {
       total: asset.finding_count || 0,
       by_severity: {
@@ -306,54 +291,56 @@ function transformToRepositoryView(asset: ApiAssetResponse): RepositoryView {
         container: 0,
         dast: 0,
       },
-      trend: "stable",
+      trend: 'stable',
     },
-    components_summary: repo ? {
-      total: repo.component_count || 0,
-      vulnerable: repo.vulnerable_component_count || 0,
-    } : { total: 0, vulnerable: 0 },
+    components_summary: repo
+      ? {
+          total: repo.component_count || 0,
+          vulnerable: repo.vulnerable_component_count || 0,
+        }
+      : { total: 0, vulnerable: 0 },
     scan_settings: {
-      enabled_scanners: ["sast", "sca", "secret"],
+      enabled_scanners: ['sast', 'sca', 'secret'],
       auto_scan: repo?.scan_enabled || false,
       scan_on_push: true,
       scan_on_pr: true,
     },
     security_features: undefined,
     last_scanned_at: repo?.last_scanned_at,
-  };
+  }
 }
 
 // ============================================
 // Filter Types
 // ============================================
 
-type StatusFilter = RepositoryStatus | "all";
-type ProviderFilter = SCMProvider | "all";
+type StatusFilter = RepositoryStatus | 'all'
+type ProviderFilter = SCMProvider | 'all'
 
 const statusFilters: { value: StatusFilter; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "active", label: "Active" },
-  { value: "inactive", label: "Inactive" },
-  { value: "archived", label: "Archived" },
-];
+  { value: 'all', label: 'All' },
+  { value: 'active', label: 'Active' },
+  { value: 'inactive', label: 'Inactive' },
+  { value: 'archived', label: 'Archived' },
+]
 
 const REPOSITORY_STATUS_LABELS: Record<string, string> = {
-  active: "Active",
-  inactive: "Inactive",
-  archived: "Archived",
-  pending: "Pending",
-  completed: "Completed",
-  failed: "Failed",
-};
+  active: 'Active',
+  inactive: 'Inactive',
+  archived: 'Archived',
+  pending: 'Pending',
+  completed: 'Completed',
+  failed: 'Failed',
+}
 
 const SCM_PROVIDER_COLORS: Record<SCMProvider, string> = {
-  github: "bg-gray-900 text-white",
-  gitlab: "bg-orange-600 text-white",
-  bitbucket: "bg-blue-600 text-white",
-  azure_devops: "bg-blue-500 text-white",
-  codecommit: "bg-yellow-600 text-white",
-  local: "bg-gray-500 text-white",
-};
+  github: 'bg-gray-900 text-white',
+  gitlab: 'bg-orange-600 text-white',
+  bitbucket: 'bg-blue-600 text-white',
+  azure_devops: 'bg-blue-500 text-white',
+  codecommit: 'bg-yellow-600 text-white',
+  local: 'bg-gray-500 text-white',
+}
 
 // ============================================
 // Helper Components
@@ -361,104 +348,133 @@ const SCM_PROVIDER_COLORS: Record<SCMProvider, string> = {
 
 function ProviderIcon({ provider, className }: { provider: SCMProvider; className?: string }) {
   switch (provider) {
-    case "github":
-      return <Github className={cn("h-4 w-4", className)} />;
-    case "gitlab":
-      return <GitlabIcon className={cn("h-4 w-4", className)} />;
-    case "bitbucket":
-      return <Cloud className={cn("h-4 w-4", className)} />;
-    case "azure_devops":
-      return <Cloud className={cn("h-4 w-4", className)} />;
+    case 'github':
+      return <Github className={cn('h-4 w-4', className)} />
+    case 'gitlab':
+      return <GitlabIcon className={cn('h-4 w-4', className)} />
+    case 'bitbucket':
+      return <Cloud className={cn('h-4 w-4', className)} />
+    case 'azure_devops':
+      return <Cloud className={cn('h-4 w-4', className)} />
     default:
-      return <GitBranch className={cn("h-4 w-4", className)} />;
+      return <GitBranch className={cn('h-4 w-4', className)} />
   }
 }
 
 function SyncStatusBadge({ status }: { status: SyncStatus }) {
-  const config: Record<SyncStatus, { variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ReactNode }> = {
-    synced: { variant: "default", icon: <CheckCircle className="h-3 w-3" /> },
-    pending: { variant: "secondary", icon: <Clock className="h-3 w-3" /> },
-    syncing: { variant: "outline", icon: <RefreshCw className="h-3 w-3 animate-spin" /> },
-    error: { variant: "destructive", icon: <XCircle className="h-3 w-3" /> },
-    disabled: { variant: "secondary", icon: <Minus className="h-3 w-3" /> },
-  };
-  const { variant, icon } = config[status];
+  const config: Record<
+    SyncStatus,
+    { variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: React.ReactNode }
+  > = {
+    synced: { variant: 'default', icon: <CheckCircle className="h-3 w-3" /> },
+    pending: { variant: 'secondary', icon: <Clock className="h-3 w-3" /> },
+    syncing: { variant: 'outline', icon: <RefreshCw className="h-3 w-3 animate-spin" /> },
+    error: { variant: 'destructive', icon: <XCircle className="h-3 w-3" /> },
+    disabled: { variant: 'secondary', icon: <Minus className="h-3 w-3" /> },
+  }
+  const { variant, icon } = config[status]
   return (
     <Badge variant={variant} className="gap-1">
       {icon}
       {SYNC_STATUS_LABELS[status]}
     </Badge>
-  );
+  )
 }
 
 function QualityGateBadge({ status }: { status: QualityGateStatus }) {
-  const config: Record<QualityGateStatus, { color: string; icon: React.ReactNode; label: string }> = {
-    passed: { color: "text-green-500", icon: <CheckCircle className="h-3.5 w-3.5" />, label: "Passed" },
-    failed: { color: "text-red-500", icon: <XCircle className="h-3.5 w-3.5" />, label: "Failed" },
-    warning: { color: "text-yellow-500", icon: <AlertTriangle className="h-3.5 w-3.5" />, label: "Warning" },
-    not_computed: { color: "text-muted-foreground", icon: <Minus className="h-3.5 w-3.5" />, label: "N/A" },
-  };
-  const { color, icon, label } = config[status];
+  const config: Record<QualityGateStatus, { color: string; icon: React.ReactNode; label: string }> =
+    {
+      passed: {
+        color: 'text-green-500',
+        icon: <CheckCircle className="h-3.5 w-3.5" />,
+        label: 'Passed',
+      },
+      failed: { color: 'text-red-500', icon: <XCircle className="h-3.5 w-3.5" />, label: 'Failed' },
+      warning: {
+        color: 'text-yellow-500',
+        icon: <AlertTriangle className="h-3.5 w-3.5" />,
+        label: 'Warning',
+      },
+      not_computed: {
+        color: 'text-muted-foreground',
+        icon: <Minus className="h-3.5 w-3.5" />,
+        label: 'N/A',
+      },
+    }
+  const { color, icon, label } = config[status]
   return (
-    <span className={cn("flex items-center gap-1 text-sm", color)}>
+    <span className={cn('flex items-center gap-1 text-sm', color)}>
       {icon}
       {label}
     </span>
-  );
+  )
 }
 
 function ComplianceBadge({ status }: { status: ComplianceStatus }) {
   const config: Record<ComplianceStatus, { color: string; label: string }> = {
-    compliant: { color: "bg-green-500/10 text-green-500 border-green-500/20", label: "Compliant" },
-    non_compliant: { color: "bg-red-500/10 text-red-500 border-red-500/20", label: "Non-Compliant" },
-    partial: { color: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20", label: "Partial" },
-    not_assessed: { color: "bg-gray-500/10 text-gray-500 border-gray-500/20", label: "Not Assessed" },
-  };
-  const { color, label } = config[status];
-  return <Badge variant="outline" className={cn("text-xs", color)}>{label}</Badge>;
+    compliant: { color: 'bg-green-500/10 text-green-500 border-green-500/20', label: 'Compliant' },
+    non_compliant: {
+      color: 'bg-red-500/10 text-red-500 border-red-500/20',
+      label: 'Non-Compliant',
+    },
+    partial: { color: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20', label: 'Partial' },
+    not_assessed: {
+      color: 'bg-gray-500/10 text-gray-500 border-gray-500/20',
+      label: 'Not Assessed',
+    },
+  }
+  const { color, label } = config[status]
+  return (
+    <Badge variant="outline" className={cn('text-xs', color)}>
+      {label}
+    </Badge>
+  )
 }
 
 function CriticalityBadge({ criticality }: { criticality: Criticality }) {
   const config: Record<Criticality, string> = {
-    critical: "bg-red-500/10 text-red-500 border-red-500/20",
-    high: "bg-orange-500/10 text-orange-500 border-orange-500/20",
-    medium: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
-    low: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-  };
+    critical: 'bg-red-500/10 text-red-500 border-red-500/20',
+    high: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
+    medium: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
+    low: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
+  }
   return (
-    <Badge variant="outline" className={cn("text-xs capitalize", config[criticality])}>
+    <Badge variant="outline" className={cn('text-xs capitalize', config[criticality])}>
       {criticality}
     </Badge>
-  );
+  )
 }
 
-function FindingsTrendIcon({ trend }: { trend?: "increasing" | "decreasing" | "stable" }) {
-  if (!trend) return null;
+function FindingsTrendIcon({ trend }: { trend?: 'increasing' | 'decreasing' | 'stable' }) {
+  if (!trend) return null
   switch (trend) {
-    case "increasing":
-      return <TrendingUp className="h-3 w-3 text-red-500" />;
-    case "decreasing":
-      return <TrendingDown className="h-3 w-3 text-green-500" />;
+    case 'increasing':
+      return <TrendingUp className="h-3 w-3 text-red-500" />
+    case 'decreasing':
+      return <TrendingDown className="h-3 w-3 text-green-500" />
     default:
-      return <Minus className="h-3 w-3 text-muted-foreground" />;
+      return <Minus className="h-3 w-3 text-muted-foreground" />
   }
 }
 
 function RepositoryStatusBadge({ status }: { status: RepositoryStatus }) {
-  const config: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; color?: string }> = {
-    active: { variant: "default" },
-    inactive: { variant: "secondary" },
-    archived: { variant: "outline", color: "text-muted-foreground" },
-    pending: { variant: "outline", color: "text-yellow-500" },
-    completed: { variant: "default", color: "text-green-500" },
-    failed: { variant: "destructive" },
-  };
-  const statusConfig = config[status] || { variant: "secondary" };
+  const config: Record<
+    string,
+    { variant: 'default' | 'secondary' | 'destructive' | 'outline'; color?: string }
+  > = {
+    active: { variant: 'default' },
+    inactive: { variant: 'secondary' },
+    archived: { variant: 'outline', color: 'text-muted-foreground' },
+    pending: { variant: 'outline', color: 'text-yellow-500' },
+    completed: { variant: 'default', color: 'text-green-500' },
+    failed: { variant: 'destructive' },
+  }
+  const statusConfig = config[status] || { variant: 'secondary' }
   return (
     <Badge variant={statusConfig.variant} className={statusConfig.color}>
       {REPOSITORY_STATUS_LABELS[status] || status}
     </Badge>
-  );
+  )
 }
 
 // ============================================
@@ -466,16 +482,16 @@ function RepositoryStatusBadge({ status }: { status: RepositoryStatus }) {
 // ============================================
 
 function SCMConnectionsBanner() {
-  const router = useRouter();
-  const { data: connectionsData, isLoading } = useSCMConnections();
+  const router = useRouter()
+  const { data: connectionsData, isLoading } = useSCMConnections()
 
   // Handle both array and paginated response formats
   const connections = Array.isArray(connectionsData)
     ? connectionsData
-    : ((connectionsData as unknown as { data?: unknown[] })?.data as typeof connectionsData) ?? [];
+    : (((connectionsData as unknown as { data?: unknown[] })?.data as typeof connectionsData) ?? [])
 
-  const connectedCount = connections.filter((c) => c.status === "connected").length;
-  const hasConnections = connections.length > 0;
+  const connectedCount = connections.filter((c) => c.status === 'connected').length
+  const hasConnections = connections.length > 0
 
   if (isLoading) {
     return (
@@ -491,29 +507,33 @@ function SCMConnectionsBanner() {
           </div>
         </CardContent>
       </Card>
-    );
+    )
   }
 
   return (
-    <Card className={cn(
-      "mt-6 border",
-      hasConnections && connectedCount > 0
-        ? "bg-green-500/5 border-green-500/20"
-        : "bg-blue-500/5 border-blue-500/20"
-    )}>
+    <Card
+      className={cn(
+        'mt-6 border',
+        hasConnections && connectedCount > 0
+          ? 'bg-green-500/5 border-green-500/20'
+          : 'bg-blue-500/5 border-blue-500/20'
+      )}
+    >
       <CardContent className="py-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
-            <div className={cn(
-              "flex h-10 w-10 items-center justify-center rounded-lg",
-              hasConnections && connectedCount > 0
-                ? "bg-green-500/10"
-                : "bg-blue-500/10"
-            )}>
-              <Link2 className={cn(
-                "h-5 w-5",
-                hasConnections && connectedCount > 0 ? "text-green-500" : "text-blue-500"
-              )} />
+            <div
+              className={cn(
+                'flex h-10 w-10 items-center justify-center rounded-lg',
+                hasConnections && connectedCount > 0 ? 'bg-green-500/10' : 'bg-blue-500/10'
+              )}
+            >
+              <Link2
+                className={cn(
+                  'h-5 w-5',
+                  hasConnections && connectedCount > 0 ? 'text-green-500' : 'text-blue-500'
+                )}
+              />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -526,23 +546,23 @@ function SCMConnectionsBanner() {
               </div>
               <p className="text-sm text-muted-foreground">
                 {hasConnections
-                  ? "Manage your source control connections to import and sync repositories"
-                  : "Connect GitHub, GitLab, or Bitbucket to import repositories automatically"}
+                  ? 'Manage your source control connections to import and sync repositories'
+                  : 'Connect GitHub, GitLab, or Bitbucket to import repositories automatically'}
               </p>
             </div>
           </div>
           <Button
-            variant={hasConnections ? "outline" : "default"}
-            onClick={() => router.push("/settings/integrations/scm")}
+            variant={hasConnections ? 'outline' : 'default'}
+            onClick={() => router.push('/settings/integrations/scm')}
             className="shrink-0"
           >
-            {hasConnections ? "Manage Connections" : "Add Connection"}
+            {hasConnections ? 'Manage Connections' : 'Add Connection'}
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </div>
       </CardContent>
     </Card>
-  );
+  )
 }
 
 // ============================================
@@ -550,120 +570,143 @@ function SCMConnectionsBanner() {
 // ============================================
 
 export default function RepositoriesPage() {
-  const router = useRouter();
+  const router = useRouter()
 
   // State for filters
-  const [selectedRepository, setSelectedRepository] = useState<Repository | null>(null);
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [globalFilter, setGlobalFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [providerFilter, setProviderFilter] = useState<ProviderFilter>("all");
-  const [rowSelection, setRowSelection] = useState({});
+  const [selectedRepository, setSelectedRepository] = useState<Repository | null>(null)
+  const [sorting, setSorting] = useState<SortingState>([])
+  const [globalFilter, setGlobalFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [providerFilter, setProviderFilter] = useState<ProviderFilter>('all')
+  const [rowSelection, setRowSelection] = useState({})
 
   // Dialog states
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [repositoryToDelete, setRepositoryToDelete] = useState<Repository | null>(null);
-  const [addRepositoryDialogOpen, setAddRepositoryDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [repositoryToDelete, setRepositoryToDelete] = useState<Repository | null>(null)
+  const [addRepositoryDialogOpen, setAddRepositoryDialogOpen] = useState(false)
 
   // Fetch ALL repositories for stats (no status/provider filters)
-  const { data: allReposResponse, isLoading: allReposLoading, mutate: mutateAllRepos } = useRepositories(
-    { perPage: 100 },
-    { revalidateOnFocus: false }
-  );
+  const {
+    data: allReposResponse,
+    isLoading: allReposLoading,
+    mutate: mutateAllRepos,
+  } = useRepositories({ perPage: 100 }, { revalidateOnFocus: false })
 
   // Transform all repos for stats calculation
   const allRepositories = useMemo(() => {
-    if (!allReposResponse?.data) return [];
-    return (allReposResponse.data as unknown as ApiAssetResponse[]).map(transformToRepositoryView);
-  }, [allReposResponse]);
+    if (!allReposResponse?.data) return []
+    return (allReposResponse.data as unknown as ApiAssetResponse[]).map(transformToRepositoryView)
+  }, [allReposResponse])
 
   // Build API filters from UI state (for filtered table view)
   const apiFilters = useMemo((): RepositoryFilters => {
     const filters: RepositoryFilters = {
       perPage: 100,
-    };
-    if (globalFilter) filters.search = globalFilter;
-    if (statusFilter !== "all") filters.statuses = [statusFilter];
-    if (providerFilter !== "all") filters.scmProviders = [providerFilter];
-    return filters;
-  }, [globalFilter, statusFilter, providerFilter]);
+    }
+    if (globalFilter) filters.search = globalFilter
+    if (statusFilter !== 'all') filters.statuses = [statusFilter]
+    if (providerFilter !== 'all') filters.scmProviders = [providerFilter]
+    return filters
+  }, [globalFilter, statusFilter, providerFilter])
 
   // Check if we need a separate filtered call (only when filters are active)
-  const needsFilteredCall = statusFilter !== "all" || providerFilter !== "all" || globalFilter !== "";
+  const needsFilteredCall =
+    statusFilter !== 'all' || providerFilter !== 'all' || globalFilter !== ''
 
   // Fetch filtered data using real API hooks (only when filters are active)
-  const { data: filteredReposResponse, error: reposError, isLoading: filteredReposLoading, mutate: mutateFilteredRepos } = useRepositories(
-    needsFilteredCall ? apiFilters : { perPage: 100 },
-    { revalidateOnFocus: false }
-  );
+  const {
+    data: filteredReposResponse,
+    error: reposError,
+    isLoading: filteredReposLoading,
+    mutate: mutateFilteredRepos,
+  } = useRepositories(needsFilteredCall ? apiFilters : { perPage: 100 }, {
+    revalidateOnFocus: false,
+  })
 
   // Transform API response to UI format
   const repositories = useMemo(() => {
     // Use allRepositories when no filters are active, otherwise use filtered response
     if (!needsFilteredCall) {
-      return allRepositories;
+      return allRepositories
     }
-    if (!filteredReposResponse?.data) return [];
-    return (filteredReposResponse.data as unknown as ApiAssetResponse[]).map(transformToRepositoryView);
-  }, [needsFilteredCall, allRepositories, filteredReposResponse]);
+    if (!filteredReposResponse?.data) return []
+    return (filteredReposResponse.data as unknown as ApiAssetResponse[]).map(
+      transformToRepositoryView
+    )
+  }, [needsFilteredCall, allRepositories, filteredReposResponse])
 
   // Combined mutate function
   const mutateRepos = useCallback(async () => {
-    await Promise.all([mutateAllRepos(), mutateFilteredRepos()]);
-  }, [mutateAllRepos, mutateFilteredRepos]);
+    await Promise.all([mutateAllRepos(), mutateFilteredRepos()])
+  }, [mutateAllRepos, mutateFilteredRepos])
 
   // Calculate stats from ALL repositories (not filtered)
   const stats = useMemo(() => {
     return {
       total: allRepositories.length,
-      with_critical_findings: allRepositories.filter(r => r.findings_summary.by_severity.critical > 0).length,
+      with_critical_findings: allRepositories.filter(
+        (r) => r.findings_summary.by_severity.critical > 0
+      ).length,
       total_findings: allRepositories.reduce((acc, r) => acc + r.findings_summary.total, 0),
       by_quality_gate: {
-        passed: allRepositories.filter(r => r.quality_gate_status === "passed").length,
-        failed: allRepositories.filter(r => r.quality_gate_status === "failed").length,
-        warning: allRepositories.filter(r => r.quality_gate_status === "warning").length,
-        not_computed: allRepositories.filter(r => r.quality_gate_status === "not_computed").length,
+        passed: allRepositories.filter((r) => r.quality_gate_status === 'passed').length,
+        failed: allRepositories.filter((r) => r.quality_gate_status === 'failed').length,
+        warning: allRepositories.filter((r) => r.quality_gate_status === 'warning').length,
+        not_computed: allRepositories.filter((r) => r.quality_gate_status === 'not_computed')
+          .length,
       },
-      total_components: allRepositories.reduce((acc, r) => acc + (r.components_summary?.total || 0), 0),
-      vulnerable_components: allRepositories.reduce((acc, r) => acc + (r.components_summary?.vulnerable || 0), 0),
-      avg_risk_score: Math.round(allRepositories.reduce((acc, r) => acc + r.risk_score, 0) / Math.max(allRepositories.length, 1)),
-      scanned_last_24h: allRepositories.filter(r => {
-        if (!r.last_scanned_at) return false;
-        const lastScanned = new Date(r.last_scanned_at);
-        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-        return lastScanned > oneDayAgo;
+      total_components: allRepositories.reduce(
+        (acc, r) => acc + (r.components_summary?.total || 0),
+        0
+      ),
+      vulnerable_components: allRepositories.reduce(
+        (acc, r) => acc + (r.components_summary?.vulnerable || 0),
+        0
+      ),
+      avg_risk_score: Math.round(
+        allRepositories.reduce((acc, r) => acc + r.risk_score, 0) /
+          Math.max(allRepositories.length, 1)
+      ),
+      scanned_last_24h: allRepositories.filter((r) => {
+        if (!r.last_scanned_at) return false
+        const lastScanned = new Date(r.last_scanned_at)
+        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+        return lastScanned > oneDayAgo
       }).length,
       by_status: {
-        active: allRepositories.filter(r => r.status === "active").length,
-        inactive: allRepositories.filter(r => r.status === "inactive").length,
-        archived: allRepositories.filter(r => r.status === "archived").length,
+        active: allRepositories.filter((r) => r.status === 'active').length,
+        inactive: allRepositories.filter((r) => r.status === 'inactive').length,
+        archived: allRepositories.filter((r) => r.status === 'archived').length,
       },
-    };
-  }, [allRepositories]);
+    }
+  }, [allRepositories])
 
   // Loading state
-  const isLoading = allReposLoading || (needsFilteredCall && filteredReposLoading);
-  const hasError = reposError;
+  const isLoading = allReposLoading || (needsFilteredCall && filteredReposLoading)
+  const hasError = reposError
 
   // Filter data
   const filteredData = useMemo(() => {
-    let data = [...repositories];
-    if (statusFilter !== "all") {
-      data = data.filter((p) => p.status === statusFilter);
+    let data = [...repositories]
+    if (statusFilter !== 'all') {
+      data = data.filter((p) => p.status === statusFilter)
     }
-    if (providerFilter !== "all") {
-      data = data.filter((p) => p.scm_provider === providerFilter);
+    if (providerFilter !== 'all') {
+      data = data.filter((p) => p.scm_provider === providerFilter)
     }
-    return data;
-  }, [repositories, statusFilter, providerFilter]);
+    return data
+  }, [repositories, statusFilter, providerFilter])
 
   // Table columns
   const columns: ColumnDef<Repository>[] = [
     {
-      id: "select",
+      id: 'select',
       header: ({ table }) => (
         <Checkbox
-          checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
+          checked={
+            table.getIsAllPageRowsSelected() ||
+            (table.getIsSomePageRowsSelected() && 'indeterminate')
+          }
           onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
           aria-label="Select all"
         />
@@ -678,9 +721,13 @@ export default function RepositoriesPage() {
       enableSorting: false,
     },
     {
-      accessorKey: "name",
+      accessorKey: 'name',
       header: ({ column }) => (
-        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} className="-ml-4">
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          className="-ml-4"
+        >
           Repository
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
@@ -693,46 +740,49 @@ export default function RepositoriesPage() {
           <div className="min-w-0">
             <p className="font-medium truncate">{row.original.name}</p>
             <p className="text-muted-foreground text-xs truncate max-w-[200px]">
-              {row.original.description || "No description"}
+              {row.original.description || 'No description'}
             </p>
           </div>
         </div>
       ),
     },
     {
-      id: "scm_connection",
-      header: "Source",
+      id: 'scm_connection',
+      header: 'Source',
       cell: ({ row }) => {
         return (
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className="flex items-center gap-1.5">
-                  <Badge variant="outline" className={cn("text-xs", SCM_PROVIDER_COLORS[row.original.scm_provider])}>
+                  <Badge
+                    variant="outline"
+                    className={cn('text-xs', SCM_PROVIDER_COLORS[row.original.scm_provider])}
+                  >
                     {SCM_PROVIDER_LABELS[row.original.scm_provider]}
                   </Badge>
                 </div>
               </TooltipTrigger>
               <TooltipContent>
-                <p className="font-medium">{row.original.scm_organization || "Manual"}</p>
+                <p className="font-medium">{row.original.scm_organization || 'Manual'}</p>
                 {row.original.repository?.webUrl && (
                   <p className="text-xs text-muted-foreground">{row.original.repository.webUrl}</p>
                 )}
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-        );
+        )
       },
     },
     {
-      accessorKey: "visibility",
-      header: "Visibility",
+      accessorKey: 'visibility',
+      header: 'Visibility',
       cell: ({ row }) =>
-        row.original.visibility === "private" ? (
+        row.original.visibility === 'private' ? (
           <span className="flex items-center gap-1 text-sm text-muted-foreground">
             <Lock className="h-3 w-3 shrink-0" /> Private
           </span>
-        ) : row.original.visibility === "internal" ? (
+        ) : row.original.visibility === 'internal' ? (
           <span className="flex items-center gap-1 text-sm text-blue-500">
             <Users className="h-3 w-3 shrink-0" /> Internal
           </span>
@@ -743,25 +793,25 @@ export default function RepositoriesPage() {
         ),
     },
     {
-      accessorKey: "primary_language",
-      header: "Language",
+      accessorKey: 'primary_language',
+      header: 'Language',
       cell: ({ row }) => {
-        const primaryLang = row.original.primary_language;
-        const languages = row.original.repository?.languages;
+        const primaryLang = row.original.primary_language
+        const languages = row.original.repository?.languages
 
         // If we have languages object with multiple languages
         if (languages && Object.keys(languages).length > 0) {
           // Calculate total bytes to convert to percentages
-          const totalBytes = Object.values(languages).reduce((sum, bytes) => sum + bytes, 0);
+          const totalBytes = Object.values(languages).reduce((sum, bytes) => sum + bytes, 0)
           const sortedLangs = Object.entries(languages)
             .sort(([, a], [, b]) => b - a) // Sort by bytes descending
             .map(([lang, bytes]) => ({
               lang,
               bytes,
-              percentage: totalBytes > 0 ? ((bytes / totalBytes) * 100).toFixed(1) : "0",
-            }));
-          const topLang = sortedLangs[0]?.lang;
-          const otherCount = sortedLangs.length - 1;
+              percentage: totalBytes > 0 ? ((bytes / totalBytes) * 100).toFixed(1) : '0',
+            }))
+          const topLang = sortedLangs[0]?.lang
+          const otherCount = sortedLangs.length - 1
 
           return (
             <TooltipProvider>
@@ -769,7 +819,7 @@ export default function RepositoriesPage() {
                 <TooltipTrigger asChild>
                   <div className="flex items-center gap-1">
                     <Badge variant="secondary" className="text-xs">
-                      {topLang || primaryLang || "-"}
+                      {topLang || primaryLang || '-'}
                     </Badge>
                     {otherCount > 0 && (
                       <span className="text-xs text-muted-foreground">+{otherCount}</span>
@@ -788,29 +838,33 @@ export default function RepositoriesPage() {
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-          );
+          )
         }
 
         // Fallback to primary language only
         return (
           <Badge variant="secondary" className="text-xs">
-            {primaryLang || "-"}
+            {primaryLang || '-'}
           </Badge>
-        );
+        )
       },
     },
     {
-      id: "findings",
+      id: 'findings',
       header: ({ column }) => (
-        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} className="-ml-4">
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          className="-ml-4"
+        >
           Findings
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
       accessorFn: (row) => row.findings_summary.total,
       cell: ({ row }) => {
-        const { total, by_severity, trend } = row.original.findings_summary;
-        if (total === 0) return <span className="text-muted-foreground">0</span>;
+        const { total, by_severity, trend } = row.original.findings_summary
+        if (total === 0) return <span className="text-muted-foreground">0</span>
         return (
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1">
@@ -820,9 +874,7 @@ export default function RepositoriesPage() {
                 </Badge>
               )}
               {by_severity.high > 0 && (
-                <Badge className="h-5 px-1.5 text-xs bg-orange-500">
-                  {by_severity.high}H
-                </Badge>
+                <Badge className="h-5 px-1.5 text-xs bg-orange-500">{by_severity.high}H</Badge>
               )}
               {(by_severity.medium > 0 || by_severity.low > 0) && (
                 <Badge variant="secondary" className="h-5 px-1.5 text-xs">
@@ -832,48 +884,59 @@ export default function RepositoriesPage() {
             </div>
             <FindingsTrendIcon trend={trend} />
           </div>
-        );
+        )
       },
     },
     {
-      accessorKey: "risk_score",
-      header: "Risk",
+      accessorKey: 'risk_score',
+      header: 'Risk',
       cell: ({ row }) => <RiskScoreBadge score={row.original.risk_score} size="sm" />,
     },
     {
-      accessorKey: "quality_gate_status",
-      header: "Quality Gate",
+      accessorKey: 'quality_gate_status',
+      header: 'Quality Gate',
       cell: ({ row }) => <QualityGateBadge status={row.original.quality_gate_status} />,
     },
     {
-      accessorKey: "sync_status",
-      header: "Sync",
+      accessorKey: 'sync_status',
+      header: 'Sync',
       cell: ({ row }) => <SyncStatusBadge status={row.original.sync_status} />,
     },
     {
-      accessorKey: "status",
-      header: "Status",
+      accessorKey: 'status',
+      header: 'Status',
       cell: ({ row }) => <RepositoryStatusBadge status={row.original.status} />,
     },
     {
-      id: "actions",
+      id: 'actions',
       cell: ({ row }) => {
-        const repository = row.original;
+        const repository = row.original
         // Check if repository can be synced (has SCM provider and organization)
-        const canSync = !!(repository.scm_provider && repository.scm_provider !== "local" && repository.repository?.fullName);
+        const canSync = !!(
+          repository.scm_provider &&
+          repository.scm_provider !== 'local' &&
+          repository.repository?.fullName
+        )
         const syncDisabledReason = !canSync
-          ? "Repository was added manually. Connect to an SCM provider to enable sync."
-          : undefined;
+          ? 'Repository was added manually. Connect to an SCM provider to enable sync.'
+          : undefined
 
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-              <DropdownMenuItem onClick={() => router.push(`/assets/repositories/${repository.id}`)}>
+              <DropdownMenuItem
+                onClick={() => router.push(`/assets/repositories/${repository.id}`)}
+              >
                 <Eye className="mr-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
@@ -891,11 +954,11 @@ export default function RepositoriesPage() {
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <span className={!canSync ? "cursor-not-allowed" : ""}>
+                    <span className={!canSync ? 'cursor-not-allowed' : ''}>
                       <DropdownMenuItem
                         onClick={() => canSync && handleSyncRepository(repository)}
                         disabled={!canSync || actionInProgress === repository.id}
-                        className={!canSync ? "opacity-50" : ""}
+                        className={!canSync ? 'opacity-50' : ''}
                       >
                         {actionInProgress === repository.id ? (
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -903,7 +966,9 @@ export default function RepositoriesPage() {
                           <RefreshCw className="mr-2 h-4 w-4" />
                         )}
                         Sync Now
-                        {!canSync && <AlertCircle className="ml-auto h-3 w-3 text-muted-foreground" />}
+                        {!canSync && (
+                          <AlertCircle className="ml-auto h-3 w-3 text-muted-foreground" />
+                        )}
                       </DropdownMenuItem>
                     </span>
                   </TooltipTrigger>
@@ -923,7 +988,9 @@ export default function RepositoriesPage() {
                 Open in Browser
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => router.push(`/assets/repositories/${repository.id}?tab=settings`)}>
+              <DropdownMenuItem
+                onClick={() => router.push(`/assets/repositories/${repository.id}?tab=settings`)}
+              >
                 <Settings className="mr-2 h-4 w-4" />
                 Settings
               </DropdownMenuItem>
@@ -931,8 +998,8 @@ export default function RepositoriesPage() {
               <DropdownMenuItem
                 className="text-red-400"
                 onClick={() => {
-                  setRepositoryToDelete(repository);
-                  setDeleteDialogOpen(true);
+                  setRepositoryToDelete(repository)
+                  setDeleteDialogOpen(true)
                 }}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
@@ -940,10 +1007,10 @@ export default function RepositoriesPage() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        );
+        )
       },
     },
-  ];
+  ]
 
   const table = useReactTable({
     data: filteredData,
@@ -956,256 +1023,276 @@ export default function RepositoriesPage() {
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-  });
+  })
 
   // Mutation state for actions
-  const [actionInProgress, setActionInProgress] = useState<string | null>(null);
+  const [actionInProgress, setActionInProgress] = useState<string | null>(null)
 
   // Handlers
   const handleCopyUrl = (repo: Repository) => {
-    const webUrl = repo.repository?.webUrl;
+    const webUrl = repo.repository?.webUrl
     if (webUrl) {
-      navigator.clipboard.writeText(webUrl);
-      toast.success("URL copied to clipboard");
+      navigator.clipboard.writeText(webUrl)
+      toast.success('URL copied to clipboard')
     } else {
-      toast.warning("Repository URL not available");
+      toast.warning('Repository URL not available')
     }
-  };
+  }
 
   const handleOpenExternal = (repo: Repository) => {
-    const webUrl = repo.repository?.webUrl;
+    const webUrl = repo.repository?.webUrl
     if (webUrl) {
-      window.open(webUrl, "_blank");
+      window.open(webUrl, '_blank')
     } else {
-      toast.warning("Repository URL not available");
+      toast.warning('Repository URL not available')
     }
-  };
+  }
 
   const handleTriggerScan = useCallback(async (repo: Repository) => {
-    setActionInProgress(repo.id);
+    setActionInProgress(repo.id)
     try {
       const response = await fetch(`/api/v1/assets/${repo.id}/scan`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
 
       if (!response.ok) {
-        const error = await response.json().catch(() => ({ message: "Unknown error" }));
-        throw new Error(error.message || "Failed to trigger scan");
+        const error = await response.json().catch(() => ({ message: 'Unknown error' }))
+        throw new Error(error.message || 'Failed to trigger scan')
       }
 
-      const result = await response.json();
-      toast.success(result.message || `Scan triggered for "${repo.name}"`);
+      const result = await response.json()
+      toast.success(result.message || `Scan triggered for "${repo.name}"`)
     } catch (error) {
-      toast.error(`Failed to trigger scan: ${error instanceof Error ? error.message : "Unknown error"}`);
+      toast.error(
+        `Failed to trigger scan: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
     } finally {
-      setActionInProgress(null);
+      setActionInProgress(null)
     }
-  }, []);
+  }, [])
 
-  const handleSyncRepository = useCallback(async (repo: Repository) => {
-    setActionInProgress(repo.id);
-    try {
-      const response = await fetch(`/api/v1/assets/${repo.id}/sync`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
+  const handleSyncRepository = useCallback(
+    async (repo: Repository) => {
+      setActionInProgress(repo.id)
+      try {
+        const response = await fetch(`/api/v1/assets/${repo.id}/sync`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        })
 
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({ message: "Unknown error" }));
-        throw new Error(error.message || "Failed to sync repository");
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({ message: 'Unknown error' }))
+          throw new Error(error.message || 'Failed to sync repository')
+        }
+
+        const result = await response.json()
+
+        // Show what was updated
+        if (result.updated_fields && result.updated_fields.length > 0) {
+          toast.success(`Synced "${repo.name}": Updated ${result.updated_fields.join(', ')}`)
+        } else {
+          toast.success(result.message || `Repository "${repo.name}" is up to date`)
+        }
+
+        // Refresh the repository list
+        await mutateRepos()
+        await invalidateRepositoriesCache()
+      } catch (error) {
+        toast.error(`Failed to sync: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      } finally {
+        setActionInProgress(null)
       }
-
-      const result = await response.json();
-
-      // Show what was updated
-      if (result.updated_fields && result.updated_fields.length > 0) {
-        toast.success(`Synced "${repo.name}": Updated ${result.updated_fields.join(", ")}`);
-      } else {
-        toast.success(result.message || `Repository "${repo.name}" is up to date`);
-      }
-
-      // Refresh the repository list
-      await mutateRepos();
-      await invalidateRepositoriesCache();
-    } catch (error) {
-      toast.error(`Failed to sync: ${error instanceof Error ? error.message : "Unknown error"}`);
-    } finally {
-      setActionInProgress(null);
-    }
-  }, [mutateRepos]);
+    },
+    [mutateRepos]
+  )
 
   const handleDelete = useCallback(async () => {
-    if (!repositoryToDelete) return;
-    setActionInProgress(repositoryToDelete.id);
+    if (!repositoryToDelete) return
+    setActionInProgress(repositoryToDelete.id)
     try {
       const response = await fetch(`/api/v1/assets/${repositoryToDelete.id}`, {
-        method: "DELETE",
-      });
-      if (!response.ok) throw new Error("Failed to delete repository");
-      toast.success(`Repository "${repositoryToDelete.name}" deleted`);
-      await mutateRepos();
-      await invalidateRepositoriesCache();
+        method: 'DELETE',
+      })
+      if (!response.ok) throw new Error('Failed to delete repository')
+      toast.success(`Repository "${repositoryToDelete.name}" deleted`)
+      await mutateRepos()
+      await invalidateRepositoriesCache()
     } catch (error) {
-      toast.error(`Failed to delete: ${error instanceof Error ? error.message : "Unknown error"}`);
+      toast.error(`Failed to delete: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
-      setDeleteDialogOpen(false);
-      setRepositoryToDelete(null);
-      setActionInProgress(null);
+      setDeleteDialogOpen(false)
+      setRepositoryToDelete(null)
+      setActionInProgress(null)
     }
-  }, [repositoryToDelete, mutateRepos]);
+  }, [repositoryToDelete, mutateRepos])
 
   const handleBulkScan = useCallback(async () => {
-    const selectedRows = table.getSelectedRowModel().rows;
-    if (selectedRows.length === 0) return;
+    const selectedRows = table.getSelectedRowModel().rows
+    if (selectedRows.length === 0) return
 
-    setActionInProgress("bulk-scan");
+    setActionInProgress('bulk-scan')
     try {
       const results = await Promise.allSettled(
         selectedRows.map((row) =>
           fetch(`/api/v1/assets/${row.original.id}/scan`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
           })
         )
-      );
+      )
 
-      const successCount = results.filter((r) => r.status === "fulfilled" && (r.value as Response).ok).length;
-      const failedCount = selectedRows.length - successCount;
+      const successCount = results.filter(
+        (r) => r.status === 'fulfilled' && (r.value as Response).ok
+      ).length
+      const failedCount = selectedRows.length - successCount
 
       if (failedCount > 0) {
-        toast.warning(`Triggered scan for ${successCount} repositories, ${failedCount} failed`);
+        toast.warning(`Triggered scan for ${successCount} repositories, ${failedCount} failed`)
       } else {
-        toast.success(`Triggered scan for ${successCount} repositories`);
+        toast.success(`Triggered scan for ${successCount} repositories`)
       }
     } catch (error) {
-      toast.error(`Failed to trigger scans: ${error instanceof Error ? error.message : "Unknown error"}`);
+      toast.error(
+        `Failed to trigger scans: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
     } finally {
-      setRowSelection({});
-      setActionInProgress(null);
+      setRowSelection({})
+      setActionInProgress(null)
     }
-  }, [table]);
+  }, [table])
 
   const handleBulkSync = useCallback(async () => {
-    const selectedRows = table.getSelectedRowModel().rows;
+    const selectedRows = table.getSelectedRowModel().rows
     // Filter only repos that can be synced
     const syncableRows = selectedRows.filter((row) => {
-      const repo = row.original;
-      return repo.scm_provider && repo.scm_provider !== "local" && repo.repository?.fullName;
-    });
+      const repo = row.original
+      return repo.scm_provider && repo.scm_provider !== 'local' && repo.repository?.fullName
+    })
 
     if (syncableRows.length === 0) {
-      toast.warning("None of the selected repositories can be synced. They may have been added manually.");
-      return;
+      toast.warning(
+        'None of the selected repositories can be synced. They may have been added manually.'
+      )
+      return
     }
 
     if (syncableRows.length < selectedRows.length) {
-      toast.info(`Syncing ${syncableRows.length} of ${selectedRows.length} repositories (${selectedRows.length - syncableRows.length} cannot be synced)`);
+      toast.info(
+        `Syncing ${syncableRows.length} of ${selectedRows.length} repositories (${selectedRows.length - syncableRows.length} cannot be synced)`
+      )
     }
 
-    setActionInProgress("bulk-sync");
+    setActionInProgress('bulk-sync')
     try {
       const results = await Promise.allSettled(
         syncableRows.map((row) =>
           fetch(`/api/v1/assets/${row.original.id}/sync`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
           })
         )
-      );
+      )
 
-      const successCount = results.filter((r) => r.status === "fulfilled" && (r.value as Response).ok).length;
-      const failedCount = syncableRows.length - successCount;
+      const successCount = results.filter(
+        (r) => r.status === 'fulfilled' && (r.value as Response).ok
+      ).length
+      const failedCount = syncableRows.length - successCount
 
       if (failedCount > 0) {
-        toast.warning(`Synced ${successCount} repositories, ${failedCount} failed`);
+        toast.warning(`Synced ${successCount} repositories, ${failedCount} failed`)
       } else {
-        toast.success(`Synced ${successCount} repositories`);
+        toast.success(`Synced ${successCount} repositories`)
       }
 
-      await mutateRepos();
-      await invalidateRepositoriesCache();
+      await mutateRepos()
+      await invalidateRepositoriesCache()
     } catch (error) {
-      toast.error(`Failed to sync repositories: ${error instanceof Error ? error.message : "Unknown error"}`);
+      toast.error(
+        `Failed to sync repositories: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
     } finally {
-      setRowSelection({});
-      setActionInProgress(null);
+      setRowSelection({})
+      setActionInProgress(null)
     }
-  }, [table, mutateRepos]);
+  }, [table, mutateRepos])
 
   const handleBulkDelete = useCallback(async () => {
-    const selectedIds = table.getSelectedRowModel().rows.map((r) => r.original.id);
-    if (selectedIds.length === 0) return;
+    const selectedIds = table.getSelectedRowModel().rows.map((r) => r.original.id)
+    if (selectedIds.length === 0) return
 
-    setActionInProgress("bulk-delete");
+    setActionInProgress('bulk-delete')
     try {
       // Delete repositories one by one
       const results = await Promise.allSettled(
-        selectedIds.map((id) =>
-          fetch(`/api/v1/assets/${id}`, { method: "DELETE" })
-        )
-      );
-      const successCount = results.filter((r) => r.status === "fulfilled").length;
-      const failedCount = results.filter((r) => r.status === "rejected").length;
+        selectedIds.map((id) => fetch(`/api/v1/assets/${id}`, { method: 'DELETE' }))
+      )
+      const successCount = results.filter((r) => r.status === 'fulfilled').length
+      const failedCount = results.filter((r) => r.status === 'rejected').length
 
       if (failedCount > 0) {
-        toast.warning(`Deleted ${successCount} repositories, ${failedCount} failed`);
+        toast.warning(`Deleted ${successCount} repositories, ${failedCount} failed`)
       } else {
-        toast.success(`Deleted ${successCount} repositories`);
+        toast.success(`Deleted ${successCount} repositories`)
       }
-      await mutateRepos();
-      await invalidateRepositoriesCache();
+      await mutateRepos()
+      await invalidateRepositoriesCache()
     } catch (error) {
-      toast.error(`Failed to delete repositories: ${error instanceof Error ? error.message : "Unknown error"}`);
+      toast.error(
+        `Failed to delete repositories: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
     } finally {
-      setRowSelection({});
-      setActionInProgress(null);
+      setRowSelection({})
+      setActionInProgress(null)
     }
-  }, [mutateRepos, table]);
+  }, [mutateRepos, table])
 
   const handleExport = useCallback(() => {
     const csv = [
-      ["Name", "Provider", "Visibility", "Language", "Risk Score", "Findings", "Quality Gate", "Status"].join(","),
+      [
+        'Name',
+        'Provider',
+        'Visibility',
+        'Language',
+        'Risk Score',
+        'Findings',
+        'Quality Gate',
+        'Status',
+      ].join(','),
       ...repositories.map((p) =>
         [
           p.name,
           p.scm_provider,
           p.visibility,
-          p.primary_language || "",
+          p.primary_language || '',
           p.risk_score,
           p.findings_summary.total,
           p.quality_gate_status,
           p.status,
-        ].join(",")
+        ].join(',')
       ),
-    ].join("\n");
+    ].join('\n')
 
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "repositories.csv";
-    a.click();
-    toast.success("Repositories exported");
-  }, [repositories]);
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'repositories.csv'
+    a.click()
+    toast.success('Repositories exported')
+  }, [repositories])
 
   // Error state component
   if (hasError) {
     return (
       <>
-        <Header fixed>
-          <div className="ms-auto flex items-center gap-2 sm:gap-4">
-            <Search />
-            <ThemeSwitch />
-            <ProfileDropdown />
-          </div>
-        </Header>
+        <Header fixed />
         <Main>
           <div className="flex flex-col items-center justify-center py-20">
             <AlertCircle className="h-12 w-12 text-destructive mb-4" />
             <h2 className="text-lg font-semibold mb-2">Failed to load repositories</h2>
             <p className="text-muted-foreground mb-4">
-              {reposError?.message || "An unexpected error occurred"}
+              {reposError?.message || 'An unexpected error occurred'}
             </p>
             <Button onClick={() => mutateRepos()}>
               <RefreshCw className="mr-2 h-4 w-4" />
@@ -1214,25 +1301,19 @@ export default function RepositoriesPage() {
           </div>
         </Main>
       </>
-    );
+    )
   }
 
   return (
     <>
-      <Header fixed>
-        <div className="ms-auto flex items-center gap-2 sm:gap-4">
-          <Search />
-          <ThemeSwitch />
-          <ProfileDropdown />
-        </div>
-      </Header>
+      <Header fixed />
 
       <Main>
         <PageHeader
           title="Git Repositories"
           description={
             isLoading
-              ? "Loading repositories..."
+              ? 'Loading repositories...'
               : `${repositories.length} repositories tracked for security scanning`
           }
         >
@@ -1266,7 +1347,10 @@ export default function RepositoriesPage() {
             </>
           ) : (
             <>
-              <Card className="cursor-pointer hover:border-primary transition-colors" onClick={() => setStatusFilter("all")}>
+              <Card
+                className="cursor-pointer hover:border-primary transition-colors"
+                onClick={() => setStatusFilter('all')}
+              >
                 <CardHeader className="pb-2">
                   <CardDescription className="flex items-center gap-2">
                     <GitBranch className="h-4 w-4 shrink-0" />
@@ -1282,7 +1366,9 @@ export default function RepositoriesPage() {
                     <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />
                     Critical Findings
                   </CardDescription>
-                  <CardTitle className="text-3xl text-red-500">{stats.with_critical_findings}</CardTitle>
+                  <CardTitle className="text-3xl text-red-500">
+                    {stats.with_critical_findings}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0">
                   <p className="text-xs text-muted-foreground">
@@ -1297,7 +1383,9 @@ export default function RepositoriesPage() {
                     <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
                     Quality Gate Passed
                   </CardDescription>
-                  <CardTitle className="text-3xl text-green-500">{stats.by_quality_gate.passed}</CardTitle>
+                  <CardTitle className="text-3xl text-green-500">
+                    {stats.by_quality_gate.passed}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0">
                   <Progress
@@ -1352,19 +1440,25 @@ export default function RepositoriesPage() {
                   <GitBranch className="h-5 w-5" />
                   All Repositories
                 </CardTitle>
-                <CardDescription>Manage your source code repositories and security scans</CardDescription>
+                <CardDescription>
+                  Manage your source code repositories and security scans
+                </CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent>
             {/* Quick Filter Tabs */}
-            <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)} className="mb-4">
+            <Tabs
+              value={statusFilter}
+              onValueChange={(v) => setStatusFilter(v as StatusFilter)}
+              className="mb-4"
+            >
               <TabsList>
                 {statusFilters.map((filter) => (
                   <TabsTrigger key={filter.value} value={filter.value} className="gap-1.5">
                     {filter.label}
                     <Badge variant="secondary" className="h-5 px-1.5 text-xs">
-                      {filter.value === "all"
+                      {filter.value === 'all'
                         ? stats.total
                         : (stats.by_status as Record<string, number>)[filter.value] || 0}
                     </Badge>
@@ -1387,7 +1481,10 @@ export default function RepositoriesPage() {
 
               <div className="flex flex-wrap items-center gap-2">
                 {/* Provider filter */}
-                <Select value={providerFilter} onValueChange={(v) => setProviderFilter(v as ProviderFilter)}>
+                <Select
+                  value={providerFilter}
+                  onValueChange={(v) => setProviderFilter(v as ProviderFilter)}
+                >
                   <SelectTrigger className="w-[140px]">
                     <SelectValue placeholder="Provider" />
                   </SelectTrigger>
@@ -1404,7 +1501,7 @@ export default function RepositoriesPage() {
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline" size="sm" disabled={actionInProgress !== null}>
-                        {actionInProgress?.startsWith("bulk") ? (
+                        {actionInProgress?.startsWith('bulk') ? (
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         ) : null}
                         {Object.keys(rowSelection).length} selected
@@ -1415,7 +1512,7 @@ export default function RepositoriesPage() {
                         onClick={handleBulkScan}
                         disabled={actionInProgress !== null}
                       >
-                        {actionInProgress === "bulk-scan" ? (
+                        {actionInProgress === 'bulk-scan' ? (
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         ) : (
                           <Play className="mr-2 h-4 w-4" />
@@ -1426,7 +1523,7 @@ export default function RepositoriesPage() {
                         onClick={handleBulkSync}
                         disabled={actionInProgress !== null}
                       >
-                        {actionInProgress === "bulk-sync" ? (
+                        {actionInProgress === 'bulk-sync' ? (
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         ) : (
                           <RefreshCw className="mr-2 h-4 w-4" />
@@ -1439,7 +1536,7 @@ export default function RepositoriesPage() {
                         onClick={handleBulkDelete}
                         disabled={actionInProgress !== null}
                       >
-                        {actionInProgress === "bulk-delete" ? (
+                        {actionInProgress === 'bulk-delete' ? (
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         ) : (
                           <Trash2 className="mr-2 h-4 w-4" />
@@ -1460,7 +1557,9 @@ export default function RepositoriesPage() {
                     <TableRow key={headerGroup.id}>
                       {headerGroup.headers.map((header) => (
                         <TableHead key={header.id}>
-                          {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(header.column.columnDef.header, header.getContext())}
                         </TableHead>
                       ))}
                     </TableRow>
@@ -1471,7 +1570,9 @@ export default function RepositoriesPage() {
                     // Loading skeleton rows
                     [...Array(5)].map((_, i) => (
                       <TableRow key={i}>
-                        <TableCell><Skeleton className="h-4 w-4" /></TableCell>
+                        <TableCell>
+                          <Skeleton className="h-4 w-4" />
+                        </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Skeleton className="h-4 w-4 rounded" />
@@ -1481,31 +1582,49 @@ export default function RepositoriesPage() {
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
-                        <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                        <TableCell><Skeleton className="h-6 w-12 rounded-full" /></TableCell>
-                        <TableCell><Skeleton className="h-5 w-20" /></TableCell>
-                        <TableCell><Skeleton className="h-6 w-12 rounded-full" /></TableCell>
-                        <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                        <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
-                        <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
-                        <TableCell><Skeleton className="h-8 w-8 rounded" /></TableCell>
+                        <TableCell>
+                          <Skeleton className="h-6 w-16 rounded-full" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-4 w-16" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-6 w-12 rounded-full" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-5 w-20" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-6 w-12 rounded-full" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-4 w-16" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-6 w-16 rounded-full" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-6 w-16 rounded-full" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-8 w-8 rounded" />
+                        </TableCell>
                       </TableRow>
                     ))
                   ) : table.getRowModel().rows?.length ? (
                     table.getRowModel().rows.map((row) => (
                       <TableRow
                         key={row.id}
-                        data-state={row.getIsSelected() && "selected"}
+                        data-state={row.getIsSelected() && 'selected'}
                         className="cursor-pointer"
                         onClick={(e) => {
                           if (
                             (e.target as HTMLElement).closest('[role="checkbox"]') ||
-                            (e.target as HTMLElement).closest("button")
+                            (e.target as HTMLElement).closest('button')
                           ) {
-                            return;
+                            return
                           }
-                          router.push(`/assets/repositories/${row.original.id}`);
+                          router.push(`/assets/repositories/${row.original.id}`)
                         }}
                       >
                         {row.getVisibleCells().map((cell) => (
@@ -1529,22 +1648,43 @@ export default function RepositoriesPage() {
             {/* Pagination */}
             <div className="flex items-center justify-between mt-4">
               <p className="text-sm text-muted-foreground">
-                {table.getFilteredSelectedRowModel().rows.length} of {table.getFilteredRowModel().rows.length} row(s) selected
+                {table.getFilteredSelectedRowModel().rows.length} of{' '}
+                {table.getFilteredRowModel().rows.length} row(s) selected
               </p>
               <div className="flex flex-wrap items-center gap-2">
-                <Button variant="outline" size="sm" onClick={() => table.setPageIndex(0)} disabled={!table.getCanPreviousPage()}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => table.setPageIndex(0)}
+                  disabled={!table.getCanPreviousPage()}
+                >
                   <ChevronsLeft className="h-4 w-4" />
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => table.previousPage()}
+                  disabled={!table.getCanPreviousPage()}
+                >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
                 <span className="text-sm">
                   Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
                 </span>
-                <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => table.nextPage()}
+                  disabled={!table.getCanNextPage()}
+                >
                   <ChevronRight className="h-4 w-4" />
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => table.setPageIndex(table.getPageCount() - 1)} disabled={!table.getCanNextPage()}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                  disabled={!table.getCanNextPage()}
+                >
                   <ChevronsRight className="h-4 w-4" />
                 </Button>
               </div>
@@ -1570,10 +1710,16 @@ export default function RepositoriesPage() {
                       <RepositoryStatusBadge status={selectedRepository.status} />
                     </div>
                     <p className="text-sm text-muted-foreground line-clamp-2">
-                      {selectedRepository.description || "No description"}
+                      {selectedRepository.description || 'No description'}
                     </p>
                     <div className="flex items-center gap-2 pt-1">
-                      <Badge variant="outline" className={cn("text-xs", SCM_PROVIDER_COLORS[selectedRepository.scm_provider])}>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          'text-xs',
+                          SCM_PROVIDER_COLORS[selectedRepository.scm_provider]
+                        )}
+                      >
                         {SCM_PROVIDER_LABELS[selectedRepository.scm_provider]}
                       </Badge>
                       <SyncStatusBadge status={selectedRepository.sync_status} />
@@ -1588,15 +1734,23 @@ export default function RepositoriesPage() {
                     <ExternalLink className="mr-2 h-4 w-4" />
                     Open in Browser
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => toast.info("Triggering scan...")}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => toast.info('Triggering scan...')}
+                  >
                     <Play className="mr-2 h-4 w-4" />
                     Scan
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => toast.info("Syncing...")}>
+                  <Button size="sm" variant="outline" onClick={() => toast.info('Syncing...')}>
                     <RefreshCw className="mr-2 h-4 w-4" />
                     Sync
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => handleCopyUrl(selectedRepository)}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleCopyUrl(selectedRepository)}
+                  >
                     <Copy className="mr-2 h-4 w-4" />
                     Copy URL
                   </Button>
@@ -1613,17 +1767,22 @@ export default function RepositoriesPage() {
                       <p className="text-xs text-muted-foreground mt-2">Risk Score</p>
                     </div>
                     <div className="text-center p-4 rounded-xl border bg-card">
-                      <p className="text-2xl font-bold">{selectedRepository.findings_summary.total}</p>
+                      <p className="text-2xl font-bold">
+                        {selectedRepository.findings_summary.total}
+                      </p>
                       <p className="text-xs text-muted-foreground mt-1">Total Findings</p>
                     </div>
                     <div className="text-center p-4 rounded-xl border bg-card">
                       <p className="text-2xl font-bold text-red-500">
-                        {selectedRepository.findings_summary.by_severity.critical + selectedRepository.findings_summary.by_severity.high}
+                        {selectedRepository.findings_summary.by_severity.critical +
+                          selectedRepository.findings_summary.by_severity.high}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">Critical/High</p>
                     </div>
                     <div className="text-center p-4 rounded-xl border bg-card">
-                      <p className="text-2xl font-bold text-blue-500">{selectedRepository.components_summary?.total || 0}</p>
+                      <p className="text-2xl font-bold text-blue-500">
+                        {selectedRepository.components_summary?.total || 0}
+                      </p>
                       <p className="text-xs text-muted-foreground mt-1">Components</p>
                     </div>
                   </div>
@@ -1639,37 +1798,57 @@ export default function RepositoriesPage() {
                     <div className="p-4">
                       <div className="flex items-center gap-2">
                         {[
-                          { key: "critical", label: "Critical", color: "bg-red-500" },
-                          { key: "high", label: "High", color: "bg-orange-500" },
-                          { key: "medium", label: "Medium", color: "bg-yellow-500" },
-                          { key: "low", label: "Low", color: "bg-blue-500" },
-                          { key: "info", label: "Info", color: "bg-gray-400" },
+                          { key: 'critical', label: 'Critical', color: 'bg-red-500' },
+                          { key: 'high', label: 'High', color: 'bg-orange-500' },
+                          { key: 'medium', label: 'Medium', color: 'bg-yellow-500' },
+                          { key: 'low', label: 'Low', color: 'bg-blue-500' },
+                          { key: 'info', label: 'Info', color: 'bg-gray-400' },
                         ].map(({ key, label, color }) => {
-                          const count = selectedRepository.findings_summary.by_severity[key as keyof typeof selectedRepository.findings_summary.by_severity];
-                          const total = selectedRepository.findings_summary.total || 1;
-                          const percentage = (count / total) * 100;
+                          const count =
+                            selectedRepository.findings_summary.by_severity[
+                              key as keyof typeof selectedRepository.findings_summary.by_severity
+                            ]
+                          const total = selectedRepository.findings_summary.total || 1
+                          const percentage = (count / total) * 100
                           return (
                             <TooltipProvider key={key}>
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <div
-                                    className={cn("h-8 rounded-md transition-all cursor-pointer hover:opacity-80", color)}
-                                    style={{ width: `${Math.max(percentage, count > 0 ? 8 : 0)}%`, minWidth: count > 0 ? "32px" : 0 }}
+                                    className={cn(
+                                      'h-8 rounded-md transition-all cursor-pointer hover:opacity-80',
+                                      color
+                                    )}
+                                    style={{
+                                      width: `${Math.max(percentage, count > 0 ? 8 : 0)}%`,
+                                      minWidth: count > 0 ? '32px' : 0,
+                                    }}
                                   />
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p className="font-medium">{label}: {count}</p>
+                                  <p className="font-medium">
+                                    {label}: {count}
+                                  </p>
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
-                          );
+                          )
                         })}
                       </div>
                       <div className="flex justify-between mt-3 text-xs">
                         <div className="flex items-center gap-4">
-                          <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-500" /> Critical: {selectedRepository.findings_summary.by_severity.critical}</span>
-                          <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-orange-500" /> High: {selectedRepository.findings_summary.by_severity.high}</span>
-                          <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-yellow-500" /> Medium: {selectedRepository.findings_summary.by_severity.medium}</span>
+                          <span className="flex items-center gap-1">
+                            <span className="h-2 w-2 rounded-full bg-red-500" /> Critical:{' '}
+                            {selectedRepository.findings_summary.by_severity.critical}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <span className="h-2 w-2 rounded-full bg-orange-500" /> High:{' '}
+                            {selectedRepository.findings_summary.by_severity.high}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <span className="h-2 w-2 rounded-full bg-yellow-500" /> Medium:{' '}
+                            {selectedRepository.findings_summary.by_severity.medium}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -1686,36 +1865,60 @@ export default function RepositoriesPage() {
                     <div className="p-4">
                       <div className="grid grid-cols-2 gap-y-4 gap-x-6 text-sm">
                         <div className="space-y-1">
-                          <p className="text-xs text-muted-foreground uppercase tracking-wide">Visibility</p>
+                          <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                            Visibility
+                          </p>
                           <p className="flex items-center gap-1.5 font-medium">
-                            {selectedRepository.visibility === "private" ? (
-                              <><Lock className="h-3.5 w-3.5 text-muted-foreground" /> Private</>
-                            ) : selectedRepository.visibility === "internal" ? (
-                              <><Users className="h-3.5 w-3.5 text-blue-500" /> Internal</>
+                            {selectedRepository.visibility === 'private' ? (
+                              <>
+                                <Lock className="h-3.5 w-3.5 text-muted-foreground" /> Private
+                              </>
+                            ) : selectedRepository.visibility === 'internal' ? (
+                              <>
+                                <Users className="h-3.5 w-3.5 text-blue-500" /> Internal
+                              </>
                             ) : (
-                              <><Globe className="h-3.5 w-3.5 text-green-500" /> Public</>
+                              <>
+                                <Globe className="h-3.5 w-3.5 text-green-500" /> Public
+                              </>
                             )}
                           </p>
                         </div>
                         <div className="space-y-1">
-                          <p className="text-xs text-muted-foreground uppercase tracking-wide">Language</p>
-                          <Badge variant="secondary">{selectedRepository.primary_language || "-"}</Badge>
+                          <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                            Language
+                          </p>
+                          <Badge variant="secondary">
+                            {selectedRepository.primary_language || '-'}
+                          </Badge>
                         </div>
                         <div className="space-y-1">
-                          <p className="text-xs text-muted-foreground uppercase tracking-wide">Default Branch</p>
-                          <code className="text-xs bg-muted px-2 py-1 rounded">{selectedRepository.default_branch}</code>
+                          <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                            Default Branch
+                          </p>
+                          <code className="text-xs bg-muted px-2 py-1 rounded">
+                            {selectedRepository.default_branch}
+                          </code>
                         </div>
                         <div className="space-y-1">
-                          <p className="text-xs text-muted-foreground uppercase tracking-wide">Criticality</p>
+                          <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                            Criticality
+                          </p>
                           <CriticalityBadge criticality={selectedRepository.criticality} />
                         </div>
                         <div className="space-y-1">
-                          <p className="text-xs text-muted-foreground uppercase tracking-wide">Compliance</p>
+                          <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                            Compliance
+                          </p>
                           <ComplianceBadge status={selectedRepository.compliance_status} />
                         </div>
                         <div className="space-y-1">
-                          <p className="text-xs text-muted-foreground uppercase tracking-wide">Repository</p>
-                          <p className="font-mono text-xs truncate">{selectedRepository.scm_organization}</p>
+                          <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                            Repository
+                          </p>
+                          <p className="font-mono text-xs truncate">
+                            {selectedRepository.scm_organization}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -1731,23 +1934,33 @@ export default function RepositoriesPage() {
                     </div>
                     <div className="p-4">
                       <div className="grid grid-cols-2 gap-3">
-                        {selectedRepository.security_features && Object.entries(selectedRepository.security_features).map(([key, enabled]) => (
-                          <div key={key} className={cn(
-                            "flex items-center gap-2.5 p-2.5 rounded-lg border text-sm",
-                            enabled ? "bg-green-500/5 border-green-500/20" : "bg-muted/30"
-                          )}>
-                            {enabled ? (
-                              <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
-                            ) : (
-                              <XCircle className="h-4 w-4 text-muted-foreground shrink-0" />
-                            )}
-                            <span className={cn("text-xs", !enabled && "text-muted-foreground")}>
-                              {key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
-                            </span>
-                          </div>
-                        ))}
+                        {selectedRepository.security_features &&
+                          Object.entries(selectedRepository.security_features).map(
+                            ([key, enabled]) => (
+                              <div
+                                key={key}
+                                className={cn(
+                                  'flex items-center gap-2.5 p-2.5 rounded-lg border text-sm',
+                                  enabled ? 'bg-green-500/5 border-green-500/20' : 'bg-muted/30'
+                                )}
+                              >
+                                {enabled ? (
+                                  <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
+                                ) : (
+                                  <XCircle className="h-4 w-4 text-muted-foreground shrink-0" />
+                                )}
+                                <span
+                                  className={cn('text-xs', !enabled && 'text-muted-foreground')}
+                                >
+                                  {key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+                                </span>
+                              </div>
+                            )
+                          )}
                         {!selectedRepository.security_features && (
-                          <p className="text-sm text-muted-foreground col-span-2">No security features configured</p>
+                          <p className="text-sm text-muted-foreground col-span-2">
+                            No security features configured
+                          </p>
                         )}
                       </div>
                     </div>
@@ -1763,7 +1976,9 @@ export default function RepositoriesPage() {
                     </div>
                     <div className="p-4 space-y-3">
                       <div>
-                        <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Enabled Scanners</p>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">
+                          Enabled Scanners
+                        </p>
                         <div className="flex flex-wrap gap-1.5">
                           {selectedRepository.scan_settings.enabled_scanners.map((scanner) => (
                             <Badge key={scanner} className="text-xs uppercase">
@@ -1806,9 +2021,7 @@ export default function RepositoriesPage() {
                   {selectedRepository.tags && selectedRepository.tags.length > 0 && (
                     <div className="rounded-xl border bg-card">
                       <div className="px-4 py-3 border-b">
-                        <h4 className="font-semibold flex items-center gap-2 text-sm">
-                          Tags
-                        </h4>
+                        <h4 className="font-semibold flex items-center gap-2 text-sm">Tags</h4>
                       </div>
                       <div className="p-4">
                         <div className="flex flex-wrap gap-1.5">
@@ -1827,7 +2040,8 @@ export default function RepositoriesPage() {
                     {selectedRepository.last_scanned_at && (
                       <p className="flex items-center gap-2">
                         <Activity className="h-3.5 w-3.5" />
-                        Last scanned: {new Date(selectedRepository.last_scanned_at).toLocaleString()}
+                        Last scanned:{' '}
+                        {new Date(selectedRepository.last_scanned_at).toLocaleString()}
                       </p>
                     )}
                     {selectedRepository.lastSeen && (
@@ -1854,8 +2068,8 @@ export default function RepositoriesPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Repository</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete <strong>{repositoryToDelete?.name}</strong>? This action cannot be undone.
-              All associated scan data and findings will be removed.
+              Are you sure you want to delete <strong>{repositoryToDelete?.name}</strong>? This
+              action cannot be undone. All associated scan data and findings will be removed.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1874,5 +2088,5 @@ export default function RepositoriesPage() {
         onSuccess={() => mutateRepos()}
       />
     </>
-  );
+  )
 }

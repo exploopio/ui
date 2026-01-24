@@ -1,6 +1,6 @@
-"use client";
+'use client'
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback } from 'react'
 import {
   ColumnDef,
   flexRender,
@@ -10,26 +10,17 @@ import {
   getSortedRowModel,
   SortingState,
   useReactTable,
-} from "@tanstack/react-table";
-import { Header, Main } from "@/components/layout";
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { PageHeader, StatusBadge } from "@/features/shared";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+} from '@tanstack/react-table'
+import { Header, Main } from '@/components/layout'
+import { PageHeader, StatusBadge } from '@/features/shared'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { Progress } from '@/components/ui/progress'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -37,28 +28,20 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import {
-  Sheet,
-  SheetContent,
-  SheetTitle,
-} from "@/components/ui/sheet";
+} from '@/components/ui/table'
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
-import { toast } from "sonner";
+} from '@/components/ui/dropdown-menu'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
+import { toast } from 'sonner'
 import {
   Plus,
   SearchIcon,
@@ -87,92 +70,85 @@ import {
   Copy,
   Tag,
   Settings,
-} from "lucide-react";
-import { Can, Permission } from "@/lib/permissions";
-import {
-  useScanConfigs,
-  useScanConfigStats,
-} from "@/lib/api/scan-hooks";
+} from 'lucide-react'
+import { Can, Permission } from '@/lib/permissions'
+import { useScanConfigs, useScanConfigStats } from '@/lib/api/scan-hooks'
 // Note: useAssetGroups can be imported when CreateConfigDialog is implemented
 // import { useAssetGroups } from "@/lib/api/security-hooks";
 import {
   SCAN_TYPE_LABELS,
   SCHEDULE_TYPE_LABELS,
   SCAN_CONFIG_STATUS_LABELS,
-} from "@/lib/api/scan-types";
-import type {
-  ScanConfig,
-  ScanConfigStatus,
-  ScanType as ApiScanType,
-} from "@/lib/api/scan-types";
+} from '@/lib/api/scan-types'
+import type { ScanConfig, ScanConfigStatus, ScanType as ApiScanType } from '@/lib/api/scan-types'
 // Mock data for Runs tab
-import { mockScans, getScanStats } from "@/features/scans/lib/mock-data";
-import { SCAN_TYPE_CONFIG } from "@/features/scans/types";
-import type { Scan, ScanType as MockScanType } from "@/features/scans/types";
+import { mockScans, getScanStats } from '@/features/scans/lib/mock-data'
+import { SCAN_TYPE_CONFIG } from '@/features/scans/types'
+import type { Scan, ScanType as MockScanType } from '@/features/scans/types'
 
 // ============================================
 // CONFIGURATIONS TAB TYPES
 // ============================================
 
-type ConfigStatusFilter = ScanConfigStatus | "all";
-type ConfigTypeFilter = ApiScanType | "all";
+type ConfigStatusFilter = ScanConfigStatus | 'all'
+type ConfigTypeFilter = ApiScanType | 'all'
 
 const configStatusFilters: { value: ConfigStatusFilter; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "active", label: "Active" },
-  { value: "paused", label: "Paused" },
-  { value: "disabled", label: "Disabled" },
-];
+  { value: 'all', label: 'All' },
+  { value: 'active', label: 'Active' },
+  { value: 'paused', label: 'Paused' },
+  { value: 'disabled', label: 'Disabled' },
+]
 
 const configTypeFilters: { value: ConfigTypeFilter; label: string }[] = [
-  { value: "all", label: "All Types" },
-  { value: "workflow", label: "Workflow" },
-  { value: "single", label: "Single Scanner" },
-];
+  { value: 'all', label: 'All Types' },
+  { value: 'workflow', label: 'Workflow' },
+  { value: 'single', label: 'Single Scanner' },
+]
 
 // ============================================
 // RUNS TAB TYPES
 // ============================================
 
-type RunStatusFilter = "all" | "active" | "completed" | "pending" | "failed";
-type RunTypeFilter = MockScanType | "all";
+type RunStatusFilter = 'all' | 'active' | 'completed' | 'pending' | 'failed'
+type RunTypeFilter = MockScanType | 'all'
 
 const runStatusFilters: { value: RunStatusFilter; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "active", label: "Active" },
-  { value: "completed", label: "Completed" },
-  { value: "pending", label: "Pending" },
-  { value: "failed", label: "Failed" },
-];
+  { value: 'all', label: 'All' },
+  { value: 'active', label: 'Active' },
+  { value: 'completed', label: 'Completed' },
+  { value: 'pending', label: 'Pending' },
+  { value: 'failed', label: 'Failed' },
+]
 
 const runTypeFilters: { value: RunTypeFilter; label: string }[] = [
-  { value: "all", label: "All Types" },
-  { value: "full", label: "Full Scan" },
-  { value: "quick", label: "Quick Scan" },
-  { value: "compliance", label: "Compliance" },
-  { value: "custom", label: "Custom" },
-];
+  { value: 'all', label: 'All Types' },
+  { value: 'full', label: 'Full Scan' },
+  { value: 'quick', label: 'Quick Scan' },
+  { value: 'compliance', label: 'Compliance' },
+  { value: 'custom', label: 'Custom' },
+]
 
 // ============================================
 // UTILS
 // ============================================
 
 function formatDate(dateString?: string): string {
-  if (!dateString) return "-";
-  return new Date(dateString).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  if (!dateString) return '-'
+  return new Date(dateString).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 
 function formatDuration(seconds?: number): string {
-  if (!seconds) return "-";
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  if (hours > 0) return `${hours}h ${minutes}m`;
-  return `${minutes}m`;
+  if (!seconds) return '-'
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+  if (hours > 0) return `${hours}h ${minutes}m`
+  return `${minutes}m`
 }
 
 // ============================================
@@ -180,35 +156,29 @@ function formatDuration(seconds?: number): string {
 // ============================================
 
 export default function ScansPage() {
-  const [mainTab, setMainTab] = useState<"configurations" | "runs">("configurations");
-  const [_dialogOpen, setDialogOpen] = useState(false);
+  const [mainTab, setMainTab] = useState<'configurations' | 'runs'>('configurations')
+  const [_dialogOpen, setDialogOpen] = useState(false)
 
   // Mock stats for Runs tab (computed once)
-  const mockStats = useMemo(() => getScanStats(), []);
+  const mockStats = useMemo(() => getScanStats(), [])
 
   return (
     <>
-      <Header fixed>
-        <div className="ms-auto flex items-center gap-2 sm:gap-4">
-          <Search />
-          <ThemeSwitch />
-          <ProfileDropdown />
-        </div>
-      </Header>
+      <Header fixed />
 
       <Main>
         <PageHeader
           title="Scan Management"
           description={
-            mainTab === "configurations"
-              ? "Manage scheduled and recurring scan configurations"
+            mainTab === 'configurations'
+              ? 'Manage scheduled and recurring scan configurations'
               : `${mockStats.totalScans} runs - ${mockStats.activeScans} active`
           }
         >
           <Can permission={Permission.ScansWrite} mode="disable">
             <Button onClick={() => setDialogOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
-              {mainTab === "configurations" ? "New Configuration" : "New Scan"}
+              {mainTab === 'configurations' ? 'New Configuration' : 'New Scan'}
             </Button>
           </Can>
         </PageHeader>
@@ -216,7 +186,7 @@ export default function ScansPage() {
         {/* Main Tabs: Configurations vs Runs */}
         <Tabs
           value={mainTab}
-          onValueChange={(v) => setMainTab(v as "configurations" | "runs")}
+          onValueChange={(v) => setMainTab(v as 'configurations' | 'runs')}
           className="mt-6"
         >
           <TabsList className="grid w-full max-w-md grid-cols-2">
@@ -240,7 +210,7 @@ export default function ScansPage() {
         </Tabs>
       </Main>
     </>
-  );
+  )
 }
 
 // ============================================
@@ -248,9 +218,9 @@ export default function ScansPage() {
 // ============================================
 
 interface ConfigActionsCellProps {
-  config: ScanConfig;
-  onViewDetails: (config: ScanConfig) => void;
-  onAction: (action: "trigger" | "pause" | "activate" | "delete", config: ScanConfig) => void;
+  config: ScanConfig
+  onViewDetails: (config: ScanConfig) => void
+  onAction: (action: 'trigger' | 'pause' | 'activate' | 'delete', config: ScanConfig) => void
 }
 
 function ConfigActionsCell({ config, onViewDetails, onAction }: ConfigActionsCellProps) {
@@ -266,35 +236,32 @@ function ConfigActionsCell({ config, onViewDetails, onAction }: ConfigActionsCel
           <Eye className="mr-2 h-4 w-4" />
           View Details
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onAction("trigger", config)}>
+        <DropdownMenuItem onClick={() => onAction('trigger', config)}>
           <Play className="mr-2 h-4 w-4" />
           Trigger Scan
         </DropdownMenuItem>
-        {config.status === "active" && (
-          <DropdownMenuItem onClick={() => onAction("pause", config)}>
+        {config.status === 'active' && (
+          <DropdownMenuItem onClick={() => onAction('pause', config)}>
             <Pause className="mr-2 h-4 w-4" />
             Pause
           </DropdownMenuItem>
         )}
-        {config.status === "paused" && (
-          <DropdownMenuItem onClick={() => onAction("activate", config)}>
+        {config.status === 'paused' && (
+          <DropdownMenuItem onClick={() => onAction('activate', config)}>
             <Play className="mr-2 h-4 w-4" />
             Resume
           </DropdownMenuItem>
         )}
         <Can permission={Permission.ScansDelete}>
           <DropdownMenuSeparator />
-          <DropdownMenuItem
-            className="text-red-400"
-            onClick={() => onAction("delete", config)}
-          >
+          <DropdownMenuItem className="text-red-400" onClick={() => onAction('delete', config)}>
             <Trash2 className="mr-2 h-4 w-4" />
             Delete
           </DropdownMenuItem>
         </Can>
       </DropdownMenuContent>
     </DropdownMenu>
-  );
+  )
 }
 
 // ============================================
@@ -302,202 +269,223 @@ function ConfigActionsCell({ config, onViewDetails, onAction }: ConfigActionsCel
 // ============================================
 
 function ConfigurationsTab() {
-  const [selectedConfig, setSelectedConfig] = useState<ScanConfig | null>(null);
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [globalFilter, setGlobalFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState<ConfigStatusFilter>("all");
-  const [typeFilter, setTypeFilter] = useState<ConfigTypeFilter>("all");
-  const [rowSelection, setRowSelection] = useState({});
+  const [selectedConfig, setSelectedConfig] = useState<ScanConfig | null>(null)
+  const [sorting, setSorting] = useState<SortingState>([])
+  const [globalFilter, setGlobalFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState<ConfigStatusFilter>('all')
+  const [typeFilter, setTypeFilter] = useState<ConfigTypeFilter>('all')
+  const [rowSelection, setRowSelection] = useState({})
 
   // Memoize filter object to prevent unnecessary re-renders
-  const filters = useMemo(() => ({
-    status: statusFilter !== "all" ? statusFilter : undefined,
-    scan_type: typeFilter !== "all" ? typeFilter : undefined,
-    search: globalFilter || undefined,
-  }), [statusFilter, typeFilter, globalFilter]);
+  const filters = useMemo(
+    () => ({
+      status: statusFilter !== 'all' ? statusFilter : undefined,
+      scan_type: typeFilter !== 'all' ? typeFilter : undefined,
+      search: globalFilter || undefined,
+    }),
+    [statusFilter, typeFilter, globalFilter]
+  )
 
   // API hooks with stable configuration
-  const swrConfig = useMemo(() => ({
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-    refreshInterval: 0,
-    dedupingInterval: 5000,
-  }), []);
+  const swrConfig = useMemo(
+    () => ({
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      refreshInterval: 0,
+      dedupingInterval: 5000,
+    }),
+    []
+  )
 
-  const { data: configsResponse, isLoading: isLoadingConfigs } = useScanConfigs(filters, swrConfig);
-  const { data: stats, isLoading: isLoadingStats } = useScanConfigStats(swrConfig);
+  const { data: configsResponse, isLoading: isLoadingConfigs } = useScanConfigs(filters, swrConfig)
+  const { data: stats, isLoading: isLoadingStats } = useScanConfigStats(swrConfig)
 
   // Memoize configs array with stable reference
   const configs = useMemo((): ScanConfig[] => {
-    return configsResponse?.items ?? [];
-  }, [configsResponse?.items]);
+    return configsResponse?.items ?? []
+  }, [configsResponse?.items])
 
   // Status counts from stats - memoized with individual deps
-  const statusCounts = useMemo(() => ({
-    all: stats?.total ?? 0,
-    active: stats?.active ?? 0,
-    paused: stats?.paused ?? 0,
-    disabled: stats?.disabled ?? 0,
-  }), [stats?.total, stats?.active, stats?.paused, stats?.disabled]);
+  const statusCounts = useMemo(
+    () => ({
+      all: stats?.total ?? 0,
+      active: stats?.active ?? 0,
+      paused: stats?.paused ?? 0,
+      disabled: stats?.disabled ?? 0,
+    }),
+    [stats?.total, stats?.active, stats?.paused, stats?.disabled]
+  )
 
   // Calculate progress for a config - memoized
   const getProgress = useCallback((config: ScanConfig) => {
-    if (config.total_runs === 0) return 0;
-    return Math.round((config.successful_runs / config.total_runs) * 100);
-  }, []);
+    if (config.total_runs === 0) return 0
+    return Math.round((config.successful_runs / config.total_runs) * 100)
+  }, [])
 
   // Memoized handlers
   const handleViewDetails = useCallback((config: ScanConfig) => {
-    setSelectedConfig(config);
-  }, []);
+    setSelectedConfig(config)
+  }, [])
 
-  const handleAction = useCallback((action: "trigger" | "pause" | "activate" | "delete", config: ScanConfig) => {
-    // Just show toast for now - actual mutations will be done via direct API call
-    toast.success(`Action "${action}" triggered for: ${config.name}`);
-    if (action === "delete") {
-      setSelectedConfig(null);
-    }
-  }, []);
+  const handleAction = useCallback(
+    (action: 'trigger' | 'pause' | 'activate' | 'delete', config: ScanConfig) => {
+      // Just show toast for now - actual mutations will be done via direct API call
+      toast.success(`Action "${action}" triggered for: ${config.name}`)
+      if (action === 'delete') {
+        setSelectedConfig(null)
+      }
+    },
+    []
+  )
 
   // Table columns - memoized to prevent infinite re-renders
-  const columns: ColumnDef<ScanConfig>[] = useMemo(() => [
-    {
-      id: "select",
-      header: ({ table }) => (
-        <Checkbox
-          checked={
-            table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && "indeterminate")
-          }
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="Select all"
-        />
-      ),
-      cell: ({ row }) => (
-        <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="Select row"
-        />
-      ),
-      enableSorting: false,
-      enableHiding: false,
-    },
-    {
-      accessorKey: "name",
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="-ml-4"
-        >
-          Name
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      ),
-      cell: ({ row }) => (
-        <div>
-          <p className="font-medium">{row.original.name}</p>
-          {row.original.description && (
-            <p className="text-muted-foreground max-w-[300px] truncate text-xs">
-              {row.original.description}
-            </p>
-          )}
-        </div>
-      ),
-    },
-    {
-      accessorKey: "scan_type",
-      header: "Type",
-      cell: ({ row }) => (
-        <Badge variant="outline">{SCAN_TYPE_LABELS[row.original.scan_type]}</Badge>
-      ),
-    },
-    {
-      accessorKey: "status",
-      header: "Status",
-      cell: ({ row }) => <StatusBadge status={row.original.status === "active" ? "active" : row.original.status === "paused" ? "pending" : "inactive"} />,
-    },
-    {
-      accessorKey: "progress",
-      header: "Progress",
-      cell: ({ row }) => {
-        const progress = getProgress(row.original);
-        const isActive = row.original.status === "active";
-        return (
-          <div className="flex items-center gap-2">
-            <Progress
-              value={progress}
-              className={`h-2 w-20 shrink-0 ${isActive ? "[&>div]:animate-pulse" : ""}`}
-            />
-            <span className="text-muted-foreground text-xs w-10 shrink-0">
-              {progress}%
-            </span>
-          </div>
-        );
+  const columns: ColumnDef<ScanConfig>[] = useMemo(
+    () => [
+      {
+        id: 'select',
+        header: ({ table }) => (
+          <Checkbox
+            checked={
+              table.getIsAllPageRowsSelected() ||
+              (table.getIsSomePageRowsSelected() && 'indeterminate')
+            }
+            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+            aria-label="Select all"
+          />
+        ),
+        cell: ({ row }) => (
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            aria-label="Select row"
+          />
+        ),
+        enableSorting: false,
+        enableHiding: false,
       },
-    },
-    {
-      accessorKey: "total_runs",
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="-ml-4"
-        >
-          Runs
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      ),
-      cell: ({ row }) => (
-        <span className="text-sm">{row.original.total_runs}</span>
-      ),
-    },
-    {
-      accessorKey: "findings",
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="-ml-4"
-        >
-          Results
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      ),
-      cell: ({ row }) => {
-        const config = row.original;
-        if (config.total_runs === 0) return <span className="text-muted-foreground">-</span>;
-        return (
-          <div className="flex items-center gap-1">
-            {config.successful_runs > 0 && (
-              <Badge className="bg-green-500 px-1 text-xs">{config.successful_runs}</Badge>
-            )}
-            {config.failed_runs > 0 && (
-              <Badge className="bg-red-500 px-1 text-xs">{config.failed_runs}</Badge>
+      {
+        accessorKey: 'name',
+        header: ({ column }) => (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+            className="-ml-4"
+          >
+            Name
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        ),
+        cell: ({ row }) => (
+          <div>
+            <p className="font-medium">{row.original.name}</p>
+            {row.original.description && (
+              <p className="text-muted-foreground max-w-[300px] truncate text-xs">
+                {row.original.description}
+              </p>
             )}
           </div>
-        );
+        ),
       },
-    },
-    {
-      accessorKey: "schedule_type",
-      header: "Schedule",
-      cell: ({ row }) => (
-        <span className="text-sm">{SCHEDULE_TYPE_LABELS[row.original.schedule_type]}</span>
-      ),
-    },
-    {
-      id: "actions",
-      cell: ({ row }) => (
-        <ConfigActionsCell
-          config={row.original}
-          onViewDetails={handleViewDetails}
-          onAction={handleAction}
-        />
-      ),
-    },
-  ], [getProgress, handleViewDetails, handleAction]);
+      {
+        accessorKey: 'scan_type',
+        header: 'Type',
+        cell: ({ row }) => (
+          <Badge variant="outline">{SCAN_TYPE_LABELS[row.original.scan_type]}</Badge>
+        ),
+      },
+      {
+        accessorKey: 'status',
+        header: 'Status',
+        cell: ({ row }) => (
+          <StatusBadge
+            status={
+              row.original.status === 'active'
+                ? 'active'
+                : row.original.status === 'paused'
+                  ? 'pending'
+                  : 'inactive'
+            }
+          />
+        ),
+      },
+      {
+        accessorKey: 'progress',
+        header: 'Progress',
+        cell: ({ row }) => {
+          const progress = getProgress(row.original)
+          const isActive = row.original.status === 'active'
+          return (
+            <div className="flex items-center gap-2">
+              <Progress
+                value={progress}
+                className={`h-2 w-20 shrink-0 ${isActive ? '[&>div]:animate-pulse' : ''}`}
+              />
+              <span className="text-muted-foreground text-xs w-10 shrink-0">{progress}%</span>
+            </div>
+          )
+        },
+      },
+      {
+        accessorKey: 'total_runs',
+        header: ({ column }) => (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+            className="-ml-4"
+          >
+            Runs
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        ),
+        cell: ({ row }) => <span className="text-sm">{row.original.total_runs}</span>,
+      },
+      {
+        accessorKey: 'findings',
+        header: ({ column }) => (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+            className="-ml-4"
+          >
+            Results
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        ),
+        cell: ({ row }) => {
+          const config = row.original
+          if (config.total_runs === 0) return <span className="text-muted-foreground">-</span>
+          return (
+            <div className="flex items-center gap-1">
+              {config.successful_runs > 0 && (
+                <Badge className="bg-green-500 px-1 text-xs">{config.successful_runs}</Badge>
+              )}
+              {config.failed_runs > 0 && (
+                <Badge className="bg-red-500 px-1 text-xs">{config.failed_runs}</Badge>
+              )}
+            </div>
+          )
+        },
+      },
+      {
+        accessorKey: 'schedule_type',
+        header: 'Schedule',
+        cell: ({ row }) => (
+          <span className="text-sm">{SCHEDULE_TYPE_LABELS[row.original.schedule_type]}</span>
+        ),
+      },
+      {
+        id: 'actions',
+        cell: ({ row }) => (
+          <ConfigActionsCell
+            config={row.original}
+            onViewDetails={handleViewDetails}
+            onAction={handleAction}
+          />
+        ),
+      },
+    ],
+    [getProgress, handleViewDetails, handleAction]
+  )
 
   const table = useReactTable({
     data: configs,
@@ -514,15 +502,15 @@ function ConfigurationsTab() {
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-  });
+  })
 
   // Active filters count
-  const activeFiltersCount = [statusFilter !== "all", typeFilter !== "all"].filter(Boolean).length;
+  const activeFiltersCount = [statusFilter !== 'all', typeFilter !== 'all'].filter(Boolean).length
 
   const clearFilters = () => {
-    setStatusFilter("all");
-    setTypeFilter("all");
-  };
+    setStatusFilter('all')
+    setTypeFilter('all')
+  }
 
   return (
     <>
@@ -543,7 +531,7 @@ function ConfigurationsTab() {
           <>
             <Card
               className="cursor-pointer hover:border-primary transition-colors"
-              onClick={() => setStatusFilter("all")}
+              onClick={() => setStatusFilter('all')}
             >
               <CardHeader className="pb-2">
                 <CardDescription className="flex items-center gap-2">
@@ -554,45 +542,39 @@ function ConfigurationsTab() {
               </CardHeader>
             </Card>
             <Card
-              className={`cursor-pointer hover:border-blue-500 transition-colors ${statusFilter === "active" ? "border-blue-500" : ""}`}
-              onClick={() => setStatusFilter("active")}
+              className={`cursor-pointer hover:border-blue-500 transition-colors ${statusFilter === 'active' ? 'border-blue-500' : ''}`}
+              onClick={() => setStatusFilter('active')}
             >
               <CardHeader className="pb-2">
                 <CardDescription className="flex items-center gap-2">
                   <Activity className="h-4 w-4 text-blue-500" />
                   Active
                 </CardDescription>
-                <CardTitle className="text-3xl text-blue-500">
-                  {statusCounts.active}
-                </CardTitle>
+                <CardTitle className="text-3xl text-blue-500">{statusCounts.active}</CardTitle>
               </CardHeader>
             </Card>
             <Card
-              className={`cursor-pointer hover:border-yellow-500 transition-colors ${statusFilter === "paused" ? "border-yellow-500" : ""}`}
-              onClick={() => setStatusFilter("paused")}
+              className={`cursor-pointer hover:border-yellow-500 transition-colors ${statusFilter === 'paused' ? 'border-yellow-500' : ''}`}
+              onClick={() => setStatusFilter('paused')}
             >
               <CardHeader className="pb-2">
                 <CardDescription className="flex items-center gap-2">
                   <Pause className="h-4 w-4 text-yellow-500" />
                   Paused
                 </CardDescription>
-                <CardTitle className="text-3xl text-yellow-500">
-                  {statusCounts.paused}
-                </CardTitle>
+                <CardTitle className="text-3xl text-yellow-500">{statusCounts.paused}</CardTitle>
               </CardHeader>
             </Card>
             <Card
-              className={`cursor-pointer hover:border-gray-500 transition-colors ${statusFilter === "disabled" ? "border-gray-500" : ""}`}
-              onClick={() => setStatusFilter("disabled")}
+              className={`cursor-pointer hover:border-gray-500 transition-colors ${statusFilter === 'disabled' ? 'border-gray-500' : ''}`}
+              onClick={() => setStatusFilter('disabled')}
             >
               <CardHeader className="pb-2">
                 <CardDescription className="flex items-center gap-2">
                   <XCircle className="h-4 w-4 text-gray-500" />
                   Disabled
                 </CardDescription>
-                <CardTitle className="text-3xl text-gray-500">
-                  {statusCounts.disabled}
-                </CardTitle>
+                <CardTitle className="text-3xl text-gray-500">{statusCounts.disabled}</CardTitle>
               </CardHeader>
             </Card>
             <Card>
@@ -686,7 +668,7 @@ function ConfigurationsTab() {
                         {configTypeFilters.map((filter) => (
                           <Badge
                             key={filter.value}
-                            variant={typeFilter === filter.value ? "default" : "outline"}
+                            variant={typeFilter === filter.value ? 'default' : 'outline'}
                             className="cursor-pointer"
                             onClick={() => setTypeFilter(filter.value)}
                           >
@@ -707,18 +689,18 @@ function ConfigurationsTab() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => toast.success("Triggered selected scans")}>
+                    <DropdownMenuItem onClick={() => toast.success('Triggered selected scans')}>
                       <Play className="mr-2 h-4 w-4" />
                       Trigger Selected
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => toast.success("Paused selected scans")}>
+                    <DropdownMenuItem onClick={() => toast.success('Paused selected scans')}>
                       <Pause className="mr-2 h-4 w-4" />
                       Pause Selected
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       className="text-red-400"
-                      onClick={() => toast.success("Deleted selected scans")}
+                      onClick={() => toast.success('Deleted selected scans')}
                     >
                       <Trash2 className="mr-2 h-4 w-4" />
                       Delete Selected
@@ -733,11 +715,11 @@ function ConfigurationsTab() {
           {activeFiltersCount > 0 && (
             <div className="flex flex-wrap items-center gap-2 mb-4">
               <span className="text-sm text-muted-foreground">Active filters:</span>
-              {typeFilter !== "all" && (
+              {typeFilter !== 'all' && (
                 <Badge variant="secondary" className="gap-1">
                   Type: {configTypeFilters.find((f) => f.value === typeFilter)?.label}
                   <button
-                    onClick={() => setTypeFilter("all")}
+                    onClick={() => setTypeFilter('all')}
                     className="ml-1 hover:text-foreground"
                   >
                     x
@@ -778,14 +760,16 @@ function ConfigurationsTab() {
                   table.getRowModel().rows.map((row) => (
                     <TableRow
                       key={row.id}
-                      data-state={row.getIsSelected() && "selected"}
+                      data-state={row.getIsSelected() && 'selected'}
                       className="cursor-pointer"
                       onClick={(e) => {
-                        if ((e.target as HTMLElement).closest('[role="checkbox"]') ||
-                            (e.target as HTMLElement).closest('button')) {
-                          return;
+                        if (
+                          (e.target as HTMLElement).closest('[role="checkbox"]') ||
+                          (e.target as HTMLElement).closest('button')
+                        ) {
+                          return
                         }
-                        setSelectedConfig(row.original);
+                        setSelectedConfig(row.original)
                       }}
                     >
                       {row.getVisibleCells().map((cell) => (
@@ -809,7 +793,7 @@ function ConfigurationsTab() {
           {/* Pagination */}
           <div className="flex items-center justify-between mt-4">
             <p className="text-sm text-muted-foreground">
-              {table.getFilteredSelectedRowModel().rows.length} of{" "}
+              {table.getFilteredSelectedRowModel().rows.length} of{' '}
               {table.getFilteredRowModel().rows.length} row(s) selected
             </p>
             <div className="flex flex-wrap items-center gap-2">
@@ -860,15 +844,12 @@ function ConfigurationsTab() {
             <SheetTitle>Configuration Details</SheetTitle>
           </VisuallyHidden>
           {selectedConfig && (
-            <ConfigDetailSheet
-              config={selectedConfig}
-              onClose={() => setSelectedConfig(null)}
-            />
+            <ConfigDetailSheet config={selectedConfig} onClose={() => setSelectedConfig(null)} />
           )}
         </SheetContent>
       </Sheet>
     </>
-  );
+  )
 }
 
 // ============================================
@@ -876,55 +857,67 @@ function ConfigurationsTab() {
 // ============================================
 
 interface ConfigDetailSheetProps {
-  config: ScanConfig;
-  onClose: () => void;
+  config: ScanConfig
+  onClose: () => void
 }
 
 function ConfigDetailSheet({ config, onClose }: ConfigDetailSheetProps) {
-  const [isTriggering, setIsTriggering] = useState(false);
+  const [isTriggering, setIsTriggering] = useState(false)
 
   // Calculate progress
   const progress = useMemo(() => {
-    if (config.total_runs === 0) return 0;
-    return Math.round((config.successful_runs / config.total_runs) * 100);
-  }, [config.total_runs, config.successful_runs]);
+    if (config.total_runs === 0) return 0
+    return Math.round((config.successful_runs / config.total_runs) * 100)
+  }, [config.total_runs, config.successful_runs])
 
   // Simplified action handlers - just show toast
   const handleTriggerScan = () => {
-    setIsTriggering(true);
+    setIsTriggering(true)
     setTimeout(() => {
-      toast.success(`Scan triggered: ${config.name}`);
-      setIsTriggering(false);
-    }, 500);
-  };
+      toast.success(`Scan triggered: ${config.name}`)
+      setIsTriggering(false)
+    }, 500)
+  }
 
   const handlePauseConfig = () => {
-    toast.success(`Paused: ${config.name}`);
-  };
+    toast.success(`Paused: ${config.name}`)
+  }
 
   const handleActivateConfig = () => {
-    toast.success(`Activated: ${config.name}`);
-  };
+    toast.success(`Activated: ${config.name}`)
+  }
 
   const handleDeleteConfig = () => {
-    toast.success(`Deleted: ${config.name}`);
-    onClose();
-  };
+    toast.success(`Deleted: ${config.name}`)
+    onClose()
+  }
 
   return (
     <>
       {/* Hero Header */}
-      <div className={`px-6 pt-6 pb-4 ${
-        config.status === "active" ? "bg-gradient-to-br from-blue-500/20 via-blue-500/10 to-transparent" :
-        config.status === "paused" ? "bg-gradient-to-br from-yellow-500/20 via-yellow-500/10 to-transparent" :
-        "bg-gradient-to-br from-gray-500/20 via-gray-500/10 to-transparent"
-      }`}>
+      <div
+        className={`px-6 pt-6 pb-4 ${
+          config.status === 'active'
+            ? 'bg-gradient-to-br from-blue-500/20 via-blue-500/10 to-transparent'
+            : config.status === 'paused'
+              ? 'bg-gradient-to-br from-yellow-500/20 via-yellow-500/10 to-transparent'
+              : 'bg-gradient-to-br from-gray-500/20 via-gray-500/10 to-transparent'
+        }`}
+      >
         {/* Status & Type Row */}
         <div className="flex items-center justify-between mb-3">
           <Badge variant="outline" className="font-medium">
             {SCAN_TYPE_LABELS[config.scan_type]}
           </Badge>
-          <StatusBadge status={config.status === "active" ? "active" : config.status === "paused" ? "pending" : "inactive"} />
+          <StatusBadge
+            status={
+              config.status === 'active'
+                ? 'active'
+                : config.status === 'paused'
+                  ? 'pending'
+                  : 'inactive'
+            }
+          />
         </div>
 
         {/* Title */}
@@ -937,22 +930,30 @@ function ConfigDetailSheet({ config, onClose }: ConfigDetailSheetProps) {
         <div className="mt-4 p-4 rounded-xl bg-background/80 backdrop-blur border">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium">Success Rate</span>
-            <span className={`text-2xl font-bold ${
-              progress >= 80 ? "text-green-500" :
-              progress >= 50 ? "text-yellow-500" :
-              progress === 0 ? "text-muted-foreground" :
-              "text-red-500"
-            }`}>
+            <span
+              className={`text-2xl font-bold ${
+                progress >= 80
+                  ? 'text-green-500'
+                  : progress >= 50
+                    ? 'text-yellow-500'
+                    : progress === 0
+                      ? 'text-muted-foreground'
+                      : 'text-red-500'
+              }`}
+            >
               {progress}%
             </span>
           </div>
           <Progress
             value={progress}
             className={`h-3 ${
-              config.status === "active" ? "[&>div]:animate-pulse [&>div]:bg-blue-500" :
-              progress >= 80 ? "[&>div]:bg-green-500" :
-              progress >= 50 ? "[&>div]:bg-yellow-500" :
-              "[&>div]:bg-red-500"
+              config.status === 'active'
+                ? '[&>div]:animate-pulse [&>div]:bg-blue-500'
+                : progress >= 80
+                  ? '[&>div]:bg-green-500'
+                  : progress >= 50
+                    ? '[&>div]:bg-yellow-500'
+                    : '[&>div]:bg-red-500'
             }`}
           />
           <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
@@ -963,10 +964,19 @@ function ConfigDetailSheet({ config, onClose }: ConfigDetailSheetProps) {
 
         {/* Quick Actions */}
         <div className="flex gap-2 mt-4">
-          {config.status === "active" && (
+          {config.status === 'active' && (
             <>
-              <Button size="sm" className="flex-1" onClick={handleTriggerScan} disabled={isTriggering}>
-                {isTriggering ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <Play className="mr-2 h-4 w-4" />}
+              <Button
+                size="sm"
+                className="flex-1"
+                onClick={handleTriggerScan}
+                disabled={isTriggering}
+              >
+                {isTriggering ? (
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Play className="mr-2 h-4 w-4" />
+                )}
                 Trigger
               </Button>
               <Button size="sm" variant="secondary" className="flex-1" onClick={handlePauseConfig}>
@@ -975,19 +985,29 @@ function ConfigDetailSheet({ config, onClose }: ConfigDetailSheetProps) {
               </Button>
             </>
           )}
-          {config.status === "paused" && (
+          {config.status === 'paused' && (
             <>
               <Button size="sm" className="flex-1" onClick={handleActivateConfig}>
                 <Play className="mr-2 h-4 w-4" />
                 Resume
               </Button>
-              <Button size="sm" variant="outline" className="flex-1" onClick={handleTriggerScan} disabled={isTriggering}>
-                {isTriggering ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+              <Button
+                size="sm"
+                variant="outline"
+                className="flex-1"
+                onClick={handleTriggerScan}
+                disabled={isTriggering}
+              >
+                {isTriggering ? (
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                )}
                 Trigger
               </Button>
             </>
           )}
-          {config.status === "disabled" && (
+          {config.status === 'disabled' && (
             <Button size="sm" className="flex-1" onClick={handleActivateConfig}>
               <Play className="mr-2 h-4 w-4" />
               Enable
@@ -1071,7 +1091,9 @@ function ConfigDetailSheet({ config, onClose }: ConfigDetailSheetProps) {
                   </div>
                   <div className="flex-1">
                     <p className="text-sm font-medium">Last Run</p>
-                    <p className="text-xs text-muted-foreground">{formatDate(config.last_run_at)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatDate(config.last_run_at)}
+                    </p>
                   </div>
                 </div>
               )}
@@ -1082,7 +1104,9 @@ function ConfigDetailSheet({ config, onClose }: ConfigDetailSheetProps) {
                   </div>
                   <div className="flex-1">
                     <p className="text-sm font-medium">Next Scheduled</p>
-                    <p className="text-xs text-muted-foreground">{formatDate(config.next_run_at)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatDate(config.next_run_at)}
+                    </p>
                   </div>
                 </div>
               )}
@@ -1162,7 +1186,7 @@ function ConfigDetailSheet({ config, onClose }: ConfigDetailSheetProps) {
                 <AvatarFallback>U</AvatarFallback>
               </Avatar>
               <div>
-                <p className="font-medium">{config.created_by || "System"}</p>
+                <p className="font-medium">{config.created_by || 'System'}</p>
                 <p className="text-xs text-muted-foreground">{formatDate(config.created_at)}</p>
               </div>
             </div>
@@ -1175,14 +1199,16 @@ function ConfigDetailSheet({ config, onClose }: ConfigDetailSheetProps) {
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Config ID</span>
                 <div className="flex items-center gap-2">
-                  <code className="text-xs bg-muted px-2 py-1 rounded truncate max-w-[150px]">{config.id}</code>
+                  <code className="text-xs bg-muted px-2 py-1 rounded truncate max-w-[150px]">
+                    {config.id}
+                  </code>
                   <Button
                     variant="ghost"
                     size="sm"
                     className="h-6 w-6 p-0"
                     onClick={() => {
-                      navigator.clipboard.writeText(config.id);
-                      toast.success("ID copied to clipboard");
+                      navigator.clipboard.writeText(config.id)
+                      toast.success('ID copied to clipboard')
                     }}
                   >
                     <Copy className="h-3 w-3" />
@@ -1191,7 +1217,9 @@ function ConfigDetailSheet({ config, onClose }: ConfigDetailSheetProps) {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Asset Group</span>
-                <code className="text-xs bg-muted px-2 py-1 rounded truncate max-w-[150px]">{config.asset_group_id}</code>
+                <code className="text-xs bg-muted px-2 py-1 rounded truncate max-w-[150px]">
+                  {config.asset_group_id}
+                </code>
               </div>
             </div>
           </div>
@@ -1217,7 +1245,7 @@ function ConfigDetailSheet({ config, onClose }: ConfigDetailSheetProps) {
         </TabsContent>
       </Tabs>
     </>
-  );
+  )
 }
 
 // ============================================
@@ -1225,8 +1253,8 @@ function ConfigDetailSheet({ config, onClose }: ConfigDetailSheetProps) {
 // ============================================
 
 interface RunActionsCellProps {
-  run: Scan;
-  setSelectedRun: (run: Scan | null) => void;
+  run: Scan
+  setSelectedRun: (run: Scan | null) => void
 }
 
 function RunActionsCell({ run, setSelectedRun }: RunActionsCellProps) {
@@ -1242,7 +1270,7 @@ function RunActionsCell({ run, setSelectedRun }: RunActionsCellProps) {
           <Eye className="mr-2 h-4 w-4" />
           View Details
         </DropdownMenuItem>
-        {run.status === "active" && (
+        {run.status === 'active' && (
           <>
             <DropdownMenuItem onClick={() => toast.success(`Paused: ${run.name}`)}>
               <Pause className="mr-2 h-4 w-4" />
@@ -1254,13 +1282,13 @@ function RunActionsCell({ run, setSelectedRun }: RunActionsCellProps) {
             </DropdownMenuItem>
           </>
         )}
-        {run.status === "pending" && (
+        {run.status === 'pending' && (
           <DropdownMenuItem onClick={() => toast.success(`Started: ${run.name}`)}>
             <Play className="mr-2 h-4 w-4" />
             Start Now
           </DropdownMenuItem>
         )}
-        {run.status === "failed" && (
+        {run.status === 'failed' && (
           <DropdownMenuItem onClick={() => toast.success(`Retrying: ${run.name}`)}>
             <RefreshCw className="mr-2 h-4 w-4" />
             Retry
@@ -1278,7 +1306,7 @@ function RunActionsCell({ run, setSelectedRun }: RunActionsCellProps) {
         </Can>
       </DropdownMenuContent>
     </DropdownMenu>
-  );
+  )
 }
 
 // ============================================
@@ -1286,201 +1314,202 @@ function RunActionsCell({ run, setSelectedRun }: RunActionsCellProps) {
 // ============================================
 
 function RunsTab() {
-  const [selectedRun, setSelectedRun] = useState<Scan | null>(null);
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [globalFilter, setGlobalFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState<RunStatusFilter>("all");
-  const [typeFilter, setTypeFilter] = useState<RunTypeFilter>("all");
-  const [rowSelection, setRowSelection] = useState({});
+  const [selectedRun, setSelectedRun] = useState<Scan | null>(null)
+  const [sorting, setSorting] = useState<SortingState>([])
+  const [globalFilter, setGlobalFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState<RunStatusFilter>('all')
+  const [typeFilter, setTypeFilter] = useState<RunTypeFilter>('all')
+  const [rowSelection, setRowSelection] = useState({})
 
   // Use mock data
-  const stats = useMemo(() => getScanStats(), []);
+  const stats = useMemo(() => getScanStats(), [])
   const scans = useMemo(() => {
-    let filtered = [...mockScans];
-    if (statusFilter !== "all") {
-      filtered = filtered.filter((s) => s.status === statusFilter);
+    let filtered = [...mockScans]
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter((s) => s.status === statusFilter)
     }
-    if (typeFilter !== "all") {
-      filtered = filtered.filter((s) => s.type === typeFilter);
+    if (typeFilter !== 'all') {
+      filtered = filtered.filter((s) => s.type === typeFilter)
     }
     if (globalFilter) {
-      const search = globalFilter.toLowerCase();
+      const search = globalFilter.toLowerCase()
       filtered = filtered.filter(
         (s) =>
-          s.name.toLowerCase().includes(search) ||
-          s.description?.toLowerCase().includes(search)
-      );
+          s.name.toLowerCase().includes(search) || s.description?.toLowerCase().includes(search)
+      )
     }
-    return filtered;
-  }, [statusFilter, typeFilter, globalFilter]);
+    return filtered
+  }, [statusFilter, typeFilter, globalFilter])
 
   // Status counts
-  const statusCounts = useMemo(() => ({
-    all: mockScans.length,
-    active: mockScans.filter((s) => s.status === "active").length,
-    completed: mockScans.filter((s) => s.status === "completed").length,
-    pending: mockScans.filter((s) => s.status === "pending").length,
-    failed: mockScans.filter((s) => s.status === "failed").length,
-  }), []);
+  const statusCounts = useMemo(
+    () => ({
+      all: mockScans.length,
+      active: mockScans.filter((s) => s.status === 'active').length,
+      completed: mockScans.filter((s) => s.status === 'completed').length,
+      pending: mockScans.filter((s) => s.status === 'pending').length,
+      failed: mockScans.filter((s) => s.status === 'failed').length,
+    }),
+    []
+  )
 
   // Table columns - memoized to prevent infinite re-renders
-  const columns: ColumnDef<Scan>[] = useMemo(() => [
-    {
-      id: "select",
-      header: ({ table }) => (
-        <Checkbox
-          checked={
-            table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && "indeterminate")
-          }
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="Select all"
-        />
-      ),
-      cell: ({ row }) => (
-        <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="Select row"
-        />
-      ),
-      enableSorting: false,
-      enableHiding: false,
-    },
-    {
-      accessorKey: "name",
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="-ml-4"
-        >
-          Name
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      ),
-      cell: ({ row }) => (
-        <div>
-          <p className="font-medium">{row.original.name}</p>
-          {row.original.description && (
-            <p className="text-muted-foreground max-w-[300px] truncate text-xs">
-              {row.original.description}
-            </p>
-          )}
-        </div>
-      ),
-    },
-    {
-      accessorKey: "type",
-      header: "Type",
-      cell: ({ row }) => (
-        <Badge
-          variant="outline"
-          className={
-            row.original.type === "full"
-              ? "border-blue-500 text-blue-500"
-              : row.original.type === "quick"
-              ? "border-green-500 text-green-500"
-              : row.original.type === "compliance"
-              ? "border-purple-500 text-purple-500"
-              : "border-orange-500 text-orange-500"
-          }
-        >
-          {SCAN_TYPE_CONFIG[row.original.type].label}
-        </Badge>
-      ),
-    },
-    {
-      accessorKey: "status",
-      header: "Status",
-      cell: ({ row }) => <StatusBadge status={row.original.status} />,
-    },
-    {
-      accessorKey: "progress",
-      header: "Progress",
-      cell: ({ row }) => {
-        const scan = row.original;
-        const isActive = scan.status === "active";
-        return (
+  const columns: ColumnDef<Scan>[] = useMemo(
+    () => [
+      {
+        id: 'select',
+        header: ({ table }) => (
+          <Checkbox
+            checked={
+              table.getIsAllPageRowsSelected() ||
+              (table.getIsSomePageRowsSelected() && 'indeterminate')
+            }
+            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+            aria-label="Select all"
+          />
+        ),
+        cell: ({ row }) => (
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            aria-label="Select row"
+          />
+        ),
+        enableSorting: false,
+        enableHiding: false,
+      },
+      {
+        accessorKey: 'name',
+        header: ({ column }) => (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+            className="-ml-4"
+          >
+            Name
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        ),
+        cell: ({ row }) => (
+          <div>
+            <p className="font-medium">{row.original.name}</p>
+            {row.original.description && (
+              <p className="text-muted-foreground max-w-[300px] truncate text-xs">
+                {row.original.description}
+              </p>
+            )}
+          </div>
+        ),
+      },
+      {
+        accessorKey: 'type',
+        header: 'Type',
+        cell: ({ row }) => (
+          <Badge
+            variant="outline"
+            className={
+              row.original.type === 'full'
+                ? 'border-blue-500 text-blue-500'
+                : row.original.type === 'quick'
+                  ? 'border-green-500 text-green-500'
+                  : row.original.type === 'compliance'
+                    ? 'border-purple-500 text-purple-500'
+                    : 'border-orange-500 text-orange-500'
+            }
+          >
+            {SCAN_TYPE_CONFIG[row.original.type].label}
+          </Badge>
+        ),
+      },
+      {
+        accessorKey: 'status',
+        header: 'Status',
+        cell: ({ row }) => <StatusBadge status={row.original.status} />,
+      },
+      {
+        accessorKey: 'progress',
+        header: 'Progress',
+        cell: ({ row }) => {
+          const scan = row.original
+          const isActive = scan.status === 'active'
+          return (
+            <div className="flex items-center gap-2">
+              <Progress
+                value={scan.progress}
+                className={`h-2 w-20 shrink-0 ${isActive ? '[&>div]:animate-pulse' : ''}`}
+              />
+              <span className="text-muted-foreground text-xs w-10 shrink-0">{scan.progress}%</span>
+            </div>
+          )
+        },
+      },
+      {
+        accessorKey: 'targetCount',
+        header: ({ column }) => (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+            className="-ml-4"
+          >
+            Targets
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        ),
+        cell: ({ row }) => <span className="text-sm">{row.original.targetCount}</span>,
+      },
+      {
+        accessorKey: 'findingsCount',
+        header: ({ column }) => (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+            className="-ml-4"
+          >
+            Findings
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        ),
+        cell: ({ row }) => {
+          const scan = row.original
+          if (scan.findingsCount === 0) return <span className="text-muted-foreground">-</span>
+          return (
+            <div className="flex items-center gap-1">
+              {scan.criticalCount > 0 && (
+                <Badge className="bg-red-600 px-1.5 text-xs">C {scan.criticalCount}</Badge>
+              )}
+              {scan.highCount > 0 && (
+                <Badge className="bg-orange-500 px-1.5 text-xs">H {scan.highCount}</Badge>
+              )}
+              {(scan.mediumCount > 0 || scan.lowCount > 0) && (
+                <Badge variant="secondary" className="px-1.5 text-xs">
+                  +{scan.mediumCount + scan.lowCount}
+                </Badge>
+              )}
+            </div>
+          )
+        },
+      },
+      {
+        accessorKey: 'createdByName',
+        header: 'Created By',
+        cell: ({ row }) => (
           <div className="flex items-center gap-2">
-            <Progress
-              value={scan.progress}
-              className={`h-2 w-20 shrink-0 ${isActive ? "[&>div]:animate-pulse" : ""}`}
-            />
-            <span className="text-muted-foreground text-xs w-10 shrink-0">
-              {scan.progress}%
-            </span>
+            <Avatar className="h-6 w-6">
+              <AvatarFallback className="text-xs">
+                {row.original.createdByName.charAt(0)}
+              </AvatarFallback>
+            </Avatar>
+            <span className="text-sm truncate max-w-[100px]">{row.original.createdByName}</span>
           </div>
-        );
+        ),
       },
-    },
-    {
-      accessorKey: "targetCount",
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="-ml-4"
-        >
-          Targets
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      ),
-      cell: ({ row }) => (
-        <span className="text-sm">{row.original.targetCount}</span>
-      ),
-    },
-    {
-      accessorKey: "findingsCount",
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="-ml-4"
-        >
-          Findings
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      ),
-      cell: ({ row }) => {
-        const scan = row.original;
-        if (scan.findingsCount === 0) return <span className="text-muted-foreground">-</span>;
-        return (
-          <div className="flex items-center gap-1">
-            {scan.criticalCount > 0 && (
-              <Badge className="bg-red-600 px-1.5 text-xs">C {scan.criticalCount}</Badge>
-            )}
-            {scan.highCount > 0 && (
-              <Badge className="bg-orange-500 px-1.5 text-xs">H {scan.highCount}</Badge>
-            )}
-            {(scan.mediumCount > 0 || scan.lowCount > 0) && (
-              <Badge variant="secondary" className="px-1.5 text-xs">
-                +{scan.mediumCount + scan.lowCount}
-              </Badge>
-            )}
-          </div>
-        );
+      {
+        id: 'actions',
+        cell: ({ row }) => <RunActionsCell run={row.original} setSelectedRun={setSelectedRun} />,
       },
-    },
-    {
-      accessorKey: "createdByName",
-      header: "Created By",
-      cell: ({ row }) => (
-        <div className="flex items-center gap-2">
-          <Avatar className="h-6 w-6">
-            <AvatarFallback className="text-xs">
-              {row.original.createdByName.charAt(0)}
-            </AvatarFallback>
-          </Avatar>
-          <span className="text-sm truncate max-w-[100px]">{row.original.createdByName}</span>
-        </div>
-      ),
-    },
-    {
-      id: "actions",
-      cell: ({ row }) => <RunActionsCell run={row.original} setSelectedRun={setSelectedRun} />,
-    },
-  ], []);
+    ],
+    []
+  )
 
   const table = useReactTable({
     data: scans,
@@ -1497,15 +1526,15 @@ function RunsTab() {
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-  });
+  })
 
   // Active filters count
-  const activeFiltersCount = [statusFilter !== "all", typeFilter !== "all"].filter(Boolean).length;
+  const activeFiltersCount = [statusFilter !== 'all', typeFilter !== 'all'].filter(Boolean).length
 
   const clearFilters = () => {
-    setStatusFilter("all");
-    setTypeFilter("all");
-  };
+    setStatusFilter('all')
+    setTypeFilter('all')
+  }
 
   return (
     <>
@@ -1513,7 +1542,7 @@ function RunsTab() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Card
           className="cursor-pointer hover:border-primary transition-colors"
-          onClick={() => setStatusFilter("all")}
+          onClick={() => setStatusFilter('all')}
         >
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-2">
@@ -1524,45 +1553,39 @@ function RunsTab() {
           </CardHeader>
         </Card>
         <Card
-          className={`cursor-pointer hover:border-blue-500 transition-colors ${statusFilter === "active" ? "border-blue-500" : ""}`}
-          onClick={() => setStatusFilter("active")}
+          className={`cursor-pointer hover:border-blue-500 transition-colors ${statusFilter === 'active' ? 'border-blue-500' : ''}`}
+          onClick={() => setStatusFilter('active')}
         >
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-2">
               <Activity className="h-4 w-4 text-blue-500" />
               Active
             </CardDescription>
-            <CardTitle className="text-3xl text-blue-500">
-              {stats.activeScans}
-            </CardTitle>
+            <CardTitle className="text-3xl text-blue-500">{stats.activeScans}</CardTitle>
           </CardHeader>
         </Card>
         <Card
-          className={`cursor-pointer hover:border-green-500 transition-colors ${statusFilter === "completed" ? "border-green-500" : ""}`}
-          onClick={() => setStatusFilter("completed")}
+          className={`cursor-pointer hover:border-green-500 transition-colors ${statusFilter === 'completed' ? 'border-green-500' : ''}`}
+          onClick={() => setStatusFilter('completed')}
         >
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-2">
               <CheckCircle className="h-4 w-4 text-green-500" />
               Completed
             </CardDescription>
-            <CardTitle className="text-3xl text-green-500">
-              {stats.completedScans}
-            </CardTitle>
+            <CardTitle className="text-3xl text-green-500">{stats.completedScans}</CardTitle>
           </CardHeader>
         </Card>
         <Card
-          className={`cursor-pointer hover:border-red-500 transition-colors ${statusFilter === "failed" ? "border-red-500" : ""}`}
-          onClick={() => setStatusFilter("failed")}
+          className={`cursor-pointer hover:border-red-500 transition-colors ${statusFilter === 'failed' ? 'border-red-500' : ''}`}
+          onClick={() => setStatusFilter('failed')}
         >
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-red-500" />
               Failed
             </CardDescription>
-            <CardTitle className="text-3xl text-red-500">
-              {stats.failedScans}
-            </CardTitle>
+            <CardTitle className="text-3xl text-red-500">{stats.failedScans}</CardTitle>
           </CardHeader>
         </Card>
         <Card>
@@ -1652,7 +1675,7 @@ function RunsTab() {
                         {runTypeFilters.map((filter) => (
                           <Badge
                             key={filter.value}
-                            variant={typeFilter === filter.value ? "default" : "outline"}
+                            variant={typeFilter === filter.value ? 'default' : 'outline'}
                             className="cursor-pointer"
                             onClick={() => setTypeFilter(filter.value)}
                           >
@@ -1673,18 +1696,18 @@ function RunsTab() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => toast.success("Paused selected scans")}>
+                    <DropdownMenuItem onClick={() => toast.success('Paused selected scans')}>
                       <Pause className="mr-2 h-4 w-4" />
                       Pause Selected
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => toast.success("Stopped selected scans")}>
+                    <DropdownMenuItem onClick={() => toast.success('Stopped selected scans')}>
                       <XCircle className="mr-2 h-4 w-4" />
                       Stop Selected
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       className="text-red-400"
-                      onClick={() => toast.success("Deleted selected scans")}
+                      onClick={() => toast.success('Deleted selected scans')}
                     >
                       <Trash2 className="mr-2 h-4 w-4" />
                       Delete Selected
@@ -1699,11 +1722,11 @@ function RunsTab() {
           {activeFiltersCount > 0 && (
             <div className="flex flex-wrap items-center gap-2 mb-4">
               <span className="text-sm text-muted-foreground">Active filters:</span>
-              {typeFilter !== "all" && (
+              {typeFilter !== 'all' && (
                 <Badge variant="secondary" className="gap-1">
                   Type: {runTypeFilters.find((f) => f.value === typeFilter)?.label}
                   <button
-                    onClick={() => setTypeFilter("all")}
+                    onClick={() => setTypeFilter('all')}
                     className="ml-1 hover:text-foreground"
                   >
                     x
@@ -1734,14 +1757,16 @@ function RunsTab() {
                   table.getRowModel().rows.map((row) => (
                     <TableRow
                       key={row.id}
-                      data-state={row.getIsSelected() && "selected"}
+                      data-state={row.getIsSelected() && 'selected'}
                       className="cursor-pointer"
                       onClick={(e) => {
-                        if ((e.target as HTMLElement).closest('[role="checkbox"]') ||
-                            (e.target as HTMLElement).closest('button')) {
-                          return;
+                        if (
+                          (e.target as HTMLElement).closest('[role="checkbox"]') ||
+                          (e.target as HTMLElement).closest('button')
+                        ) {
+                          return
                         }
-                        setSelectedRun(row.original);
+                        setSelectedRun(row.original)
                       }}
                     >
                       {row.getVisibleCells().map((cell) => (
@@ -1765,7 +1790,7 @@ function RunsTab() {
           {/* Pagination */}
           <div className="flex items-center justify-between mt-4">
             <p className="text-sm text-muted-foreground">
-              {table.getFilteredSelectedRowModel().rows.length} of{" "}
+              {table.getFilteredSelectedRowModel().rows.length} of{' '}
               {table.getFilteredRowModel().rows.length} row(s) selected
             </p>
             <div className="flex flex-wrap items-center gap-2">
@@ -1819,7 +1844,7 @@ function RunsTab() {
         </SheetContent>
       </Sheet>
     </>
-  );
+  )
 }
 
 // ============================================
@@ -1827,31 +1852,36 @@ function RunsTab() {
 // ============================================
 
 interface RunDetailSheetProps {
-  run: Scan;
+  run: Scan
 }
 
 function RunDetailSheet({ run }: RunDetailSheetProps) {
   return (
     <>
       {/* Hero Header */}
-      <div className={`px-6 pt-6 pb-4 ${
-        run.status === "active" ? "bg-gradient-to-br from-blue-500/20 via-blue-500/10 to-transparent" :
-        run.status === "completed" ? "bg-gradient-to-br from-green-500/20 via-green-500/10 to-transparent" :
-        run.status === "pending" ? "bg-gradient-to-br from-yellow-500/20 via-yellow-500/10 to-transparent" :
-        "bg-gradient-to-br from-red-500/20 via-red-500/10 to-transparent"
-      }`}>
+      <div
+        className={`px-6 pt-6 pb-4 ${
+          run.status === 'active'
+            ? 'bg-gradient-to-br from-blue-500/20 via-blue-500/10 to-transparent'
+            : run.status === 'completed'
+              ? 'bg-gradient-to-br from-green-500/20 via-green-500/10 to-transparent'
+              : run.status === 'pending'
+                ? 'bg-gradient-to-br from-yellow-500/20 via-yellow-500/10 to-transparent'
+                : 'bg-gradient-to-br from-red-500/20 via-red-500/10 to-transparent'
+        }`}
+      >
         {/* Status & Type Row */}
         <div className="flex items-center justify-between mb-3">
           <Badge
             variant="outline"
             className={
-              run.type === "full"
-                ? "border-blue-500 text-blue-500"
-                : run.type === "quick"
-                ? "border-green-500 text-green-500"
-                : run.type === "compliance"
-                ? "border-purple-500 text-purple-500"
-                : "border-orange-500 text-orange-500"
+              run.type === 'full'
+                ? 'border-blue-500 text-blue-500'
+                : run.type === 'quick'
+                  ? 'border-green-500 text-green-500'
+                  : run.type === 'compliance'
+                    ? 'border-purple-500 text-purple-500'
+                    : 'border-orange-500 text-orange-500'
             }
           >
             {SCAN_TYPE_CONFIG[run.type].label}
@@ -1861,65 +1891,80 @@ function RunDetailSheet({ run }: RunDetailSheetProps) {
 
         {/* Title */}
         <h2 className="text-xl font-bold mb-1">{run.name}</h2>
-        {run.description && (
-          <p className="text-sm text-muted-foreground">{run.description}</p>
-        )}
+        {run.description && <p className="text-sm text-muted-foreground">{run.description}</p>}
 
         {/* Progress Bar */}
         <div className="mt-4 p-4 rounded-xl bg-background/80 backdrop-blur border">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium">Progress</span>
-            <span className={`text-2xl font-bold ${
-              run.progress === 100 ? "text-green-500" :
-              run.status === "failed" ? "text-red-500" :
-              "text-blue-500"
-            }`}>
+            <span
+              className={`text-2xl font-bold ${
+                run.progress === 100
+                  ? 'text-green-500'
+                  : run.status === 'failed'
+                    ? 'text-red-500'
+                    : 'text-blue-500'
+              }`}
+            >
               {run.progress}%
             </span>
           </div>
           <Progress
             value={run.progress}
             className={`h-3 ${
-              run.status === "active" ? "[&>div]:animate-pulse [&>div]:bg-blue-500" :
-              run.progress === 100 ? "[&>div]:bg-green-500" :
-              run.status === "failed" ? "[&>div]:bg-red-500" :
-              "[&>div]:bg-yellow-500"
+              run.status === 'active'
+                ? '[&>div]:animate-pulse [&>div]:bg-blue-500'
+                : run.progress === 100
+                  ? '[&>div]:bg-green-500'
+                  : run.status === 'failed'
+                    ? '[&>div]:bg-red-500'
+                    : '[&>div]:bg-yellow-500'
             }`}
           />
           <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
             <span>{run.targetCount} targets</span>
-            <span>{run.duration ? formatDuration(run.duration) : "In progress"}</span>
+            <span>{run.duration ? formatDuration(run.duration) : 'In progress'}</span>
           </div>
         </div>
 
         {/* Quick Actions */}
         <div className="flex gap-2 mt-4">
-          {run.status === "active" && (
+          {run.status === 'active' && (
             <>
-              <Button size="sm" variant="secondary" className="flex-1" onClick={() => toast.success("Paused")}>
+              <Button
+                size="sm"
+                variant="secondary"
+                className="flex-1"
+                onClick={() => toast.success('Paused')}
+              >
                 <Pause className="mr-2 h-4 w-4" />
                 Pause
               </Button>
-              <Button size="sm" variant="destructive" className="flex-1" onClick={() => toast.success("Stopped")}>
+              <Button
+                size="sm"
+                variant="destructive"
+                className="flex-1"
+                onClick={() => toast.success('Stopped')}
+              >
                 <XCircle className="mr-2 h-4 w-4" />
                 Stop
               </Button>
             </>
           )}
-          {run.status === "pending" && (
-            <Button size="sm" className="flex-1" onClick={() => toast.success("Started")}>
+          {run.status === 'pending' && (
+            <Button size="sm" className="flex-1" onClick={() => toast.success('Started')}>
               <Play className="mr-2 h-4 w-4" />
               Start Now
             </Button>
           )}
-          {run.status === "failed" && (
-            <Button size="sm" className="flex-1" onClick={() => toast.success("Retrying")}>
+          {run.status === 'failed' && (
+            <Button size="sm" className="flex-1" onClick={() => toast.success('Retrying')}>
               <RefreshCw className="mr-2 h-4 w-4" />
               Retry
             </Button>
           )}
-          {run.status === "completed" && (
-            <Button size="sm" className="flex-1" onClick={() => toast.success("Viewing report")}>
+          {run.status === 'completed' && (
+            <Button size="sm" className="flex-1" onClick={() => toast.success('Viewing report')}>
               <Eye className="mr-2 h-4 w-4" />
               View Report
             </Button>
@@ -2039,7 +2084,7 @@ function RunDetailSheet({ run }: RunDetailSheetProps) {
               <p className="text-sm text-muted-foreground mb-4">
                 {run.findingsCount} vulnerabilities detected across {run.targetCount} targets.
               </p>
-              <Button className="w-full" onClick={() => toast.success("Navigating to findings")}>
+              <Button className="w-full" onClick={() => toast.success('Navigating to findings')}>
                 View All Findings
               </Button>
             </div>
@@ -2048,9 +2093,9 @@ function RunDetailSheet({ run }: RunDetailSheetProps) {
               <Shield className="h-12 w-12 text-green-500 mx-auto mb-3" />
               <h4 className="font-medium mb-1">No Findings</h4>
               <p className="text-sm text-muted-foreground">
-                {run.status === "completed"
-                  ? "Great news! No vulnerabilities were detected."
-                  : "Scan is still in progress or has not started yet."}
+                {run.status === 'completed'
+                  ? 'Great news! No vulnerabilities were detected.'
+                  : 'Scan is still in progress or has not started yet.'}
               </p>
             </div>
           )}
@@ -2079,14 +2124,16 @@ function RunDetailSheet({ run }: RunDetailSheetProps) {
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Run ID</span>
                 <div className="flex items-center gap-2">
-                  <code className="text-xs bg-muted px-2 py-1 rounded truncate max-w-[150px]">{run.id}</code>
+                  <code className="text-xs bg-muted px-2 py-1 rounded truncate max-w-[150px]">
+                    {run.id}
+                  </code>
                   <Button
                     variant="ghost"
                     size="sm"
                     className="h-6 w-6 p-0"
                     onClick={() => {
-                      navigator.clipboard.writeText(run.id);
-                      toast.success("ID copied to clipboard");
+                      navigator.clipboard.writeText(run.id)
+                      toast.success('ID copied to clipboard')
                     }}
                   >
                     <Copy className="h-3 w-3" />
@@ -2095,7 +2142,9 @@ function RunDetailSheet({ run }: RunDetailSheetProps) {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Intensity</span>
-                <Badge variant="outline" className="capitalize">{run.intensity}</Badge>
+                <Badge variant="outline" className="capitalize">
+                  {run.intensity}
+                </Badge>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Max Concurrent</span>
@@ -2121,7 +2170,7 @@ function RunDetailSheet({ run }: RunDetailSheetProps) {
                 variant="destructive"
                 size="sm"
                 className="w-full"
-                onClick={() => toast.success("Deleted")}
+                onClick={() => toast.success('Deleted')}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete Run
@@ -2131,5 +2180,5 @@ function RunDetailSheet({ run }: RunDetailSheetProps) {
         </TabsContent>
       </Tabs>
     </>
-  );
+  )
 }
