@@ -96,9 +96,13 @@ export function SubModuleGate({
   // Find the specific sub-module
   const subModuleInfo = parentSubModules.find((m) => m.slug === subModule)
 
-  // Check if sub-module exists and is active
-  const hasSubModule =
-    subModuleInfo && subModuleInfo.is_active && subModuleInfo.release_status !== 'disabled'
+  // Check if sub-module exists, is active, and has accessible release status
+  // Only 'released' and 'beta' statuses allow access
+  // 'coming_soon', 'disabled', 'deprecated' block access
+  const isAccessibleStatus =
+    subModuleInfo?.release_status === 'released' || subModuleInfo?.release_status === 'beta'
+
+  const hasSubModule = subModuleInfo && subModuleInfo.is_active && isAccessibleStatus
 
   if (hasSubModule) {
     return children
@@ -109,13 +113,17 @@ export function SubModuleGate({
     return fallback
   }
 
-  // Show UpgradePrompt with sub-module info
+  // Determine the appropriate message based on status
   const moduleName = subModuleInfo?.name || `${parentModule}.${subModule}`
+  const isComingSoon = subModuleInfo?.release_status === 'coming_soon'
+
+  // Show UpgradePrompt with sub-module info
   return (
     <UpgradePrompt
       module={`${parentModule}.${subModule}`}
       moduleName={moduleName}
       variant={promptVariant}
+      isComingSoon={isComingSoon}
     />
   )
 }
@@ -141,12 +149,16 @@ export function useSubModuleAccess(parentModule: string, subModule: string) {
   const parentSubModules = subModules[parentModule] || []
   const subModuleInfo = parentSubModules.find((m) => m.slug === subModule)
 
-  const hasSubModule =
-    subModuleInfo && subModuleInfo.is_active && subModuleInfo.release_status !== 'disabled'
+  // Only 'released' and 'beta' statuses allow access
+  const isAccessibleStatus =
+    subModuleInfo?.release_status === 'released' || subModuleInfo?.release_status === 'beta'
+
+  const hasSubModule = subModuleInfo && subModuleInfo.is_active && isAccessibleStatus
 
   return {
     hasSubModule: !!hasSubModule,
     subModuleInfo,
+    isComingSoon: subModuleInfo?.release_status === 'coming_soon',
     isLoading,
   }
 }

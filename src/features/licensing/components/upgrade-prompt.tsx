@@ -19,7 +19,7 @@
 
 'use client'
 
-import { Lock, Sparkles, ArrowRight } from 'lucide-react'
+import { Lock, Sparkles, ArrowRight, Clock } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -111,6 +111,13 @@ interface UpgradePromptProps {
   variant?: 'card' | 'banner' | 'inline'
 
   /**
+   * Whether this is a "Coming Soon" feature (not yet released)
+   * Shows different messaging when true
+   * @default false
+   */
+  isComingSoon?: boolean
+
+  /**
    * Additional CSS classes
    */
   className?: string
@@ -125,42 +132,58 @@ export function UpgradePrompt({
   moduleName,
   description,
   variant = 'card',
+  isComingSoon = false,
   className,
 }: UpgradePromptProps) {
   const info = MODULE_INFO[module] || { name: module, description: '' }
   const displayName = moduleName || info.name
   const displayDescription = description || info.description
 
+  // Coming Soon specific messages
+  const comingSoonDescription =
+    'This feature is currently under development and will be available soon. Stay tuned for updates!'
+
   // Banner variant - horizontal at top
   if (variant === 'banner') {
     return (
       <div
         className={cn(
-          'bg-gradient-to-r from-primary/10 via-primary/5 to-transparent',
-          'border border-primary/20 rounded-lg p-4',
+          isComingSoon
+            ? 'bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border-amber-500/20'
+            : 'bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-primary/20',
+          'border rounded-lg p-4',
           className
         )}
       >
         <div className="flex items-center gap-4">
-          <div className="flex-shrink-0 p-2 bg-primary/10 rounded-lg">
-            <Lock className="h-5 w-5 text-primary" />
+          <div
+            className={cn(
+              'flex-shrink-0 p-2 rounded-lg',
+              isComingSoon ? 'bg-amber-500/10' : 'bg-primary/10'
+            )}
+          >
+            {isComingSoon ? (
+              <Clock className="h-5 w-5 text-amber-500" />
+            ) : (
+              <Lock className="h-5 w-5 text-primary" />
+            )}
           </div>
           <div className="flex-1 min-w-0">
             <p className="font-medium text-foreground">
-              Upgrade to unlock {displayName}
+              {isComingSoon ? `${displayName} - Coming Soon` : `Upgrade to unlock ${displayName}`}
             </p>
-            {displayDescription && (
-              <p className="text-sm text-muted-foreground truncate">
-                {displayDescription}
-              </p>
-            )}
+            <p className="text-sm text-muted-foreground truncate">
+              {isComingSoon ? comingSoonDescription : displayDescription}
+            </p>
           </div>
-          <Button asChild size="sm">
-            <Link href="/settings/billing">
-              View Plans
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
+          {!isComingSoon && (
+            <Button asChild size="sm">
+              <Link href="/settings/billing">
+                View Plans
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          )}
         </div>
       </div>
     )
@@ -169,21 +192,19 @@ export function UpgradePrompt({
   // Inline variant - minimal
   if (variant === 'inline') {
     return (
-      <div
-        className={cn(
-          'flex items-center gap-2 text-sm text-muted-foreground',
-          className
-        )}
-      >
-        <Lock className="h-4 w-4" />
+      <div className={cn('flex items-center gap-2 text-sm text-muted-foreground', className)}>
+        {isComingSoon ? <Clock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
         <span>
-          {displayName} is not available on your current plan.{' '}
-          <Link
-            href="/settings/billing"
-            className="text-primary hover:underline font-medium"
-          >
-            Upgrade
-          </Link>
+          {isComingSoon ? (
+            `${displayName} is coming soon.`
+          ) : (
+            <>
+              {displayName} is not available on your current plan.{' '}
+              <Link href="/settings/billing" className="text-primary hover:underline font-medium">
+                Upgrade
+              </Link>
+            </>
+          )}
         </span>
       </div>
     )
@@ -194,34 +215,44 @@ export function UpgradePrompt({
     <Card className={cn('border-dashed', className)}>
       <CardContent className="flex flex-col items-center justify-center py-16 px-8 text-center">
         <div className="relative mb-6">
-          <div className="p-4 bg-muted rounded-full">
-            <Lock className="h-10 w-10 text-muted-foreground" />
+          <div className={cn('p-4 rounded-full', isComingSoon ? 'bg-amber-500/10' : 'bg-muted')}>
+            {isComingSoon ? (
+              <Clock className="h-10 w-10 text-amber-500" />
+            ) : (
+              <Lock className="h-10 w-10 text-muted-foreground" />
+            )}
           </div>
-          <div className="absolute -top-1 -right-1 p-1 bg-primary rounded-full">
-            <Sparkles className="h-4 w-4 text-primary-foreground" />
-          </div>
+          {!isComingSoon && (
+            <div className="absolute -top-1 -right-1 p-1 bg-primary rounded-full">
+              <Sparkles className="h-4 w-4 text-primary-foreground" />
+            </div>
+          )}
         </div>
 
         <h3 className="text-xl font-semibold mb-2">
-          {displayName} Not Available
+          {isComingSoon ? `${displayName} - Coming Soon` : `${displayName} Not Available`}
         </h3>
 
         <p className="text-muted-foreground mb-6 max-w-md">
-          {displayDescription ||
-            'This feature is not available on your current plan. Upgrade to access this and more advanced features.'}
+          {isComingSoon
+            ? comingSoonDescription
+            : displayDescription ||
+              'This feature is not available on your current plan. Upgrade to access this and more advanced features.'}
         </p>
 
-        <div className="flex flex-col sm:flex-row gap-3">
-          <Button asChild>
-            <Link href="/settings/billing">
-              <Sparkles className="mr-2 h-4 w-4" />
-              View Plans
-            </Link>
-          </Button>
-          <Button variant="outline" asChild>
-            <Link href="/settings/billing#compare">Compare Features</Link>
-          </Button>
-        </div>
+        {!isComingSoon && (
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button asChild>
+              <Link href="/settings/billing">
+                <Sparkles className="mr-2 h-4 w-4" />
+                View Plans
+              </Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link href="/settings/billing#compare">Compare Features</Link>
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   )
