@@ -441,6 +441,17 @@ export const assetEndpoints = {
    * Archive asset (set status to archived)
    */
   archive: (assetId: string) => `${API_BASE.ASSETS}/${assetId}/archive`,
+
+  // ============================================
+  // STATISTICS
+  // ============================================
+
+  /**
+   * Get asset statistics (comprehensive stats with all breakdowns)
+   * Includes: by_type, by_status, by_criticality, by_scope, by_exposure,
+   * high_risk_count, findings_total, risk_score_avg
+   */
+  stats: () => `${API_BASE.ASSETS}/stats`,
 } as const
 
 // ============================================

@@ -122,7 +122,7 @@ export default function CloudAccountsPage() {
         />
 
         {/* Stats */}
-        <div className="grid gap-4 md:grid-cols-5 mb-6">
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 mb-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Accounts</CardTitle>
@@ -166,6 +166,10 @@ export default function CloudAccountsPage() {
               </div>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Scope Coverage */}
+        <div className="mb-6">
           <ScopeCoverageCard
             coverage={scopeCoverage}
             title="Scope Coverage"

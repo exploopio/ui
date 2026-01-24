@@ -14,8 +14,13 @@ type Team = {
 
 /**
  * Release status for sidebar items (synced with backend module status)
+ * - released: Normal, clickable
+ * - coming_soon: Show "Soon" badge, disabled
+ * - beta: Show "Beta" badge, clickable
+ * - deprecated: May show warning or be hidden
+ * - disabled: Hidden from sidebar completely
  */
-type ReleaseStatus = 'released' | 'coming_soon' | 'beta' | 'deprecated'
+type ReleaseStatus = 'released' | 'coming_soon' | 'beta' | 'deprecated' | 'disabled'
 
 type BaseNavItem = {
   title: string
@@ -46,6 +51,13 @@ type BaseNavItem = {
    * Example: 'findings', 'scans', 'compliance'
    */
   module?: string
+  /**
+   * Asset module key for visibility control.
+   * Used to filter Asset Inventory items based on development status.
+   * Example: 'domains', 'websites', 'mobile'
+   * @see src/config/asset-modules.ts
+   */
+  assetModuleKey?: string
   /**
    * Release status of this item (set dynamically based on module status from backend)
    * - released: Normal, clickable

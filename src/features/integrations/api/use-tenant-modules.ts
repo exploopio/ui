@@ -22,8 +22,13 @@ import type { NotificationEventType } from '../types/integration.types'
 
 /**
  * Release status for a module
+ * - released: Module is fully available
+ * - coming_soon: Module is planned, shown with "Soon" badge, disabled
+ * - beta: Module is in beta, shown with "Beta" badge, usable
+ * - deprecated: Module is being phased out
+ * - disabled: Module is hidden from sidebar completely
  */
-export type ReleaseStatus = 'released' | 'coming_soon' | 'beta' | 'deprecated'
+export type ReleaseStatus = 'released' | 'coming_soon' | 'beta' | 'deprecated' | 'disabled'
 
 /**
  * Permission belonging to a module
@@ -48,6 +53,8 @@ export interface LicensingModule {
   display_order: number
   is_active: boolean
   release_status: ReleaseStatus
+  /** Parent module ID for sub-modules (e.g., "assets" for "assets.domains") */
+  parent_module_id?: string
   event_types?: string[]
   /** Permissions that belong to this module - used for access control */
   permissions?: ModulePermission[]
@@ -59,6 +66,8 @@ export interface LicensingModule {
 export interface TenantModulesResponse {
   module_ids: string[]
   modules: LicensingModule[]
+  /** Sub-modules organized by parent module ID (e.g., "assets" -> [domains, certificates, ...]) */
+  sub_modules?: Record<string, LicensingModule[]>
   event_types?: NotificationEventType[]
   coming_soon_module_ids?: string[]
   beta_module_ids?: string[]
@@ -121,6 +130,8 @@ export function useTenantModules() {
     moduleIds: data?.module_ids || [],
     /** Full module objects with details */
     modules: data?.modules || [],
+    /** Sub-modules organized by parent module ID (e.g., "assets" -> [domains, certificates, ...]) */
+    subModules: data?.sub_modules || {},
     /** Pre-computed available event types for this tenant */
     eventTypes: data?.event_types || [],
     /** Module IDs that are coming soon */

@@ -1,6 +1,6 @@
 'use client'
 
-import { type ReactNode } from 'react'
+import { type ReactNode, useMemo } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ChevronRight } from 'lucide-react'
@@ -32,6 +32,10 @@ import {
   type NavGroup as NavGroupProps,
 } from '@/components/types'
 import { useDynamicBadges, getBadgeValue, type DynamicBadges } from '@/hooks/use-dynamic-badges'
+import {
+  useTenantModules,
+  type LicensingModule,
+} from '@/features/integrations/api/use-tenant-modules'
 
 export function NavGroup({ title, items }: NavGroupProps) {
   const { state, isMobile } = useSidebar()
@@ -91,7 +95,7 @@ function NavBadge({
     return (
       <Badge
         variant="outline"
-        className="rounded-full px-1.5 py-0 text-[10px] text-muted-foreground border-dashed"
+        className="ms-auto shrink-0 rounded-full px-1.5 py-0 text-[10px] text-muted-foreground border-dashed"
       >
         {children}
       </Badge>
@@ -100,12 +104,12 @@ function NavBadge({
   // Beta badge styling
   if (variant === 'beta' || children === 'Beta') {
     return (
-      <Badge variant="secondary" className="rounded-full px-1.5 py-0 text-[10px]">
+      <Badge variant="secondary" className="ms-auto shrink-0 rounded-full px-1.5 py-0 text-[10px]">
         {children}
       </Badge>
     )
   }
-  return <Badge className="rounded-full px-1 py-0 text-xs">{children}</Badge>
+  return <Badge className="ms-auto shrink-0 rounded-full px-1 py-0 text-xs">{children}</Badge>
 }
 
 /**
@@ -121,6 +125,65 @@ function getReleaseStatusBadge(
     return { text: 'Beta', variant: 'beta' }
   }
   return null
+}
+
+/**
+ * Filter sub-items based on sub-modules from API.
+ * - Items without assetModuleKey are always shown (like "Overview")
+ * - Items with assetModuleKey are filtered by sub-module release_status and is_active
+ * - "disabled" modules or is_active=false are hidden completely
+ * - "coming_soon" and "beta" modules get their release status applied
+ */
+function useFilteredSubItems(
+  items: NavLink[],
+  parentModuleId: string | undefined,
+  subModules: Record<string, LicensingModule[]>
+) {
+  return useMemo(() => {
+    // If no parent module specified, return all items
+    if (!parentModuleId) return items
+
+    // Get sub-modules for this parent
+    const parentSubModules = subModules[parentModuleId] || []
+
+    // If no sub-modules loaded yet, return all items (for loading state)
+    if (parentSubModules.length === 0 && Object.keys(subModules).length === 0) {
+      return items
+    }
+
+    return items
+      .map((item) => {
+        // Items without assetModuleKey are always shown (like "Overview")
+        if (!item.assetModuleKey) return item
+
+        // Find the sub-module that matches this item
+        const subModule = parentSubModules.find((m) => m.slug === item.assetModuleKey)
+
+        // If sub-module not found in API response, hide the item
+        // This means it's either not configured or the parent module has no sub-modules
+        if (!subModule) {
+          // If sub-modules exist for parent but this item not found, hide it
+          if (parentSubModules.length > 0) {
+            return null
+          }
+          // If no sub-modules at all for parent, show item as-is (backward compat)
+          return item
+        }
+
+        // If sub-module is inactive (is_active=false), hide completely
+        if (!subModule.is_active) return null
+
+        // If sub-module is disabled, hide completely
+        if (subModule.release_status === 'disabled') return null
+
+        // Apply release status from sub-module to the item
+        return {
+          ...item,
+          releaseStatus: subModule.release_status,
+        }
+      })
+      .filter((item): item is NavLink => item !== null)
+  }, [items, parentModuleId, subModules])
 }
 
 function SidebarMenuLink({
@@ -182,7 +245,11 @@ function SidebarMenuCollapsible({
   dynamicBadges: DynamicBadges
 }) {
   const { setOpenMobile } = useSidebar()
+  const { subModules } = useTenantModules()
   const releaseStatusBadge = getReleaseStatusBadge(item.releaseStatus)
+
+  // Filter sub-items based on sub-modules from API
+  const filteredItems = useFilteredSubItems(item.items, item.module, subModules)
 
   return (
     <Collapsible
@@ -205,7 +272,7 @@ function SidebarMenuCollapsible({
         </CollapsibleTrigger>
         <CollapsibleContent className="CollapsibleContent">
           <SidebarMenuSub>
-            {item.items.map((subItem) => {
+            {filteredItems.map((subItem) => {
               const subReleaseStatusBadge = getReleaseStatusBadge(subItem.releaseStatus)
               const isSubComingSoon = subItem.releaseStatus === 'coming_soon'
 
@@ -213,8 +280,8 @@ function SidebarMenuCollapsible({
                 return (
                   <SidebarMenuSubItem key={subItem.title}>
                     <SidebarMenuSubButton className="cursor-not-allowed opacity-60">
-                      {subItem.icon && <subItem.icon />}
-                      <span>{subItem.title}</span>
+                      {subItem.icon && <subItem.icon className="shrink-0" />}
+                      <span className="flex-1 truncate">{subItem.title}</span>
                       {subReleaseStatusBadge && (
                         <NavBadge variant={subReleaseStatusBadge.variant}>
                           {subReleaseStatusBadge.text}
@@ -229,8 +296,8 @@ function SidebarMenuCollapsible({
                 <SidebarMenuSubItem key={subItem.title}>
                   <SidebarMenuSubButton asChild isActive={checkIsActive(pathname, subItem)}>
                     <Link href={subItem.url} prefetch={false} onClick={() => setOpenMobile(false)}>
-                      {subItem.icon && <subItem.icon />}
-                      <span>{subItem.title}</span>
+                      {subItem.icon && <subItem.icon className="shrink-0" />}
+                      <span className="flex-1 truncate">{subItem.title}</span>
                       {subReleaseStatusBadge ? (
                         <NavBadge variant={subReleaseStatusBadge.variant}>
                           {subReleaseStatusBadge.text}
@@ -259,7 +326,11 @@ function SidebarMenuCollapsedDropdown({
   pathname: string
   dynamicBadges: DynamicBadges
 }) {
+  const { subModules } = useTenantModules()
   const releaseStatusBadge = getReleaseStatusBadge(item.releaseStatus)
+
+  // Filter sub-items based on sub-modules from API
+  const filteredItems = useFilteredSubItems(item.items, item.module, subModules)
 
   return (
     <SidebarMenuItem>
@@ -286,7 +357,7 @@ function SidebarMenuCollapsedDropdown({
                 : ''}
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          {item.items.map((sub) => {
+          {filteredItems.map((sub) => {
             const subReleaseStatusBadge = getReleaseStatusBadge(sub.releaseStatus)
             const isSubComingSoon = sub.releaseStatus === 'coming_soon'
 

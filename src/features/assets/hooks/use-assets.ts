@@ -78,12 +78,12 @@ interface BackendAsset {
   id: string
   tenant_id?: string
   name: string
-  type: string           // Backend uses "type" in JSON
-  criticality: string    // low, medium, high, critical
-  status: string         // active, inactive, archived
-  scope: string          // internal, external, cloud, partner, vendor, shadow
-  exposure: string       // public, restricted, private, isolated, unknown
-  risk_score: number     // 0-100
+  type: string // Backend uses "type" in JSON
+  criticality: string // low, medium, high, critical
+  status: string // active, inactive, archived
+  scope: string // internal, external, cloud, partner, vendor, shadow
+  exposure: string // public, restricted, private, isolated, unknown
+  risk_score: number // 0-100
   finding_count: number
   description?: string
   tags?: string[]
@@ -116,27 +116,45 @@ function transformAsset(backend: BackendAsset): Asset {
   }
 }
 
-// Asset stats from backend
+// Asset stats from backend - matches /api/v1/assets/stats response
 interface BackendAssetStats {
   total: number
   by_type: Record<string, number>
   by_status: Record<string, number>
-  average_risk_score: number
+  by_criticality: Record<string, number>
+  by_scope: Record<string, number>
+  by_exposure: Record<string, number>
+  with_findings: number
+  risk_score_avg: number
+  findings_total: number
+  high_risk_count?: number // Assets with risk_score >= 70
 }
 
 export interface AssetStatsData {
   total: number
   byType: Record<string, number>
   byStatus: Record<string, number>
+  byCriticality: Record<string, number>
+  byScope: Record<string, number>
+  byExposure: Record<string, number>
+  withFindings: number
   averageRiskScore: number
+  totalFindings: number
+  highRiskCount: number
 }
 
 function transformAssetStats(backend: BackendAssetStats): AssetStatsData {
   return {
-    total: backend.total,
+    total: backend.total || 0,
     byType: backend.by_type || {},
     byStatus: backend.by_status || {},
-    averageRiskScore: backend.average_risk_score || 0,
+    byCriticality: backend.by_criticality || {},
+    byScope: backend.by_scope || {},
+    byExposure: backend.by_exposure || {},
+    withFindings: backend.with_findings || 0,
+    averageRiskScore: backend.risk_score_avg || 0,
+    totalFindings: backend.findings_total || 0,
+    highRiskCount: backend.high_risk_count || 0,
   }
 }
 
@@ -270,9 +288,8 @@ export function useAssets(filters?: AssetSearchFilters) {
 
   // Build query string from filters
   const queryParams = buildAssetQueryParams(filters)
-  const queryString = Object.keys(queryParams).length > 0
-    ? '?' + new URLSearchParams(queryParams).toString()
-    : ''
+  const queryString =
+    Object.keys(queryParams).length > 0 ? '?' + new URLSearchParams(queryParams).toString() : ''
 
   // Only fetch if user has permission, tenant context, and not skipped
   const shouldFetch = currentTenant && canReadAssets && !filters?.skip
@@ -330,11 +347,15 @@ export function useAsset(assetId: string | null) {
 /**
  * Hook to fetch assets by type
  */
-export function useAssetsByType(type: AssetType, additionalFilters?: Omit<AssetSearchFilters, 'types'>) {
-  const { assets, total, isLoading, isError, error, mutate, totalPages, page, pageSize } = useAssets({
-    types: [type],
-    ...additionalFilters,
-  })
+export function useAssetsByType(
+  type: AssetType,
+  additionalFilters?: Omit<AssetSearchFilters, 'types'>
+) {
+  const { assets, total, isLoading, isError, error, mutate, totalPages, page, pageSize } =
+    useAssets({
+      types: [type],
+      ...additionalFilters,
+    })
 
   return {
     assets,
@@ -356,7 +377,7 @@ export async function createAsset(input: CreateAssetInput): Promise<Asset> {
   const response = await post<BackendAsset>(endpoints.assets.create(), {
     name: input.name,
     type: input.type,
-    criticality: input.criticality || 'medium',  // Default to medium if not specified
+    criticality: input.criticality || 'medium', // Default to medium if not specified
     description: input.description,
     scope: input.scope || 'internal',
     exposure: input.exposure || 'unknown',
@@ -396,28 +417,28 @@ export async function bulkDeleteAssets(assetIds: string[]): Promise<void> {
   const BATCH_SIZE = 5
   for (let i = 0; i < assetIds.length; i += BATCH_SIZE) {
     const batch = assetIds.slice(i, i + BATCH_SIZE)
-    await Promise.all(batch.map(id => del(endpoints.assets.delete(id))))
+    await Promise.all(batch.map((id) => del(endpoints.assets.delete(id))))
   }
 }
 
 /**
- * Hook for asset stats (uses global dashboard stats)
- * This provides cached asset statistics
- * Only fetches if user has dashboard:read or assets:read permission
+ * Hook for asset stats (uses dedicated /api/v1/assets/stats endpoint)
+ * This provides comprehensive cached asset statistics with all breakdowns
+ * Only fetches if user has assets:read permission
  */
 export function useAssetStats() {
   const { currentTenant } = useTenant()
-  const { canAny } = usePermissions()
-  const canReadStats = canAny(Permission.DashboardRead, Permission.AssetsRead)
+  const { can } = usePermissions()
+  const canReadAssets = can(Permission.AssetsRead)
 
   // Only fetch if user has permission and tenant context
-  const shouldFetch = currentTenant && canReadStats
+  const shouldFetch = currentTenant && canReadAssets
 
-  const { data, error, isLoading } = useSWR<{ assets: BackendAssetStats }>(
+  const { data, error, isLoading, mutate } = useSWR<BackendAssetStats>(
     shouldFetch ? 'asset-stats' : null,
     async () => {
-      // Fetch from dashboard global stats which includes asset stats
-      const response = await get<{ assets: BackendAssetStats }>(endpoints.dashboard.globalStats())
+      // Fetch from dedicated asset stats endpoint
+      const response = await get<BackendAssetStats>(endpoints.assets.stats())
       return response
     },
     {
@@ -430,13 +451,20 @@ export function useAssetStats() {
     total: 0,
     byType: {},
     byStatus: {},
+    byCriticality: {},
+    byScope: {},
+    byExposure: {},
+    withFindings: 0,
     averageRiskScore: 0,
+    totalFindings: 0,
+    highRiskCount: 0,
   }
 
   return {
-    stats: data?.assets ? transformAssetStats(data.assets) : emptyStats,
+    stats: data ? transformAssetStats(data) : emptyStats,
     isLoading: shouldFetch ? isLoading : false,
     error,
+    mutate,
   }
 }
 
@@ -510,7 +538,9 @@ export function useRepositoryAssets(additionalFilters?: Omit<AssetSearchFilters,
 /**
  * Create a repository asset (creates both asset and repository extension)
  */
-export async function createRepositoryAsset(input: CreateRepositoryAssetInput): Promise<AssetWithRepository> {
+export async function createRepositoryAsset(
+  input: CreateRepositoryAssetInput
+): Promise<AssetWithRepository> {
   const response = await post<BackendAssetWithRepository>(endpoints.assets.createRepository(), {
     // Asset fields
     name: input.name,
@@ -554,28 +584,31 @@ export async function updateRepositoryExtension(
   assetId: string,
   input: UpdateRepositoryExtensionInput
 ): Promise<RepositoryExtension> {
-  const response = await put<BackendRepositoryExtension>(endpoints.assets.updateRepository(assetId), {
-    full_name: input.fullName,
-    scm_organization: input.scmOrganization,
-    clone_url: input.cloneUrl,
-    web_url: input.webUrl,
-    ssh_url: input.sshUrl,
-    default_branch: input.defaultBranch,
-    visibility: input.visibility,
-    language: input.language,
-    languages: input.languages,
-    topics: input.topics,
-    stars: input.stars,
-    forks: input.forks,
-    watchers: input.watchers,
-    open_issues: input.openIssues,
-    size_kb: input.sizeKb,
-    scan_enabled: input.scanEnabled,
-    scan_schedule: input.scanSchedule,
-    repo_created_at: input.repoCreatedAt,
-    repo_updated_at: input.repoUpdatedAt,
-    repo_pushed_at: input.repoPushedAt,
-  })
+  const response = await put<BackendRepositoryExtension>(
+    endpoints.assets.updateRepository(assetId),
+    {
+      full_name: input.fullName,
+      scm_organization: input.scmOrganization,
+      clone_url: input.cloneUrl,
+      web_url: input.webUrl,
+      ssh_url: input.sshUrl,
+      default_branch: input.defaultBranch,
+      visibility: input.visibility,
+      language: input.language,
+      languages: input.languages,
+      topics: input.topics,
+      stars: input.stars,
+      forks: input.forks,
+      watchers: input.watchers,
+      open_issues: input.openIssues,
+      size_kb: input.sizeKb,
+      scan_enabled: input.scanEnabled,
+      scan_schedule: input.scanSchedule,
+      repo_created_at: input.repoCreatedAt,
+      repo_updated_at: input.repoUpdatedAt,
+      repo_pushed_at: input.repoPushedAt,
+    }
+  )
   return transformRepositoryExtension(response)
 }
 
