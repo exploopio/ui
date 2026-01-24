@@ -62,10 +62,14 @@ export const Module = {
 export const routePermissions: Record<string, RoutePermissionConfig> = {
   // ========================================
   // Dashboard
+  // Dashboard is a core feature - no module check required
+  // Only RBAC permission check is needed
   // ========================================
   '/': {
     permission: Permission.DashboardRead,
-    module: Module.Dashboard,
+    // NOTE: Removed module requirement - Dashboard is always available
+    // Module check was causing "Feature Not Available" for users with
+    // dashboard:read permission but tenant without dashboard module in plan
   },
 
   // ========================================

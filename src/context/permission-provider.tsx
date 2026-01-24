@@ -62,6 +62,13 @@ const POLL_INTERVAL_MS = 2 * 60 * 1000
 // API endpoint for permission sync
 const PERMISSIONS_SYNC_URL = '/api/v1/me/permissions/sync'
 
+// Minimum interval between fetches (5 seconds) to prevent rapid successive calls
+const MIN_FETCH_INTERVAL_MS = 5000
+
+// Minimum time tab must be hidden before sync on focus (30 seconds)
+// This prevents unnecessary syncs when quickly switching tabs
+const MIN_HIDDEN_DURATION_FOR_SYNC_MS = 30 * 1000
+
 // ============================================
 // CONTEXT
 // ============================================
@@ -85,7 +92,11 @@ export function PermissionProvider({ children }: PermissionProviderProps) {
   const [isLoading, setIsLoading] = React.useState(true)
   const [error, setError] = React.useState<Error | null>(null)
   const [isStale, setIsStale] = React.useState(false)
-  const [etag, setEtag] = React.useState<string | null>(null)
+
+  // Use refs for values that shouldn't trigger callback recreation
+  const etagRef = React.useRef<string | null>(null)
+  const lastFetchTimeRef = React.useRef<number>(0)
+  const tabHiddenAtRef = React.useRef<number>(0)
 
   // Track current tenant to detect switches
   const previousTenantIdRef = React.useRef<string | null>(null)
@@ -113,7 +124,8 @@ export function PermissionProvider({ children }: PermissionProviderProps) {
     // Tenant changed - reset state
     previousTenantIdRef.current = tenantId
     setIsLoading(true)
-    setEtag(null) // Clear ETag to force full fetch
+    etagRef.current = null // Clear ETag to force full fetch
+    lastFetchTimeRef.current = 0 // Reset fetch time
     setError(null)
     setIsStale(false)
 
@@ -135,6 +147,7 @@ export function PermissionProvider({ children }: PermissionProviderProps) {
   }, [tenantId])
 
   // Fetch permissions from server
+  // NOTE: This callback is stable (no etag in deps) to prevent cascading effect re-runs
   const fetchPermissions = React.useCallback(
     async (force = false) => {
       if (!tenantId) {
@@ -144,14 +157,31 @@ export function PermissionProvider({ children }: PermissionProviderProps) {
         return
       }
 
+      // Debounce: Skip if fetched recently (unless forced)
+      const now = Date.now()
+      if (!force && lastFetchTimeRef.current > 0) {
+        const timeSinceLastFetch = now - lastFetchTimeRef.current
+        if (timeSinceLastFetch < MIN_FETCH_INTERVAL_MS) {
+          if (process.env.NODE_ENV === 'development') {
+            console.log(
+              `[PermissionProvider] Skipping fetch - last fetch was ${timeSinceLastFetch}ms ago (min: ${MIN_FETCH_INTERVAL_MS}ms)`
+            )
+          }
+          return
+        }
+      }
+
+      // Update last fetch time
+      lastFetchTimeRef.current = now
+
       try {
         const headers: HeadersInit = {
           'Content-Type': 'application/json',
         }
 
         // Use ETag for conditional request (unless forced)
-        if (!force && etag) {
-          headers['If-None-Match'] = etag
+        if (!force && etagRef.current) {
+          headers['If-None-Match'] = etagRef.current
         }
 
         const response = await fetch(PERMISSIONS_SYNC_URL, {
@@ -179,10 +209,10 @@ export function PermissionProvider({ children }: PermissionProviderProps) {
         setError(null)
         setIsStale(false)
 
-        // Update ETag
+        // Update ETag (using ref to avoid triggering re-renders)
         const newEtag = response.headers.get('ETag')
         if (newEtag) {
-          setEtag(newEtag)
+          etagRef.current = newEtag
         }
 
         // Store in localStorage
@@ -201,13 +231,14 @@ export function PermissionProvider({ children }: PermissionProviderProps) {
         setIsLoading(false)
       }
     },
-    [tenantId, etag]
+    [tenantId] // Removed etag from deps - using ref instead
   )
 
-  // Force refresh (ignores ETag)
+  // Force refresh (ignores ETag and debounce)
   const refreshPermissions = React.useCallback(async () => {
     setIsLoading(true)
-    setEtag(null) // Clear ETag to force full fetch
+    etagRef.current = null // Clear ETag to force full fetch
+    lastFetchTimeRef.current = 0 // Reset debounce timer
     await fetchPermissions(true)
   }, [fetchPermissions])
 
@@ -228,16 +259,47 @@ export function PermissionProvider({ children }: PermissionProviderProps) {
     return () => clearInterval(intervalId)
   }, [tenantId, fetchPermissions])
 
-  // Refetch on tab focus
+  // Track tab visibility and sync on focus only if hidden for a while
+  // This prevents unnecessary API calls when quickly switching tabs
   React.useEffect(() => {
-    const handleFocus = () => {
-      if (tenantId) {
-        fetchPermissions()
+    // Track when tab becomes hidden
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        tabHiddenAtRef.current = Date.now()
       }
     }
 
+    // Sync on focus only if tab was hidden for MIN_HIDDEN_DURATION_FOR_SYNC_MS
+    const handleFocus = () => {
+      if (!tenantId) return
+
+      const hiddenDuration = tabHiddenAtRef.current > 0 ? Date.now() - tabHiddenAtRef.current : 0
+
+      // Only sync if tab was hidden for a significant period
+      if (hiddenDuration >= MIN_HIDDEN_DURATION_FOR_SYNC_MS) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log(
+            `[PermissionProvider] Tab was hidden for ${Math.round(hiddenDuration / 1000)}s, syncing permissions`
+          )
+        }
+        fetchPermissions()
+      } else if (process.env.NODE_ENV === 'development' && tabHiddenAtRef.current > 0) {
+        console.log(
+          `[PermissionProvider] Tab was hidden for only ${Math.round(hiddenDuration / 1000)}s, skipping sync (min: ${MIN_HIDDEN_DURATION_FOR_SYNC_MS / 1000}s)`
+        )
+      }
+
+      // Reset hidden timestamp
+      tabHiddenAtRef.current = 0
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
     window.addEventListener('focus', handleFocus)
-    return () => window.removeEventListener('focus', handleFocus)
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('focus', handleFocus)
+    }
   }, [tenantId, fetchPermissions])
 
   // Handle stale detection from API responses (via custom event)

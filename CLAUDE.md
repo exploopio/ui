@@ -364,9 +364,14 @@ See [`docs/architecture/permission-realtime-sync.md`](../docs/architecture/permi
 **Key Points:**
 
 - Permissions cached in localStorage for instant UI render
-- `X-Permission-Stale` header triggers automatic refresh
-- Multiple refresh triggers: stale header, 403 error, tab focus, 2-min polling
-- PermissionProvider manages cache + version tracking
+- `X-Permission-Stale` header triggers automatic refresh (immediate)
+- Sync triggers:
+  - Stale header detected → immediate sync
+  - 403 Forbidden error → immediate sync
+  - Tab focus → only if tab hidden > 30 seconds (prevents unnecessary calls)
+  - Polling → every 2 minutes
+- Debounce: minimum 5 seconds between fetches
+- PermissionProvider manages cache + version tracking using refs (stable callbacks)
 
 **Usage:**
 
