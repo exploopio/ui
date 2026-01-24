@@ -1,6 +1,6 @@
 'use client'
 
-import { type ReactNode, useMemo } from 'react'
+import { type ReactNode, useMemo, memo } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ChevronRight } from 'lucide-react'
@@ -37,9 +37,17 @@ import {
   type LicensingModule,
 } from '@/features/integrations/api/use-tenant-modules'
 
-export function NavGroup({ title, items }: NavGroupProps) {
+/**
+ * NavGroup Component
+ *
+ * Renders a group of navigation items in the sidebar.
+ * Optimized to minimize re-renders:
+ * - NavGroup itself doesn't use usePathname() directly
+ * - Each item component manages its own active state
+ * - Dynamic badges are fetched once and passed down
+ */
+function NavGroupComponent({ title, items }: NavGroupProps) {
   const { state, isMobile } = useSidebar()
-  const pathname = usePathname() // ✅ thay cho useLocation
   const dynamicBadges = useDynamicBadges()
 
   return (
@@ -50,33 +58,14 @@ export function NavGroup({ title, items }: NavGroupProps) {
           const key = 'items' in item ? item.title : `${item.title}-${String(item.url)}`
 
           if (!('items' in item))
-            return (
-              <SidebarMenuLink
-                key={key}
-                item={item}
-                pathname={pathname}
-                dynamicBadges={dynamicBadges}
-              />
-            )
+            return <SidebarMenuLink key={key} item={item} dynamicBadges={dynamicBadges} />
 
           if (state === 'collapsed' && !isMobile)
             return (
-              <SidebarMenuCollapsedDropdown
-                key={key}
-                item={item}
-                pathname={pathname}
-                dynamicBadges={dynamicBadges}
-              />
+              <SidebarMenuCollapsedDropdown key={key} item={item} dynamicBadges={dynamicBadges} />
             )
 
-          return (
-            <SidebarMenuCollapsible
-              key={key}
-              item={item}
-              pathname={pathname}
-              dynamicBadges={dynamicBadges}
-            />
-          )
+          return <SidebarMenuCollapsible key={key} item={item} dynamicBadges={dynamicBadges} />
         })}
       </SidebarMenu>
     </SidebarGroup>
@@ -186,15 +175,18 @@ function useFilteredSubItems(
   }, [items, parentModuleId, subModules])
 }
 
-function SidebarMenuLink({
+/**
+ * SidebarMenuLink - Memoized to prevent re-renders
+ * Uses its own usePathname() so it only re-renders when pathname changes
+ */
+const SidebarMenuLink = memo(function SidebarMenuLink({
   item,
-  pathname,
   dynamicBadges,
 }: {
   item: NavLink
-  pathname: string
   dynamicBadges: DynamicBadges
 }) {
+  const pathname = usePathname()
   const { setOpenMobile } = useSidebar()
   const badge = getBadgeValue(dynamicBadges, item.url as string, item.badge)
   const releaseStatusBadge = getReleaseStatusBadge(item.releaseStatus)
@@ -233,17 +225,22 @@ function SidebarMenuLink({
       </SidebarMenuButton>
     </SidebarMenuItem>
   )
-}
+})
 
-function SidebarMenuCollapsible({
+SidebarMenuLink.displayName = 'SidebarMenuLink'
+
+/**
+ * SidebarMenuCollapsible - Memoized to prevent re-renders
+ * Uses its own usePathname() so it only re-renders when pathname changes
+ */
+const SidebarMenuCollapsible = memo(function SidebarMenuCollapsible({
   item,
-  pathname,
   dynamicBadges: _dynamicBadges,
 }: {
   item: NavCollapsible
-  pathname: string
   dynamicBadges: DynamicBadges
 }) {
+  const pathname = usePathname()
   const { setOpenMobile } = useSidebar()
   const { subModules } = useTenantModules()
   const releaseStatusBadge = getReleaseStatusBadge(item.releaseStatus)
@@ -315,17 +312,22 @@ function SidebarMenuCollapsible({
       </SidebarMenuItem>
     </Collapsible>
   )
-}
+})
 
-function SidebarMenuCollapsedDropdown({
+SidebarMenuCollapsible.displayName = 'SidebarMenuCollapsible'
+
+/**
+ * SidebarMenuCollapsedDropdown - Memoized to prevent re-renders
+ * Uses its own usePathname() so it only re-renders when pathname changes
+ */
+const SidebarMenuCollapsedDropdown = memo(function SidebarMenuCollapsedDropdown({
   item,
-  pathname,
   dynamicBadges: _dynamicBadges,
 }: {
   item: NavCollapsible
-  pathname: string
   dynamicBadges: DynamicBadges
 }) {
+  const pathname = usePathname()
   const { subModules } = useTenantModules()
   const releaseStatusBadge = getReleaseStatusBadge(item.releaseStatus)
 
@@ -401,7 +403,9 @@ function SidebarMenuCollapsedDropdown({
       </DropdownMenu>
     </SidebarMenuItem>
   )
-}
+})
+
+SidebarMenuCollapsedDropdown.displayName = 'SidebarMenuCollapsedDropdown'
 
 function checkIsActive(pathname: string, item: NavItem, mainNav = false) {
   // For collapsible items with sub-items, check if any sub-item is active
@@ -427,3 +431,15 @@ function checkIsActive(pathname: string, item: NavItem, mainNav = false) {
 
   return false
 }
+
+/**
+ * Memoized NavGroup to prevent re-renders when pathname changes
+ * Only re-renders when items or title props actually change
+ */
+export const NavGroup = memo(NavGroupComponent, (prevProps, nextProps) => {
+  // Only re-render if title or items array reference changes
+  // This prevents re-render when only pathname changes (which is handled internally)
+  return prevProps.title === nextProps.title && prevProps.items === nextProps.items
+})
+
+NavGroup.displayName = 'NavGroup'
