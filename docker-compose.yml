@@ -38,24 +38,25 @@ services:
       - /app/.next
     # Development ports
     ports:
-      - "${UI_PORT:-3000}:3000"
+      - '${UI_PORT:-3000}:3000'
     # Environment variables from .env.local
     env_file:
       - .env.local
     # Override environment for development
     environment:
       NODE_ENV: development
-      WATCHPACK_POLLING: "true"
-      CHOKIDAR_USEPOLLING: "true"
-      # Backend API URL for server-side calls from the container
-      # - Use http://host.docker.internal:8080 for API running on host machine
-      # - Use http://api:8080 if API is in same docker-compose network
-      BACKEND_API_URL: ${BACKEND_API_URL:-http://host.docker.internal:8080}
-    # Keep stdin open for debugging
+      WATCHPACK_POLLING: 'true'
+      CHOKIDAR_USEPOLLING: 'true'
+      # Backend API URL is loaded from .env.local via env_file above
+      # To override, set BACKEND_API_URL in your shell before running docker-compose
+      # Keep stdin open for debugging
     stdin_open: true
     tty: true
     # Restart on failure
     restart: unless-stopped
+    # Make host.docker.internal work on Linux
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
     # Network
     networks:
       - app-network
