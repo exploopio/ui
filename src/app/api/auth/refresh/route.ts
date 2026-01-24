@@ -110,12 +110,10 @@ export async function POST(_request: NextRequest): Promise<NextResponse> {
         { status: response.status }
       )
 
-      // CRITICAL: Clear auth token cookies when refresh fails with 401
-      // This prevents infinite retry loop where client keeps trying to refresh with invalid token
-      // NOTE: We do NOT clear the tenant cookie - this preserves user's team selection
-      // so when they log in again, they'll automatically be in the same team
+      // CRITICAL: Clear ALL cookies when refresh fails with 401
+      // This prevents login loops caused by stale cookies
       if (response.status === 401) {
-        console.log('[Refresh] Clearing auth token cookies due to invalid refresh token')
+        console.log('[Refresh] Clearing ALL auth cookies due to invalid refresh token')
 
         // Clear access token cookie
         errorResponse.cookies.set(ACCESS_TOKEN_COOKIE, '', {
@@ -135,17 +133,15 @@ export async function POST(_request: NextRequest): Promise<NextResponse> {
           path: '/',
         })
 
-        // Also clear the refresh token cookie
-        errorResponse.cookies.set(REFRESH_TOKEN_COOKIE, '', {
-          httpOnly: true,
+        // Clear tenant cookie to prevent login loops
+        // When user logs in again, they'll go through proper tenant selection
+        errorResponse.cookies.set(TENANT_COOKIE, '', {
+          httpOnly: false,
           secure: process.env.NODE_ENV === 'production',
           sameSite: 'lax',
           maxAge: 0,
           path: '/',
         })
-
-        // DO NOT clear tenant cookie - preserve user's team selection
-        // When user logs in again, they'll be redirected to their previous team
       }
 
       return errorResponse

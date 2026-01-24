@@ -24,10 +24,7 @@ import { isTokenExpired, extractUser } from '@/lib/keycloak/jwt'
 import { setServerCookie, removeServerCookie } from '@/lib/cookies-server'
 import { validateRedirectUrl } from '@/lib/redirect'
 
-import type {
-  AuthSuccessResponse,
-  AuthErrorResponse,
-} from '../schemas/auth.schema'
+import type { AuthSuccessResponse, AuthErrorResponse } from '../schemas/auth.schema'
 import type { KeycloakUser, KeycloakTokens } from '@/lib/keycloak/types'
 
 // ============================================
@@ -193,9 +190,11 @@ export async function refreshTokenAction(): Promise<RefreshTokenResult> {
 
     // Check if refresh token is expired
     if (isTokenExpired(refreshToken)) {
-      // Clean up expired cookies
+      // Clean up ALL cookies to prevent login loops
       await removeServerCookie(env.auth.cookieName)
       await removeServerCookie(env.auth.refreshCookieName)
+      await removeServerCookie(env.cookies.tenant)
+      await removeServerCookie(env.cookies.pendingTenants)
 
       return {
         success: false,
@@ -210,9 +209,11 @@ export async function refreshTokenAction(): Promise<RefreshTokenResult> {
     } catch (error) {
       console.error('Token refresh error:', error)
 
-      // Clean up cookies on refresh failure
+      // Clean up ALL cookies on refresh failure to prevent login loops
       await removeServerCookie(env.auth.cookieName)
       await removeServerCookie(env.auth.refreshCookieName)
+      await removeServerCookie(env.cookies.tenant)
+      await removeServerCookie(env.cookies.pendingTenants)
 
       return {
         success: false,
@@ -358,9 +359,7 @@ export async function getCurrentUser(
  *
  * @param postLogoutRedirectUri - URL to redirect to after logout
  */
-export async function logoutAction(
-  postLogoutRedirectUri?: string
-): Promise<never> {
+export async function logoutAction(postLogoutRedirectUri?: string): Promise<never> {
   try {
     // Get current access token for Keycloak logout
     const cookieStore = await cookies()
