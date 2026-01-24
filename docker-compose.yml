@@ -41,7 +41,7 @@ services:
       - '${UI_PORT:-3000}:3000'
     # Environment variables from .env.local
     env_file:
-      - .env.local
+      - .env
     # Override environment for development
     environment:
       NODE_ENV: development
