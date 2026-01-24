@@ -183,8 +183,9 @@ function DisabledWrapper({ children, tooltip }: DisabledWrapperProps) {
     <Tooltip>
       <TooltipTrigger asChild>
         {/* Wrapper div blocks clicks and shows tooltip */}
+        {/* Using w-full to maintain full-width buttons layout when disabled */}
         <div
-          className="inline-flex"
+          className="w-full"
           onClick={handleClick}
           onMouseDown={handleClick}
           role="button"
