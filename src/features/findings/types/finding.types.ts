@@ -431,12 +431,14 @@ export interface RelatedFinding {
 // ============================================
 
 export type FindingSource =
-  | "manual"
-  | "nuclei"
-  | "nessus"
-  | "burp"
-  | "zap"
-  | "custom";
+  | "sast"      // Static Application Security Testing (Semgrep, CodeQL, etc.)
+  | "dast"      // Dynamic Application Security Testing (ZAP, Burp, Nuclei)
+  | "sca"       // Software Composition Analysis (Trivy, Snyk, Grype)
+  | "secret"    // Secret detection (Gitleaks, Trufflehog)
+  | "iac"       // Infrastructure as Code (Checkov, Tfsec)
+  | "container" // Container scanning
+  | "manual"    // Manual findings
+  | "external"; // External sources
 
 export interface Finding {
   id: string;
@@ -452,6 +454,22 @@ export interface Finding {
   cwe?: string;
   owasp?: string;
   tags?: string[];
+
+  // Location Info (file path, line numbers)
+  filePath?: string;
+  startLine?: number;
+  endLine?: number;
+  startColumn?: number;
+  endColumn?: number;
+
+  // Scanner/Tool Info
+  ruleId?: string;
+  ruleName?: string;
+  toolName?: string;
+  toolVersion?: string;
+
+  // Code snippet
+  snippet?: string;
 
   // Affected Assets
   assets: AffectedAsset[];

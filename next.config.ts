@@ -1,6 +1,18 @@
 import type { NextConfig } from 'next'
 import { validateEnv } from './src/lib/env'
 
+// Optional bundle analyzer - only used when ANALYZE=true
+let withBundleAnalyzer = (config: NextConfig) => config
+if (process.env.ANALYZE === 'true') {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const bundleAnalyzer = require('@next/bundle-analyzer')
+    withBundleAnalyzer = bundleAnalyzer({ enabled: true })
+  } catch {
+    console.warn('Bundle analyzer not available - install @next/bundle-analyzer to use ANALYZE=true')
+  }
+}
+
 // Validate environment variables at build time
 // This will throw an error if required vars are missing or invalid
 if (process.env.NODE_ENV !== 'test') {
@@ -54,15 +66,17 @@ const nextConfig: NextConfig = {
           },
           // Content Security Policy - Prevents XSS attacks
           // Note: This is a strict policy. Adjust based on your needs.
+          // API calls go through /api/proxy (same-origin) so connect-src 'self' is sufficient
           {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
               "script-src 'self' 'unsafe-eval' 'unsafe-inline'", // Next.js requires unsafe-eval and unsafe-inline
-              "style-src 'self' 'unsafe-inline'", // Tailwind requires unsafe-inline
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com", // Tailwind + Google Fonts
+              "style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com", // Google Fonts stylesheets
               "img-src 'self' data: https:",
-              "font-src 'self' data:",
-              "connect-src 'self' " + (process.env.NEXT_PUBLIC_BACKEND_API_URL || ''),
+              "font-src 'self' data: https://fonts.gstatic.com", // Google Fonts files
+              "connect-src 'self'", // API calls through /api/proxy (same-origin)
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",
@@ -73,16 +87,16 @@ const nextConfig: NextConfig = {
     ]
   },
   // Allow cross-origin requests in development (for accessing from other devices/IPs)
+  // Note: Add your local IP to this list during development if needed
   allowedDevOrigins: [
-    'http://10.29.243.85:3000',
     'http://localhost:3000',
     'http://127.0.0.1:3000',
+    'http://localhost:8080',
+    'http://127.0.0.1:8080',
+    // Production domains
     'https://app.rediver.io',
-    'https://app.rediver.io:3000',
-    'http://app.rediver.io:3000',
-    'https://app.rediver.io:443',
-    'http://app.rediver.io:80',
+    'http://app.rediver.io',
   ],
 }
 
-export default nextConfig
+export default withBundleAnalyzer(nextConfig)

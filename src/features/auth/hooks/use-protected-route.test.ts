@@ -27,6 +27,7 @@ const mockUser = {
   realmRoles: ['user', 'admin'],
   clientRoles: {},
   emailVerified: true,
+  permissions: [],
 }
 
 const mockRouter = {

@@ -5,17 +5,17 @@
 #
 # Development (with hot reload):
 #   docker-compose up
-#   OR: docker build --target development -t rediver-ui:dev .
+#   OR: docker build --target development -t ui:dev .
 #
 # Production:
 #   docker-compose -f docker-compose.prod.yml up --build
-#   OR: docker build --target production -t rediver-ui:prod .
+#   OR: docker build --target production -t ui:prod .
 # ==============================================================================
 
 # ==============================================================================
 # BASE STAGE - Common dependencies
 # ==============================================================================
-FROM node:22-alpine AS base
+FROM public.ecr.aws/docker/library/node:22-alpine AS base
 
 # Add libc6-compat for Alpine compatibility with some npm packages
 RUN apk add --no-cache libc6-compat
@@ -30,8 +30,10 @@ FROM base AS deps
 # Copy package files
 COPY package.json package-lock.json* ./
 
-# Install all dependencies
-RUN npm ci
+# Install all dependencies with BuildKit cache mount for faster builds
+# Cache is shared across builds, significantly speeding up npm ci
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci
 
 # ==============================================================================
 # DEVELOPMENT STAGE - Hot reload enabled
@@ -74,33 +76,40 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Build-time environment variables (NEXT_PUBLIC_*)
+# These are baked into the client bundle - NEVER put secrets here!
+ARG NEXT_PUBLIC_APP_URL
+ARG NEXT_PUBLIC_AUTH_PROVIDER=local
+ARG NEXT_PUBLIC_AUTH_COOKIE_NAME=auth_token
+ARG NEXT_PUBLIC_REFRESH_COOKIE_NAME=refresh_token
+ARG NEXT_PUBLIC_OAUTH_CALLBACK_URL
+ARG NEXT_PUBLIC_SENTRY_DSN
+# Keycloak (only needed for OIDC auth)
 ARG NEXT_PUBLIC_KEYCLOAK_URL
 ARG NEXT_PUBLIC_KEYCLOAK_REALM
 ARG NEXT_PUBLIC_KEYCLOAK_CLIENT_ID
 ARG NEXT_PUBLIC_KEYCLOAK_REDIRECT_URI
-ARG NEXT_PUBLIC_AUTH_COOKIE_NAME
-ARG NEXT_PUBLIC_REFRESH_COOKIE_NAME
-ARG NEXT_PUBLIC_BACKEND_API_URL
-ARG NEXT_PUBLIC_API_URL
-ARG NEXT_PUBLIC_APP_URL
-ARG NEXT_PUBLIC_SENTRY_DSN
+# Server-side only (NOT exposed to browser)
+ARG BACKEND_API_URL
 
 # Set environment for build
 ENV DOCKER_BUILD=true
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Pass build args to env
+# Pass build args to env (NEXT_PUBLIC_* are baked into client bundle)
+ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
+ENV NEXT_PUBLIC_AUTH_PROVIDER=$NEXT_PUBLIC_AUTH_PROVIDER
+ENV NEXT_PUBLIC_AUTH_COOKIE_NAME=$NEXT_PUBLIC_AUTH_COOKIE_NAME
+ENV NEXT_PUBLIC_REFRESH_COOKIE_NAME=$NEXT_PUBLIC_REFRESH_COOKIE_NAME
+ENV NEXT_PUBLIC_OAUTH_CALLBACK_URL=$NEXT_PUBLIC_OAUTH_CALLBACK_URL
+ENV NEXT_PUBLIC_SENTRY_DSN=$NEXT_PUBLIC_SENTRY_DSN
+# Keycloak
 ENV NEXT_PUBLIC_KEYCLOAK_URL=$NEXT_PUBLIC_KEYCLOAK_URL
 ENV NEXT_PUBLIC_KEYCLOAK_REALM=$NEXT_PUBLIC_KEYCLOAK_REALM
 ENV NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=$NEXT_PUBLIC_KEYCLOAK_CLIENT_ID
 ENV NEXT_PUBLIC_KEYCLOAK_REDIRECT_URI=$NEXT_PUBLIC_KEYCLOAK_REDIRECT_URI
-ENV NEXT_PUBLIC_AUTH_COOKIE_NAME=$NEXT_PUBLIC_AUTH_COOKIE_NAME
-ENV NEXT_PUBLIC_REFRESH_COOKIE_NAME=$NEXT_PUBLIC_REFRESH_COOKIE_NAME
-ENV NEXT_PUBLIC_BACKEND_API_URL=$NEXT_PUBLIC_BACKEND_API_URL
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
-ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
-ENV NEXT_PUBLIC_SENTRY_DSN=$NEXT_PUBLIC_SENTRY_DSN
+# Server-side only
+ENV BACKEND_API_URL=$BACKEND_API_URL
 
 # Build application
 RUN npm run build
@@ -120,7 +129,7 @@ ENV HOSTNAME="0.0.0.0"
 
 # Create non-root user for security
 RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 nextjs
+  adduser --system --uid 1001 nextjs
 
 # Copy public assets
 COPY --from=builder /app/public ./public

@@ -9,4 +9,11 @@
 // COMPONENTS
 // ============================================
 
-export { Analytics, AnalyticsChart, Overview, RecentSales } from './components'
+export { ActivityItem, Analytics, AnalyticsChart, Overview, QuickStat, RecentSales } from './components'
+
+// ============================================
+// HOOKS
+// ============================================
+
+export { useDashboardStats, useGlobalDashboardStats, useRecentActivity } from './hooks/use-dashboard-stats'
+export type { DashboardStats } from './hooks/use-dashboard-stats'

@@ -1,3 +1,5 @@
+import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
 import Link from "next/link"
 import {
   Card,
@@ -7,11 +9,27 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { env } from '@/lib/env'
 
 // Use refactored RegisterForm from features directory
 import { RegisterForm } from '@/features/auth/components/register-form'
 
-export default function SignUp() {
+export default async function SignUp() {
+  // Check if user is already authenticated
+  const cookieStore = await cookies()
+  const hasAuthToken = cookieStore.get(env.auth.cookieName)?.value
+  const hasRefreshToken = cookieStore.get(env.auth.refreshCookieName)?.value
+
+  if (hasAuthToken || hasRefreshToken) {
+    // User is authenticated - check if they have a tenant
+    const hasTenant = cookieStore.get(env.cookies.tenant)?.value
+    if (hasTenant) {
+      redirect('/')
+    } else {
+      redirect('/onboarding/create-team')
+    }
+  }
+
   return (
     <Card className='gap-4'>
         <CardHeader>
@@ -22,7 +40,7 @@ export default function SignUp() {
             Enter your email and password to create an account. <br />
             Already have an account?{' '}
             <Link
-              href='/sign-in'
+              href='/login'
               className='hover:text-primary underline underline-offset-4'
             >
               Sign In

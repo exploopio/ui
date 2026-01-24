@@ -81,8 +81,24 @@ export type LoginOutput = LoginInput
 // ============================================
 
 /**
+ * First name field validator
+ */
+export const firstNameSchema = z
+  .string()
+  .min(1, 'Please enter your first name')
+  .max(50, 'First name must be less than 50 characters')
+
+/**
+ * Last name field validator
+ */
+export const lastNameSchema = z
+  .string()
+  .min(1, 'Please enter your last name')
+  .max(50, 'Last name must be less than 50 characters')
+
+/**
  * Register form validation schema
- * Includes password confirmation matching
+ * Includes password confirmation matching and name fields for local auth
  *
  * @example
  * const form = useForm<RegisterInput>({
@@ -91,6 +107,8 @@ export type LoginOutput = LoginInput
  */
 export const registerSchema = z
   .object({
+    firstName: firstNameSchema,
+    lastName: lastNameSchema,
     email: emailSchema,
     password: passwordSchema,
     confirmPassword: confirmPasswordSchema,

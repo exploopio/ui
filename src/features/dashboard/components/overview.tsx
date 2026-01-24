@@ -6,7 +6,7 @@
  * - Mock data for demonstration (should be replaced with real API data)
  */
 
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from 'recharts'
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from '@/components/charts'
 
 // MOCK DATA - Replace with real API integration (see docs/API_INTEGRATION.md)
 const data = [

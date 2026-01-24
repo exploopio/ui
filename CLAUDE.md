@@ -11,12 +11,14 @@ Modern Next.js 16 with internationalization (en/vi/ar), RTL support, Zustand aut
 ## 🛠️ Tech Stack
 
 **Core:**
+
 - Next.js 16 (App Router, Turbopack, Server Components) • [Docs](https://nextjs.org/docs)
 - React 19 with Server Components • [Docs](https://react.dev)
 - TypeScript (strict mode)
 - Node.js 20+
 
 **UI & Styling:**
+
 - shadcn/ui - Radix UI-based components • [Docs](https://ui.shadcn.com)
 - Tailwind CSS with CSS Variables • [Docs](https://tailwindcss.com)
 - CVA (class-variance-authority) for variants
@@ -24,18 +26,21 @@ Modern Next.js 16 with internationalization (en/vi/ar), RTL support, Zustand aut
 - Geist & Geist Mono fonts
 
 **i18n:**
+
 - Custom proxy (Next.js 16): locale detection
 - Locales: `en`, `vi`, `ar`
 - RTL: ar, he, fa, ur
 - Cookie + header injection
 
 **State & Forms:**
+
 - Zustand → Global state (auth)
 - React Context → UI state (theme, direction, layout, search)
 - React Hook Form + Zod validation
 - Server Actions for mutations
 
 **Dev:**
+
 - ESLint + Prettier
 - Path alias: `@/*` → `./src/*`
 
@@ -85,21 +90,24 @@ project/
 ## ⚡ Core Conventions
 
 ### 1. Import Paths
+
 ```tsx
 // ✅ Always use @/* alias
-import { Button } from "@/components/ui/button"
-import { createUser } from "@/features/users/actions/user-actions"
+import { Button } from '@/components/ui/button'
+import { createUser } from '@/features/users/actions/user-actions'
 
 // ❌ Never relative from src/
-import { Button } from "../../components/ui/button"
+import { Button } from '../../components/ui/button'
 ```
 
 ### 2. Feature Organization
+
 - **Rule**: One feature = one folder in `src/features/`
 - Structure: `components/`, `actions/`, `schemas/`, `types/`, `hooks/`, `lib/`
 - **If used ONLY in one feature** → put in that feature
 
 ### 3. File Naming
+
 ```
 Components:     user-card.tsx      (kebab-case)
 Actions:        user-actions.ts    (suffix: -actions)
@@ -109,6 +117,7 @@ Hooks:          use-user.ts        (prefix: use-)
 ```
 
 ### 4. Component Types
+
 ```tsx
 // Default: Server Component (no directive)
 export default async function Page() {
@@ -131,6 +140,7 @@ export async function create(formData: FormData) {
 ```
 
 ### 5. App Router Files
+
 - `page.tsx` - Route content
 - `layout.tsx` - Shared UI (persistent)
 - `loading.tsx` - Loading state
@@ -139,6 +149,7 @@ export async function create(formData: FormData) {
 - `route.ts` - API endpoint
 
 ### 6. Styling
+
 ```tsx
 import { cn } from "@/lib/utils"
 
@@ -158,6 +169,7 @@ import { cn } from "@/lib/utils"
 ```
 
 No Emoji Rule:
+
 ```tsx
 // ❌ WRONG - No emoji in UI
 <Button>Save 💾</Button>
@@ -173,6 +185,7 @@ import { Save } from "lucide-react"
 ```
 
 ### 7. State Management
+
 ```tsx
 // ✅ Zustand for GLOBAL (auth)
 const { user, accessToken, logout } = useAuthStore()
@@ -183,9 +196,10 @@ const { direction } = useDirection()
 ```
 
 ### 8. i18n
+
 ```tsx
 // Server Component
-const locale = (await headers()).get("x-locale") || "en"
+const locale = (await headers()).get('x-locale') || 'en'
 
 // Client Component (if context created)
 const { locale } = useLocale()
@@ -195,6 +209,7 @@ const { locale } = useLocale()
 ```
 
 ### 9. Data Fetching
+
 ```tsx
 // ✅ Server Components (default)
 async function getData() {
@@ -214,6 +229,7 @@ const { data } = useSWR('/api/data')
 ```
 
 ### 10. Validation & Errors
+
 - ✅ Always validate server-side (Zod)
 - ✅ Server Actions return: `{ success: boolean, error?: string, data?: T }`
 - ✅ Every route group needs `error.tsx`
@@ -222,12 +238,14 @@ const { data } = useSWR('/api/data')
 ## 🎯 When to Create Feature
 
 **✅ Create Feature When:**
+
 - 2+ related components
 - Distinct business domain
 - Could be independent module
 - Examples: auth, users, products, orders
 
 **❌ Don't Create Feature:**
+
 - 1-2 simple components → `components/`
 - Pure UI → `components/ui/`
 - Utils → `lib/`
@@ -236,12 +254,14 @@ const { data } = useSWR('/api/data')
 ## 🌍 Internationalization
 
 **Flow:**
+
 ```
 Request → Proxy → Cookie/Header → x-locale injection
 → Root layout → dir="ltr|rtl" → Components
 ```
 
 **Implementation:**
+
 ```tsx
 // proxy.ts (Next.js 16 - replaces middleware.ts)
 export function proxy(request: NextRequest) {
@@ -261,21 +281,349 @@ const dir = ["ar","he","fa","ur"].includes(locale) ? "rtl" : "ltr"
 
 ## 🔐 Authentication
 
+Multi-tenant auth with local, social, and OIDC support. See [auth.md](.claude/auth.md) for complete guide.
+
+**Auth Flow:**
+
+```
+Unauthenticated → /login
+    ↓ login
+No Tenant → /onboarding/create-team
+    ↓ create team
+Has Tenant → / (Dashboard)
+```
+
+**Key Files:**
+
+```
+src/features/auth/actions/     # Server actions (login, register, etc.)
+src/lib/middleware/auth.ts     # Route protection
+src/components/layout/tenant-gate.tsx  # Dashboard guard
+proxy.ts                       # Next.js 16 middleware
+```
+
+**Important:** After auth changes, use `window.location.href` (not `router.push`) to ensure cookies are picked up.
+
+## 🛡️ Access Control (RBAC)
+
+Simplified permission model. See [access-control.md](.claude/access-control.md) for complete guide.
+
+**Architecture:**
+
+```
+User → Membership (owner | member)
+     → Roles → Feature Permissions (what can you DO)
+     → Groups → Data Scope (what can you SEE)
+```
+
+**Key Concepts:**
+
+- **Membership**: Owner (protected, full access) | Member (permissions from roles)
+- **RBAC Roles**: Feature permissions (system + custom roles with 150+ permissions)
+- **Groups**: Data scoping (teams, departments, projects)
+
+**Invitation Flow:**
+
+```
+Invite user → Select RBAC roles → User accepts → Becomes "member" + roles applied
+```
+
+**Key Files:**
+
+```
+src/features/access-control/        # RBAC feature
+src/features/access-control/api/    # Role & Group hooks
+src/features/access-control/types/  # Type definitions
+```
+
+**Hooks:**
+
 ```tsx
-// Zustand store: src/stores/auth-store.ts
-interface User {
-  accountNo: string
-  email: string
-  role: string
-  exp: number
+// Roles
+const { roles } = useRoles() // All available roles
+const { roles } = useUserRoles(userId) // User's assigned roles
+const { setUserRoles } = useSetUserRoles(userId) // Assign roles
+
+// Groups
+const { groups } = useGroups()
+const { members } = useGroupMembers(groupId)
+
+// Permissions
+const { hasPermission } = useMyPermissions()
+if (hasPermission('assets:write')) {
+  /* show edit */
+}
+```
+
+### Permission Real-time Sync
+
+**Important:** Permissions sync in real-time when admin revokes/grants access (no logout/login required).
+
+See [`docs/architecture/permission-realtime-sync.md`](../docs/architecture/permission-realtime-sync.md) for complete implementation guide.
+
+**Key Points:**
+
+- Permissions cached in localStorage for instant UI render
+- `X-Permission-Stale` header triggers automatic refresh (immediate)
+- Sync triggers:
+  - Stale header detected → immediate sync
+  - 403 Forbidden error → immediate sync
+  - Tab focus → only if tab hidden > 30 seconds (prevents unnecessary calls)
+  - Polling → every 2 minutes
+- Debounce: minimum 5 seconds between fetches
+- PermissionProvider manages cache + version tracking using refs (stable callbacks)
+
+**Usage:**
+
+```tsx
+// PermissionProvider wraps app (auto-handles sync)
+const { permissions, hasPermission, isLoading } = usePermissions()
+
+// PermissionGate for UI visibility
+<PermissionGate permission="assets:write">
+  <EditButton />
+</PermissionGate>
+
+// API Client intercepts X-Permission-Stale header automatically
+```
+
+## 🔔 Notification System
+
+Multi-channel notification system for security alerts. Supports Slack, Teams, Telegram, Email (SMTP), and custom webhooks.
+
+**Key Files:**
+
+```
+src/features/notifications/
+├── components/
+│   ├── add-notification-dialog.tsx    # Create new channel
+│   ├── edit-notification-dialog.tsx   # Edit channel settings
+│   └── notification-events.tsx        # View sent notifications
+src/features/integrations/
+├── types/integration.types.ts         # Types & constants
+└── api/use-integrations-api.ts        # API hooks
+src/app/(dashboard)/settings/integrations/notifications/
+├── page.tsx                           # Channel list
+├── history/page.tsx                   # Notification events history
+└── outbox/page.tsx                    # Queue management
+```
+
+**Types:**
+
+```tsx
+// Event types for notification routing
+type NotificationEventType = 'findings' | 'exposures' | 'scans' | 'alerts'
+
+// All known event types (for UI)
+import {
+  ALL_NOTIFICATION_EVENT_TYPES,
+  DEFAULT_ENABLED_EVENT_TYPES,
+} from '@/features/integrations/types/integration.types'
+
+// NotificationExtension from API
+interface NotificationExtension {
+  enabled_severities?: NotificationSeverity[] // Severity filters
+  enabled_event_types?: NotificationEventType[] // Event routing
+  message_template?: string // Custom template
+  include_details: boolean
+  min_interval_minutes: number // Rate limiting
+}
+// Note: Provider-specific config (chat_id, channel_name, smtp_host) is stored
+// in Integration.metadata (non-sensitive) and credentials (sensitive)
+```
+
+**Hooks:**
+
+```tsx
+// List notification integrations
+const { data, isLoading, mutate } = useNotificationIntegrationsApi()
+
+// Create notification integration
+const { trigger: create } = useCreateNotificationIntegrationApi()
+await create({
+  name: 'Security Alerts',
+  provider: 'slack',
+  credentials: 'https://hooks.slack.com/...',
+  notify_on_critical: true,
+  enabled_event_types: ['findings', 'exposures'],
+})
+
+// Get notification events (audit trail)
+const { data: events } = useNotificationEventsApi(integrationId, { limit: 20 })
+```
+
+**Template Variables:**
+Custom message templates support these variables:
+
+- `{title}` - Notification title
+- `{severity}` - Severity level (CRITICAL, HIGH, etc.)
+- `{severity_emoji}` - Emoji for severity
+- `{body}` - Notification body
+- `{url}` - Link to finding/alert
+- `{timestamp}` - When sent
+
+### Notification Outbox (Queue Management)
+
+The notification outbox allows tenants to monitor and manage their notification delivery queue.
+
+**Key Files:**
+
+```
+src/features/notifications/
+├── api/use-notification-outbox-api.ts     # API hooks
+├── types/notification-outbox.types.ts     # Types & status configs
+src/app/(dashboard)/settings/integrations/notifications/
+└── outbox/page.tsx                        # Queue management page
+```
+
+**Types:**
+
+```tsx
+type OutboxStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'dead'
+
+interface OutboxEntry {
+  id: string
+  event_type: string
+  aggregate_type: string
+  title: string
+  severity: OutboxSeverity
+  status: OutboxStatus
+  retry_count: number
+  max_retries: number
+  last_error?: string
+  scheduled_at: string
 }
 
-// ⚠️ TODO PRODUCTION: Change cookie key from test value
-// Current: 'thisisjustarandomstring' → Use secure key
-
-// Usage
-const { user, accessToken, setAuth, logout } = useAuthStore()
+interface OutboxStats {
+  pending: number
+  processing: number
+  completed: number
+  failed: number
+  dead: number
+  total: number
+}
 ```
+
+**Hooks:**
+
+```tsx
+// List outbox entries (tenant-scoped)
+const { data, isLoading } = useNotificationOutboxApi({ status: 'failed', page: 1 })
+
+// Get outbox statistics
+const { data: stats } = useNotificationOutboxStatsApi()
+
+// Retry failed entry
+const { trigger: retry } = useRetryOutboxEntryApi(entryId)
+await retry()
+
+// Delete entry
+const { trigger: del } = useDeleteOutboxEntryApi(entryId)
+await del()
+```
+
+**Permissions Required:**
+
+- `integrations:notifications:read` for viewing
+- `integrations:notifications:write` for retry
+- `integrations:notifications:delete` for delete
+
+## 👤 Account Settings
+
+User account management for profile, security, and preferences.
+
+**Key Files:**
+
+```
+src/features/account/
+├── api/
+│   ├── use-profile.ts        # Profile CRUD hooks
+│   ├── use-security.ts       # Password, 2FA hooks
+│   ├── use-sessions.ts       # Session management
+│   └── use-preferences.ts    # User preferences
+├── types/
+│   └── account.types.ts      # Type definitions
+└── index.ts                  # Feature exports
+
+src/app/(dashboard)/account/
+├── layout.tsx                # Account layout with tabs
+├── page.tsx                  # Profile tab
+├── security/page.tsx         # Security tab (password, 2FA, sessions)
+├── preferences/page.tsx      # Preferences tab (theme, language, notifications)
+└── activity/page.tsx         # Activity log tab
+```
+
+**Types:**
+
+```tsx
+// User profile
+interface UserProfile {
+  id: string
+  email: string
+  name: string
+  avatar_url?: string
+  phone?: string
+  bio?: string
+  auth_provider: 'local' | 'google' | 'github' | 'microsoft' | 'saml' | 'oidc'
+}
+
+// Session
+interface Session {
+  id: string
+  device: string
+  browser: string
+  ip_address: string
+  is_current: boolean
+  last_active_at: string
+}
+
+// Preferences
+interface UserPreferences {
+  theme: 'light' | 'dark' | 'system'
+  language: string
+  timezone: string
+  email_notifications: EmailNotificationPreferences
+  desktop_notifications: boolean
+}
+```
+
+**Hooks:**
+
+```tsx
+// Profile
+const { profile, isLoading, mutate } = useProfile()
+const { updateProfile, isUpdating } = useUpdateProfile()
+const { updateAvatar, removeAvatar } = useUpdateAvatar()
+
+// Security
+const { changePassword, isChanging } = useChangePassword()
+const { status: twoFactorStatus } = useTwoFactorStatus()
+
+// Sessions
+const { sessions, mutate } = useSessions()
+const { revokeSession } = useRevokeSession()
+const { revokeAllSessions } = useRevokeAllSessions()
+
+// Preferences
+const { preferences, mutate } = usePreferences()
+const { updatePreferences, isUpdating } = useUpdatePreferences()
+```
+
+**API Endpoints:**
+
+| Endpoint                           | Method          | Description        |
+| ---------------------------------- | --------------- | ------------------ |
+| `/api/v1/users/me`                 | GET/PUT         | Profile CRUD       |
+| `/api/v1/users/me/avatar`          | PUT/DELETE      | Avatar management  |
+| `/api/v1/users/me/change-password` | POST            | Change password    |
+| `/api/v1/users/me/2fa`             | GET/POST/DELETE | 2FA management     |
+| `/api/v1/users/me/sessions`        | GET/DELETE      | Session management |
+| `/api/v1/users/me/preferences`     | GET/PUT         | User preferences   |
+
+**Navigation:**
+
+- Accessible via profile dropdown (top-right)
+- Tab-based navigation: Profile > Security > Preferences > Activity
 
 ## 🎨 UI & Theming
 
@@ -283,29 +631,32 @@ const { user, accessToken, setAuth, logout } = useAuthStore()
 // Theme
 const { theme, setTheme } = useTheme() // "light"|"dark"|"system"
 
-// Direction  
+// Direction
 const { direction } = useDirection() // "ltr"|"rtl"
 
 // Components
-import { Button, Dialog, Input } from "@/components/ui/..."
+import { Button, Dialog, Input } from '@/components/ui/...'
 
 // Toasts
-import { toast } from "sonner"
-toast.success("Done!")
-toast.error("Failed!")
+import { toast } from 'sonner'
+toast.success('Done!')
+toast.error('Failed!')
 ```
 
 ## 🔧 Project-Specific
 
 **React Compiler:**
+
 - Enabled in `next.config.ts`
 - Auto-optimizes → No manual memoization needed
 
 **Providers:**
+
 - Wrapped in `src/app/providers.tsx`
 - Order: Theme → Direction → Layout → Search
 
 **TypeScript:**
+
 - Strict mode • Explicit return types
 - No `any` (use `unknown`)
 - Generate types from DB schema
@@ -313,12 +664,17 @@ toast.error("Failed!")
 ## 📚 Documentation
 
 **Guides:**
+
 - [architecture.md](.claude/architecture.md) - Structure deep dive
+- [auth.md](.claude/auth.md) - Authentication & multi-tenant flow
+- [access-control.md](.claude/access-control.md) - RBAC & permissions system
+- [account.md](.claude/account.md) - Account settings & preferences
 - [patterns.md](.claude/patterns.md) - Code patterns & examples
 - [i18n.md](.claude/i18n.md) - Internationalization guide
 - [troubleshooting.md](.claude/troubleshooting.md) - Common issues
 
 **External:**
+
 - [Next.js 16](https://nextjs.org/docs) • [shadcn/ui](https://ui.shadcn.com)
 - [Zustand](https://zustand-demo.pmnd.rs/) • [Tailwind](https://tailwindcss.com/docs)
 
@@ -327,20 +683,108 @@ toast.error("Failed!")
 ```bash
 npm run dev          # Dev server (Turbopack)
 npm run build        # Production build
-npm run lint         # ESLint
-npm run type-check   # TypeScript
+npm run lint         # ESLint check
+npm run lint:fix     # ESLint auto-fix
+npm run type-check   # TypeScript check
+npm run validate     # Run type-check + lint (use before commit)
 ```
+
+## 🔍 MANDATORY: Code Quality Checks
+
+**CRITICAL**: After completing ANY code changes, you MUST run these checks and fix ALL errors before committing:
+
+```bash
+# 1. Run type-check and lint - MUST pass with no errors
+npm run validate
+
+# 2. If validate passes, run full build to catch any remaining issues
+npm run build
+```
+
+**Pre-commit hooks will automatically run type-check and ESLint on staged files.**
+
+### Pre-commit Hook (Automatic)
+
+This project uses **Husky + lint-staged** to automatically check code before commits:
+
+- TypeScript type checking runs on all staged files
+- ESLint auto-fixes staged `.ts` and `.tsx` files
+
+### Common Issues to Avoid
+
+| Issue                    | Problem       | Solution                                       |
+| ------------------------ | ------------- | ---------------------------------------------- |
+| **Unused imports**       | Lint warning  | Remove or prefix with `_`                      |
+| **Missing type imports** | Build error   | Import all types used in interfaces            |
+| **Property mismatch**    | Build error   | Check type definitions before accessing        |
+| **Snake vs Camel case**  | Runtime error | UI uses `snake_case`, backend uses `camelCase` |
+
+### Naming Convention for Unused Variables
+
+```tsx
+// ✅ Prefix with underscore for intentionally unused
+const { data, isLoading: _isLoading } = useQuery()
+const [_unused, setUsed] = useState()
+
+// ❌ Don't leave unused without prefix (causes lint warning)
+const { data, isLoading } = useQuery() // warning if isLoading not used
+```
+
+### Type Safety Tips
+
+```tsx
+// ✅ Always import types you use
+import type { ScannerType, FindingStatus } from "../types"
+
+// ✅ Use Record for flexible object types
+const labels: Record<string, string> = { ... }
+
+// ✅ Add optional chaining for possibly undefined
+selectedItem?.property
+
+// ✅ Add null checks before accessing
+{selectedItem.tags && selectedItem.tags.map(...)}
+```
+
+## 🔄 CI/CD Workflows
+
+### PR to main/develop
+
+```
+├── quality (type-check + lint + prettier)  ─┐
+└── test                                     ─┴── Done (no build)
+```
+
+### Push to main/develop
+
+```
+├── quality ─┐
+└── test    ─┴── build ── Done
+```
+
+### Tag Release (v\*)
+
+```
+prepare ── build (amd64) ─┐
+         ── build (arm64) ─┴── merge ── Push to Docker Hub
+```
+
+**Notes:**
+
+- PRs skip build to save time (quality + test is enough for review)
+- Docker builds run in parallel for amd64/arm64
+- All builds use GitHub Actions cache for faster subsequent runs
 
 ## 🚀 Claude Code Usage
 
-| Task | Prompt | Result |
-|------|--------|--------|
-| **New feature** | "Create feature [name] following structure" | `src/features/[name]/{...}` |
-| **i18n component** | "Create localized [X] with locale detection" | Includes header reading |
-| **Auth page** | "Create protected [X] checking auth" | Includes Zustand check |
-| **Themed component** | "Create [X] with theme support" | Uses useTheme hook |
-| **Pattern help** | "Show CRUD pattern" | Links to patterns.md |
-| **RTL help** | "How to handle RTL?" | Links to i18n.md |
+| Task                 | Prompt                                       | Result                      |
+| -------------------- | -------------------------------------------- | --------------------------- |
+| **New feature**      | "Create feature [name] following structure"  | `src/features/[name]/{...}` |
+| **i18n component**   | "Create localized [X] with locale detection" | Includes header reading     |
+| **Auth page**        | "Create protected [X] checking auth"         | Includes Zustand check      |
+| **Themed component** | "Create [X] with theme support"              | Uses useTheme hook          |
+| **Pattern help**     | "Show CRUD pattern"                          | Links to patterns.md        |
+| **RTL help**         | "How to handle RTL?"                         | Links to i18n.md            |
 
 ## 📝 Commits
 
@@ -363,13 +807,14 @@ chore: update dependencies
 
 **IMPORTANT**: Next.js 16 deprecated `middleware.ts` in favor of `proxy.ts`.
 
-| Next.js 15 | Next.js 16 |
-|------------|------------|
-| `middleware.ts` | `proxy.ts` |
+| Next.js 15                     | Next.js 16                |
+| ------------------------------ | ------------------------- |
+| `middleware.ts`                | `proxy.ts`                |
 | `export function middleware()` | `export function proxy()` |
-| Edge Runtime | Node.js Runtime |
+| Edge Runtime                   | Node.js Runtime           |
 
 **Migration:**
+
 ```bash
 # Rename file
 mv middleware.ts proxy.ts
@@ -386,17 +831,22 @@ export function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/', '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)'],
+  matcher: [
+    '/',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+  ],
 }
 ```
 
 **Best Practices (Next.js 16):**
+
 - Keep `proxy.ts` lightweight - only routing/coarse checks
 - NO database calls or JWT verification in proxy
 - Detailed auth should be in Server Components/Actions
 - Use Node.js compatible libraries (not Edge-only)
 
 **References:**
+
 - [Next.js 16 Blog](https://nextjs.org/blog/next-16)
 - [Auth0: What's New in Next.js 16](https://auth0.com/blog/whats-new-nextjs-16/)
 
@@ -404,4 +854,6 @@ export const config = {
 
 **Note**: Keep under 12KB. For patterns, examples, troubleshooting → see `.claude/`
 
-**Last Updated**: 2025-12-15
+---
+
+**Last Updated**: 2026-01-24

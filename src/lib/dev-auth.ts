@@ -7,7 +7,7 @@
 
 import type { AuthUser } from "@/lib/keycloak";
 
-// Mock user data for development
+// Mock user data for development (admin role with full permissions)
 export const DEV_USER: AuthUser = {
   id: "dev-001",
   email: "admin@rediver.io",
@@ -16,7 +16,59 @@ export const DEV_USER: AuthUser = {
   emailVerified: true,
   roles: ["admin", "security_analyst"],
   realmRoles: ["admin"],
-  clientRoles: { "rediver-ui": ["admin", "security_analyst"] },
+  clientRoles: { "ui": ["admin", "security_analyst"] },
+  // Permissions for admin role (standardized IDs)
+  permissions: [
+    // Core
+    "dashboard:read",
+    "audit:read",
+    // Assets
+    "assets:read", "assets:write", "assets:delete",
+    "assets:groups:read", "assets:groups:write", "assets:groups:delete",
+    "assets:repositories:read", "assets:repositories:write",
+    "assets:components:read", "assets:components:write",
+    "assets:branches:read", "assets:branches:write",
+    // Findings
+    "findings:read", "findings:write", "findings:delete",
+    "findings:vulnerabilities:read",
+    "findings:credentials:read", "findings:credentials:write",
+    "findings:remediation:read", "findings:remediation:write",
+    "findings:workflows:read", "findings:workflows:write",
+    // Scans
+    "scans:read", "scans:write", "scans:delete",
+    "scans:profiles:read", "scans:profiles:write",
+    "scans:sources:read", "scans:sources:write",
+    "scans:tools:read",
+    "scans:tenant_tools:read", "scans:tenant_tools:write",
+    // Agents
+    "agents:read", "agents:write",
+    "agents:commands:read", "agents:commands:write",
+    // Team
+    "team:read", "team:update",
+    "team:members:read", "team:members:invite", "team:members:write",
+    "team:groups:read", "team:groups:write", "team:groups:members",
+    "team:roles:read", "team:roles:write", "team:roles:assign",
+    "team:permission_sets:read", "team:permission_sets:write",
+    "team:assignment_rules:read", "team:assignment_rules:write",
+    // Integrations
+    "integrations:read", "integrations:manage",
+    "integrations:scm:read", "integrations:scm:write",
+    "integrations:notifications:read", "integrations:notifications:write",
+    "integrations:webhooks:read", "integrations:webhooks:write",
+    "integrations:api_keys:read", "integrations:api_keys:write",
+    "integrations:pipelines:read", "integrations:pipelines:write",
+    // Settings
+    "settings:billing:read",
+    "settings:sla:read", "settings:sla:write",
+    // Attack Surface
+    "attack_surface:scope:read", "attack_surface:scope:write",
+    // Validation
+    "validation:read", "validation:write",
+    // Reports
+    "reports:read", "reports:write",
+  ],
+  tenantId: "dev-tenant-001",
+  tenantRole: "admin",
 };
 
 // Mock credentials
@@ -44,7 +96,7 @@ export function generateDevToken(): string {
       iat: now,
       exp: exp,
       iss: "dev-issuer",
-      aud: "rediver-ui",
+      aud: "ui",
 
       // Keycloak-specific claims
       email: DEV_USER.email,
@@ -55,8 +107,13 @@ export function generateDevToken(): string {
       // Roles
       realm_access: { roles: DEV_USER.realmRoles },
       resource_access: {
-        "rediver-ui": { roles: DEV_USER.roles },
+        "ui": { roles: DEV_USER.roles },
       },
+
+      // Permissions and tenant context
+      permissions: DEV_USER.permissions,
+      tenant: DEV_USER.tenantId,
+      role: DEV_USER.tenantRole,
     })
   );
   const signature = btoa("dev-signature");

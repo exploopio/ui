@@ -14,6 +14,9 @@
 8. [Error Handling Pattern](#error-handling-pattern)
 9. [Loading State Pattern](#loading-state-pattern)
 10. [API Route Pattern](#api-route-pattern)
+11. [Asset API Pattern](#asset-api-pattern)
+12. [Permission-Gated SWR Hook Pattern](#permission-gated-hook-pattern)
+13. [Permission Guard Component Pattern](#permission-guard-pattern)
 
 ---
 
@@ -874,6 +877,334 @@ export async function DELETE(
 
 ---
 
+---
+
+## 🏢 Asset API Pattern {#asset-api-pattern}
+
+Pattern for asset pages with real API integration using SWR.
+
+### 1. Import Required Functions
+
+```tsx
+import {
+  useAssets,
+  createAsset,
+  updateAsset,
+  deleteAsset,
+  bulkDeleteAssets,
+  type Asset,
+  type AssetSearchFilters,
+} from "@/features/assets";
+```
+
+### 2. Component Setup
+
+```tsx
+"use client";
+
+export default function HostsPage() {
+  // Fetch assets from API
+  const { assets: hosts, isLoading, isError, error, mutate } = useAssets({
+    types: ['host'],
+  });
+
+  // Local states
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
+
+  // Dialog states
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+```
+
+### 3. CRUD Handlers
+
+```tsx
+  // Create
+  const handleCreate = async () => {
+    if (!formData.name) {
+      toast.error("Name is required");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await createAsset({
+        name: formData.name,
+        type: "host",
+        criticality: "medium",
+        description: formData.description,
+        scope: "internal",
+        exposure: "private",
+        tags: formData.tags.split(",").map(s => s.trim()).filter(Boolean),
+      });
+      await mutate();
+      setFormData(emptyForm);
+      setAddDialogOpen(false);
+      toast.success("Asset created successfully");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to create");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Update
+  const handleUpdate = async () => {
+    if (!selectedAsset || !formData.name) {
+      toast.error("Please fill required fields");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await updateAsset(selectedAsset.id, {
+        name: formData.name,
+        description: formData.description,
+        tags: formData.tags.split(",").map(s => s.trim()).filter(Boolean),
+      });
+      await mutate();
+      setSelectedAsset(null);
+      toast.success("Asset updated successfully");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Delete
+  const handleDelete = async () => {
+    if (!assetToDelete) return;
+
+    setIsSubmitting(true);
+    try {
+      await deleteAsset(assetToDelete.id);
+      await mutate();
+      setDeleteDialogOpen(false);
+      toast.success("Asset deleted successfully");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Bulk Delete
+  const handleBulkDelete = async () => {
+    const selectedIds = table.getSelectedRowModel().rows.map(r => r.original.id);
+    if (selectedIds.length === 0) return;
+
+    setIsSubmitting(true);
+    try {
+      await bulkDeleteAssets(selectedIds);
+      await mutate();
+      setRowSelection({});
+      toast.success(`Deleted ${selectedIds.length} assets`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+```
+
+### 4. Render with Loading States
+
+```tsx
+  if (isLoading) {
+    return <LoadingSkeleton />;
+  }
+
+  if (isError) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-destructive">{error?.message || "Failed to load"}</p>
+        <Button onClick={() => mutate()}>Retry</Button>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <DataTable
+        data={hosts}
+        columns={columns}
+        onDelete={handleDelete}
+        onBulkDelete={handleBulkDelete}
+      />
+    </div>
+  );
+}
+```
+
+### Key Points
+
+1. **Always call `mutate()` after mutations** to refresh data
+2. **Use `isSubmitting` state** to disable buttons during operations
+3. **Handle errors with try/catch** and show user-friendly messages
+4. **Transform form data to API format** before sending
+
+---
+
+---
+
+## 🔐 Permission-Gated SWR Hook Pattern {#permission-gated-hook-pattern}
+
+Pattern for API hooks that check permissions before fetching.
+
+### Basic Hook with Permission Check
+
+```tsx
+'use client'
+
+import useSWR from 'swr'
+import { get } from '@/lib/api/client'
+import { useTenant } from '@/context/tenant-provider'
+import { usePermissions, Permission } from '@/lib/permissions'
+
+export function useAssets(filters?: AssetFilters) {
+  const { currentTenant } = useTenant()
+  const { can } = usePermissions()
+  const canReadAssets = can(Permission.AssetsRead)
+
+  // Only fetch if user has permission
+  const shouldFetch = currentTenant && canReadAssets
+
+  const { data, error, isLoading, mutate } = useSWR<AssetListResponse>(
+    shouldFetch ? ['assets', currentTenant, filters] : null,  // null key = no fetch
+    () => get<AssetListResponse>(endpoints.assets.list(filters)),
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 10000,
+    }
+  )
+
+  return {
+    assets: data?.data || [],
+    total: data?.total || 0,
+    isLoading: shouldFetch ? isLoading : false,  // Not loading if no permission
+    isError: !!error,
+    error,
+    mutate,
+  }
+}
+```
+
+### Hook with Multiple Permission Options (canAny)
+
+```tsx
+export function useStats(tenantId: string | null) {
+  const { canAny } = usePermissions()
+  // Allow if user has EITHER permission
+  const canReadStats = canAny(Permission.FindingsRead, Permission.DashboardRead)
+
+  const shouldFetch = tenantId && canReadStats
+
+  const { data, error, isLoading } = useSWR<Stats>(
+    shouldFetch ? ['stats', tenantId] : null,
+    () => get<Stats>(endpoints.stats()),
+    { revalidateOnFocus: false }
+  )
+
+  return {
+    stats: data || emptyStats,
+    isLoading: shouldFetch ? isLoading : false,
+    error,
+  }
+}
+```
+
+### Key Points
+
+1. **Check permission first**: Use `usePermissions()` hook to check permissions
+2. **Conditional SWR key**: Pass `null` as key if no permission → prevents fetch
+3. **Handle isLoading**: Return `false` for isLoading if no permission
+4. **Empty defaults**: Return empty arrays/objects instead of undefined
+
+---
+
+## 🔒 Permission Guard Component Pattern {#permission-guard-pattern}
+
+Pattern for conditionally showing/disabling UI based on permissions.
+
+### Can Component with Disable Mode
+
+```tsx
+import { Can, Permission } from '@/lib/permissions'
+import { Button } from '@/components/ui/button'
+import Link from 'next/link'
+
+// Quick Actions with permission-gated buttons
+function QuickActions() {
+  return (
+    <div className="grid gap-2">
+      {/* Hide if no permission */}
+      <Can permission={Permission.ScansWrite}>
+        <Button asChild>
+          <Link href="/scans/new">New Scan</Link>
+        </Button>
+      </Can>
+
+      {/* Disable with tooltip if no permission - Links won't navigate */}
+      <Can
+        permission={Permission.ReportsCreate}
+        mode="disable"
+        disabledTooltip="You don't have permission to generate reports"
+      >
+        <Button asChild>
+          <Link href="/reports/generate">Generate Report</Link>
+        </Button>
+      </Can>
+
+      {/* Multiple permissions (any) */}
+      <Can permission={[Permission.FindingsWrite, Permission.FindingsAssign]}>
+        <Button>Manage Finding</Button>
+      </Can>
+    </div>
+  )
+}
+```
+
+### Conditional Rendering with usePermissions Hook
+
+```tsx
+import { usePermissions, Permission } from '@/lib/permissions'
+
+function AssetActions({ asset }) {
+  const { can, canAny } = usePermissions()
+
+  return (
+    <div>
+      {/* Single permission check */}
+      {can(Permission.AssetsWrite) && (
+        <Button onClick={handleEdit}>Edit</Button>
+      )}
+
+      {/* Any of multiple permissions */}
+      {canAny(Permission.AssetsDelete, Permission.AssetsManage) && (
+        <Button variant="destructive" onClick={handleDelete}>
+          Delete
+        </Button>
+      )}
+    </div>
+  )
+}
+```
+
+### When to Use Each Approach
+
+| Approach | Use When |
+|----------|----------|
+| `<Can>` with `mode="hide"` (default) | Navigation items, menu entries |
+| `<Can>` with `mode="disable"` | Action buttons, forms - show user what they can't do |
+| `usePermissions().can()` | Conditional logic, not just rendering |
+| Multiple permissions array | User needs ANY of the listed permissions |
+
+---
+
 **See also:**
 - [architecture.md](architecture.md) - Project structure
+- [access-control.md](access-control.md) - Complete RBAC guide
 - [troubleshooting.md](troubleshooting.md) - Common issues
+- [ASSETS_API_INTEGRATION.md](../docs/ASSETS_API_INTEGRATION.md) - Complete asset API guide

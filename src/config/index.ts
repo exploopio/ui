@@ -7,5 +7,14 @@
 
 export { sidebarData } from './sidebar-data'
 
+// Route permissions configuration
+export {
+  routePermissions,
+  matchRoutePermission,
+  getRoutesForPermission,
+  isProtectedRoute,
+  type RoutePermissionConfig,
+} from './route-permissions'
+
 // Re-export types for convenience
 export type { SidebarData, NavGroup, NavItem, Team, User } from '@/components/types'

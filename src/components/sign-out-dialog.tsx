@@ -3,14 +3,17 @@
  *
  * Confirmation dialog for user logout
  * - Shows confirmation before logging out
- * - Clears auth state and redirects to Keycloak logout
+ * - Supports both local and OIDC (Keycloak) authentication
  * - Preserves return URL for re-login
  */
 
 'use client'
 
+import { useTransition } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
 import { ConfirmDialog } from '@/components/confirm-dialog'
+import { isLocalAuthOnly } from '@/lib/env'
+import { localLogoutAction } from '@/features/auth/actions/local-auth-actions'
 
 // ============================================
 // TYPES
@@ -29,7 +32,7 @@ interface SignOutDialogProps {
 
   /**
    * Optional custom redirect URL after logout
-   * If not provided, redirects to home page
+   * If not provided, redirects to sign-in page
    */
   redirectTo?: string
 }
@@ -44,27 +47,39 @@ export function SignOutDialog({
   redirectTo,
 }: SignOutDialogProps) {
   const logout = useAuthStore((state) => state.logout)
+  const clearAuth = useAuthStore((state) => state.clearAuth)
+  const [isPending, startTransition] = useTransition()
 
   /**
    * Handle sign out confirmation
-   * - Clears authentication state
-   * - Redirects to Keycloak logout
-   * - Keycloak will then redirect back to the app
+   * - For local auth: calls server action to clear cookies and redirect
+   * - For OIDC: redirects to Keycloak logout endpoint
    */
   const handleSignOut = () => {
     // Close dialog first
     onOpenChange(false)
 
-    // Determine post-logout redirect URL
-    const postLogoutUrl = redirectTo || window.location.origin
+    // Clear localStorage user data
+    try {
+      localStorage.removeItem('app_user')
+    } catch {
+      // Ignore localStorage errors
+    }
 
-    // Logout via Keycloak
-    // This will:
-    // 1. Clear Zustand auth state
-    // 2. Clear HttpOnly refresh token cookie
-    // 3. Redirect to Keycloak logout endpoint
-    // 4. Keycloak redirects back to postLogoutUrl
-    logout(postLogoutUrl)
+    if (isLocalAuthOnly()) {
+      // Local auth logout
+      // Clear client-side state first
+      clearAuth()
+
+      // Call server action to clear cookies and redirect
+      startTransition(async () => {
+        await localLogoutAction(redirectTo || '/login')
+      })
+    } else {
+      // OIDC (Keycloak) logout
+      const postLogoutUrl = redirectTo || window.location.origin
+      logout(postLogoutUrl)
+    }
   }
 
   return (
@@ -73,7 +88,7 @@ export function SignOutDialog({
       onOpenChange={onOpenChange}
       title='Sign out'
       desc='Are you sure you want to sign out? You will need to sign in again to access your account.'
-      confirmText='Sign out'
+      confirmText={isPending ? 'Signing out...' : 'Sign out'}
       cancelBtnText='Cancel'
       destructive
       handleConfirm={handleSignOut}
@@ -100,15 +115,31 @@ export function SignOutButton({
   redirectTo?: string
 }) {
   const logout = useAuthStore((state) => state.logout)
+  const clearAuth = useAuthStore((state) => state.clearAuth)
+  const [isPending, startTransition] = useTransition()
 
   const handleClick = () => {
-    const postLogoutUrl = redirectTo || window.location.origin
-    logout(postLogoutUrl)
+    // Clear localStorage user data
+    try {
+      localStorage.removeItem('app_user')
+    } catch {
+      // Ignore localStorage errors
+    }
+
+    if (isLocalAuthOnly()) {
+      clearAuth()
+      startTransition(async () => {
+        await localLogoutAction(redirectTo || '/login')
+      })
+    } else {
+      const postLogoutUrl = redirectTo || window.location.origin
+      logout(postLogoutUrl)
+    }
   }
 
   return (
-    <button onClick={handleClick} className={className}>
-      {children || 'Sign out'}
+    <button onClick={handleClick} className={className} disabled={isPending}>
+      {isPending ? 'Signing out...' : (children || 'Sign out')}
     </button>
   )
 }

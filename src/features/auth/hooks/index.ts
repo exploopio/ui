@@ -10,3 +10,13 @@ export {
   useRequireRoles,
   useRequireAuth,
 } from './use-protected-route'
+export {
+  usePermissions,
+  useUserPermissions,
+  useHasPermission,
+  useHasAnyPermission,
+  useHasAllPermissions,
+  useIsTenantAdmin,
+  useTenantRole,
+  type UsePermissionsReturn,
+} from './use-permissions'

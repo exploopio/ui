@@ -24,6 +24,8 @@ import {
   type AuthUser,
   type AuthStatus,
 } from '@/lib/keycloak'
+import { clearAllStoredPermissions } from '@/lib/permission-storage'
+import { clearAllLogoCaches } from '@/lib/logo-storage'
 
 // ============================================
 // TYPES
@@ -92,6 +94,9 @@ export const useAuthStore = create<AuthState>()(
           const expiresIn = getTimeUntilExpiry(accessToken)
           const expiresAt = Date.now() + expiresIn * 1000
 
+          // Reset auth failure flag on successful login
+          authPermanentlyFailed = false
+
           set({
             status: 'authenticated',
             user,
@@ -133,6 +138,10 @@ export const useAuthStore = create<AuthState>()(
           expiresAt: null,
           error: null,
         })
+
+        // Clear stored permissions and logo caches from localStorage
+        clearAllStoredPermissions()
+        clearAllLogoCaches()
 
         // Redirect to Keycloak logout
         // This will also clear the HttpOnly refresh token cookie
@@ -189,6 +198,10 @@ export const useAuthStore = create<AuthState>()(
           expiresAt: null,
           error: null,
         })
+
+        // Clear stored permissions and logo caches from localStorage
+        clearAllStoredPermissions()
+        clearAllLogoCaches()
       },
 
       /**
@@ -256,9 +269,15 @@ export const useAuthStore = create<AuthState>()(
 // Store refresh timeout ID at module level for type safety
 let authRefreshTimeout: ReturnType<typeof setTimeout> | null = null
 
+// Token refresh mutex - shared with API client via module-level state
+let isRefreshingToken = false
+
+// Flag to completely stop auto-refresh when auth has permanently failed
+let authPermanentlyFailed = false
+
 /**
  * Setup automatic token refresh before expiry
- * This is a simple implementation - you may want to use a more robust solution
+ * Automatically refreshes the access token 5 minutes before expiry.
  *
  * @param expiresIn - Seconds until token expires
  */
@@ -269,27 +288,76 @@ function setupTokenRefresh(expiresIn: number): void {
     authRefreshTimeout = null
   }
 
+  // Don't setup refresh if auth has permanently failed
+  if (authPermanentlyFailed) {
+    console.log('[Auth] Auth permanently failed, not setting up auto-refresh')
+    return
+  }
+
   // Only setup refresh if token has reasonable expiry
   if (expiresIn < 60 || expiresIn > 86400) return // 1 min to 24 hours
 
-  // Refresh 5 minutes before expiry
+  // Refresh 5 minutes before expiry (or immediately if less than 5 min left)
   const refreshIn = Math.max(0, (expiresIn - 300) * 1000)
 
   if (typeof window !== 'undefined') {
-    authRefreshTimeout = setTimeout(() => {
-      // Call your refresh token API here
-      console.log('[Auth] Token expiring soon, should refresh...')
+    authRefreshTimeout = setTimeout(async () => {
+      // Skip if auth has permanently failed
+      if (authPermanentlyFailed) {
+        console.log('[Auth] Auth permanently failed, skipping scheduled refresh')
+        return
+      }
 
-      // Example: Call refresh endpoint
-      // fetch('/api/auth/refresh', { method: 'POST' })
-      //   .then(res => res.json())
-      //   .then(data => {
-      //     if (data.accessToken) {
-      //       useAuthStore.getState().updateToken(data.accessToken)
-      //     }
-      //   })
+      // Skip if already refreshing (prevents race with API client refresh)
+      if (isRefreshingToken) {
+        console.log('[Auth] Token refresh already in progress, skipping scheduled refresh')
+        return
+      }
+
+      console.log('[Auth] Token expiring soon, refreshing...')
+      isRefreshingToken = true
+
+      try {
+        const response = await fetch('/api/auth/refresh', {
+          method: 'POST',
+          credentials: 'include', // Include httpOnly cookies
+        })
+
+        const data = await response.json()
+
+        if (response.ok && data.success && data.data?.access_token) {
+          console.log('[Auth] Token refreshed successfully')
+          useAuthStore.getState().updateToken(data.data.access_token)
+        } else {
+          // Refresh failed permanently - set flag and redirect
+          console.warn(
+            '[Auth] Token refresh failed permanently:',
+            data.error?.message || 'Unknown error'
+          )
+          authPermanentlyFailed = true
+          useAuthStore.getState().clearAuth()
+          redirectToLogin()
+        }
+      } catch (error) {
+        console.error('[Auth] Token refresh error:', error)
+        // Network error - don't set permanently failed, just clear auth
+        useAuthStore.getState().clearAuth()
+        redirectToLogin()
+      } finally {
+        // Clear the mutex after a delay to prevent rapid re-attempts
+        setTimeout(() => {
+          isRefreshingToken = false
+        }, 1000)
+      }
     }, refreshIn)
   }
+}
+
+/**
+ * Reset auth failure flag (call on successful login)
+ */
+export function resetAuthFailureFlag(): void {
+  authPermanentlyFailed = false
 }
 
 // ============================================
@@ -310,8 +378,7 @@ export const useAuthStatus = () => useAuthStore((state) => state.status)
 /**
  * Select only if authenticated (computed)
  */
-export const useIsAuthenticated = () =>
-  useAuthStore((state) => state.isAuthenticated())
+export const useIsAuthenticated = () => useAuthStore((state) => state.isAuthenticated())
 
 /**
  * Select user roles

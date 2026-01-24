@@ -377,7 +377,9 @@ function SidebarContent({ className, ...props }: React.ComponentProps<'div'>) {
       data-slot='sidebar-content'
       data-sidebar='content'
       className={cn(
-        'flex min-h-0 flex-1 flex-col gap-2 overflow-auto group-data-[collapsible=icon]:overflow-hidden',
+        'flex min-h-0 flex-1 flex-col overflow-auto',
+        // Allow scrolling in collapsed icon mode but hide scrollbar for cleaner look
+        'group-data-[collapsible=icon]:overflow-y-auto group-data-[collapsible=icon]:no-scrollbar',
         className
       )}
       {...props}
