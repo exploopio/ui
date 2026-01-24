@@ -854,4 +854,6 @@ export const config = {
 
 **Note**: Keep under 12KB. For patterns, examples, troubleshooting → see `.claude/`
 
+---
+
 **Last Updated**: 2026-01-24

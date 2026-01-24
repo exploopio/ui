@@ -16,6 +16,7 @@ Rediver is an enterprise-grade Attack Surface Management (ASM) and Vulnerability
 ## Key Features
 
 ### CTEM 5-Stage Process
+
 - **Scoping** - Define attack surface boundaries and business context
 - **Discovery** - Automated asset discovery (domains, websites, services, repositories, cloud, credentials)
 - **Prioritization** - Risk-based vulnerability prioritization with business impact analysis
@@ -23,28 +24,33 @@ Rediver is an enterprise-grade Attack Surface Management (ASM) and Vulnerability
 - **Mobilization** - Remediation task management with workflow automation
 
 ### Asset Management
+
 - **6 Asset Types** - Domains, Websites, Services, Repositories, Cloud Assets, Credential Leaks
 - **Asset Groups** - Organize assets by environment (Production, Staging, Development)
 - **Risk Scoring** - 0-100 risk scores with severity-based visualization
 
 ### Scan Management
+
 - **Single Scans** - One-time scans with custom configuration
 - **Workflow Scans** - Predefined multi-tool workflows (Full Recon, Vuln Assessment, etc.)
 - **Scan Runners** - Distributed scan execution with runner management
 
 ### Findings & Remediation
+
 - **Severity Classification** - Critical, High, Medium, Low, Info
 - **CVSS Scoring** - Industry-standard vulnerability scoring
 - **Task Management** - Kanban-style remediation workflow
 - **Assignee Tracking** - Team-based task assignment
 
 ### Security & Authentication
+
 - **Keycloak OAuth2/OIDC** - Enterprise-grade authentication
 - **Role-Based Access Control** - Fine-grained permissions
 - **Secure Cookies** - HttpOnly, Secure, SameSite
 - **CSRF Protection** - Cross-site request forgery prevention
 
 ### Deployment & Operations
+
 - **Docker Support** - Multi-stage optimized build with health checks
 - **Nginx Configuration** - Reverse proxy with SSL/TLS and rate limiting
 - **Health Monitoring** - Built-in `/api/health` endpoint
@@ -54,47 +60,53 @@ Rediver is an enterprise-grade Attack Surface Management (ASM) and Vulnerability
 
 ## 📚 Documentation
 
-| Guide | Description |
-|-------|-------------|
-| [Getting Started](https://docs.rediver.io/docs/getting-started) | Quick start guide |
-| [Development Setup](https://docs.rediver.io/docs/development-setup) | IDE, debugging, testing |
-| [Authentication](https://docs.rediver.io/docs/guides/authentication) | JWT & OIDC auth flow |
-| [Multi-tenancy](https://docs.rediver.io/docs/guides/multi-tenancy) | Teams & tenant switching |
-| [Permissions](https://docs.rediver.io/docs/guides/permissions) | Role-based access control |
-| [API Reference](https://docs.rediver.io/docs/api/reference) | Complete API endpoints |
-| [Configuration](https://docs.rediver.io/docs/operations/configuration) | Environment variables |
-| [Troubleshooting](https://docs.rediver.io/docs/operations/troubleshooting) | Common issues |
+| Guide                                                                      | Description               |
+| -------------------------------------------------------------------------- | ------------------------- |
+| [Getting Started](https://docs.rediver.io/docs/getting-started)            | Quick start guide         |
+| [Development Setup](https://docs.rediver.io/docs/development-setup)        | IDE, debugging, testing   |
+| [Authentication](https://docs.rediver.io/docs/guides/authentication)       | JWT & OIDC auth flow      |
+| [Multi-tenancy](https://docs.rediver.io/docs/guides/multi-tenancy)         | Teams & tenant switching  |
+| [Permissions](https://docs.rediver.io/docs/guides/permissions)             | Role-based access control |
+| [API Reference](https://docs.rediver.io/docs/api/reference)                | Complete API endpoints    |
+| [Configuration](https://docs.rediver.io/docs/operations/configuration)     | Environment variables     |
+| [Troubleshooting](https://docs.rediver.io/docs/operations/troubleshooting) | Common issues             |
 
 ---
 
 ## 🛠️ Tech Stack
 
 **Framework & Runtime:**
+
 - Next.js 16.0.8 (App Router)
 - React 19
 - Node.js 20+
 
 **Authentication:**
+
 - Keycloak (OAuth2/OIDC)
 - JWT token validation
 - Cookie-based sessions
 
 **UI & Styling:**
+
 - Tailwind CSS 4
 - shadcn/ui components
 - Radix UI primitives
 
 **State & Data:**
+
 - Zustand (global state)
 - SWR (data fetching)
 - Zod (validation)
 
 **Testing:**
+
 - Vitest
 - React Testing Library
 - V8 coverage
 
 **DevOps:**
+
 - Docker
 - Nginx
 - Sentry (optional)
@@ -139,6 +151,7 @@ nano .env.local
 ```
 
 **Required environment variables:**
+
 ```env
 # Keycloak Configuration
 NEXT_PUBLIC_KEYCLOAK_URL=http://localhost:8080
@@ -161,6 +174,7 @@ NODE_ENV=development
 ### 3. Setup Keycloak
 
 Follow the [Keycloak Setup Guide](./docs/auth/KEYCLOAK_SETUP.md) to:
+
 1. Install Keycloak server
 2. Create realm and client
 3. Configure redirect URIs
@@ -181,21 +195,25 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 Comprehensive documentation is available in the [`docs/`](./docs/) directory:
 
 ### Getting Started
+
 - **[CLAUDE.md](./CLAUDE.md)** - Project architecture & conventions
 - **[docs/README.md](./docs/README.md)** - Documentation overview
 
 ### Authentication
+
 - **[Keycloak Setup](./docs/auth/KEYCLOAK_SETUP.md)** - Setup Keycloak server
 - **[Auth Usage](./docs/auth/AUTH_USAGE.md)** - Implement login, logout, protected routes
 - **[API Reference](./docs/auth/API_REFERENCE.md)** - Complete API documentation
 - **[Troubleshooting](./docs/auth/TROUBLESHOOTING.md)** - Common issues & solutions
 
 ### Backend Integration
+
 - **[API Integration](./docs/API_INTEGRATION.md)** - Connect to your backend API
 - **[Customize Types](./docs/CUSTOMIZE_TYPES_GUIDE.md)** - Match your backend schema
 - **[Scaling Types](./docs/ORGANIZING_TYPES_AT_SCALE.md)** - Organize for large projects
 
 ### Deployment
+
 - **[Production Checklist](./docs/PRODUCTION_CHECKLIST.md)** - Pre-deployment checklist
 - **[Deployment Guide](./docs/DEPLOYMENT.md)** - Vercel, Docker, traditional server
 - **[Docker & Sentry](./docs/DOCKER_SENTRY_SETUP.md)** - Docker deployment with monitoring
@@ -319,11 +337,11 @@ See [Deployment Guide](./docs/DEPLOYMENT.md#vercel) for details.
 
 #### Docker Compose Files
 
-| File | Purpose | Includes Nginx |
-|------|---------|----------------|
-| `docker-compose.yml` | Development | No |
-| `docker-compose.prod.yml` | Production (full) | Yes (SSL/TLS) |
-| `docker-compose.prod-simple.yml` | Production (simple) | No |
+| File                             | Purpose             | Includes Nginx |
+| -------------------------------- | ------------------- | -------------- |
+| `docker-compose.yml`             | Development         | No             |
+| `docker-compose.prod.yml`        | Production (full)   | Yes (SSL/TLS)  |
+| `docker-compose.prod-simple.yml` | Production (simple) | No             |
 
 #### Development (with hot reload)
 
@@ -332,6 +350,7 @@ docker compose up --build
 ```
 
 Features:
+
 - Hot reload with volume mounts
 - Port 3000 exposed
 - Environment from `.env.local`
@@ -360,6 +379,7 @@ docker compose -f docker-compose.prod.yml logs -f
 ```
 
 Features:
+
 - Nginx reverse proxy (ports 80, 443)
 - HTTP to HTTPS redirect
 - SSL/TLS termination
@@ -377,6 +397,7 @@ docker compose -f docker-compose.prod-simple.yml up --build -d
 ```
 
 When to use:
+
 - AWS ALB, GCP Load Balancer, Azure App Gateway
 - Kubernetes Ingress
 - Traefik, Caddy as external proxy
@@ -440,19 +461,23 @@ See [Security Documentation](./docs/auth/KEYCLOAK_SETUP.md#security-consideratio
 ### Common Issues
 
 **Authentication errors:**
+
 - See [Troubleshooting Guide](./docs/auth/TROUBLESHOOTING.md)
 
 **API connection issues:**
+
 - Check `NEXT_PUBLIC_BACKEND_API_URL` in `.env.local`
 - Verify backend is running
 - Check CORS configuration on backend
 
 **Build errors:**
+
 - Ensure all environment variables are set
 - Run `npm run type-check` to find TypeScript errors
 - Check Node.js version (requires 20+)
 
 **Docker issues:**
+
 - See [Docker Setup Guide](./docs/DOCKER_SENTRY_SETUP.md#troubleshooting)
 
 ---
@@ -473,6 +498,7 @@ See [Security Documentation](./docs/auth/KEYCLOAK_SETUP.md#security-consideratio
 **Last Updated:** 2026-01-08
 
 ### Completed (UI - 90%)
+
 - CTEM Dashboard with 5-stage process visualization
 - Asset Management (6 types with full CRUD)
 - Asset Groups with risk scoring
@@ -485,6 +511,7 @@ See [Security Documentation](./docs/auth/KEYCLOAK_SETUP.md#security-consideratio
 - Security hardening
 
 ### Pending (Backend - 0%)
+
 - Backend API development
 - Database schema implementation
 - Real scan engine integration
@@ -492,6 +519,7 @@ See [Security Documentation](./docs/auth/KEYCLOAK_SETUP.md#security-consideratio
 - Report generation
 
 ### Roadmap
+
 - CI/CD pipeline
 - Real-time notifications
 - Performance monitoring (Sentry)
@@ -499,15 +527,28 @@ See [Security Documentation](./docs/auth/KEYCLOAK_SETUP.md#security-consideratio
 
 ---
 
+## 💖 Support
+
+If you find Rediver useful, please consider supporting the project:
+
+**BSC Network (BEP-20):**
+
+```
+0x97f0891b4a682904a78e6Bc854a58819Ea972454
+```
+
+---
+
 ## 📄 License
 
-[Your License Here]
+MIT License - See [LICENSE](LICENSE) file for details.
 
 ---
 
 ## 🙏 Acknowledgments
 
 Built with:
+
 - [Next.js](https://nextjs.org/)
 - [Keycloak](https://www.keycloak.org/)
 - [shadcn/ui](https://ui.shadcn.com/)
