@@ -40,7 +40,15 @@ import type {
 const defaultConfig: SWRConfiguration = {
   revalidateOnFocus: false,
   revalidateOnReconnect: true,
-  shouldRetryOnError: true,
+  // Don't retry on client errors (4xx) - only retry on server/network errors
+  shouldRetryOnError: (error) => {
+    // Don't retry on 4xx errors (client errors like 403, 404, etc.)
+    if (error?.statusCode >= 400 && error?.statusCode < 500) {
+      return false
+    }
+    // Retry on 5xx or network errors
+    return true
+  },
   errorRetryCount: 3,
   errorRetryInterval: 1000,
   dedupingInterval: 2000,
@@ -182,11 +190,7 @@ export function useFindingsApi(filters?: FindingApiFilters, config?: SWRConfigur
   // Ensure user has a tenant before making requests
   const key = currentTenant ? buildFindingsEndpoint(filters) : null
 
-  return useSWR<ApiFindingListResponse>(
-    key,
-    fetchFindings,
-    { ...defaultConfig, ...config }
-  )
+  return useSWR<ApiFindingListResponse>(key, fetchFindings, { ...defaultConfig, ...config })
 }
 
 /**
@@ -198,11 +202,7 @@ export function useFindingApi(findingId: string | null, config?: SWRConfiguratio
   // Ensure user has a tenant before making requests
   const key = currentTenant && findingId ? buildFindingEndpoint(findingId) : null
 
-  return useSWR<ApiFinding>(
-    key,
-    fetchFinding,
-    { ...defaultConfig, ...config }
-  )
+  return useSWR<ApiFinding>(key, fetchFinding, { ...defaultConfig, ...config })
 }
 
 /**
@@ -218,15 +218,10 @@ export function useAssetFindingsApi(
   const { currentTenant } = useTenant()
 
   // Ensure user has a tenant before making requests
-  const key = currentTenant && assetId
-    ? buildAssetFindingsEndpoint(assetId, sort, page, perPage)
-    : null
+  const key =
+    currentTenant && assetId ? buildAssetFindingsEndpoint(assetId, sort, page, perPage) : null
 
-  return useSWR<ApiFindingListResponse>(
-    key,
-    fetchFindings,
-    { ...defaultConfig, ...config }
-  )
+  return useSWR<ApiFindingListResponse>(key, fetchFindings, { ...defaultConfig, ...config })
 }
 
 // ============================================
@@ -236,14 +231,16 @@ export function useAssetFindingsApi(
 /**
  * Fetch vulnerabilities from global CVE database
  */
-export function useVulnerabilitiesApi(filters?: VulnerabilityApiFilters, config?: SWRConfiguration) {
+export function useVulnerabilitiesApi(
+  filters?: VulnerabilityApiFilters,
+  config?: SWRConfiguration
+) {
   const key = buildVulnerabilitiesEndpoint(filters)
 
-  return useSWR<ApiVulnerabilityListResponse>(
-    key,
-    fetchVulnerabilities,
-    { ...defaultConfig, ...config }
-  )
+  return useSWR<ApiVulnerabilityListResponse>(key, fetchVulnerabilities, {
+    ...defaultConfig,
+    ...config,
+  })
 }
 
 /**
@@ -252,11 +249,7 @@ export function useVulnerabilitiesApi(filters?: VulnerabilityApiFilters, config?
 export function useVulnerabilityApi(vulnerabilityId: string | null, config?: SWRConfiguration) {
   const key = vulnerabilityId ? `/api/v1/vulnerabilities/${vulnerabilityId}` : null
 
-  return useSWR<ApiVulnerability>(
-    key,
-    fetchVulnerability,
-    { ...defaultConfig, ...config }
-  )
+  return useSWR<ApiVulnerability>(key, fetchVulnerability, { ...defaultConfig, ...config })
 }
 
 /**
@@ -265,11 +258,7 @@ export function useVulnerabilityApi(vulnerabilityId: string | null, config?: SWR
 export function useVulnerabilityByCveApi(cveId: string | null, config?: SWRConfiguration) {
   const key = cveId ? `/api/v1/vulnerabilities/cve/${cveId}` : null
 
-  return useSWR<ApiVulnerability>(
-    key,
-    fetchVulnerability,
-    { ...defaultConfig, ...config }
-  )
+  return useSWR<ApiVulnerability>(key, fetchVulnerability, { ...defaultConfig, ...config })
 }
 
 // ============================================
@@ -433,15 +422,9 @@ async function fetchComments(url: string): Promise<ApiFindingCommentListResponse
 export function useFindingCommentsApi(findingId: string | null, config?: SWRConfiguration) {
   const { currentTenant } = useTenant()
 
-  const key = currentTenant && findingId
-    ? `${buildFindingEndpoint(findingId)}/comments`
-    : null
+  const key = currentTenant && findingId ? `${buildFindingEndpoint(findingId)}/comments` : null
 
-  return useSWR<ApiFindingCommentListResponse>(
-    key,
-    fetchComments,
-    { ...defaultConfig, ...config }
-  )
+  return useSWR<ApiFindingCommentListResponse>(key, fetchComments, { ...defaultConfig, ...config })
 }
 
 /**
@@ -509,11 +492,7 @@ export function useFindingStatsApi(config?: SWRConfiguration) {
 
   const key = currentTenant ? '/api/v1/findings/stats' : null
 
-  return useSWR<FindingStatsResponse>(
-    key,
-    fetchFindingStats,
-    { ...defaultConfig, ...config }
-  )
+  return useSWR<FindingStatsResponse>(key, fetchFindingStats, { ...defaultConfig, ...config })
 }
 
 // ============================================
@@ -525,11 +504,9 @@ export function useFindingStatsApi(config?: SWRConfiguration) {
  */
 export async function invalidateFindingsCache() {
   const { mutate } = await import('swr')
-  await mutate(
-    (key) => typeof key === 'string' && key.includes('/findings'),
-    undefined,
-    { revalidate: true }
-  )
+  await mutate((key) => typeof key === 'string' && key.includes('/findings'), undefined, {
+    revalidate: true,
+  })
 }
 
 /**
@@ -537,9 +514,7 @@ export async function invalidateFindingsCache() {
  */
 export async function invalidateVulnerabilitiesCache() {
   const { mutate } = await import('swr')
-  await mutate(
-    (key) => typeof key === 'string' && key.includes('/vulnerabilities'),
-    undefined,
-    { revalidate: true }
-  )
+  await mutate((key) => typeof key === 'string' && key.includes('/vulnerabilities'), undefined, {
+    revalidate: true,
+  })
 }

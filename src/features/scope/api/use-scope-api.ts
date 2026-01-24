@@ -46,7 +46,15 @@ import type {
 const defaultConfig: SWRConfiguration = {
   revalidateOnFocus: false,
   revalidateOnReconnect: true,
-  shouldRetryOnError: true,
+  // Don't retry on client errors (4xx) - only retry on server/network errors
+  shouldRetryOnError: (error) => {
+    // Don't retry on 4xx errors (client errors like 403, 404, etc.)
+    if (error?.statusCode >= 400 && error?.statusCode < 500) {
+      return false
+    }
+    // Retry on 5xx or network errors
+    return true
+  },
   errorRetryCount: 3,
   errorRetryInterval: 1000,
   dedupingInterval: 2000,
@@ -183,11 +191,7 @@ export function useScopeTargetsApi(filters?: ScopeTargetFilters, config?: SWRCon
 
   const key = currentTenant ? buildTargetsEndpoint(filters) : null
 
-  return useSWR<ApiScopeTargetListResponse>(
-    key,
-    fetchTargets,
-    { ...defaultConfig, ...config }
-  )
+  return useSWR<ApiScopeTargetListResponse>(key, fetchTargets, { ...defaultConfig, ...config })
 }
 
 /**
@@ -198,11 +202,7 @@ export function useScopeTargetApi(targetId: string | null, config?: SWRConfigura
 
   const key = currentTenant && targetId ? `${BASE_URL}/targets/${targetId}` : null
 
-  return useSWR<ApiScopeTarget>(
-    key,
-    fetchTarget,
-    { ...defaultConfig, ...config }
-  )
+  return useSWR<ApiScopeTarget>(key, fetchTarget, { ...defaultConfig, ...config })
 }
 
 /**
@@ -287,11 +287,10 @@ export function useScopeExclusionsApi(filters?: ScopeExclusionFilters, config?: 
 
   const key = currentTenant ? buildExclusionsEndpoint(filters) : null
 
-  return useSWR<ApiScopeExclusionListResponse>(
-    key,
-    fetchExclusions,
-    { ...defaultConfig, ...config }
-  )
+  return useSWR<ApiScopeExclusionListResponse>(key, fetchExclusions, {
+    ...defaultConfig,
+    ...config,
+  })
 }
 
 /**
@@ -302,11 +301,7 @@ export function useScopeExclusionApi(exclusionId: string | null, config?: SWRCon
 
   const key = currentTenant && exclusionId ? `${BASE_URL}/exclusions/${exclusionId}` : null
 
-  return useSWR<ApiScopeExclusion>(
-    key,
-    fetchExclusion,
-    { ...defaultConfig, ...config }
-  )
+  return useSWR<ApiScopeExclusion>(key, fetchExclusion, { ...defaultConfig, ...config })
 }
 
 /**
@@ -377,11 +372,7 @@ export function useScanSchedulesApi(filters?: ScanScheduleFilters, config?: SWRC
 
   const key = currentTenant ? buildSchedulesEndpoint(filters) : null
 
-  return useSWR<ApiScanScheduleListResponse>(
-    key,
-    fetchSchedules,
-    { ...defaultConfig, ...config }
-  )
+  return useSWR<ApiScanScheduleListResponse>(key, fetchSchedules, { ...defaultConfig, ...config })
 }
 
 /**
@@ -392,11 +383,7 @@ export function useScanScheduleApi(scheduleId: string | null, config?: SWRConfig
 
   const key = currentTenant && scheduleId ? `${BASE_URL}/schedules/${scheduleId}` : null
 
-  return useSWR<ApiScanSchedule>(
-    key,
-    fetchSchedule,
-    { ...defaultConfig, ...config }
-  )
+  return useSWR<ApiScanSchedule>(key, fetchSchedule, { ...defaultConfig, ...config })
 }
 
 /**
@@ -467,11 +454,7 @@ export function useScopeStatsApi(config?: SWRConfiguration) {
 
   const key = currentTenant ? `${BASE_URL}/stats` : null
 
-  return useSWR<ApiScopeStats>(
-    key,
-    fetchStats,
-    { ...defaultConfig, ...config }
-  )
+  return useSWR<ApiScopeStats>(key, fetchStats, { ...defaultConfig, ...config })
 }
 
 // ============================================
@@ -504,11 +487,9 @@ export function useCheckScopeApi() {
  */
 export async function invalidateScopeCache() {
   const { mutate } = await import('swr')
-  await mutate(
-    (key) => typeof key === 'string' && key.includes('/scope'),
-    undefined,
-    { revalidate: true }
-  )
+  await mutate((key) => typeof key === 'string' && key.includes('/scope'), undefined, {
+    revalidate: true,
+  })
 }
 
 /**
@@ -516,11 +497,9 @@ export async function invalidateScopeCache() {
  */
 export async function invalidateScopeTargetsCache() {
   const { mutate } = await import('swr')
-  await mutate(
-    (key) => typeof key === 'string' && key.includes('/scope/targets'),
-    undefined,
-    { revalidate: true }
-  )
+  await mutate((key) => typeof key === 'string' && key.includes('/scope/targets'), undefined, {
+    revalidate: true,
+  })
 }
 
 /**
@@ -528,11 +507,9 @@ export async function invalidateScopeTargetsCache() {
  */
 export async function invalidateScopeExclusionsCache() {
   const { mutate } = await import('swr')
-  await mutate(
-    (key) => typeof key === 'string' && key.includes('/scope/exclusions'),
-    undefined,
-    { revalidate: true }
-  )
+  await mutate((key) => typeof key === 'string' && key.includes('/scope/exclusions'), undefined, {
+    revalidate: true,
+  })
 }
 
 /**
@@ -540,11 +517,9 @@ export async function invalidateScopeExclusionsCache() {
  */
 export async function invalidateScanSchedulesCache() {
   const { mutate } = await import('swr')
-  await mutate(
-    (key) => typeof key === 'string' && key.includes('/scope/schedules'),
-    undefined,
-    { revalidate: true }
-  )
+  await mutate((key) => typeof key === 'string' && key.includes('/scope/schedules'), undefined, {
+    revalidate: true,
+  })
 }
 
 /**
@@ -552,9 +527,7 @@ export async function invalidateScanSchedulesCache() {
  */
 export async function invalidateScopeStatsCache() {
   const { mutate } = await import('swr')
-  await mutate(
-    (key) => typeof key === 'string' && key.includes('/scope/stats'),
-    undefined,
-    { revalidate: true }
-  )
+  await mutate((key) => typeof key === 'string' && key.includes('/scope/stats'), undefined, {
+    revalidate: true,
+  })
 }

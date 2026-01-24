@@ -4,13 +4,13 @@
  * SWR hooks for Tool Category Management
  */
 
-'use client';
+'use client'
 
-import useSWR, { type SWRConfiguration, mutate } from 'swr';
-import useSWRMutation from 'swr/mutation';
-import { get, post, put, del } from './client';
-import { handleApiError } from './error-handler';
-import { toolCategoryEndpoints, customToolCategoryEndpoints } from './endpoints';
+import useSWR, { type SWRConfiguration, mutate } from 'swr'
+import useSWRMutation from 'swr/mutation'
+import { get, post, put, del } from './client'
+import { handleApiError } from './error-handler'
+import { toolCategoryEndpoints, customToolCategoryEndpoints } from './endpoints'
 import type {
   ToolCategory,
   ToolCategoryListResponse,
@@ -18,7 +18,7 @@ import type {
   ToolCategoryAllResponse,
   CreateToolCategoryRequest,
   UpdateToolCategoryRequest,
-} from './tool-category-types';
+} from './tool-category-types'
 
 // ============================================
 // SWR CONFIGURATION
@@ -27,25 +27,25 @@ import type {
 const defaultConfig: SWRConfiguration = {
   revalidateOnFocus: false,
   revalidateOnReconnect: true,
-  shouldRetryOnError: true,
+  // Don't retry on client errors (4xx) - only retry on server/network errors
+  shouldRetryOnError: (error) => {
+    // Don't retry on 4xx errors (client errors like 403, 404, etc.)
+    if (error?.statusCode >= 400 && error?.statusCode < 500) {
+      return false
+    }
+    // Retry on 5xx or network errors
+    return true
+  },
   errorRetryCount: 3,
   errorRetryInterval: 1000,
   dedupingInterval: 2000,
-  onErrorRetry: (error, _key, _config, revalidate, { retryCount }) => {
-    // Don't retry on client errors (4xx)
-    if (error?.statusCode && error.statusCode >= 400 && error.statusCode < 500) {
-      return;
-    }
-    if (retryCount >= 3) return;
-    setTimeout(() => revalidate({ retryCount }), 1000);
-  },
   onError: (error) => {
     handleApiError(error, {
       showToast: true,
       logError: true,
-    });
+    })
   },
-};
+}
 
 // ============================================
 // CACHE KEYS
@@ -58,7 +58,7 @@ export const toolCategoryKeys = {
   allCategories: () => [...toolCategoryKeys.all, 'all'] as const,
   details: () => [...toolCategoryKeys.all, 'detail'] as const,
   detail: (id: string) => [...toolCategoryKeys.details(), id] as const,
-};
+}
 
 // ============================================
 // CACHE INVALIDATION
@@ -68,11 +68,9 @@ export const toolCategoryKeys = {
  * Invalidate all tool category caches
  */
 export async function invalidateToolCategoriesCache() {
-  await mutate(
-    (key) => Array.isArray(key) && key[0] === 'tool-categories',
-    undefined,
-    { revalidate: true }
-  );
+  await mutate((key) => Array.isArray(key) && key[0] === 'tool-categories', undefined, {
+    revalidate: true,
+  })
 }
 
 // ============================================
@@ -82,15 +80,12 @@ export async function invalidateToolCategoriesCache() {
 /**
  * Fetch all tool categories (platform + tenant custom) with pagination
  */
-export function useToolCategories(
-  filters?: ToolCategoryListFilters,
-  config?: SWRConfiguration
-) {
+export function useToolCategories(filters?: ToolCategoryListFilters, config?: SWRConfiguration) {
   return useSWR<ToolCategoryListResponse>(
     toolCategoryKeys.list(filters),
     () => get<ToolCategoryListResponse>(toolCategoryEndpoints.list(filters)),
     { ...defaultConfig, ...config }
-  );
+  )
 }
 
 /**
@@ -101,21 +96,18 @@ export function useAllToolCategories(config?: SWRConfiguration) {
     toolCategoryKeys.allCategories(),
     () => get<ToolCategoryAllResponse>(toolCategoryEndpoints.all()),
     { ...defaultConfig, ...config }
-  );
+  )
 }
 
 /**
  * Fetch a single tool category by ID
  */
-export function useToolCategory(
-  categoryId: string | null | undefined,
-  config?: SWRConfiguration
-) {
+export function useToolCategory(categoryId: string | null | undefined, config?: SWRConfiguration) {
   return useSWR<ToolCategory>(
     categoryId ? toolCategoryKeys.detail(categoryId) : null,
     () => get<ToolCategory>(toolCategoryEndpoints.get(categoryId!)),
     { ...defaultConfig, ...config }
-  );
+  )
 }
 
 // ============================================
@@ -129,14 +121,11 @@ export function useCreateToolCategory() {
   return useSWRMutation<ToolCategory, Error, string, CreateToolCategoryRequest>(
     'create-tool-category',
     async (_key, { arg }) => {
-      const response = await post<ToolCategory>(
-        customToolCategoryEndpoints.create(),
-        arg
-      );
-      await invalidateToolCategoriesCache();
-      return response;
+      const response = await post<ToolCategory>(customToolCategoryEndpoints.create(), arg)
+      await invalidateToolCategoriesCache()
+      return response
     }
-  );
+  )
 }
 
 /**
@@ -146,27 +135,21 @@ export function useUpdateToolCategory(categoryId: string) {
   return useSWRMutation<ToolCategory, Error, string, UpdateToolCategoryRequest>(
     `update-tool-category-${categoryId}`,
     async (_key, { arg }) => {
-      const response = await put<ToolCategory>(
-        customToolCategoryEndpoints.update(categoryId),
-        arg
-      );
-      await invalidateToolCategoriesCache();
-      return response;
+      const response = await put<ToolCategory>(customToolCategoryEndpoints.update(categoryId), arg)
+      await invalidateToolCategoriesCache()
+      return response
     }
-  );
+  )
 }
 
 /**
  * Delete a custom tool category
  */
 export function useDeleteToolCategory(categoryId: string) {
-  return useSWRMutation<void, Error, string>(
-    `delete-tool-category-${categoryId}`,
-    async () => {
-      await del(customToolCategoryEndpoints.delete(categoryId));
-      await invalidateToolCategoriesCache();
-    }
-  );
+  return useSWRMutation<void, Error, string>(`delete-tool-category-${categoryId}`, async () => {
+    await del(customToolCategoryEndpoints.delete(categoryId))
+    await invalidateToolCategoriesCache()
+  })
 }
 
 // ============================================
@@ -180,8 +163,8 @@ export function findCategoryById(
   categories: ToolCategory[] | undefined,
   categoryId: string | undefined
 ): ToolCategory | undefined {
-  if (!categories || !categoryId) return undefined;
-  return categories.find((c) => c.id === categoryId);
+  if (!categories || !categoryId) return undefined
+  return categories.find((c) => c.id === categoryId)
 }
 
 /**
@@ -192,8 +175,8 @@ export function getCategoryNameById(
   categories: ToolCategory[] | undefined,
   categoryId: string | undefined
 ): string {
-  const category = findCategoryById(categories, categoryId);
-  return category?.name || 'unknown';
+  const category = findCategoryById(categories, categoryId)
+  return category?.name || 'unknown'
 }
 
 /**
@@ -204,6 +187,6 @@ export function getCategoryDisplayNameById(
   categories: ToolCategory[] | undefined,
   categoryId: string | undefined
 ): string {
-  const category = findCategoryById(categories, categoryId);
-  return category?.display_name || 'Unknown';
+  const category = findCategoryById(categories, categoryId)
+  return category?.display_name || 'Unknown'
 }

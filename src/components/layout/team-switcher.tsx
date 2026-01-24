@@ -1,4 +1,4 @@
-"use client";
+'use client'
 
 /**
  * Team Switcher Component
@@ -10,8 +10,8 @@
  * - Shows loading state during switch
  */
 
-import * as React from "react";
-import { useRouter } from "next/navigation";
+import * as React from 'react'
+import { useRouter } from 'next/navigation'
 import {
   ChevronsUpDown,
   Plus,
@@ -20,7 +20,7 @@ import {
   Command,
   AudioWaveform,
   Building2,
-} from "lucide-react";
+} from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,109 +29,107 @@ import {
   DropdownMenuSeparator,
   DropdownMenuShortcut,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu'
 import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
-} from "@/components/ui/sidebar";
-import { useTenant } from "@/context/tenant-provider";
-import { useTenantSubscription } from "@/features/licensing";
-import { cn } from "@/lib/utils";
-import { toast } from "sonner";
+} from '@/components/ui/sidebar'
+import { useTenant } from '@/context/tenant-provider'
+import { useBootstrapSubscription } from '@/context/bootstrap-provider'
+import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 
 // Team icons based on index or name
-const teamIcons = [Command, AudioWaveform, Building2];
+const teamIcons = [Command, AudioWaveform, Building2]
 
 function getTeamIcon(index: number) {
-  return teamIcons[index % teamIcons.length];
+  return teamIcons[index % teamIcons.length]
 }
 
 export function TeamSwitcher() {
-  const router = useRouter();
-  const { isMobile } = useSidebar();
-  const {
-    currentTenant,
-    tenants,
-    isLoading,
-    isSwitching,
-    switchTeam,
-    error,
-    loadTenants,
-  } = useTenant();
+  const router = useRouter()
+  const { isMobile } = useSidebar()
+  const { currentTenant, tenants, isLoading, isSwitching, switchTeam, error, loadTenants } =
+    useTenant()
 
   // Fetch actual plan name from subscription API
-  const { plan: subscriptionPlan, isLoading: isPlanLoading } = useTenantSubscription();
+  const { plan: subscriptionPlan, isLoading: isPlanLoading } = useBootstrapSubscription()
 
-  const [isOpen, setIsOpen] = React.useState(false);
+  const [isOpen, setIsOpen] = React.useState(false)
 
   // If API returns empty but we have current tenant, show it in the list
   const displayTenants = React.useMemo(() => {
-    if (tenants.length > 0) return tenants;
+    if (tenants.length > 0) return tenants
 
     // Fallback: create a tenant entry from current tenant cookie
     if (currentTenant) {
-      return [{
-        id: currentTenant.id,
-        name: currentTenant.name || currentTenant.slug,
-        slug: currentTenant.slug,
-        plan: (currentTenant.plan || 'free') as 'free' | 'paid',
-        role: currentTenant.role,
-        joined_at: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-      }];
+      return [
+        {
+          id: currentTenant.id,
+          name: currentTenant.name || currentTenant.slug,
+          slug: currentTenant.slug,
+          plan: (currentTenant.plan || 'free') as 'free' | 'paid',
+          role: currentTenant.role,
+          joined_at: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+        },
+      ]
     }
 
-    return [];
-  }, [tenants, currentTenant]);
+    return []
+  }, [tenants, currentTenant])
 
   // Log errors for debugging
   React.useEffect(() => {
     if (error) {
-      console.error('[TeamSwitcher] Error fetching tenants:', error);
+      console.error('[TeamSwitcher] Error fetching tenants:', error)
     }
-  }, [error]);
+  }, [error])
 
   // Handle team selection
-  const handleSelectTeam = React.useCallback(async (tenantId: string) => {
-    if (isSwitching) return;
+  const handleSelectTeam = React.useCallback(
+    async (tenantId: string) => {
+      if (isSwitching) return
 
-    try {
-      await switchTeam(tenantId);
-      setIsOpen(false);
-      toast.success("Team switched successfully");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to switch team");
-    }
-  }, [switchTeam, isSwitching]);
+      try {
+        await switchTeam(tenantId)
+        setIsOpen(false)
+        toast.success('Team switched successfully')
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Failed to switch team')
+      }
+    },
+    [switchTeam, isSwitching]
+  )
 
   // Keyboard shortcuts for team switching
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       // Only handle ⌘1-9 or Ctrl+1-9
-      if ((event.metaKey || event.ctrlKey) && event.key >= "1" && event.key <= "9") {
-        const index = parseInt(event.key) - 1;
+      if ((event.metaKey || event.ctrlKey) && event.key >= '1' && event.key <= '9') {
+        const index = parseInt(event.key) - 1
         if (index < displayTenants.length) {
-          event.preventDefault();
-          handleSelectTeam(displayTenants[index].id);
+          event.preventDefault()
+          handleSelectTeam(displayTenants[index].id)
         }
       }
-    };
+    }
 
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [displayTenants, handleSelectTeam]);
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [displayTenants, handleSelectTeam])
 
   // Get current tenant display info
-  const currentTeamName = currentTenant?.name || currentTenant?.slug || "Select Team";
+  const currentTeamName = currentTenant?.name || currentTenant?.slug || 'Select Team'
   // Use plan name from subscription API (e.g., "Enterprise", "Pro", "Business", "Starter")
   // Show skeleton/loading indicator while fetching, then actual plan name
-  const currentTeamPlan = subscriptionPlan?.name;
+  const currentTeamPlan = subscriptionPlan?.name
   const currentIndex = currentTenant
-    ? displayTenants.findIndex(t => t.id === currentTenant.id)
-    : 0;
-  const currentIconIndex = currentIndex >= 0 ? currentIndex : 0;
+    ? displayTenants.findIndex((t) => t.id === currentTenant.id)
+    : 0
+  const currentIconIndex = currentIndex >= 0 ? currentIndex : 0
 
   // Loading state
   if (isLoading && displayTenants.length === 0) {
@@ -149,7 +147,7 @@ export function TeamSwitcher() {
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>
-    );
+    )
   }
 
   // No teams state
@@ -157,35 +155,33 @@ export function TeamSwitcher() {
     return (
       <SidebarMenu>
         <SidebarMenuItem>
-          <SidebarMenuButton
-            size="lg"
-            onClick={() => router.push("/settings/tenant/create")}
-          >
+          <SidebarMenuButton size="lg" onClick={() => router.push('/settings/tenant/create')}>
             <div className="flex aspect-square size-8 items-center justify-center rounded-lg border border-dashed">
               <Plus className="size-4" />
             </div>
             <div className="grid flex-1 text-start text-sm leading-tight">
               <span className="truncate font-semibold">Create Team</span>
-              <span className="truncate text-xs text-muted-foreground">
-                Get started
-              </span>
+              <span className="truncate text-xs text-muted-foreground">Get started</span>
             </div>
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>
-    );
+    )
   }
 
   return (
     <SidebarMenu>
       <SidebarMenuItem>
-        <DropdownMenu open={isOpen} onOpenChange={(open) => {
-            setIsOpen(open);
+        <DropdownMenu
+          open={isOpen}
+          onOpenChange={(open) => {
+            setIsOpen(open)
             // Trigger lazy load of tenant list when dropdown is opened
             if (open) {
-              loadTenants();
+              loadTenants()
             }
-          }}>
+          }}
+        >
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size="lg"
@@ -196,7 +192,9 @@ export function TeamSwitcher() {
                 {isSwitching ? (
                   <Loader2 className="size-4 animate-spin" />
                 ) : (
-                  React.createElement(teamIcons[currentIconIndex % teamIcons.length], { className: "size-4" })
+                  React.createElement(teamIcons[currentIconIndex % teamIcons.length], {
+                    className: 'size-4',
+                  })
                 )}
               </div>
 
@@ -205,9 +203,7 @@ export function TeamSwitcher() {
                 {isPlanLoading ? (
                   <span className="h-3 w-12 bg-muted rounded animate-pulse" />
                 ) : currentTeamPlan ? (
-                  <span className="truncate text-xs text-muted-foreground">
-                    {currentTeamPlan}
-                  </span>
+                  <span className="truncate text-xs text-muted-foreground">{currentTeamPlan}</span>
                 ) : null}
               </div>
 
@@ -218,25 +214,23 @@ export function TeamSwitcher() {
           <DropdownMenuContent
             className="min-w-[14rem] rounded-lg"
             align="start"
-            side={isMobile ? "bottom" : "right"}
+            side={isMobile ? 'bottom' : 'right'}
             sideOffset={4}
           >
             <DropdownMenuLabel className="text-muted-foreground text-xs flex items-center gap-2">
               Teams
-              {isLoading && (
-                <Loader2 className="size-3 animate-spin text-muted-foreground" />
-              )}
+              {isLoading && <Loader2 className="size-3 animate-spin text-muted-foreground" />}
             </DropdownMenuLabel>
 
             {displayTenants.map((tenant, index) => {
-              const Icon = getTeamIcon(index);
-              const isActive = currentTenant?.id === tenant.id;
+              const Icon = getTeamIcon(index)
+              const isActive = currentTenant?.id === tenant.id
 
               return (
                 <DropdownMenuItem
                   key={tenant.id}
                   onClick={() => handleSelectTeam(tenant.id)}
-                  className={cn("gap-2 p-2", isActive && "bg-accent")}
+                  className={cn('gap-2 p-2', isActive && 'bg-accent')}
                   disabled={isSwitching}
                 >
                   <div className="flex size-6 items-center justify-center rounded-sm border">
@@ -246,7 +240,7 @@ export function TeamSwitcher() {
                   {isActive && <Check className="size-4 text-primary" />}
                   <DropdownMenuShortcut>⌘{index + 1}</DropdownMenuShortcut>
                 </DropdownMenuItem>
-              );
+              )
             })}
 
             {/* Show skeleton items while loading additional teams */}
@@ -268,8 +262,8 @@ export function TeamSwitcher() {
             <DropdownMenuItem
               className="gap-2 p-2"
               onClick={() => {
-                setIsOpen(false);
-                router.push("/settings/tenant/create");
+                setIsOpen(false)
+                router.push('/settings/tenant/create')
               }}
             >
               <div className="bg-background flex size-6 items-center justify-center rounded-md border">
@@ -281,5 +275,5 @@ export function TeamSwitcher() {
         </DropdownMenu>
       </SidebarMenuItem>
     </SidebarMenu>
-  );
+  )
 }

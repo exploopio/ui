@@ -275,18 +275,17 @@ export async function apiClient<T = unknown>(
       }
 
       // Handle 403 Forbidden - user doesn't have permission
-      // Note: We don't automatically retry on 403 because:
+      // Note: We DON'T trigger permission refresh on 403 because:
       // 1. 403 means "authenticated but not authorized" - user identity is valid
-      // 2. Refreshing token won't help unless admin changed permissions
-      // 3. Auto-retry would cause unnecessary API calls and noise
-      // Instead, we trigger a permission refresh and let the component handle the error
+      // 2. If user legitimately doesn't have permission, refreshing won't help
+      // 3. Auto-refreshing on 403 causes infinite loops when user lacks permission
+      // 4. Backend will send X-Permission-Stale header if permissions actually changed
+      // Just log and let the component handle the error
       if (response.status === 403) {
         if (process.env.NODE_ENV === 'development') {
           console.log('[API Client] 403 Forbidden - user lacks permission for:', endpoint)
         }
-        // Trigger permission refresh in case permissions were revoked
-        dispatchPermissionStaleEvent()
-        // Don't retry - just throw the error for the component to handle
+        // Don't trigger permission refresh - let RouteGuard handle access denied
       }
 
       const error = await parseErrorResponse(response)

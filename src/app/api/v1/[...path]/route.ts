@@ -7,6 +7,7 @@
  * Authentication flow:
  * - Reads access token from httpOnly cookie (set by login action)
  * - If access token is missing but refresh token exists, auto-refresh first
+ * - If backend returns 401, try to refresh and retry the request
  * - Forwards as Authorization header to backend
  * - Also forwards X-CSRF-Token and X-Tenant-ID headers
  */
@@ -23,49 +24,140 @@ const ACCESS_TOKEN_COOKIE = env.auth.cookieName
 const REFRESH_TOKEN_COOKIE = env.auth.refreshCookieName
 const TENANT_COOKIE = env.cookies.tenant
 
+// Simple in-memory lock to prevent concurrent refresh attempts
+// Key: tenantId, Value: Promise that resolves when refresh completes
+const refreshLocks = new Map<string, Promise<RefreshResult | null>>()
+
+interface RefreshResult {
+  accessToken: string
+  refreshToken?: string
+  expiresIn: number
+}
+
+/**
+ * Get tenant ID from tenant cookie
+ */
+async function getTenantId(): Promise<string | undefined> {
+  const cookieStore = await cookies()
+  const tenantCookie = cookieStore.get(TENANT_COOKIE)?.value
+  if (tenantCookie) {
+    try {
+      const tenantInfo = JSON.parse(tenantCookie)
+      return tenantInfo.id
+    } catch {
+      console.error('[Proxy] Failed to parse tenant cookie')
+    }
+  }
+  return undefined
+}
+
 /**
  * Attempt to refresh the access token using refresh token
+ * Uses locking to prevent concurrent refresh attempts for the same tenant
  * Returns the new access token if successful, null otherwise
  */
 async function tryRefreshAccessToken(
   refreshToken: string,
   tenantId: string | undefined
-): Promise<{ accessToken: string; refreshToken?: string; expiresIn: number } | null> {
+): Promise<RefreshResult | null> {
   if (!tenantId) {
     console.log('[Proxy] Cannot refresh - no tenant ID')
     return null
   }
 
-  try {
-    console.log('[Proxy] Attempting to refresh access token...')
-    const response = await fetch(`${BACKEND_URL}/api/v1/auth/refresh`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        refresh_token: refreshToken,
-        tenant_id: tenantId,
-      }),
-    })
-
-    if (!response.ok) {
-      console.log('[Proxy] Token refresh failed:', response.status)
-      return null
-    }
-
-    const data = await response.json()
-    console.log('[Proxy] Token refresh successful, new token length:', data.access_token?.length)
-
-    return {
-      accessToken: data.access_token,
-      refreshToken: data.refresh_token,
-      expiresIn: data.expires_in || 900,
-    }
-  } catch (error) {
-    console.error('[Proxy] Token refresh error:', error)
-    return null
+  // Check if there's already a refresh in progress for this tenant
+  const existingPromise = refreshLocks.get(tenantId)
+  if (existingPromise) {
+    console.log('[Proxy] Refresh already in progress for tenant, waiting...')
+    return existingPromise
   }
+
+  // Create a new refresh promise
+  const refreshPromise = (async (): Promise<RefreshResult | null> => {
+    try {
+      console.log('[Proxy] Attempting to refresh access token for tenant:', tenantId)
+      const response = await fetch(`${BACKEND_URL}/api/v1/auth/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          refresh_token: refreshToken,
+          tenant_id: tenantId,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => 'Unknown error')
+        console.log('[Proxy] Token refresh failed:', response.status, errorText)
+        return null
+      }
+
+      const data = await response.json()
+      console.log('[Proxy] Token refresh successful, new token length:', data.access_token?.length)
+
+      return {
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token,
+        expiresIn: data.expires_in || 900,
+      }
+    } catch (error) {
+      console.error('[Proxy] Token refresh error:', error)
+      return null
+    } finally {
+      // Remove lock after completion
+      refreshLocks.delete(tenantId)
+    }
+  })()
+
+  // Store the promise so concurrent requests can wait on it
+  refreshLocks.set(tenantId, refreshPromise)
+
+  return refreshPromise
+}
+
+/**
+ * Set token cookies on a response
+ */
+function setTokenCookies(response: NextResponse, tokenData: RefreshResult): void {
+  const isProd = process.env.NODE_ENV === 'production'
+  console.log('[Proxy] Setting token cookies, expires_in:', tokenData.expiresIn)
+
+  // Set new access token cookie
+  response.cookies.set(ACCESS_TOKEN_COOKIE, tokenData.accessToken, {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: 'lax',
+    maxAge: tokenData.expiresIn,
+    path: '/',
+  })
+
+  // Set new refresh token cookie if rotated
+  if (tokenData.refreshToken) {
+    response.cookies.set(REFRESH_TOKEN_COOKIE, tokenData.refreshToken, {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60, // 7 days
+      path: '/',
+    })
+  }
+}
+
+/**
+ * Make a request to the backend
+ */
+async function makeBackendRequest(
+  backendUrl: string,
+  method: string,
+  headers: Headers,
+  body: string | undefined
+): Promise<Response> {
+  return fetch(backendUrl, {
+    method,
+    headers,
+    body,
+  })
 }
 
 async function proxyRequest(
@@ -82,44 +174,22 @@ async function proxyRequest(
   let accessToken = cookieStore.get(ACCESS_TOKEN_COOKIE)?.value
   const refreshToken = cookieStore.get(REFRESH_TOKEN_COOKIE)?.value
 
-  // Debug: Log cookie status and all auth-related cookies
-  const allCookies = cookieStore.getAll()
-  const authCookies = allCookies.filter(
-    (c) => c.name.includes('rediver') || c.name.includes('auth') || c.name.includes('token')
-  )
-  console.log('[Proxy]', request.method, path)
-  console.log(
-    '[Proxy] Access token cookie (' + ACCESS_TOKEN_COOKIE + '):',
-    accessToken ? `present (${accessToken.substring(0, 20)}...)` : 'MISSING'
-  )
-  console.log('[Proxy] All auth cookies:', authCookies.map((c) => c.name).join(', ') || 'none')
+  // Debug: Log cookie status (reduced logging for production)
+  console.log('[Proxy]', request.method, path, accessToken ? 'authenticated' : 'NO_TOKEN')
 
   // Track if we refreshed the token (to set cookie in response)
-  let refreshedTokenData: { accessToken: string; refreshToken?: string; expiresIn: number } | null =
-    null
+  let refreshedTokenData: RefreshResult | null = null
 
-  // If access token is missing but refresh token exists, try to refresh
+  // If access token is missing but refresh token exists, try to refresh BEFORE making request
   if (!accessToken && refreshToken) {
-    console.log('[Proxy] Access token missing, attempting refresh...')
-
-    // Get tenant ID from cookie
-    const tenantCookie = cookieStore.get(TENANT_COOKIE)?.value
-    let tenantId: string | undefined
-    if (tenantCookie) {
-      try {
-        const tenantInfo = JSON.parse(tenantCookie)
-        tenantId = tenantInfo.id
-      } catch {
-        console.error('[Proxy] Failed to parse tenant cookie')
-      }
-    }
-
+    console.log('[Proxy] Access token missing, attempting pre-request refresh...')
+    const tenantId = await getTenantId()
     refreshedTokenData = await tryRefreshAccessToken(refreshToken, tenantId)
     if (refreshedTokenData) {
       accessToken = refreshedTokenData.accessToken
-      console.log('[Proxy] Token refreshed successfully, continuing with request')
+      console.log('[Proxy] Pre-request token refresh successful')
     } else {
-      console.warn('[Proxy] Token refresh failed, request will likely fail with 401')
+      console.warn('[Proxy] Pre-request token refresh failed')
     }
   }
 
@@ -127,22 +197,15 @@ async function proxyRequest(
   const headers = new Headers()
   headers.set('Content-Type', 'application/json')
 
-  // Set Authorization header from cookie (or refreshed token)
+  // Set Authorization header
   if (accessToken) {
     headers.set('Authorization', `Bearer ${accessToken}`)
-    console.log('[Proxy] Authorization header SET with token length:', accessToken.length)
-  } else {
-    console.warn('[Proxy] No access token - request will likely fail with 401')
   }
 
   // Forward refresh token cookie for endpoints that need it
-  // (e.g., accept-with-refresh, create-first-team)
   if (refreshToken) {
     headers.set('Cookie', `${REFRESH_TOKEN_COOKIE}=${refreshToken}`)
-    console.log('[Proxy] Refresh token cookie forwarded')
   }
-
-  console.log('[Proxy] Backend URL:', backendUrl)
 
   // Forward other relevant headers from client
   const forwardHeaders = ['accept', 'accept-language', 'x-tenant-id', 'x-csrf-token']
@@ -153,36 +216,50 @@ async function proxyRequest(
     }
   })
 
+  // Get request body for non-GET requests (need to read it once since it can only be read once)
+  const body =
+    request.method !== 'GET' && request.method !== 'HEAD' ? await request.text() : undefined
+
   try {
     // Make request to backend
-    const response = await fetch(backendUrl, {
-      method: request.method,
-      headers,
-      body:
-        request.method !== 'GET' && request.method !== 'HEAD' ? await request.text() : undefined,
-    })
+    let response = await makeBackendRequest(backendUrl, request.method, headers, body)
+
+    // Handle 401 Unauthorized - try to refresh token and retry ONCE
+    if (response.status === 401 && refreshToken && !refreshedTokenData) {
+      console.log('[Proxy] Got 401, attempting token refresh and retry...')
+      const tenantId = await getTenantId()
+      refreshedTokenData = await tryRefreshAccessToken(refreshToken, tenantId)
+
+      if (refreshedTokenData) {
+        console.log('[Proxy] Token refresh successful, retrying original request...')
+        // Update Authorization header with new token
+        headers.set('Authorization', `Bearer ${refreshedTokenData.accessToken}`)
+
+        // Retry the original request
+        response = await makeBackendRequest(backendUrl, request.method, headers, body)
+        console.log('[Proxy] Retry response:', response.status)
+      } else {
+        console.warn('[Proxy] Token refresh failed, returning original 401')
+      }
+    }
 
     // Handle 204 No Content - must return response without body
     if (response.status === 204) {
-      console.log('[Proxy] Backend response: 204 No Content')
-      return new NextResponse(null, {
+      const proxyResponse = new NextResponse(null, {
         status: 204,
         statusText: 'No Content',
       })
+      // Still set cookies if we refreshed
+      if (refreshedTokenData) {
+        setTokenCookies(proxyResponse, refreshedTokenData)
+      }
+      return proxyResponse
     }
 
     // Get response body
     const responseText = await response.text()
-    console.log(
-      '[Proxy] Backend response:',
-      response.status,
-      response.statusText,
-      'Body length:',
-      responseText.length
-    )
-    console.log('[Proxy] Response body preview:', responseText.substring(0, 300))
     if (response.status >= 400) {
-      console.log('[Proxy] Backend error body:', responseText.substring(0, 500))
+      console.log('[Proxy] Backend error:', response.status, responseText.substring(0, 200))
     }
 
     // Create response with same status and headers
@@ -201,10 +278,8 @@ async function proxyRequest(
     })
 
     // Forward Set-Cookie headers from backend (important for auth endpoints)
-    // Use getSetCookie() to get all Set-Cookie headers (there can be multiple)
     const setCookieHeaders = response.headers.getSetCookie()
     if (setCookieHeaders && setCookieHeaders.length > 0) {
-      console.log('[Proxy] Forwarding', setCookieHeaders.length, 'Set-Cookie headers')
       setCookieHeaders.forEach((cookie) => {
         proxyResponse.headers.append('Set-Cookie', cookie)
       })
@@ -212,34 +287,12 @@ async function proxyRequest(
 
     // If we refreshed the token, set the new cookies in response
     if (refreshedTokenData) {
-      const isProd = process.env.NODE_ENV === 'production'
-      console.log('[Proxy] Setting refreshed token cookies')
-
-      // Set new access token cookie
-      proxyResponse.cookies.set(ACCESS_TOKEN_COOKIE, refreshedTokenData.accessToken, {
-        httpOnly: true,
-        secure: isProd,
-        sameSite: 'lax',
-        maxAge: refreshedTokenData.expiresIn,
-        path: '/',
-      })
-
-      // Set new refresh token cookie if rotated
-      if (refreshedTokenData.refreshToken) {
-        proxyResponse.cookies.set(REFRESH_TOKEN_COOKIE, refreshedTokenData.refreshToken, {
-          httpOnly: true,
-          secure: isProd,
-          sameSite: 'lax',
-          maxAge: 7 * 24 * 60 * 60, // 7 days
-          path: '/',
-        })
-      }
+      setTokenCookies(proxyResponse, refreshedTokenData)
     }
 
     return proxyResponse
   } catch (error) {
     console.error('[Proxy] Connection error:', error)
-    console.error('[Proxy] Backend URL was:', backendUrl)
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     return NextResponse.json(
       { error: 'PROXY_ERROR', message: `Failed to connect to backend: ${errorMessage}` },

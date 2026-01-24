@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import {
   ColumnDef,
   flexRender,
@@ -132,12 +132,33 @@ export default function RolesPage() {
   const [selectedRole, setSelectedRole] = useState<Role | null>(null)
   const [createSheetOpen, setCreateSheetOpen] = useState(false)
   const [editRole, setEditRole] = useState<Role | null>(null)
+  const [pendingEditRole, setPendingEditRole] = useState<Role | null>(null) // For transition from detail to edit
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [roleToDelete, setRoleToDelete] = useState<Role | null>(null)
   const [sorting, setSorting] = useState<SortingState>([])
   const [globalFilter, setGlobalFilter] = useState('')
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
   const [rowSelection, setRowSelection] = useState({})
+
+  // Handle transition from detail sheet to edit sheet
+  // When detail sheet closes and there's a pending edit, open the edit sheet
+  useEffect(() => {
+    if (!selectedRole && pendingEditRole) {
+      // Small delay to ensure detail sheet animation is complete
+      const timer = setTimeout(() => {
+        setEditRole(pendingEditRole)
+        setPendingEditRole(null)
+      }, 50)
+      return () => clearTimeout(timer)
+    }
+  }, [selectedRole, pendingEditRole])
+
+  // Ensure mutual exclusivity: when edit sheet opens, close detail sheet
+  useEffect(() => {
+    if (editRole && selectedRole) {
+      setSelectedRole(null)
+    }
+  }, [editRole, selectedRole])
 
   // Delete hook
   const { deleteRole, isDeleting } = useDeleteRole(roleToDelete?.id || null)
@@ -290,14 +311,24 @@ export default function RolesPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setSelectedRole(role)}>
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setSelectedRole(role)
+                }}
+              >
                 <Eye className="mr-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
               {!role.is_system && (
                 <>
                   <Can permission={Permission.RolesWrite}>
-                    <DropdownMenuItem onClick={() => setEditRole(role)}>
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setEditRole(role)
+                      }}
+                    >
                       <Pencil className="mr-2 h-4 w-4" />
                       Edit Role
                     </DropdownMenuItem>
@@ -306,7 +337,8 @@ export default function RolesPage() {
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       className="text-red-400"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation()
                         setRoleToDelete(role)
                         setDeleteDialogOpen(true)
                       }}
@@ -650,8 +682,9 @@ export default function RolesPage() {
         open={!!selectedRole}
         onOpenChange={(open) => !open && setSelectedRole(null)}
         onEdit={(role) => {
-          setSelectedRole(null)
-          setEditRole(role)
+          // Use pending edit pattern to wait for detail sheet to close
+          setPendingEditRole(role)
+          setSelectedRole(null) // This triggers the close animation
         }}
         onDelete={(role) => {
           setRoleToDelete(role)

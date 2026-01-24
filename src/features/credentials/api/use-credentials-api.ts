@@ -29,7 +29,15 @@ import type {
 const defaultConfig: SWRConfiguration = {
   revalidateOnFocus: false,
   revalidateOnReconnect: true,
-  shouldRetryOnError: true,
+  // Don't retry on client errors (4xx) - only retry on server/network errors
+  shouldRetryOnError: (error) => {
+    // Don't retry on 4xx errors (client errors like 403, 404, etc.)
+    if (error?.statusCode >= 400 && error?.statusCode < 500) {
+      return false
+    }
+    // Retry on 5xx or network errors
+    return true
+  },
   errorRetryCount: 3,
   errorRetryInterval: 1000,
   dedupingInterval: 2000,
@@ -120,11 +128,7 @@ export function useCredentialsApi(filters?: CredentialApiFilters, config?: SWRCo
   // Ensure user has a tenant before making requests
   const key = currentTenant ? buildCredentialsEndpoint(filters) : null
 
-  return useSWR<ApiCredentialListResponse>(
-    key,
-    fetchCredentials,
-    { ...defaultConfig, ...config }
-  )
+  return useSWR<ApiCredentialListResponse>(key, fetchCredentials, { ...defaultConfig, ...config })
 }
 
 /**
@@ -136,11 +140,7 @@ export function useCredentialApi(credentialId: string | null, config?: SWRConfig
   // Ensure user has a tenant before making requests
   const key = currentTenant && credentialId ? buildCredentialEndpoint(credentialId) : null
 
-  return useSWR<ApiCredential>(
-    key,
-    fetchCredential,
-    { ...defaultConfig, ...config }
-  )
+  return useSWR<ApiCredential>(key, fetchCredential, { ...defaultConfig, ...config })
 }
 
 /**
@@ -151,11 +151,7 @@ export function useCredentialStatsApi(config?: SWRConfiguration) {
 
   const key = currentTenant ? '/api/v1/credentials/stats' : null
 
-  return useSWR<ApiCredentialStats>(
-    key,
-    fetchCredentialStats,
-    { ...defaultConfig, ...config }
-  )
+  return useSWR<ApiCredentialStats>(key, fetchCredentialStats, { ...defaultConfig, ...config })
 }
 
 /**
@@ -166,17 +162,16 @@ export function useCredentialEnumsApi(config?: SWRConfiguration) {
 
   const key = currentTenant ? '/api/v1/credentials/enums' : null
 
-  return useSWR<ApiCredentialEnums>(
-    key,
-    fetchCredentialEnums,
-    { ...defaultConfig, ...config }
-  )
+  return useSWR<ApiCredentialEnums>(key, fetchCredentialEnums, { ...defaultConfig, ...config })
 }
 
 /**
  * Fetch credentials grouped by identity (username/email)
  */
-export function useCredentialIdentitiesApi(filters?: CredentialApiFilters, config?: SWRConfiguration) {
+export function useCredentialIdentitiesApi(
+  filters?: CredentialApiFilters,
+  config?: SWRConfiguration
+) {
   const { currentTenant } = useTenant()
 
   const buildUrl = (): string => {
@@ -195,11 +190,10 @@ export function useCredentialIdentitiesApi(filters?: CredentialApiFilters, confi
 
   const key = currentTenant ? buildUrl() : null
 
-  return useSWR<ApiIdentityListResponse>(
-    key,
-    (url: string) => get<ApiIdentityListResponse>(url),
-    { ...defaultConfig, ...config }
-  )
+  return useSWR<ApiIdentityListResponse>(key, (url: string) => get<ApiIdentityListResponse>(url), {
+    ...defaultConfig,
+    ...config,
+  })
 }
 
 /**
@@ -208,15 +202,12 @@ export function useCredentialIdentitiesApi(filters?: CredentialApiFilters, confi
 export function useRelatedCredentialsApi(credentialId: string | null, config?: SWRConfiguration) {
   const { currentTenant } = useTenant()
 
-  const key = currentTenant && credentialId
-    ? `/api/v1/credentials/${credentialId}/related`
-    : null
+  const key = currentTenant && credentialId ? `/api/v1/credentials/${credentialId}/related` : null
 
-  return useSWR<ApiCredential[]>(
-    key,
-    (url: string) => get<ApiCredential[]>(url),
-    { ...defaultConfig, ...config }
-  )
+  return useSWR<ApiCredential[]>(key, (url: string) => get<ApiCredential[]>(url), {
+    ...defaultConfig,
+    ...config,
+  })
 }
 
 /**
@@ -303,7 +294,9 @@ export function useMarkFalsePositiveApi(credentialId: string | null) {
   const { currentTenant } = useTenant()
 
   return useSWRMutation(
-    currentTenant && credentialId ? `${buildCredentialEndpoint(credentialId)}/false-positive` : null,
+    currentTenant && credentialId
+      ? `${buildCredentialEndpoint(credentialId)}/false-positive`
+      : null,
     async (url: string, { arg }: { arg: { notes?: string } }) => {
       return post<ApiCredential>(url, arg)
     }
@@ -333,9 +326,7 @@ export function useReactivateCredentialApi(credentialId: string | null) {
  */
 export async function invalidateCredentialsCache() {
   const { mutate } = await import('swr')
-  await mutate(
-    (key) => typeof key === 'string' && key.includes('/credentials'),
-    undefined,
-    { revalidate: true }
-  )
+  await mutate((key) => typeof key === 'string' && key.includes('/credentials'), undefined, {
+    revalidate: true,
+  })
 }

@@ -33,7 +33,15 @@ import type {
 const defaultConfig: SWRConfiguration = {
   revalidateOnFocus: false,
   revalidateOnReconnect: true,
-  shouldRetryOnError: true,
+  // Don't retry on client errors (4xx) - only retry on server/network errors
+  shouldRetryOnError: (error) => {
+    // Don't retry on 4xx errors (client errors like 403, 404, etc.)
+    if (error?.statusCode >= 400 && error?.statusCode < 500) {
+      return false
+    }
+    // Retry on 5xx or network errors
+    return true
+  },
   errorRetryCount: 3,
   errorRetryInterval: 1000,
   dedupingInterval: 2000,
@@ -66,7 +74,8 @@ function buildComponentsEndpoint(filters?: ComponentApiFilters): string {
 
   if (filters.ecosystems?.length) params.set('ecosystems', filters.ecosystems.join(','))
   if (filters.statuses?.length) params.set('statuses', filters.statuses.join(','))
-  if (filters.dependency_types?.length) params.set('dependency_types', filters.dependency_types.join(','))
+  if (filters.dependency_types?.length)
+    params.set('dependency_types', filters.dependency_types.join(','))
   if (filters.licenses?.length) params.set('licenses', filters.licenses.join(','))
 
   const queryString = params.toString()
@@ -77,11 +86,7 @@ function buildComponentEndpoint(componentId: string): string {
   return `/api/v1/components/${componentId}`
 }
 
-function buildAssetComponentsEndpoint(
-  assetId: string,
-  page?: number,
-  perPage?: number
-): string {
+function buildAssetComponentsEndpoint(assetId: string, page?: number, perPage?: number): string {
   const baseUrl = `/api/v1/assets/${assetId}/components`
   const params = new URLSearchParams()
 
@@ -137,15 +142,9 @@ export function useComponentsApi(filters?: ComponentApiFilters, config?: SWRConf
   // Only fetch if user has permission
   const shouldFetch = currentTenant && canReadComponents
 
-  const key = shouldFetch
-    ? buildComponentsEndpoint(filters)
-    : null
+  const key = shouldFetch ? buildComponentsEndpoint(filters) : null
 
-  return useSWR<ApiComponentListResponse>(
-    key,
-    fetchComponents,
-    { ...defaultConfig, ...config }
-  )
+  return useSWR<ApiComponentListResponse>(key, fetchComponents, { ...defaultConfig, ...config })
 }
 
 /**
@@ -160,15 +159,9 @@ export function useComponentApi(componentId: string | null, config?: SWRConfigur
   // Only fetch if user has permission
   const shouldFetch = currentTenant && componentId && canReadComponents
 
-  const key = shouldFetch
-    ? buildComponentEndpoint(componentId)
-    : null
+  const key = shouldFetch ? buildComponentEndpoint(componentId) : null
 
-  return useSWR<ApiComponent>(
-    key,
-    fetchComponent,
-    { ...defaultConfig, ...config }
-  )
+  return useSWR<ApiComponent>(key, fetchComponent, { ...defaultConfig, ...config })
 }
 
 /**
@@ -188,15 +181,9 @@ export function useAssetComponentsApi(
   // Only fetch if user has permission
   const shouldFetch = currentTenant && assetId && canReadComponents
 
-  const key = shouldFetch
-    ? buildAssetComponentsEndpoint(assetId, page, perPage)
-    : null
+  const key = shouldFetch ? buildAssetComponentsEndpoint(assetId, page, perPage) : null
 
-  return useSWR<ApiComponentListResponse>(
-    key,
-    fetchComponents,
-    { ...defaultConfig, ...config }
-  )
+  return useSWR<ApiComponentListResponse>(key, fetchComponents, { ...defaultConfig, ...config })
 }
 
 /**
@@ -300,9 +287,7 @@ export function useUpdateComponentApi(componentId: string) {
   const { currentTenant } = useTenant()
 
   return useSWRMutation(
-    currentTenant && componentId
-      ? buildComponentEndpoint(componentId)
-      : null,
+    currentTenant && componentId ? buildComponentEndpoint(componentId) : null,
     async (url: string, { arg }: { arg: UpdateComponentInput }) => {
       return put<ApiComponent>(url, arg)
     }
@@ -316,9 +301,7 @@ export function useDeleteComponentApi(componentId: string) {
   const { currentTenant } = useTenant()
 
   return useSWRMutation(
-    currentTenant && componentId
-      ? buildComponentEndpoint(componentId)
-      : null,
+    currentTenant && componentId ? buildComponentEndpoint(componentId) : null,
     async (url: string) => {
       return del<void>(url)
     }
@@ -334,9 +317,7 @@ export function useDeleteComponentApi(componentId: string) {
  */
 export async function invalidateComponentsCache() {
   const { mutate } = await import('swr')
-  await mutate(
-    (key) => typeof key === 'string' && key.includes(`/api/v1/components`),
-    undefined,
-    { revalidate: true }
-  )
+  await mutate((key) => typeof key === 'string' && key.includes(`/api/v1/components`), undefined, {
+    revalidate: true,
+  })
 }

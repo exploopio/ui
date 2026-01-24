@@ -158,7 +158,7 @@ function SidebarMenuLink({
   return (
     <SidebarMenuItem>
       <SidebarMenuButton asChild isActive={checkIsActive(pathname, item)} tooltip={item.title}>
-        <Link href={item.url} onClick={() => setOpenMobile(false)}>
+        <Link href={item.url} prefetch={false} onClick={() => setOpenMobile(false)}>
           {item.icon && <item.icon />}
           <span>{item.title}</span>
           {releaseStatusBadge ? (
@@ -228,7 +228,7 @@ function SidebarMenuCollapsible({
               return (
                 <SidebarMenuSubItem key={subItem.title}>
                   <SidebarMenuSubButton asChild isActive={checkIsActive(pathname, subItem)}>
-                    <Link href={subItem.url} onClick={() => setOpenMobile(false)}>
+                    <Link href={subItem.url} prefetch={false} onClick={() => setOpenMobile(false)}>
                       {subItem.icon && <subItem.icon />}
                       <span>{subItem.title}</span>
                       {subReleaseStatusBadge ? (
@@ -312,6 +312,7 @@ function SidebarMenuCollapsedDropdown({
               <DropdownMenuItem key={`${sub.title}-${sub.url}`} asChild>
                 <Link
                   href={sub.url}
+                  prefetch={false}
                   className={`${checkIsActive(pathname, sub) ? 'bg-secondary' : ''}`}
                 >
                   {sub.icon && <sub.icon />}

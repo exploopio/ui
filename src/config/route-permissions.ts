@@ -84,7 +84,7 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
     module: Module.Assets,
   },
   '/scope-config': {
-    permission: Permission.AssetGroupsRead,
+    permission: Permission.ScopeRead,
     module: Module.Assets,
   },
 
@@ -146,21 +146,22 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
 
   // ========================================
   // Prioritization Phase (Module: threat_intel)
+  // Backend uses VulnerabilitiesRead for threat intel routes
   // ========================================
   '/threat-intel': {
-    permission: Permission.FindingsRead,
+    permission: Permission.VulnerabilitiesRead,
     module: Module.ThreatIntel,
   },
   '/threat-intel/**': {
-    permission: Permission.FindingsRead,
+    permission: Permission.VulnerabilitiesRead,
     module: Module.ThreatIntel,
   },
   '/risk-analysis': {
-    permission: Permission.FindingsRead,
+    permission: Permission.VulnerabilitiesRead,
     module: Module.ThreatIntel,
   },
   '/business-impact': {
-    permission: Permission.FindingsRead,
+    permission: Permission.VulnerabilitiesRead,
     module: Module.ThreatIntel,
   },
 
@@ -225,14 +226,15 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
   },
 
   // ========================================
-  // Settings - Scanning (Module: scans)
+  // Settings - Agents (Module: scans)
+  // Backend uses AgentsRead for agent management routes
   // ========================================
   '/agents': {
-    permission: Permission.ScansRead,
+    permission: Permission.AgentsRead,
     module: Module.Scans,
   },
   '/agents/**': {
-    permission: Permission.ScansRead,
+    permission: Permission.AgentsRead,
     module: Module.Scans,
   },
   '/scan-profiles': {

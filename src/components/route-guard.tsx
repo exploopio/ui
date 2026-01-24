@@ -29,7 +29,7 @@ import * as React from 'react'
 import { usePathname } from 'next/navigation'
 import { ShieldX, ArrowLeft, Home, Package } from 'lucide-react'
 import { usePermissions } from '@/lib/permissions/hooks'
-import { useTenantModules } from '@/features/integrations/api/use-tenant-modules'
+import { useBootstrapModules } from '@/context/bootstrap-provider'
 import { matchRoutePermission } from '@/config/route-permissions'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -57,7 +57,7 @@ export function RouteGuard({ children }: RouteGuardProps) {
   const pathname = usePathname()
   // Use the same permission hook as sidebar for consistency
   const { can, isLoading: permissionsLoading, permissions } = usePermissions()
-  const { moduleIds, isLoading: modulesLoading } = useTenantModules()
+  const { moduleIds, isLoading: modulesLoading } = useBootstrapModules()
 
   // Find the route permission config for current pathname
   const routeConfig = React.useMemo(() => {

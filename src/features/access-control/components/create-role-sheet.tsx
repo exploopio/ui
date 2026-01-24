@@ -1,14 +1,14 @@
-'use client';
+'use client'
 
-import { useState, useMemo, useCallback } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { useState, useMemo, useCallback } from 'react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Textarea } from '@/components/ui/textarea'
+import { Switch } from '@/components/ui/switch'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Sheet,
   SheetContent,
@@ -16,19 +16,10 @@ import {
   SheetHeader,
   SheetTitle,
   SheetFooter,
-} from '@/components/ui/sheet';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { toast } from 'sonner';
+} from '@/components/ui/sheet'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { toast } from 'sonner'
 import {
   Plus,
   Shield,
@@ -42,37 +33,59 @@ import {
   X,
   Database,
   Eraser,
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
+} from 'lucide-react'
+import { cn } from '@/lib/utils'
 import {
   useCreateRole,
   useTenantPermissionModules,
   generateSlug,
   type PermissionModule,
-} from '@/features/access-control';
+} from '@/features/access-control'
 
 interface CreateRoleSheetProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSuccess?: () => void;
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onSuccess?: () => void
 }
 
 // Permission type colors
-const permissionTypeConfig: Record<string, { color: string; bgColor: string; icon: React.ElementType }> = {
+const permissionTypeConfig: Record<
+  string,
+  { color: string; bgColor: string; icon: React.ElementType }
+> = {
   read: { color: 'text-emerald-600', bgColor: 'bg-emerald-50 dark:bg-emerald-950', icon: Eye },
   write: { color: 'text-blue-600', bgColor: 'bg-blue-50 dark:bg-blue-950', icon: Pencil },
   delete: { color: 'text-red-600', bgColor: 'bg-red-50 dark:bg-red-950', icon: Trash2 },
-};
+}
 
 function getPermissionType(permissionId: string): string {
-  if (permissionId.includes(':delete') || permissionId.includes(':remove')) return 'delete';
-  if (permissionId.includes(':write') || permissionId.includes(':create') || permissionId.includes(':update') || permissionId.includes(':manage')) return 'write';
-  return 'read';
+  // Extract the action (last part after the last colon)
+  // Permission format: {module}:{subfeature}:{action}
+  const action = permissionId.split(':').pop() || ''
+
+  if (action === 'delete' || action === 'remove') return 'delete'
+  if (
+    [
+      'write',
+      'create',
+      'update',
+      'manage',
+      'assign',
+      'trigger',
+      'cancel',
+      'schedule',
+      'invite',
+      'bulk',
+      'export',
+    ].includes(action)
+  )
+    return 'write'
+  return 'read'
 }
 
 export function CreateRoleSheet({ open, onOpenChange, onSuccess }: CreateRoleSheetProps) {
-  const { createRole, isCreating } = useCreateRole();
-  const { modules: permissionModules, isLoading: isLoadingModules } = useTenantPermissionModules();
+  const { createRole, isCreating } = useCreateRole()
+  const { modules: permissionModules, isLoading: isLoadingModules } = useTenantPermissionModules()
 
   // Form state
   const [form, setForm] = useState({
@@ -80,27 +93,27 @@ export function CreateRoleSheet({ open, onOpenChange, onSuccess }: CreateRoleShe
     description: '',
     hasFullDataAccess: false,
     permissions: [] as string[],
-  });
+  })
 
   // UI state
-  const [searchQuery, setSearchQuery] = useState('');
-  const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
+  const [searchQuery, setSearchQuery] = useState('')
+  const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set())
 
   // Reset form when sheet closes
   const handleOpenChange = (open: boolean) => {
     if (!open) {
-      setForm({ name: '', description: '', hasFullDataAccess: false, permissions: [] });
-      setSearchQuery('');
-      setExpandedModules(new Set());
+      setForm({ name: '', description: '', hasFullDataAccess: false, permissions: [] })
+      setSearchQuery('')
+      setExpandedModules(new Set())
     }
-    onOpenChange(open);
-  };
+    onOpenChange(open)
+  }
 
   // Filter modules based on search
   const filteredModules = useMemo(() => {
-    if (!searchQuery.trim()) return permissionModules;
+    if (!searchQuery.trim()) return permissionModules
 
-    const query = searchQuery.toLowerCase();
+    const query = searchQuery.toLowerCase()
     return permissionModules
       .map((module) => ({
         ...module,
@@ -111,21 +124,23 @@ export function CreateRoleSheet({ open, onOpenChange, onSuccess }: CreateRoleShe
             p.description?.toLowerCase().includes(query)
         ),
       }))
-      .filter((module) => module.permissions.length > 0 || module.name.toLowerCase().includes(query));
-  }, [permissionModules, searchQuery]);
+      .filter(
+        (module) => module.permissions.length > 0 || module.name.toLowerCase().includes(query)
+      )
+  }, [permissionModules, searchQuery])
 
   // Toggle module expansion
   const toggleModule = (moduleId: string) => {
     setExpandedModules((prev) => {
-      const next = new Set(prev);
+      const next = new Set(prev)
       if (next.has(moduleId)) {
-        next.delete(moduleId);
+        next.delete(moduleId)
       } else {
-        next.add(moduleId);
+        next.add(moduleId)
       }
-      return next;
-    });
-  };
+      return next
+    })
+  }
 
   // Toggle single permission
   const togglePermission = useCallback((permissionId: string) => {
@@ -134,67 +149,67 @@ export function CreateRoleSheet({ open, onOpenChange, onSuccess }: CreateRoleShe
       permissions: prev.permissions.includes(permissionId)
         ? prev.permissions.filter((p) => p !== permissionId)
         : [...prev.permissions, permissionId],
-    }));
-  }, []);
+    }))
+  }, [])
 
   // Toggle all permissions in a module
   const toggleModulePermissions = useCallback((module: PermissionModule, checked: boolean) => {
-    const modulePermissionIds = module.permissions.map((p) => p.id);
+    const modulePermissionIds = module.permissions.map((p) => p.id)
     setForm((prev) => ({
       ...prev,
       permissions: checked
         ? [...new Set([...prev.permissions, ...modulePermissionIds])]
         : prev.permissions.filter((p) => !modulePermissionIds.includes(p)),
-    }));
-  }, []);
+    }))
+  }, [])
 
   // Quick actions
   const selectAllRead = useCallback(() => {
     const readPermissions = permissionModules.flatMap((m) =>
       m.permissions.filter((p) => getPermissionType(p.id) === 'read').map((p) => p.id)
-    );
+    )
     setForm((prev) => ({
       ...prev,
       permissions: [...new Set([...prev.permissions, ...readPermissions])],
-    }));
-  }, [permissionModules]);
+    }))
+  }, [permissionModules])
 
   const selectAllWrite = useCallback(() => {
     const writePermissions = permissionModules.flatMap((m) =>
       m.permissions.filter((p) => getPermissionType(p.id) === 'write').map((p) => p.id)
-    );
+    )
     setForm((prev) => ({
       ...prev,
       permissions: [...new Set([...prev.permissions, ...writePermissions])],
-    }));
-  }, [permissionModules]);
+    }))
+  }, [permissionModules])
 
   const clearAllPermissions = useCallback(() => {
-    setForm((prev) => ({ ...prev, permissions: [] }));
-  }, []);
+    setForm((prev) => ({ ...prev, permissions: [] }))
+  }, [])
 
   // Group selected permissions by module for preview
   const groupedSelectedPermissions = useMemo(() => {
-    const groups: Record<string, { module: PermissionModule; permissions: string[] }> = {};
+    const groups: Record<string, { module: PermissionModule; permissions: string[] }> = {}
 
     for (const permModule of permissionModules) {
       const selected = permModule.permissions
         .filter((p) => form.permissions.includes(p.id))
-        .map((p) => p.id);
+        .map((p) => p.id)
 
       if (selected.length > 0) {
-        groups[permModule.id] = { module: permModule, permissions: selected };
+        groups[permModule.id] = { module: permModule, permissions: selected }
       }
     }
 
-    return groups;
-  }, [permissionModules, form.permissions]);
+    return groups
+  }, [permissionModules, form.permissions])
 
   // Handle create
   const handleCreate = async () => {
     if (!form.name.trim()) {
-      toast.error('Please enter a role name');
-      return;
+      toast.error('Please enter a role name')
+      return
     }
 
     try {
@@ -204,28 +219,30 @@ export function CreateRoleSheet({ open, onOpenChange, onSuccess }: CreateRoleShe
         description: form.description || undefined,
         has_full_data_access: form.hasFullDataAccess,
         permissions: form.permissions,
-      });
-      toast.success(`Role "${form.name}" created successfully`);
-      handleOpenChange(false);
-      onSuccess?.();
+      })
+      toast.success(`Role "${form.name}" created successfully`)
+      handleOpenChange(false)
+      onSuccess?.()
     } catch (error) {
-      toast.error(`Failed to create role: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast.error(
+        `Failed to create role: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
     }
-  };
+  }
 
   // Get module selection state
   const getModuleSelectionState = (module: PermissionModule) => {
-    const modulePermissionIds = module.permissions.map((p) => p.id);
-    const selectedCount = form.permissions.filter((p) => modulePermissionIds.includes(p)).length;
-    const total = modulePermissionIds.length;
+    const modulePermissionIds = module.permissions.map((p) => p.id)
+    const selectedCount = form.permissions.filter((p) => modulePermissionIds.includes(p)).length
+    const total = modulePermissionIds.length
 
     return {
       selectedCount,
       total,
       allSelected: total > 0 && selectedCount === total,
       someSelected: selectedCount > 0 && selectedCount < total,
-    };
-  };
+    }
+  }
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
@@ -238,9 +255,7 @@ export function CreateRoleSheet({ open, onOpenChange, onSuccess }: CreateRoleShe
             </div>
             <div>
               <SheetTitle>Create Role</SheetTitle>
-              <SheetDescription>
-                Create a custom role with specific permissions
-              </SheetDescription>
+              <SheetDescription>Create a custom role with specific permissions</SheetDescription>
             </div>
           </div>
         </SheetHeader>
@@ -269,7 +284,9 @@ export function CreateRoleSheet({ open, onOpenChange, onSuccess }: CreateRoleShe
                       id="role-description"
                       placeholder="Describe what this role can do..."
                       value={form.description}
-                      onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
+                      onChange={(e) =>
+                        setForm((prev) => ({ ...prev, description: e.target.value }))
+                      }
                       rows={2}
                     />
                   </div>
@@ -286,7 +303,9 @@ export function CreateRoleSheet({ open, onOpenChange, onSuccess }: CreateRoleShe
                     </div>
                     <Switch
                       checked={form.hasFullDataAccess}
-                      onCheckedChange={(checked) => setForm((prev) => ({ ...prev, hasFullDataAccess: checked }))}
+                      onCheckedChange={(checked) =>
+                        setForm((prev) => ({ ...prev, hasFullDataAccess: checked }))
+                      }
                     />
                   </div>
                 </div>
@@ -364,8 +383,9 @@ export function CreateRoleSheet({ open, onOpenChange, onSuccess }: CreateRoleShe
                   ) : (
                     <div className="space-y-2">
                       {filteredModules.map((module) => {
-                        const { selectedCount, total, allSelected, someSelected } = getModuleSelectionState(module);
-                        const isExpanded = expandedModules.has(module.id) || searchQuery.length > 0;
+                        const { selectedCount, total, allSelected, someSelected } =
+                          getModuleSelectionState(module)
+                        const isExpanded = expandedModules.has(module.id) || searchQuery.length > 0
 
                         return (
                           <Collapsible
@@ -378,7 +398,9 @@ export function CreateRoleSheet({ open, onOpenChange, onSuccess }: CreateRoleShe
                               <div className="flex items-center gap-2 p-3">
                                 <Checkbox
                                   checked={allSelected || (someSelected && 'indeterminate')}
-                                  onCheckedChange={(checked) => toggleModulePermissions(module, !!checked)}
+                                  onCheckedChange={(checked) =>
+                                    toggleModulePermissions(module, !!checked)
+                                  }
                                   onClick={(e) => e.stopPropagation()}
                                 />
                                 <CollapsibleTrigger asChild>
@@ -410,10 +432,10 @@ export function CreateRoleSheet({ open, onOpenChange, onSuccess }: CreateRoleShe
                                   )}
                                   <div className="flex flex-wrap gap-2 ml-6">
                                     {module.permissions.map((permission) => {
-                                      const type = getPermissionType(permission.id);
-                                      const config = permissionTypeConfig[type];
-                                      const isSelected = form.permissions.includes(permission.id);
-                                      const Icon = config.icon;
+                                      const type = getPermissionType(permission.id)
+                                      const config = permissionTypeConfig[type]
+                                      const isSelected = form.permissions.includes(permission.id)
+                                      const Icon = config.icon
 
                                       return (
                                         <TooltipProvider key={permission.id}>
@@ -439,19 +461,21 @@ export function CreateRoleSheet({ open, onOpenChange, onSuccess }: CreateRoleShe
                                             <TooltipContent side="top" className="max-w-xs">
                                               <p className="font-mono text-xs">{permission.id}</p>
                                               {permission.description && (
-                                                <p className="text-xs mt-1">{permission.description}</p>
+                                                <p className="text-xs mt-1">
+                                                  {permission.description}
+                                                </p>
                                               )}
                                             </TooltipContent>
                                           </Tooltip>
                                         </TooltipProvider>
-                                      );
+                                      )
                                     })}
                                   </div>
                                 </div>
                               </CollapsibleContent>
                             </div>
                           </Collapsible>
-                        );
+                        )
                       })}
                     </div>
                   )}
@@ -475,7 +499,9 @@ export function CreateRoleSheet({ open, onOpenChange, onSuccess }: CreateRoleShe
                     </div>
                     <div>
                       <p className="font-medium text-sm">
-                        {form.name || <span className="text-muted-foreground italic">Enter role name...</span>}
+                        {form.name || (
+                          <span className="text-muted-foreground italic">Enter role name...</span>
+                        )}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {form.permissions.length} permissions
@@ -497,48 +523,48 @@ export function CreateRoleSheet({ open, onOpenChange, onSuccess }: CreateRoleShe
                 {form.permissions.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-8 text-center">
                     <Shield className="h-8 w-8 text-muted-foreground/30 mb-2" />
-                    <p className="text-xs text-muted-foreground">
-                      No permissions selected
-                    </p>
+                    <p className="text-xs text-muted-foreground">No permissions selected</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                       Selected Permissions
                     </p>
-                    {Object.entries(groupedSelectedPermissions).map(([moduleId, { module, permissions }]) => (
-                      <div key={moduleId} className="space-y-1.5">
-                        <div className="flex items-center justify-between">
-                          <p className="text-xs font-medium">{module.name}</p>
-                          <Badge variant="outline" className="text-xs h-5">
-                            {permissions.length}
-                          </Badge>
-                        </div>
-                        <div className="flex flex-wrap gap-1">
-                          {permissions.map((permId) => {
-                            const perm = module.permissions.find((p) => p.id === permId);
-                            const type = getPermissionType(permId);
-                            const config = permissionTypeConfig[type];
+                    {Object.entries(groupedSelectedPermissions).map(
+                      ([moduleId, { module, permissions }]) => (
+                        <div key={moduleId} className="space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs font-medium">{module.name}</p>
+                            <Badge variant="outline" className="text-xs h-5">
+                              {permissions.length}
+                            </Badge>
+                          </div>
+                          <div className="flex flex-wrap gap-1">
+                            {permissions.map((permId) => {
+                              const perm = module.permissions.find((p) => p.id === permId)
+                              const type = getPermissionType(permId)
+                              const config = permissionTypeConfig[type]
 
-                            return (
-                              <button
-                                key={permId}
-                                onClick={() => togglePermission(permId)}
-                                className={cn(
-                                  'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs',
-                                  config.bgColor,
-                                  config.color,
-                                  'hover:opacity-80 transition-opacity'
-                                )}
-                              >
-                                <span>{perm?.name || permId.split(':')[1]}</span>
-                                <X className="h-2.5 w-2.5" />
-                              </button>
-                            );
-                          })}
+                              return (
+                                <button
+                                  key={permId}
+                                  onClick={() => togglePermission(permId)}
+                                  className={cn(
+                                    'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs',
+                                    config.bgColor,
+                                    config.color,
+                                    'hover:opacity-80 transition-opacity'
+                                  )}
+                                >
+                                  <span>{perm?.name || permId.split(':')[1]}</span>
+                                  <X className="h-2.5 w-2.5" />
+                                </button>
+                              )
+                            })}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      )
+                    )}
                   </div>
                 )}
               </div>
@@ -562,5 +588,5 @@ export function CreateRoleSheet({ open, onOpenChange, onSuccess }: CreateRoleShe
         </SheetFooter>
       </SheetContent>
     </Sheet>
-  );
+  )
 }

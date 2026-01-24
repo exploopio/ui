@@ -39,7 +39,15 @@ import type {
 const defaultConfig: SWRConfiguration = {
   revalidateOnFocus: false,
   revalidateOnReconnect: true,
-  shouldRetryOnError: true,
+  // Don't retry on client errors (4xx) - only retry on server/network errors
+  shouldRetryOnError: (error) => {
+    // Don't retry on 4xx errors (client errors like 403, 404, etc.)
+    if (error?.statusCode >= 400 && error?.statusCode < 500) {
+      return false
+    }
+    // Retry on 5xx or network errors
+    return true
+  },
   errorRetryCount: 3,
   errorRetryInterval: 1000,
   dedupingInterval: 2000,
@@ -66,8 +74,10 @@ function buildAssetGroupsEndpoint(filters?: AssetGroupApiFilters): string {
   if (filters.business_unit) params.set('business_unit', filters.business_unit)
   if (filters.owner) params.set('owner', filters.owner)
   if (filters.has_findings !== undefined) params.set('has_findings', String(filters.has_findings))
-  if (filters.min_risk_score !== undefined) params.set('min_risk_score', String(filters.min_risk_score))
-  if (filters.max_risk_score !== undefined) params.set('max_risk_score', String(filters.max_risk_score))
+  if (filters.min_risk_score !== undefined)
+    params.set('min_risk_score', String(filters.min_risk_score))
+  if (filters.max_risk_score !== undefined)
+    params.set('max_risk_score', String(filters.max_risk_score))
   if (filters.page) params.set('page', String(filters.page))
   if (filters.per_page) params.set('per_page', String(filters.per_page))
   if (filters.sort_by) params.set('sort_by', filters.sort_by)
@@ -174,11 +184,7 @@ export function useAssetGroupsApi(filters?: AssetGroupApiFilters, config?: SWRCo
 
   const key = shouldFetch ? buildAssetGroupsEndpoint(filters) : null
 
-  return useSWR<ApiAssetGroupListResponse>(
-    key,
-    fetchAssetGroups,
-    { ...defaultConfig, ...config }
-  )
+  return useSWR<ApiAssetGroupListResponse>(key, fetchAssetGroups, { ...defaultConfig, ...config })
 }
 
 /**
@@ -195,11 +201,7 @@ export function useAssetGroupApi(groupId: string | null, config?: SWRConfigurati
 
   const key = shouldFetch ? buildAssetGroupEndpoint(groupId) : null
 
-  return useSWR<ApiAssetGroup>(
-    key,
-    fetchAssetGroup,
-    { ...defaultConfig, ...config }
-  )
+  return useSWR<ApiAssetGroup>(key, fetchAssetGroup, { ...defaultConfig, ...config })
 }
 
 /**
@@ -218,15 +220,9 @@ export function useGroupAssetsApi(
   // Only fetch if user has permission
   const shouldFetch = currentTenant && groupId && canReadAssetGroups
 
-  const key = shouldFetch
-    ? buildGroupAssetsEndpoint(groupId, filters)
-    : null
+  const key = shouldFetch ? buildGroupAssetsEndpoint(groupId, filters) : null
 
-  return useSWR<ApiGroupAssetsResponse>(
-    key,
-    fetchGroupAssets,
-    { ...defaultConfig, ...config }
-  )
+  return useSWR<ApiGroupAssetsResponse>(key, fetchGroupAssets, { ...defaultConfig, ...config })
 }
 
 /**
@@ -246,15 +242,9 @@ export function useGroupFindingsApi(
   // Only fetch if user has permission
   const shouldFetch = currentTenant && groupId && canReadAssetGroups
 
-  const key = shouldFetch
-    ? buildGroupFindingsEndpoint(groupId, page, perPage)
-    : null
+  const key = shouldFetch ? buildGroupFindingsEndpoint(groupId, page, perPage) : null
 
-  return useSWR<ApiGroupFindingsResponse>(
-    key,
-    fetchGroupFindings,
-    { ...defaultConfig, ...config }
-  )
+  return useSWR<ApiGroupFindingsResponse>(key, fetchGroupFindings, { ...defaultConfig, ...config })
 }
 
 /**
@@ -271,11 +261,7 @@ export function useAssetGroupStatsApi(config?: SWRConfiguration) {
 
   const key = shouldFetch ? `${BASE_URL}/stats` : null
 
-  return useSWR<ApiAssetGroupStats>(
-    key,
-    fetchAssetGroupStats,
-    { ...defaultConfig, ...config }
-  )
+  return useSWR<ApiAssetGroupStats>(key, fetchAssetGroupStats, { ...defaultConfig, ...config })
 }
 
 // ============================================
@@ -394,11 +380,9 @@ export function useBulkDeleteAssetGroupsApi() {
  */
 export async function invalidateAssetGroupsCache() {
   const { mutate } = await import('swr')
-  await mutate(
-    (key) => typeof key === 'string' && key.includes('/asset-groups'),
-    undefined,
-    { revalidate: true }
-  )
+  await mutate((key) => typeof key === 'string' && key.includes('/asset-groups'), undefined, {
+    revalidate: true,
+  })
 }
 
 /**

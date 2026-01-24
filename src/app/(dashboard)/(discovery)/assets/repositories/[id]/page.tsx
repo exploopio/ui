@@ -1815,7 +1815,7 @@ function SettingsTab({ repository }: { repository: Repository }) {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Can permission={Permission.RepositoriesWrite}>
+          <Can permission={Permission.AssetsWrite}>
             <div className="flex items-center justify-between p-4 rounded-lg border border-red-500/20">
               <div>
                 <p className="font-medium">Archive Repository</p>
@@ -1831,7 +1831,7 @@ function SettingsTab({ repository }: { repository: Repository }) {
               </Button>
             </div>
           </Can>
-          <Can permission={Permission.RepositoriesDelete}>
+          <Can permission={Permission.AssetsDelete}>
             <div className="flex items-center justify-between p-4 rounded-lg border border-red-500/20">
               <div>
                 <p className="font-medium">Delete Repository</p>
@@ -2193,7 +2193,7 @@ export default function RepositoryDetailPage() {
                     <Copy className="mr-2 h-4 w-4" />
                     Copy URL
                   </DropdownMenuItem>
-                  <Can permission={Permission.RepositoriesDelete}>
+                  <Can permission={Permission.AssetsDelete}>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem className="text-red-500" onClick={handleDelete}>
                       <Trash2 className="mr-2 h-4 w-4" />

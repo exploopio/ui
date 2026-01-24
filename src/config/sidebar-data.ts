@@ -134,7 +134,7 @@ export const sidebarData: SidebarData = {
           title: 'Scope Config',
           url: '/scope-config',
           icon: Settings2,
-          permission: Permission.AssetGroupsRead,
+          permission: Permission.ScopeRead,
           module: 'assets',
         },
       ],
@@ -303,21 +303,21 @@ export const sidebarData: SidebarData = {
           title: 'Threat Intel',
           url: '/threat-intel',
           icon: TrendingUp,
-          permission: Permission.FindingsRead,
+          permission: Permission.VulnerabilitiesRead,
           module: 'threat_intel',
         },
         {
           title: 'Risk Analysis',
           url: '/risk-analysis',
           icon: BarChart3,
-          permission: Permission.FindingsRead,
+          permission: Permission.VulnerabilitiesRead,
           module: 'threat_intel',
         },
         {
           title: 'Business Impact',
           url: '/business-impact',
           icon: Building2,
-          permission: Permission.FindingsRead,
+          permission: Permission.VulnerabilitiesRead,
           module: 'threat_intel',
         },
       ],
@@ -448,7 +448,7 @@ export const sidebarData: SidebarData = {
               title: 'Agents',
               url: '/agents',
               icon: Bot,
-              permission: Permission.ScansRead,
+              permission: Permission.AgentsRead,
             },
             {
               title: 'Profiles',
@@ -500,9 +500,8 @@ export const sidebarData: SidebarData = {
               title: 'Audit Log',
               url: '/settings/audit',
               icon: History,
-              // Requires audit:read permission and audit module
+              // Requires audit:read permission (core feature - no module required)
               permission: Permission.AuditRead,
-              module: 'audit',
             },
             {
               title: 'Billing',

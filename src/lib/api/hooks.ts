@@ -28,11 +28,23 @@ import type {
 
 /**
  * Default SWR configuration
+ *
+ * IMPORTANT: Don't retry on 4xx client errors (403, 404, etc.)
+ * Only retry on 5xx server errors or network failures
+ * This prevents infinite loops when user lacks permissions
  */
 export const defaultSwrConfig: SWRConfiguration = {
   revalidateOnFocus: false,
   revalidateOnReconnect: true,
-  shouldRetryOnError: true,
+  // Don't retry on client errors (4xx) - only retry on server/network errors
+  shouldRetryOnError: (error) => {
+    // Don't retry on 4xx errors (client errors like 403, 404, etc.)
+    if (error?.statusCode >= 400 && error?.statusCode < 500) {
+      return false
+    }
+    // Retry on 5xx or network errors
+    return true
+  },
   errorRetryCount: 3,
   errorRetryInterval: 1000,
   dedupingInterval: 2000,
@@ -52,20 +64,15 @@ export const defaultSwrConfig: SWRConfiguration = {
  * Fetch current user profile
  */
 export function useCurrentUser(config?: SWRConfiguration) {
-  return useSWR<User>(
-    endpoints.users.me(),
-    get,
-    { ...defaultSwrConfig, ...config }
-  )
+  return useSWR<User>(endpoints.users.me(), get, { ...defaultSwrConfig, ...config })
 }
 
 /**
  * Update current user profile
  */
 export function useUpdateCurrentUser() {
-  return useSWRMutation(
-    endpoints.users.updateMe(),
-    (url, { arg }: { arg: UpdateUserRequest }) => put<User>(url, arg)
+  return useSWRMutation(endpoints.users.updateMe(), (url, { arg }: { arg: UpdateUserRequest }) =>
+    put<User>(url, arg)
   )
 }
 
@@ -80,34 +87,28 @@ export function useUpdateCurrentUser() {
  * Fetch user by ID
  */
 export function useUser(userId: string | null, config?: SWRConfiguration) {
-  return useSWR<User>(
-    userId ? endpoints.users.get(userId) : null,
-    get,
-    { ...defaultSwrConfig, ...config }
-  )
+  return useSWR<User>(userId ? endpoints.users.get(userId) : null, get, {
+    ...defaultSwrConfig,
+    ...config,
+  })
 }
 
 /**
  * Fetch users list with pagination and filters
  */
-export function useUsers(
-  filters?: UserListFilters,
-  config?: SWRConfiguration
-) {
-  return useSWR<PaginatedResponse<User>>(
-    endpoints.users.list(filters),
-    get,
-    { ...defaultSwrConfig, ...config }
-  )
+export function useUsers(filters?: UserListFilters, config?: SWRConfiguration) {
+  return useSWR<PaginatedResponse<User>>(endpoints.users.list(filters), get, {
+    ...defaultSwrConfig,
+    ...config,
+  })
 }
 
 /**
  * Create user mutation
  */
 export function useCreateUser() {
-  return useSWRMutation(
-    endpoints.users.create(),
-    (url, { arg }: { arg: CreateUserRequest }) => post<User>(url, arg)
+  return useSWRMutation(endpoints.users.create(), (url, { arg }: { arg: CreateUserRequest }) =>
+    post<User>(url, arg)
   )
 }
 
@@ -125,10 +126,7 @@ export function useUpdateUser(userId: string) {
  * Delete user mutation
  */
 export function useDeleteUser(userId: string) {
-  return useSWRMutation(
-    endpoints.users.delete(userId),
-    (url) => del(url)
-  )
+  return useSWRMutation(endpoints.users.delete(userId), (url) => del(url))
 }
 
 // ============================================
@@ -139,22 +137,17 @@ export function useDeleteUser(userId: string) {
  * Fetch tenants list
  */
 export function useTenants(filters?: SearchFilters, config?: SWRConfiguration) {
-  return useSWR(
-    endpoints.tenants.list(filters),
-    get,
-    { ...defaultSwrConfig, ...config }
-  )
+  return useSWR(endpoints.tenants.list(filters), get, { ...defaultSwrConfig, ...config })
 }
 
 /**
  * Fetch tenant by ID or slug
  */
 export function useTenant(tenantIdOrSlug: string | null, config?: SWRConfiguration) {
-  return useSWR(
-    tenantIdOrSlug ? endpoints.tenants.get(tenantIdOrSlug) : null,
-    get,
-    { ...defaultSwrConfig, ...config }
-  )
+  return useSWR(tenantIdOrSlug ? endpoints.tenants.get(tenantIdOrSlug) : null, get, {
+    ...defaultSwrConfig,
+    ...config,
+  })
 }
 
 /**
@@ -181,21 +174,17 @@ export function useUpdateTenant(tenantIdOrSlug: string) {
  * Delete tenant mutation
  */
 export function useDeleteTenant(tenantIdOrSlug: string) {
-  return useSWRMutation(
-    endpoints.tenants.delete(tenantIdOrSlug),
-    (url) => del(url)
-  )
+  return useSWRMutation(endpoints.tenants.delete(tenantIdOrSlug), (url) => del(url))
 }
 
 /**
  * Fetch tenant members
  */
 export function useTenantMembers(tenantIdOrSlug: string | null, config?: SWRConfiguration) {
-  return useSWR(
-    tenantIdOrSlug ? endpoints.tenants.members(tenantIdOrSlug) : null,
-    get,
-    { ...defaultSwrConfig, ...config }
-  )
+  return useSWR(tenantIdOrSlug ? endpoints.tenants.members(tenantIdOrSlug) : null, get, {
+    ...defaultSwrConfig,
+    ...config,
+  })
 }
 
 // ============================================
@@ -206,33 +195,27 @@ export function useTenantMembers(tenantIdOrSlug: string | null, config?: SWRConf
  * Fetch vulnerabilities list
  */
 export function useVulnerabilities(filters?: SearchFilters, config?: SWRConfiguration) {
-  return useSWR(
-    endpoints.vulnerabilities.list(filters),
-    get,
-    { ...defaultSwrConfig, ...config }
-  )
+  return useSWR(endpoints.vulnerabilities.list(filters), get, { ...defaultSwrConfig, ...config })
 }
 
 /**
  * Fetch vulnerability by ID
  */
 export function useVulnerability(vulnId: string | null, config?: SWRConfiguration) {
-  return useSWR(
-    vulnId ? endpoints.vulnerabilities.get(vulnId) : null,
-    get,
-    { ...defaultSwrConfig, ...config }
-  )
+  return useSWR(vulnId ? endpoints.vulnerabilities.get(vulnId) : null, get, {
+    ...defaultSwrConfig,
+    ...config,
+  })
 }
 
 /**
  * Fetch vulnerability by CVE ID
  */
 export function useVulnerabilityByCVE(cveId: string | null, config?: SWRConfiguration) {
-  return useSWR(
-    cveId ? endpoints.vulnerabilities.getByCVE(cveId) : null,
-    get,
-    { ...defaultSwrConfig, ...config }
-  )
+  return useSWR(cveId ? endpoints.vulnerabilities.getByCVE(cveId) : null, get, {
+    ...defaultSwrConfig,
+    ...config,
+  })
 }
 
 // ============================================
@@ -247,11 +230,10 @@ export function useFindings(
   filters?: SearchFilters,
   config?: SWRConfiguration
 ) {
-  return useSWR(
-    tenantIdOrSlug ? endpoints.findings.list(filters) : null,
-    get,
-    { ...defaultSwrConfig, ...config }
-  )
+  return useSWR(tenantIdOrSlug ? endpoints.findings.list(filters) : null, get, {
+    ...defaultSwrConfig,
+    ...config,
+  })
 }
 
 /**
@@ -262,11 +244,10 @@ export function useFinding(
   findingId: string | null,
   config?: SWRConfiguration
 ) {
-  return useSWR(
-    tenantIdOrSlug && findingId ? endpoints.findings.get(findingId) : null,
-    get,
-    { ...defaultSwrConfig, ...config }
-  )
+  return useSWR(tenantIdOrSlug && findingId ? endpoints.findings.get(findingId) : null, get, {
+    ...defaultSwrConfig,
+    ...config,
+  })
 }
 
 /**
@@ -279,9 +260,7 @@ export function useFindingsByProject(
   config?: SWRConfiguration
 ) {
   return useSWR(
-    tenantIdOrSlug && projectId
-      ? endpoints.findings.listByAsset(projectId, filters)
-      : null,
+    tenantIdOrSlug && projectId ? endpoints.findings.listByAsset(projectId, filters) : null,
     get,
     { ...defaultSwrConfig, ...config }
   )
@@ -299,11 +278,10 @@ export function useProjects(
   filters?: SearchFilters,
   config?: SWRConfiguration
 ) {
-  return useSWR(
-    tenantIdOrSlug ? endpoints.projects.list(tenantIdOrSlug, filters) : null,
-    get,
-    { ...defaultSwrConfig, ...config }
-  )
+  return useSWR(tenantIdOrSlug ? endpoints.projects.list(tenantIdOrSlug, filters) : null, get, {
+    ...defaultSwrConfig,
+    ...config,
+  })
 }
 
 /**
@@ -333,11 +311,10 @@ export function useComponents(
   filters?: SearchFilters,
   config?: SWRConfiguration
 ) {
-  return useSWR(
-    tenantIdOrSlug ? endpoints.components.list(tenantIdOrSlug, filters) : null,
-    get,
-    { ...defaultSwrConfig, ...config }
-  )
+  return useSWR(tenantIdOrSlug ? endpoints.components.list(tenantIdOrSlug, filters) : null, get, {
+    ...defaultSwrConfig,
+    ...config,
+  })
 }
 
 /**
@@ -366,22 +343,17 @@ export function useComponentsByProject(
  * Fetch assets list
  */
 export function useAssets(filters?: SearchFilters, config?: SWRConfiguration) {
-  return useSWR(
-    endpoints.assets.list(filters),
-    get,
-    { ...defaultSwrConfig, ...config }
-  )
+  return useSWR(endpoints.assets.list(filters), get, { ...defaultSwrConfig, ...config })
 }
 
 /**
  * Fetch asset by ID
  */
 export function useAsset(assetId: string | null, config?: SWRConfiguration) {
-  return useSWR(
-    assetId ? endpoints.assets.get(assetId) : null,
-    get,
-    { ...defaultSwrConfig, ...config }
-  )
+  return useSWR(assetId ? endpoints.assets.get(assetId) : null, get, {
+    ...defaultSwrConfig,
+    ...config,
+  })
 }
 
 // ============================================
@@ -393,7 +365,7 @@ export function useAsset(assetId: string | null, config?: SWRConfiguration) {
  */
 export async function mutateMultiple(keys: string[]) {
   const { mutate } = await import('swr')
-  await Promise.all(keys.map(key => mutate(key)))
+  await Promise.all(keys.map((key) => mutate(key)))
 }
 
 /**
@@ -414,15 +386,11 @@ export async function optimisticUpdate<T>(
 ) {
   const { mutate } = await import('swr')
 
-  await mutate(
-    key,
-    updateFn(),
-    {
-      optimisticData,
-      rollbackOnError: true,
-      revalidate: false,
-    }
-  )
+  await mutate(key, updateFn(), {
+    optimisticData,
+    rollbackOnError: true,
+    revalidate: false,
+  })
 }
 
 // ============================================
@@ -434,8 +402,7 @@ export async function optimisticUpdate<T>(
  */
 export function useInfiniteUsers(filters?: UserListFilters) {
   return useSWRInfinite(
-    (pageIndex: number) =>
-      endpoints.users.list({ ...filters, page: pageIndex + 1 }),
+    (pageIndex: number) => endpoints.users.list({ ...filters, page: pageIndex + 1 }),
     get,
     defaultSwrConfig
   )
@@ -450,11 +417,10 @@ export function useDependentData<T, C = unknown>(
   fetcher: (key: string) => Promise<T>,
   config?: SWRConfiguration
 ) {
-  return useSWR<T>(
-    condition ? keyFn(condition as NonNullable<C>) : null,
-    fetcher,
-    { ...defaultSwrConfig, ...config }
-  )
+  return useSWR<T>(condition ? keyFn(condition as NonNullable<C>) : null, fetcher, {
+    ...defaultSwrConfig,
+    ...config,
+  })
 }
 
 /**
@@ -466,13 +432,9 @@ export function usePolling<T>(
   interval: number = 5000,
   config?: SWRConfiguration
 ) {
-  return useSWR<T>(
-    key,
-    fetcher,
-    {
-      ...defaultSwrConfig,
-      refreshInterval: interval,
-      ...config,
-    }
-  )
+  return useSWR<T>(key, fetcher, {
+    ...defaultSwrConfig,
+    refreshInterval: interval,
+    ...config,
+  })
 }

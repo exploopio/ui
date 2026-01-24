@@ -29,7 +29,15 @@ import type {
 export const defaultProjectSwrConfig: SWRConfiguration = {
   revalidateOnFocus: false,
   revalidateOnReconnect: true,
-  shouldRetryOnError: true,
+  // Don't retry on client errors (4xx) - only retry on server/network errors
+  shouldRetryOnError: (error) => {
+    // Don't retry on 4xx errors (client errors like 403, 404, etc.)
+    if (error?.statusCode >= 400 && error?.statusCode < 500) {
+      return false
+    }
+    // Retry on 5xx or network errors
+    return true
+  },
   errorRetryCount: 3,
   errorRetryInterval: 1000,
   dedupingInterval: 2000,
@@ -57,15 +65,11 @@ export const defaultProjectSwrConfig: SWRConfiguration = {
  * })
  * ```
  */
-export function useProjects(
-  filters?: ProjectFilters,
-  config?: SWRConfiguration
-) {
-  return useSWR<ProjectListResponse>(
-    projectEndpoints.list(filters),
-    get,
-    { ...defaultProjectSwrConfig, ...config }
-  )
+export function useProjects(filters?: ProjectFilters, config?: SWRConfiguration) {
+  return useSWR<ProjectListResponse>(projectEndpoints.list(filters), get, {
+    ...defaultProjectSwrConfig,
+    ...config,
+  })
 }
 
 /**
@@ -76,15 +80,11 @@ export function useProjects(
  * const { data: project } = useProject('project-456')
  * ```
  */
-export function useProject(
-  projectId: string | null,
-  config?: SWRConfiguration
-) {
-  return useSWR<Project>(
-    projectId ? projectEndpoints.get(projectId) : null,
-    get,
-    { ...defaultProjectSwrConfig, ...config }
-  )
+export function useProject(projectId: string | null, config?: SWRConfiguration) {
+  return useSWR<Project>(projectId ? projectEndpoints.get(projectId) : null, get, {
+    ...defaultProjectSwrConfig,
+    ...config,
+  })
 }
 
 /**
@@ -105,9 +105,8 @@ export function useProject(
  * ```
  */
 export function useCreateProject() {
-  return useSWRMutation(
-    projectEndpoints.create(),
-    (url, { arg }: { arg: CreateProjectRequest }) => post<Project>(url, arg)
+  return useSWRMutation(projectEndpoints.create(), (url, { arg }: { arg: CreateProjectRequest }) =>
+    post<Project>(url, arg)
   )
 }
 
@@ -125,10 +124,7 @@ export function useUpdateProject(projectId: string) {
  * Delete project mutation
  */
 export function useDeleteProject(projectId: string) {
-  return useSWRMutation(
-    projectEndpoints.delete(projectId),
-    (url) => del(url)
-  )
+  return useSWRMutation(projectEndpoints.delete(projectId), (url) => del(url))
 }
 
 // ============================================

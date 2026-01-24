@@ -28,7 +28,7 @@
 import { useMemo } from 'react'
 import { usePermissions } from './hooks'
 import { isRoleAtLeast, type RoleString } from './constants'
-import { useTenantModules } from '@/features/integrations/api/use-tenant-modules'
+import { useBootstrapModules } from '@/context/bootstrap-provider'
 import type {
   SidebarData,
   NavGroup,
@@ -238,7 +238,7 @@ export function useFilteredSidebarData(sidebarData: SidebarData): FilteredSideba
     permissions,
     isLoading: permissionsLoading,
   } = usePermissions()
-  const { moduleIds, modules, isLoading: modulesLoading } = useTenantModules()
+  const { moduleIds, modules, isLoading: modulesLoading } = useBootstrapModules()
 
   // Create helper functions for module access
   const moduleHelpers = useMemo(() => {
