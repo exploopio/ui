@@ -44,7 +44,11 @@ export default async function SiteLayout({ children }: SiteLayoutProps) {
               >
                 {/* RouteGuard checks if user has permission to access current route */}
                 {/* Shows "Access Denied" page if user doesn't have required permission */}
-                <RouteGuard>{children}</RouteGuard>
+                <RouteGuard>
+                  {/* Enable if header is needed for all dashboard pages */}
+                  {/* <Header fixed /> */}
+                  {children}
+                </RouteGuard>
               </SidebarInset>
             </SidebarProvider>
           </TenantGate>
