@@ -1,8 +1,8 @@
-'use client';
+'use client'
 
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Clock,
   User,
@@ -20,14 +20,16 @@ import {
   Trash,
   Wifi,
   WifiOff,
-} from 'lucide-react';
+  Lock,
+} from 'lucide-react'
 
-import { useResourceAuditHistory } from '@/lib/api/audit-hooks';
-import type { AuditLog, AuditAction, AuditResult } from '@/lib/api/audit-types';
-import { getActionLabel, getSeverityColor, getResultColor } from '@/lib/api/audit-types';
+import { useResourceAuditHistory } from '@/lib/api/audit-hooks'
+import { useHasModule } from '@/features/integrations/api/use-tenant-modules'
+import type { AuditLog, AuditAction, AuditResult } from '@/lib/api/audit-types'
+import { getActionLabel, getSeverityColor, getResultColor } from '@/lib/api/audit-types'
 
 interface AgentAuditLogProps {
-  agentId: string;
+  agentId: string
 }
 
 /**
@@ -44,8 +46,8 @@ function getActionIcon(action: AuditAction) {
     'agent.key_regenerated': <KeyRound className="h-4 w-4" />,
     'agent.connected': <Wifi className="h-4 w-4" />,
     'agent.disconnected': <WifiOff className="h-4 w-4" />,
-  };
-  return iconMap[action] || <FileText className="h-4 w-4" />;
+  }
+  return iconMap[action] || <FileText className="h-4 w-4" />
 }
 
 /**
@@ -56,32 +58,32 @@ function getResultIcon(result: AuditResult) {
     success: <CheckCircle className="h-3 w-3" />,
     failure: <XCircle className="h-3 w-3" />,
     denied: <AlertTriangle className="h-3 w-3" />,
-  };
-  return iconMap[result];
+  }
+  return iconMap[result]
 }
 
 /**
  * Format timestamp for display
  */
 function formatTimestamp(timestamp: string): string {
-  const date = new Date(timestamp);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffSecs = Math.floor(diffMs / 1000);
-  const diffMins = Math.floor(diffSecs / 60);
-  const diffHours = Math.floor(diffMins / 60);
-  const diffDays = Math.floor(diffHours / 24);
+  const date = new Date(timestamp)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffSecs = Math.floor(diffMs / 1000)
+  const diffMins = Math.floor(diffSecs / 60)
+  const diffHours = Math.floor(diffMins / 60)
+  const diffDays = Math.floor(diffHours / 24)
 
-  if (diffSecs < 60) return 'Just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
+  if (diffSecs < 60) return 'Just now'
+  if (diffMins < 60) return `${diffMins}m ago`
+  if (diffHours < 24) return `${diffHours}h ago`
+  if (diffDays < 7) return `${diffDays}d ago`
 
   return date.toLocaleDateString(undefined, {
     month: 'short',
     day: 'numeric',
     year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
-  });
+  })
 }
 
 /**
@@ -162,7 +164,7 @@ function AuditLogEntry({ log }: { log: AuditLog }) {
         )}
       </div>
     </div>
-  );
+  )
 }
 
 /**
@@ -182,7 +184,7 @@ function AuditLogSkeleton() {
         </div>
       ))}
     </div>
-  );
+  )
 }
 
 /**
@@ -190,12 +192,27 @@ function AuditLogSkeleton() {
  * Displays audit history for a specific agent
  */
 export function AgentAuditLog({ agentId }: AgentAuditLogProps) {
+  const { hasModule: hasAuditModule, isLoading: moduleLoading } = useHasModule('audit')
   const { data, isLoading, error } = useResourceAuditHistory('agent', agentId, {
     refreshInterval: 30000, // Refresh every 30 seconds
-  });
+  })
 
-  if (isLoading) {
-    return <AuditLogSkeleton />;
+  // Show loading skeleton while checking module availability
+  if (moduleLoading || isLoading) {
+    return <AuditLogSkeleton />
+  }
+
+  // Show upgrade prompt if audit module is not available
+  if (!hasAuditModule) {
+    return (
+      <div className="flex flex-col items-center justify-center py-8 text-center">
+        <Lock className="h-8 w-8 text-muted-foreground/50 mb-2" />
+        <p className="text-sm font-medium text-muted-foreground">Audit Log Not Available</p>
+        <p className="text-xs text-muted-foreground/70 mt-1">
+          Upgrade your plan to access activity logs
+        </p>
+      </div>
+    )
   }
 
   if (error) {
@@ -204,7 +221,7 @@ export function AgentAuditLog({ agentId }: AgentAuditLogProps) {
         <AlertTriangle className="h-8 w-8 text-amber-500 mb-2" />
         <p className="text-sm text-muted-foreground">Failed to load audit logs</p>
       </div>
-    );
+    )
   }
 
   if (!data?.items?.length) {
@@ -216,7 +233,7 @@ export function AgentAuditLog({ agentId }: AgentAuditLogProps) {
           Activity will appear here when actions are performed
         </p>
       </div>
-    );
+    )
   }
 
   return (
@@ -232,5 +249,5 @@ export function AgentAuditLog({ agentId }: AgentAuditLogProps) {
         </div>
       )}
     </ScrollArea>
-  );
+  )
 }

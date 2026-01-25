@@ -1,48 +1,67 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import { Plus, Link2, AlertCircle, RefreshCw, Loader2, ChevronRight } from "lucide-react";
+import { useState } from 'react'
+import { Plus, Link2, AlertCircle, RefreshCw, Loader2, ChevronRight } from 'lucide-react'
 
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { Skeleton } from '@/components/ui/skeleton'
 
-import { AddConnectionDialog } from "./add-connection-dialog";
-import { SCMConnectionCard } from "./scm-connection-card";
-import {
-  useSCMIntegrationsApi,
-  invalidateSCMIntegrationsCache,
-} from "@/features/integrations";
+import { AddConnectionDialog } from './add-connection-dialog'
+import { SCMConnectionCard } from './scm-connection-card'
+import { useSCMIntegrationsApi, invalidateSCMIntegrationsCache } from '@/features/integrations'
+import { useHasModule } from '@/features/integrations/api/use-tenant-modules'
 
 interface SCMConnectionsSectionProps {
-  onConnectionSelect?: (connectionId: string | null) => void;
-  selectedConnectionId?: string | null;
+  onConnectionSelect?: (connectionId: string | null) => void
+  selectedConnectionId?: string | null
 }
 
 export function SCMConnectionsSection({
   onConnectionSelect,
   selectedConnectionId,
 }: SCMConnectionsSectionProps) {
-  const [isOpen, setIsOpen] = useState(false); // Collapsed by default
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false) // Collapsed by default
+  const [addDialogOpen, setAddDialogOpen] = useState(false)
 
-  const { data: connectionsData, error, isLoading, mutate } = useSCMIntegrationsApi();
+  const { hasModule: hasSCMModule, isLoading: moduleLoading } = useHasModule('scm')
+  const { data: connectionsData, error, isLoading, mutate } = useSCMIntegrationsApi()
+
+  // Don't render if SCM module is not available (free plan doesn't have SCM)
+  if (!moduleLoading && !hasSCMModule) {
+    return null
+  }
 
   // Handle the API response format
-  const connections = connectionsData?.data ?? [];
+  const connections = connectionsData?.data ?? []
 
   const handleRefresh = async () => {
-    await invalidateSCMIntegrationsCache();
-    await mutate();
-  };
+    await invalidateSCMIntegrationsCache()
+    await mutate()
+  }
 
-  const connectedCount = connections.filter((c) => c.status === "connected").length;
-  const errorCount = connections.filter((c) => c.status === "error").length;
+  const connectedCount = connections.filter((c) => c.status === 'connected').length
+  const errorCount = connections.filter((c) => c.status === 'error').length
+
+  // Show loading skeleton while checking module availability
+  if (moduleLoading) {
+    return (
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {[...Array(2)].map((_, i) => (
+          <div key={i} className="rounded-lg border p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <Skeleton className="h-10 w-10 rounded-lg" />
+              <div className="space-y-1.5 flex-1">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-3 w-32" />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
 
   if (error) {
     return (
@@ -52,14 +71,14 @@ export function SCMConnectionsSection({
           <span className="text-sm font-medium">Failed to load SCM connections</span>
         </div>
         <p className="text-sm text-muted-foreground mt-1">
-          {error.message || "An unexpected error occurred"}
+          {error.message || 'An unexpected error occurred'}
         </p>
         <Button variant="outline" size="sm" className="mt-2" onClick={handleRefresh}>
           <RefreshCw className="mr-2 h-4 w-4" />
           Retry
         </Button>
       </div>
-    );
+    )
   }
 
   return (
@@ -68,7 +87,9 @@ export function SCMConnectionsSection({
         <div className="flex items-center justify-between mb-3">
           <CollapsibleTrigger asChild>
             <Button variant="ghost" className="gap-2 -ml-2 h-8">
-              <ChevronRight className={`h-4 w-4 transition-transform duration-200 ${isOpen ? "rotate-90" : ""}`} />
+              <ChevronRight
+                className={`h-4 w-4 transition-transform duration-200 ${isOpen ? 'rotate-90' : ''}`}
+              />
               <Link2 className="h-4 w-4" />
               <span className="font-medium">SCM Connections</span>
               {!isLoading && connections && (
@@ -77,12 +98,18 @@ export function SCMConnectionsSection({
                     {connections.length}
                   </Badge>
                   {connectedCount > 0 && (
-                    <Badge variant="outline" className="h-5 px-1.5 text-xs text-green-500 border-green-500/30">
+                    <Badge
+                      variant="outline"
+                      className="h-5 px-1.5 text-xs text-green-500 border-green-500/30"
+                    >
                       {connectedCount} active
                     </Badge>
                   )}
                   {errorCount > 0 && (
-                    <Badge variant="outline" className="h-5 px-1.5 text-xs text-red-500 border-red-500/30">
+                    <Badge
+                      variant="outline"
+                      className="h-5 px-1.5 text-xs text-red-500 border-red-500/30"
+                    >
                       {errorCount} error
                     </Badge>
                   )}
@@ -91,12 +118,7 @@ export function SCMConnectionsSection({
             </Button>
           </CollapsibleTrigger>
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleRefresh}
-              disabled={isLoading}
-            >
+            <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={isLoading}>
               {isLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
@@ -167,5 +189,5 @@ export function SCMConnectionsSection({
         onSuccess={handleRefresh}
       />
     </>
-  );
+  )
 }

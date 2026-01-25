@@ -113,6 +113,7 @@ import {
   SYNC_STATUS_LABELS,
 } from '@/features/repositories'
 import { useSCMConnections } from '@/features/repositories/hooks/use-repositories'
+import { useHasModule } from '@/features/integrations/api/use-tenant-modules'
 import type { AssetWithRepository } from '@/features/assets/types/asset.types'
 import type { Status } from '@/features/shared/types'
 
@@ -483,7 +484,13 @@ function RepositoryStatusBadge({ status }: { status: RepositoryStatus }) {
 
 function SCMConnectionsBanner() {
   const router = useRouter()
+  const { hasModule: hasSCMModule, isLoading: moduleLoading } = useHasModule('scm')
   const { data: connectionsData, isLoading } = useSCMConnections()
+
+  // Don't render if SCM module is not available (free plan doesn't have SCM)
+  if (!moduleLoading && !hasSCMModule) {
+    return null
+  }
 
   // Handle both array and paginated response formats
   const connections = Array.isArray(connectionsData)
@@ -493,7 +500,7 @@ function SCMConnectionsBanner() {
   const connectedCount = connections.filter((c) => c.status === 'connected').length
   const hasConnections = connections.length > 0
 
-  if (isLoading) {
+  if (isLoading || moduleLoading) {
     return (
       <Card className="mt-6 bg-muted/30">
         <CardContent className="py-4">
