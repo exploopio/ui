@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { Header, Main } from '@/components/layout'
+import { Main } from '@/components/layout'
 import { RiskScoreBadge } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -1855,8 +1855,6 @@ function SettingsTab({ repository }: { repository: Repository }) {
 function DetailPageSkeleton() {
   return (
     <>
-      <Header fixed />
-
       <Main>
         <div className="mb-6">
           <Skeleton className="h-9 w-40 mb-4" />
@@ -2081,8 +2079,6 @@ export default function RepositoryDetailPage() {
 
   return (
     <>
-      <Header fixed />
-
       <Main>
         {/* Breadcrumb & Back */}
         <div className="mb-6">

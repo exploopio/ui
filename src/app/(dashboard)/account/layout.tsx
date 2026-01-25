@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { Header, Main } from '@/components/layout'
+import { Main } from '@/components/layout'
 import { PageHeader } from '@/features/shared'
 import { cn } from '@/lib/utils'
 import { User, Shield, Settings, History } from 'lucide-react'
@@ -48,8 +48,6 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
 
   return (
     <>
-      <Header fixed />
-
       <Main>
         <PageHeader
           title="Account Settings"

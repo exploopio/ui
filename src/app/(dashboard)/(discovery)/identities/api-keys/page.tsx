@@ -1,6 +1,6 @@
 'use client'
 
-import { Header, Main } from '@/components/layout'
+import { Main } from '@/components/layout'
 import { PageHeader } from '@/features/shared'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Key, CheckCircle, Clock, AlertTriangle } from 'lucide-react'
@@ -44,8 +44,6 @@ const apiKeyStats = [
 export default function ApiKeysPage() {
   return (
     <>
-      <Header fixed />
-
       <Main>
         <PageHeader title="API Keys" description="API keys and access tokens" />
 

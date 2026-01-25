@@ -1,6 +1,6 @@
 'use client'
 
-import { Header, Main } from '@/components/layout'
+import { Main } from '@/components/layout'
 import { PageHeader, SeverityBadge } from '@/features/shared'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -126,8 +126,6 @@ export default function RiskAnalysisPage() {
 
   return (
     <>
-      <Header fixed />
-
       <Main>
         <PageHeader
           title="Risk Analysis"

@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { ColumnDef } from '@tanstack/react-table'
-import { Header, Main } from '@/components/layout'
+import { Main } from '@/components/layout'
 import { PageHeader, DataTable, DataTableColumnHeader, RiskScoreBadge } from '@/features/shared'
 import { Can, Permission } from '@/lib/permissions'
 import { Button } from '@/components/ui/button'
@@ -560,8 +560,6 @@ export default function CrownJewelsPage() {
 
   return (
     <>
-      <Header fixed />
-
       <Main>
         <PageHeader
           title="Crown Jewels"

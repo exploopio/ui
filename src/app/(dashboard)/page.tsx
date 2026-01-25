@@ -1,7 +1,7 @@
 'use client'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Header, Main } from '@/components/layout'
+import { Main } from '@/components/layout'
 import { ProcessStepper, StatsCard } from '@/features/shared'
 import { ActivityItem, QuickStat, useGlobalDashboardStats } from '@/features/dashboard'
 import { Can, Permission } from '@/lib/permissions'
@@ -119,8 +119,6 @@ export default function Dashboard() {
 
   return (
     <>
-      <Header fixed />
-
       <Main>
         {/* Quick Actions & Process Stepper */}
         <section className="mb-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">

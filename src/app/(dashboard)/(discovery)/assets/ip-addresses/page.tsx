@@ -11,7 +11,7 @@ import {
   SortingState,
   useReactTable,
 } from '@tanstack/react-table'
-import { Header, Main } from '@/components/layout'
+import { Main } from '@/components/layout'
 import { PageHeader, StatusBadge, RiskScoreBadge } from '@/features/shared'
 import { AssetDetailSheet, StatCard, StatsGrid, SectionTitle } from '@/features/assets'
 import { Button } from '@/components/ui/button'
@@ -647,8 +647,6 @@ export default function IpAddressesPage() {
 
   return (
     <>
-      <Header fixed />
-
       <Main>
         <PageHeader
           title="IP Addresses"

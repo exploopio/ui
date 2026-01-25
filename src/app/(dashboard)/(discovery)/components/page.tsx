@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Header, Main } from '@/components/layout'
+import { Main } from '@/components/layout'
 import { PageHeader } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -54,8 +54,6 @@ export default function ComponentsOverviewPage() {
 
   return (
     <>
-      <Header fixed />
-
       <Main>
         <PageHeader
           title="Software Components"

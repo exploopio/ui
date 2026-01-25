@@ -3,9 +3,8 @@ import { cn } from '@/lib/utils'
 import { LayoutProvider } from '@/context/layout-provider'
 import { SearchProvider } from '@/context/search-provider'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
-import { AppSidebar, TenantGate } from '@/components/layout'
+import { DashboardHeader, DashboardProviders, AppSidebar, TenantGate } from '@/components/layout'
 import { SkipToMain } from '@/components/skip-to-main'
-import { DashboardProviders } from '@/components/layout/dashboard-providers'
 import { RouteGuard } from '@/components/route-guard'
 
 type SiteLayoutProps = {
@@ -45,8 +44,8 @@ export default async function SiteLayout({ children }: SiteLayoutProps) {
                 {/* RouteGuard checks if user has permission to access current route */}
                 {/* Shows "Access Denied" page if user doesn't have required permission */}
                 <RouteGuard>
-                  {/* Enable if header is needed for all dashboard pages */}
-                  {/* <Header fixed /> */}
+                  {/* Global header that handles per-route visibility */}
+                  <DashboardHeader />
                   {children}
                 </RouteGuard>
               </SidebarInset>

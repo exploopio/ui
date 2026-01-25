@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Header, Main } from '@/components/layout'
+import { Main } from '@/components/layout'
 import { PageHeader } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -161,7 +161,6 @@ export default function AuditLogPage() {
   if (!hasAuditPermission) {
     return (
       <>
-        <Header fixed />
         <Main>
           <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
             <div className="rounded-full bg-red-100 p-4 dark:bg-red-900/20">
@@ -201,8 +200,6 @@ export default function AuditLogPage() {
 
   return (
     <>
-      <Header fixed />
-
       <Main>
         <PageHeader title="Audit Log" description="View activity history and security events">
           <Button variant="outline" onClick={() => mutate()}>

@@ -2,7 +2,7 @@
 
 import { use, useState, useMemo, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Header, Main } from '@/components/layout'
+import { Main } from '@/components/layout'
 import { RiskScoreBadge } from '@/features/shared'
 import { Can, Permission } from '@/lib/permissions'
 import { Button } from '@/components/ui/button'
@@ -270,7 +270,6 @@ export default function AssetGroupDetailPage({ params }: PageProps) {
   if (groupLoading) {
     return (
       <>
-        <Header fixed />
         <Main>
           {/* Header skeleton */}
           <div className="flex items-center gap-4 mb-6">
@@ -340,7 +339,6 @@ export default function AssetGroupDetailPage({ params }: PageProps) {
   if (!group) {
     return (
       <>
-        <Header fixed />
         <Main>
           <div className="flex flex-col items-center justify-center py-20">
             <FolderKanban className="h-16 w-16 text-muted-foreground/50 mb-4" />
@@ -444,8 +442,6 @@ export default function AssetGroupDetailPage({ params }: PageProps) {
 
   return (
     <>
-      <Header fixed />
-
       <Main>
         {/* Header with Back Button */}
         <div className="flex items-center gap-4 mb-6">

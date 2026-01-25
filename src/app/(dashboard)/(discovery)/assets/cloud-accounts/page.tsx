@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Header, Main } from '@/components/layout'
+import { Main } from '@/components/layout'
 import { PageHeader } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -113,8 +113,6 @@ export default function CloudAccountsPage() {
 
   return (
     <>
-      <Header fixed />
-
       <Main>
         <PageHeader
           title="Cloud Accounts"

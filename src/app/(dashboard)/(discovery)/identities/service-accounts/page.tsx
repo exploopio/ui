@@ -1,6 +1,6 @@
 'use client'
 
-import { Header, Main } from '@/components/layout'
+import { Main } from '@/components/layout'
 import { PageHeader } from '@/features/shared'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Bot, CheckCircle, AlertTriangle, Shield } from 'lucide-react'
@@ -44,8 +44,6 @@ const serviceAccountStats = [
 export default function ServiceAccountsPage() {
   return (
     <>
-      <Header fixed />
-
       <Main>
         <PageHeader title="Service Accounts" description="Non-human service accounts" />
 

@@ -13,7 +13,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
-import { Header, Main } from '@/components/layout'
+import { Main } from '@/components/layout'
 import { cn } from '@/lib/utils'
 import {
   Search,
@@ -197,8 +197,6 @@ export default function ExposuresPage() {
 
   return (
     <>
-      <Header fixed />
-
       <Main>
         <div className="space-y-6">
           {/* Page Header */}

@@ -1,6 +1,6 @@
 'use client'
 
-import { Header, Main } from '@/components/layout'
+import { Main } from '@/components/layout'
 import { PageHeader } from '@/features/shared'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Users, Bot, Key, Puzzle, KeyRound, ShieldAlert } from 'lucide-react'
@@ -60,8 +60,6 @@ const identityStats = [
 export default function IdentitiesOverviewPage() {
   return (
     <>
-      <Header fixed />
-
       <Main>
         <PageHeader title="Identities Overview" description="Human and non-human identities" />
 

@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Header, Main } from '@/components/layout'
+import { Main } from '@/components/layout'
 import { PageHeader } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -198,7 +198,6 @@ export default function SCMConnectionsPage() {
   if (error) {
     return (
       <>
-        <Header fixed />
         <Main>
           <div className="flex flex-col items-center justify-center py-20">
             <AlertCircle className="h-12 w-12 text-destructive mb-4" />
@@ -218,8 +217,6 @@ export default function SCMConnectionsPage() {
 
   return (
     <>
-      <Header fixed />
-
       <Main>
         {/* Breadcrumb */}
         <div className="mb-4">

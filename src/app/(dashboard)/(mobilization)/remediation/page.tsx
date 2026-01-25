@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { ColumnDef } from '@tanstack/react-table'
-import { Header, Main } from '@/components/layout'
+import { Main } from '@/components/layout'
 import { PageHeader, SeverityBadge, DataTable, DataTableColumnHeader } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -565,8 +565,6 @@ export default function RemediationPage() {
 
   return (
     <>
-      <Header fixed />
-
       <Main>
         <PageHeader
           title="Remediation Tasks"

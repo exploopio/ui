@@ -1,6 +1,6 @@
 'use client'
 
-import { Header, Main } from '@/components/layout'
+import { Main } from '@/components/layout'
 import { PageHeader } from '@/features/shared'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Puzzle, CheckCircle, AlertTriangle, Shield } from 'lucide-react'
@@ -44,8 +44,6 @@ const oauthAppStats = [
 export default function OAuthAppsPage() {
   return (
     <>
-      <Header fixed />
-
       <Main>
         <PageHeader title="OAuth Apps" description="Third-party OAuth applications" />
 

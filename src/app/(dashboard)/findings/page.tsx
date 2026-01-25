@@ -3,7 +3,7 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { ColumnDef } from '@tanstack/react-table'
-import { Header, Main } from '@/components/layout'
+import { Main } from '@/components/layout'
 import { PageHeader, SeverityBadge, DataTable, DataTableColumnHeader } from '@/features/shared'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -544,7 +544,6 @@ export default function FindingsPage() {
   if (error) {
     return (
       <>
-        <Header fixed />
         <Main>
           <div className="flex flex-col items-center justify-center py-20">
             <AlertCircle className="h-12 w-12 text-destructive mb-4" />
@@ -564,8 +563,6 @@ export default function FindingsPage() {
 
   return (
     <>
-      <Header fixed />
-
       <Main>
         <PageHeader
           title="Security Findings"
