@@ -511,7 +511,7 @@ export const sidebarData: SidebarData = {
               url: '/agents',
               icon: Bot,
               permission: Permission.AgentsRead,
-              module: 'agents',
+              module: 'scans', // Agents are required to run scans, so bundle with scans module
             },
             {
               title: 'Profiles',
