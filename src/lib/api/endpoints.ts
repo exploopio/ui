@@ -1120,6 +1120,131 @@ export const customToolCategoryEndpoints = {
 } as const
 
 // ============================================
+// PIPELINE ENDPOINTS
+// ============================================
+
+import type { PipelineListFilters, PipelineRunListFilters } from './pipeline-types'
+
+/**
+ * Pipeline endpoints for managing workflow pipelines
+ * Pipelines are templates for multi-step scan orchestration
+ */
+export const pipelineEndpoints = {
+  /**
+   * List pipelines with optional filters
+   */
+  list: (filters?: PipelineListFilters) => {
+    const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
+    return `/api/v1/pipelines${queryString}`
+  },
+
+  /**
+   * Get pipeline by ID
+   */
+  get: (pipelineId: string) => `/api/v1/pipelines/${pipelineId}`,
+
+  /**
+   * Create a new pipeline
+   */
+  create: () => '/api/v1/pipelines',
+
+  /**
+   * Update pipeline
+   */
+  update: (pipelineId: string) => `/api/v1/pipelines/${pipelineId}`,
+
+  /**
+   * Delete pipeline
+   */
+  delete: (pipelineId: string) => `/api/v1/pipelines/${pipelineId}`,
+
+  /**
+   * Activate pipeline
+   */
+  activate: (pipelineId: string) => `/api/v1/pipelines/${pipelineId}/activate`,
+
+  /**
+   * Deactivate pipeline
+   */
+  deactivate: (pipelineId: string) => `/api/v1/pipelines/${pipelineId}/deactivate`,
+
+  /**
+   * Clone pipeline
+   */
+  clone: (pipelineId: string) => `/api/v1/pipelines/${pipelineId}/clone`,
+
+  /**
+   * Add step to pipeline
+   */
+  addStep: (pipelineId: string) => `/api/v1/pipelines/${pipelineId}/steps`,
+
+  /**
+   * Update step
+   */
+  updateStep: (pipelineId: string, stepId: string) =>
+    `/api/v1/pipelines/${pipelineId}/steps/${stepId}`,
+
+  /**
+   * Delete step
+   */
+  deleteStep: (pipelineId: string, stepId: string) =>
+    `/api/v1/pipelines/${pipelineId}/steps/${stepId}`,
+} as const
+
+/**
+ * Pipeline Run endpoints
+ */
+export const pipelineRunEndpoints = {
+  /**
+   * List pipeline runs with optional filters
+   */
+  list: (filters?: PipelineRunListFilters) => {
+    const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
+    return `/api/v1/pipeline-runs${queryString}`
+  },
+
+  /**
+   * Get pipeline run by ID
+   */
+  get: (runId: string) => `/api/v1/pipeline-runs/${runId}`,
+
+  /**
+   * Get step runs for a pipeline run
+   */
+  stepRuns: (runId: string) => `/api/v1/pipeline-runs/${runId}/steps`,
+
+  /**
+   * Trigger a new pipeline run
+   */
+  trigger: () => '/api/v1/pipeline-runs/trigger',
+
+  /**
+   * Cancel a running pipeline
+   */
+  cancel: (runId: string) => `/api/v1/pipeline-runs/${runId}/cancel`,
+
+  /**
+   * Retry a failed pipeline run
+   */
+  retry: (runId: string) => `/api/v1/pipeline-runs/${runId}/retry`,
+} as const
+
+/**
+ * Scan Management stats endpoint
+ */
+export const scanManagementEndpoints = {
+  /**
+   * Get overview stats (pipelines, scans, jobs)
+   */
+  stats: () => '/api/v1/scan-management/stats',
+
+  /**
+   * Quick scan targets
+   */
+  quickScan: () => '/api/v1/quick-scan',
+} as const
+
+// ============================================
 // SCAN ENDPOINTS
 // ============================================
 
@@ -1412,6 +1537,9 @@ export const endpoints = {
   customTools: customToolEndpoints,
   tenantTools: tenantToolEndpoints,
   toolStats: toolStatsEndpoints,
+  pipelines: pipelineEndpoints,
+  pipelineRuns: pipelineRunEndpoints,
+  scanManagement: scanManagementEndpoints,
   scans: scanEndpoints,
   exposures: exposureEndpoints,
   threatIntel: threatIntelEndpoints,
@@ -1440,6 +1568,9 @@ export {
   customToolEndpoints as customTools,
   tenantToolEndpoints as tenantTools,
   toolStatsEndpoints as toolStats,
+  pipelineEndpoints as pipelines,
+  pipelineRunEndpoints as pipelineRuns,
+  scanManagementEndpoints as scanManagement,
   scanEndpoints as scans,
   exposureEndpoints as exposures,
   threatIntelEndpoints as threatIntel,

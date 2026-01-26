@@ -224,23 +224,11 @@ export type {
 // USER TENANT MEMBERSHIP
 // ============================================
 
-export {
-  useMyTenants,
-  getMyTenantsKey,
-  invalidateMyTenantsCache,
-} from './user-tenant-hooks'
+export { useMyTenants, getMyTenantsKey, invalidateMyTenantsCache } from './user-tenant-hooks'
 
-export type {
-  TenantMembership,
-  TenantPlan,
-  TenantRole,
-} from './user-tenant-types'
+export type { TenantMembership, TenantPlan, TenantRole } from './user-tenant-types'
 
-export {
-  RolePermissions,
-  RoleLabels,
-  RoleColors,
-} from './user-tenant-types'
+export { RolePermissions, RoleLabels, RoleColors } from './user-tenant-types'
 
 // ============================================
 // SECURITY PLATFORM HOOKS
@@ -381,11 +369,7 @@ export type {
   FindingStats,
 } from './finding-types'
 
-export {
-  SEVERITY_CONFIG,
-  STATUS_CONFIG,
-  SOURCE_CONFIG,
-} from './finding-types'
+export { SEVERITY_CONFIG, STATUS_CONFIG, SOURCE_CONFIG } from './finding-types'
 
 // ============================================
 // AUDIT LOG HOOKS & TYPES
@@ -413,9 +397,100 @@ export type {
   AuditLogStats,
 } from './audit-types'
 
+export { getActionLabel, getSeverityColor, getResultColor, getActionCategory } from './audit-types'
+
+// ============================================
+// PIPELINE HOOKS & TYPES
+// ============================================
+
 export {
-  getActionLabel,
-  getSeverityColor,
-  getResultColor,
-  getActionCategory,
-} from './audit-types'
+  // Pipeline template hooks
+  usePipelines,
+  usePipeline,
+  useCreatePipeline,
+  useUpdatePipeline,
+  useDeletePipeline,
+  useActivatePipeline,
+  useDeactivatePipeline,
+  useClonePipeline,
+
+  // Pipeline step hooks
+  useAddStep,
+  useUpdateStep,
+  useDeleteStep,
+
+  // Pipeline run hooks
+  usePipelineRuns,
+  usePipelineRun,
+  useTriggerPipelineRun,
+  useCancelPipelineRun,
+  useRetryPipelineRun,
+
+  // Scan management hooks
+  useScanManagementStats,
+  useQuickScan,
+
+  // Cache utilities
+  pipelineKeys,
+  pipelineRunKeys,
+  scanManagementKeys,
+  invalidatePipelinesCache,
+  invalidatePipelineRunsCache,
+  invalidateScanManagementStatsCache,
+  invalidateAllPipelineCaches,
+} from './pipeline-hooks'
+
+export type {
+  // Pipeline types
+  PipelineTemplate,
+  PipelineStep,
+  PipelineTrigger,
+  PipelineSettings,
+  PipelineListFilters,
+  PipelineListResponse,
+
+  // Pipeline run types
+  PipelineRun,
+  StepRun,
+  PipelineRunListFilters,
+  PipelineRunListResponse,
+
+  // Request types
+  CreatePipelineRequest,
+  UpdatePipelineRequest,
+  CreateStepRequest,
+  UpdateStepRequest,
+  TriggerPipelineRunRequest,
+  QuickScanRequest,
+
+  // UI Position for workflow builder
+  UIPosition,
+  StepCondition,
+
+  // Stats types
+  ScanManagementOverview,
+  StatusCounts,
+
+  // Enum types
+  PipelineTriggerType,
+  StepConditionType,
+  PipelineRunStatus,
+  StepRunStatus,
+} from './pipeline-types'
+
+export {
+  PIPELINE_TRIGGERS,
+  PIPELINE_TRIGGER_LABELS,
+  STEP_CONDITION_TYPES,
+  STEP_CONDITION_LABELS,
+  PIPELINE_RUN_STATUSES,
+  PIPELINE_RUN_STATUS_LABELS,
+  STEP_RUN_STATUSES,
+  DEFAULT_PIPELINE_SETTINGS,
+} from './pipeline-types'
+
+// ============================================
+// PIPELINE & SCAN MANAGEMENT ENDPOINTS
+// ============================================
+
+export { pipelineEndpoints, pipelineRunEndpoints, scanManagementEndpoints } from './endpoints'
