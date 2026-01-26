@@ -1,5 +1,7 @@
 'use client'
 
+import { useMemo } from 'react'
+
 import useSWR from 'swr'
 import { get, post, patch, del } from '@/lib/api/client'
 import { endpoints } from '@/lib/api/endpoints'
@@ -131,15 +133,20 @@ export function useFindings(tenantId: string | null, filters?: SearchFilters) {
     }
   )
 
-  return {
-    findings: data?.data?.map(transformFinding) || [],
-    total: data?.pagination?.total || 0,
-    page: data?.pagination?.page || 1,
-    pageSize: data?.pagination?.pageSize || 10,
-    isLoading: shouldFetch ? isLoading : false,
-    error,
-    mutate,
-  }
+  const memoizedResult = useMemo(
+    () => ({
+      findings: data?.data?.map(transformFinding) || [],
+      total: data?.pagination?.total || 0,
+      page: data?.pagination?.page || 1,
+      pageSize: data?.pagination?.pageSize || 10,
+      isLoading: shouldFetch ? isLoading : false,
+      error,
+      mutate,
+    }),
+    [data, shouldFetch, isLoading, error, mutate]
+  )
+
+  return memoizedResult
 }
 
 /**
@@ -162,12 +169,17 @@ export function useFinding(tenantId: string | null, findingId: string | null) {
     }
   )
 
-  return {
-    finding: data ? transformFinding(data) : null,
-    isLoading: shouldFetch ? isLoading : false,
-    error,
-    mutate,
-  }
+  const memoizedResult = useMemo(
+    () => ({
+      finding: data ? transformFinding(data) : null,
+      isLoading: shouldFetch ? isLoading : false,
+      error,
+      mutate,
+    }),
+    [data, shouldFetch, isLoading, error, mutate]
+  )
+
+  return memoizedResult
 }
 
 /**
@@ -175,7 +187,11 @@ export function useFinding(tenantId: string | null, findingId: string | null) {
  * Note: Projects are now assets with type="repository", use asset_id filter
  * Only fetches if user has findings:read permission
  */
-export function useFindingsByProject(tenantId: string | null, projectId: string | null, filters?: SearchFilters) {
+export function useFindingsByProject(
+  tenantId: string | null,
+  projectId: string | null,
+  filters?: SearchFilters
+) {
   const { can } = usePermissions()
   const canReadFindings = can(Permission.FindingsRead)
 
@@ -184,20 +200,26 @@ export function useFindingsByProject(tenantId: string | null, projectId: string 
 
   const { data, error, isLoading, mutate } = useSWR<PaginatedResponse<BackendFinding>>(
     shouldFetch ? ['findings-by-project', tenantId, projectId, filters] : null,
-    () => get<PaginatedResponse<BackendFinding>>(endpoints.findings.listByAsset(projectId!, filters)),
+    () =>
+      get<PaginatedResponse<BackendFinding>>(endpoints.findings.listByAsset(projectId!, filters)),
     {
       revalidateOnFocus: false,
       dedupingInterval: 10000,
     }
   )
 
-  return {
-    findings: data?.data?.map(transformFinding) || [],
-    total: data?.pagination?.total || 0,
-    isLoading: shouldFetch ? isLoading : false,
-    error,
-    mutate,
-  }
+  const memoizedResult = useMemo(
+    () => ({
+      findings: data?.data?.map(transformFinding) || [],
+      total: data?.pagination?.total || 0,
+      isLoading: shouldFetch ? isLoading : false,
+      error,
+      mutate,
+    }),
+    [data, shouldFetch, isLoading, error, mutate]
+  )
+
+  return memoizedResult
 }
 
 /**
@@ -222,7 +244,10 @@ export interface CreateFindingInput {
  * Create a new finding
  * Note: Tenant is extracted from JWT token, not URL path
  */
-export async function createFinding(_tenantId: string, input: CreateFindingInput): Promise<Finding> {
+export async function createFinding(
+  _tenantId: string,
+  input: CreateFindingInput
+): Promise<Finding> {
   const response = await post<BackendFinding>(endpoints.findings.create(), {
     title: input.title,
     description: input.description,
@@ -277,7 +302,9 @@ export function useFindingStats(tenantId: string | null) {
   const { data, error, isLoading } = useSWR<{ findings: BackendFindingStats }>(
     shouldFetch ? ['finding-stats', tenantId] : null,
     async () => {
-      const response = await get<{ findings: BackendFindingStats }>(endpoints.dashboard.stats(tenantId!))
+      const response = await get<{ findings: BackendFindingStats }>(
+        endpoints.dashboard.stats(tenantId!)
+      )
       return response
     },
     {
@@ -306,9 +333,14 @@ export function useFindingStats(tenantId: string | null) {
     newThisWeek: 0,
   }
 
-  return {
-    stats: data?.findings ? transformFindingStats(data.findings) : emptyStats,
-    isLoading: shouldFetch ? isLoading : false,
-    error,
-  }
+  const memoizedResult = useMemo(
+    () => ({
+      stats: data?.findings ? transformFindingStats(data.findings) : emptyStats,
+      isLoading: shouldFetch ? isLoading : false,
+      error,
+    }),
+    [data, shouldFetch, isLoading, error]
+  )
+
+  return memoizedResult
 }

@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import useSWR from 'swr'
 import { get, post, put, del } from '@/lib/api/client'
 import { endpoints } from '@/lib/api/endpoints'
@@ -303,17 +304,22 @@ export function useAssets(filters?: AssetSearchFilters) {
     }
   )
 
-  return {
-    assets: data?.data?.map(transformAsset) || [],
-    total: data?.total || 0,
-    page: data?.page || 1,
-    pageSize: data?.per_page || 20,
-    totalPages: data?.total_pages || 1,
-    isLoading: shouldFetch ? isLoading : false,
-    isError: !!error,
-    error,
-    mutate,
-  }
+  const memoizedResult = useMemo(
+    () => ({
+      assets: data?.data?.map(transformAsset) || [],
+      total: data?.total || 0,
+      page: data?.page || 1,
+      pageSize: data?.per_page || 20,
+      totalPages: data?.total_pages || 1,
+      isLoading: shouldFetch ? isLoading : false,
+      isError: !!error,
+      error,
+      mutate,
+    }),
+    [data, shouldFetch, isLoading, error, mutate]
+  )
+
+  return memoizedResult
 }
 
 /**
