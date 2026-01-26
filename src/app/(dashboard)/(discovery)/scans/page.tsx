@@ -70,6 +70,8 @@ import {
   Copy,
   Tag,
   Settings,
+  Cloud,
+  Server,
 } from 'lucide-react'
 import { Can, Permission } from '@/lib/permissions'
 import { useScanConfigs, useScanConfigStats } from '@/lib/api/scan-hooks'
@@ -83,7 +85,8 @@ import {
 import type { ScanConfig, ScanConfigStatus, ScanType as ApiScanType } from '@/lib/api/scan-types'
 // Mock data for Runs tab
 import { mockScans, getScanStats } from '@/features/scans/lib/mock-data'
-import { SCAN_TYPE_CONFIG } from '@/features/scans/types'
+import { SCAN_TYPE_CONFIG, AGENT_TYPE_CONFIG } from '@/features/scans/types'
+import { PlatformUsageCard } from '@/features/scans/components'
 import type { Scan, ScanType as MockScanType } from '@/features/scans/types'
 
 // ============================================
@@ -1488,6 +1491,41 @@ function RunsTab() {
         },
       },
       {
+        accessorKey: 'agentType',
+        header: 'Agent',
+        cell: ({ row }) => {
+          const scan = row.original
+          const isPlatform = scan.agentType === 'platform'
+          const hasPendingQueue = scan.queuePosition !== undefined && scan.status === 'pending'
+
+          if (hasPendingQueue) {
+            return (
+              <div className="flex items-center gap-1.5">
+                <Cloud className="h-4 w-4 text-purple-500" />
+                <span className="text-xs text-muted-foreground">Queue #{scan.queuePosition}</span>
+              </div>
+            )
+          }
+
+          if (!scan.agentType) {
+            return <span className="text-muted-foreground text-xs">-</span>
+          }
+
+          return (
+            <div className="flex items-center gap-1.5">
+              {isPlatform ? (
+                <Cloud className="h-4 w-4 text-purple-500" />
+              ) : (
+                <Server className="h-4 w-4 text-blue-500" />
+              )}
+              <span className="text-xs truncate max-w-[100px]">
+                {scan.agentName || AGENT_TYPE_CONFIG[scan.agentType].label}
+              </span>
+            </div>
+          )
+        },
+      },
+      {
         accessorKey: 'createdByName',
         header: 'Created By',
         cell: ({ row }) => (
@@ -1537,7 +1575,7 @@ function RunsTab() {
   return (
     <>
       {/* Stats Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
         <Card
           className="cursor-pointer hover:border-primary transition-colors"
           onClick={() => setStatusFilter('all')}
@@ -1595,6 +1633,7 @@ function RunsTab() {
             <CardTitle className="text-3xl">{stats.totalFindings}</CardTitle>
           </CardHeader>
         </Card>
+        <PlatformUsageCard variant="compact" />
       </div>
 
       {/* Table Card */}
@@ -2112,6 +2151,48 @@ function RunDetailSheet({ run }: RunDetailSheetProps) {
                 <p className="font-medium">{run.createdByName}</p>
                 <p className="text-xs text-muted-foreground">{formatDate(run.createdAt)}</p>
               </div>
+            </div>
+          </div>
+
+          {/* Agent Info */}
+          <div className="rounded-xl border p-4 bg-card">
+            <h4 className="text-sm font-medium mb-3">Agent Information</h4>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Preference</span>
+                <Badge variant="outline" className="capitalize">
+                  {run.agentPreference}
+                </Badge>
+              </div>
+              {run.agentType && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Agent Type</span>
+                  <div className="flex items-center gap-1.5">
+                    {run.agentType === 'platform' ? (
+                      <Cloud className="h-4 w-4 text-purple-500" />
+                    ) : (
+                      <Server className="h-4 w-4 text-blue-500" />
+                    )}
+                    <span className="text-sm font-medium">
+                      {AGENT_TYPE_CONFIG[run.agentType].label}
+                    </span>
+                  </div>
+                </div>
+              )}
+              {run.agentName && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Agent Name</span>
+                  <span className="text-sm font-medium truncate max-w-[150px]">
+                    {run.agentName}
+                  </span>
+                </div>
+              )}
+              {run.queuePosition !== undefined && run.status === 'pending' && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Queue Position</span>
+                  <Badge className="bg-purple-500">#{run.queuePosition}</Badge>
+                </div>
+              )}
             </div>
           </div>
 

@@ -34,6 +34,10 @@ Rediver is an enterprise-grade Attack Surface Management (ASM) and Vulnerability
 - **Single Scans** - One-time scans with custom configuration
 - **Workflow Scans** - Predefined multi-tool workflows (Full Recon, Vuln Assessment, etc.)
 - **Scan Runners** - Distributed scan execution with runner management
+- **Agent Preference** - Choose between tenant-owned or platform agents:
+  - `Auto` - Platform decides based on quota and availability
+  - `Tenant` - Use only tenant-owned agents
+  - `Platform` - Use shared platform agents (quota-based)
 
 ### Findings & Remediation
 
@@ -497,7 +501,7 @@ See [Security Documentation](./docs/auth/KEYCLOAK_SETUP.md#security-consideratio
 **Status:** UI Complete - Ready for Backend Integration
 **Last Updated:** 2026-01-08
 
-### Completed (UI - 90%)
+### Completed (UI - 95%)
 
 - CTEM Dashboard with 5-stage process visualization
 - Asset Management (6 types with full CRUD)
@@ -509,6 +513,11 @@ See [Security Documentation](./docs/auth/KEYCLOAK_SETUP.md#security-consideratio
 - Docker deployment with health checks
 - Keycloak authentication integration
 - Security hardening
+- **Platform Agent Support:**
+  - Agent preference selection in Create Scan form
+  - Platform agent status indicator in Runs table
+  - Queue position display for platform jobs
+  - Platform usage quota card
 
 ### Pending (Backend - 0%)
 
