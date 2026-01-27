@@ -23,6 +23,10 @@ export type ScheduleType = (typeof SCHEDULE_TYPES)[number];
 export const SCAN_CONFIG_STATUSES = ['active', 'paused', 'disabled'] as const;
 export type ScanConfigStatus = (typeof SCAN_CONFIG_STATUSES)[number];
 
+// Agent preference types
+export const AGENT_PREFERENCES = ['auto', 'tenant', 'platform'] as const;
+export type AgentPreference = (typeof AGENT_PREFERENCES)[number];
+
 // Labels for display
 export const SCAN_TYPE_LABELS: Record<ScanType, string> = {
   workflow: 'Workflow',
@@ -41,6 +45,18 @@ export const SCAN_CONFIG_STATUS_LABELS: Record<ScanConfigStatus, string> = {
   active: 'Active',
   paused: 'Paused',
   disabled: 'Disabled',
+};
+
+export const AGENT_PREFERENCE_LABELS: Record<AgentPreference, string> = {
+  auto: 'Auto (Tenant first, Platform fallback)',
+  tenant: 'Tenant Agents Only',
+  platform: 'Platform Agents Only',
+};
+
+export const AGENT_PREFERENCE_DESCRIPTIONS: Record<AgentPreference, string> = {
+  auto: 'Uses tenant agents when available, falls back to platform agents',
+  tenant: 'Only uses agents deployed in your infrastructure',
+  platform: 'Only uses Rediver\'s managed platform agents',
 };
 
 /**
@@ -65,6 +81,7 @@ export interface ScanConfig {
   next_run_at?: string;
   tags?: string[];
   run_on_tenant_runner: boolean;
+  agent_preference: AgentPreference;
   status: ScanConfigStatus;
   last_run_id?: string;
   last_run_at?: string;
@@ -110,6 +127,7 @@ export interface CreateScanConfigRequest {
   timezone?: string;
   tags?: string[];
   run_on_tenant_runner?: boolean;
+  agent_preference?: AgentPreference;
 }
 
 /**
@@ -129,6 +147,7 @@ export interface UpdateScanConfigRequest {
   timezone?: string;
   tags?: string[];
   run_on_tenant_runner?: boolean;
+  agent_preference?: AgentPreference;
 }
 
 /**
@@ -226,3 +245,78 @@ export interface ScanManagementOverview {
   scans: StatusCounts;
   jobs: StatusCounts;
 }
+
+// Scan Run status types
+export const SCAN_RUN_STATUSES = [
+  'pending',
+  'running',
+  'completed',
+  'failed',
+  'canceled',
+  'timeout',
+] as const;
+export type ScanRunStatus = (typeof SCAN_RUN_STATUSES)[number];
+
+export const SCAN_RUN_STATUS_LABELS: Record<ScanRunStatus, string> = {
+  pending: 'Pending',
+  running: 'Running',
+  completed: 'Completed',
+  failed: 'Failed',
+  canceled: 'Canceled',
+  timeout: 'Timed Out',
+};
+
+/**
+ * Scan Session entity (matches backend ScanSessionResponse)
+ */
+export interface ScanSession {
+  id: string;
+  tenant_id?: string;
+  agent_id?: string;
+  scanner_name: string;
+  scanner_version?: string;
+  scanner_type?: string;
+  asset_type: string;
+  asset_value: string;
+  asset_id?: string;
+  commit_sha?: string;
+  branch?: string;
+  base_commit_sha?: string;
+  status: ScanRunStatus;
+  error_message?: string;
+  findings_total: number;
+  findings_new: number;
+  findings_fixed: number;
+  findings_by_severity?: Record<string, number>;
+  started_at?: string;
+  completed_at?: string;
+  duration_ms?: number;
+  created_at: string;
+}
+
+// Alias for backward compatibility
+export type ScanRun = ScanSession;
+
+/**
+ * Scan Run list filters
+ */
+export interface ScanRunListFilters {
+  scan_id?: string;
+  status?: ScanRunStatus;
+  page?: number;
+  per_page?: number;
+}
+
+/**
+ * Scan Session list response (matches backend pagination)
+ */
+export interface ScanSessionListResponse {
+  data: ScanSession[];
+  total: number;
+  page: number;
+  per_page: number;
+  total_pages: number;
+}
+
+// Alias for backward compatibility
+export type ScanRunListResponse = ScanSessionListResponse;

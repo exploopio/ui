@@ -297,13 +297,16 @@ export function usePipelineRun(runId: string | null, config?: SWRConfiguration) 
 
 /**
  * Trigger a new pipeline run
+ * Uses POST /api/v1/pipelines/{template_id}/runs
  */
 export function useTriggerPipelineRun() {
   const { currentTenant } = useTenant()
 
   return useSWRMutation(
-    currentTenant ? pipelineRunEndpoints.trigger() : null,
-    async (url: string, { arg }: { arg: TriggerPipelineRunRequest }) => {
+    // Use a stable key - actual URL is built dynamically from arg.template_id
+    currentTenant ? 'pipeline-run-trigger' : null,
+    async (_key: string, { arg }: { arg: TriggerPipelineRunRequest }) => {
+      const url = pipelineRunEndpoints.trigger(arg.template_id)
       return post<PipelineRun>(url, arg)
     }
   )

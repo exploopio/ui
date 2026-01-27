@@ -112,6 +112,25 @@ export interface PipelineTrigger {
 }
 
 // ============================================
+// AGENT PREFERENCE
+// ============================================
+
+export const PIPELINE_AGENT_PREFERENCES = ['auto', 'tenant', 'platform'] as const
+export type PipelineAgentPreference = (typeof PIPELINE_AGENT_PREFERENCES)[number]
+
+export const PIPELINE_AGENT_PREFERENCE_LABELS: Record<PipelineAgentPreference, string> = {
+  auto: 'Auto (Tenant first, Platform fallback)',
+  tenant: 'Tenant Agents Only',
+  platform: 'Platform Agents Only',
+}
+
+export const PIPELINE_AGENT_PREFERENCE_DESCRIPTIONS: Record<PipelineAgentPreference, string> = {
+  auto: 'Uses tenant agents when available, falls back to platform agents',
+  tenant: 'Only uses agents deployed in your infrastructure',
+  platform: "Only uses Rediver's managed platform agents",
+}
+
+// ============================================
 // PIPELINE SETTINGS
 // ============================================
 
@@ -123,6 +142,7 @@ export interface PipelineSettings {
   notify_on_complete: boolean
   notify_on_failure: boolean
   notification_channels?: string[]
+  agent_preference?: PipelineAgentPreference
 }
 
 export const DEFAULT_PIPELINE_SETTINGS: PipelineSettings = {
@@ -133,7 +153,22 @@ export const DEFAULT_PIPELINE_SETTINGS: PipelineSettings = {
   notify_on_complete: false,
   notify_on_failure: true,
   notification_channels: [],
+  agent_preference: 'auto',
 }
+
+// ============================================
+// NODE TYPES (for Visual Builder)
+// ============================================
+
+export const PIPELINE_NODE_TYPES = [
+  'scanner',
+  'trigger',
+  'condition',
+  'action',
+  'notification',
+  'tool',
+] as const
+export type PipelineNodeType = (typeof PIPELINE_NODE_TYPES)[number]
 
 // ============================================
 // PIPELINE STEP
@@ -146,6 +181,7 @@ export interface PipelineStep {
   description?: string
   order: number
   ui_position: UIPosition
+  node_type?: PipelineNodeType // Visual builder node type
   tool?: string
   capabilities: string[]
   config?: Record<string, unknown>
@@ -172,6 +208,9 @@ export interface PipelineTemplate {
   settings: PipelineSettings
   tags?: string[]
   steps: PipelineStep[]
+  // UI positions for visual builder Start/End nodes
+  ui_start_position?: UIPosition
+  ui_end_position?: UIPosition
   created_at: string
   updated_at: string
   created_by?: string
@@ -232,6 +271,9 @@ export interface CreatePipelineRequest {
   settings?: Partial<PipelineSettings>
   tags?: string[]
   steps: CreateStepRequest[]
+  // UI positions for visual builder Start/End nodes
+  ui_start_position?: UIPosition
+  ui_end_position?: UIPosition
 }
 
 export interface CreateStepRequest {
@@ -241,7 +283,7 @@ export interface CreateStepRequest {
   order?: number
   ui_position?: UIPosition
   tool?: string
-  capabilities: string[]
+  capabilities?: string[] // Optional - backend derives from tool if not provided
   config?: Record<string, unknown>
   timeout_seconds?: number
   depends_on?: string[]
@@ -256,6 +298,10 @@ export interface UpdatePipelineRequest {
   triggers?: PipelineTrigger[]
   settings?: Partial<PipelineSettings>
   tags?: string[]
+  steps?: CreateStepRequest[]
+  // UI positions for visual builder Start/End nodes
+  ui_start_position?: UIPosition
+  ui_end_position?: UIPosition
 }
 
 export interface UpdateStepRequest {

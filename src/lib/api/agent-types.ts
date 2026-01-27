@@ -153,3 +153,11 @@ export interface AgentListFilters {
     page?: number;
     page_size?: number;
 }
+
+/**
+ * Available capabilities response
+ * Returns all unique capability names from all agents accessible to the tenant
+ */
+export interface AvailableCapabilitiesResponse {
+    capabilities: string[];
+}

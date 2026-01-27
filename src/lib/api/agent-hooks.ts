@@ -20,6 +20,7 @@ import type {
   CreateAgentResponse,
   UpdateAgentRequest,
   RegenerateAPIKeyResponse,
+  AvailableCapabilitiesResponse,
 } from './agent-types'
 
 // ============================================
@@ -59,6 +60,8 @@ export const agentKeys = {
   list: (filters?: AgentListFilters) => [...agentKeys.lists(), filters] as const,
   details: () => [...agentKeys.all, 'detail'] as const,
   detail: (id: string) => [...agentKeys.details(), id] as const,
+  availableCapabilities: (includePlatform: boolean = true) =>
+    [...agentKeys.all, 'available-capabilities', includePlatform] as const,
 }
 
 // ============================================
@@ -71,6 +74,10 @@ async function fetchAgents(url: string): Promise<AgentListResponse> {
 
 async function fetchAgent(url: string): Promise<Agent> {
   return get<Agent>(url)
+}
+
+async function fetchAvailableCapabilities(url: string): Promise<AvailableCapabilitiesResponse> {
+  return get<AvailableCapabilitiesResponse>(url)
 }
 
 // ============================================
@@ -100,6 +107,33 @@ export function useAgent(agentId: string | null, config?: SWRConfiguration) {
   const key = currentTenant && agentId ? agentEndpoints.get(agentId) : null
 
   return useSWR<Agent>(key, fetchAgent, {
+    ...defaultConfig,
+    ...config,
+  })
+}
+
+/**
+ * Fetch available capabilities for the current tenant.
+ * Returns unique capability names from all agents accessible to the tenant:
+ * - Tenant's own agents (active + online)
+ * - Platform agents (if includePlatform=true, which is default)
+ *
+ * Use case: Determine what capabilities a tenant can use based on their available agents.
+ * Example: If platform agents have capabilities A, B, C and tenant adds an agent with capability D,
+ * the tenant will see they have access to capabilities A, B, C, D.
+ *
+ * @param includePlatform - Whether to include platform agents' capabilities (default: true)
+ * @param config - SWR configuration options
+ */
+export function useAvailableCapabilities(
+  includePlatform: boolean = true,
+  config?: SWRConfiguration
+) {
+  const { currentTenant } = useTenant()
+
+  const key = currentTenant ? agentEndpoints.availableCapabilities(includePlatform) : null
+
+  return useSWR<AvailableCapabilitiesResponse>(key, fetchAvailableCapabilities, {
     ...defaultConfig,
     ...config,
   })
