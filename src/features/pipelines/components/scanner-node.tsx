@@ -1,138 +1,391 @@
 'use client'
 
-import { memo } from 'react'
+import { memo, useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react'
-import { Play, Zap, GitBranch, Mail, Settings, Wrench, Radar } from 'lucide-react'
+import {
+  Radar,
+  Play,
+  Flag,
+  Clock,
+  Link2,
+} from 'lucide-react'
+import { cn, slugify } from '@/lib/utils'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Badge } from '@/components/ui/badge'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { CapabilityBadgeList } from '@/components/capability-badge'
+
+// =============================================================================
+// UTILITIES
+// =============================================================================
+
+/**
+ * Format timeout seconds to human readable
+ */
+function formatTimeout(seconds: number): string {
+  if (seconds >= 3600) {
+    const hours = Math.floor(seconds / 3600)
+    const mins = Math.floor((seconds % 3600) / 60)
+    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`
+  }
+  if (seconds >= 60) {
+    return `${Math.floor(seconds / 60)}m`
+  }
+  return `${seconds}s`
+}
+
+// =============================================================================
+// SCANNER NODE - Main pipeline step node with full inline editing
+// =============================================================================
 
 export type ScannerNodeData = {
   label: string
   description?: string
   tool?: string
+  toolDisplayName?: string
   capabilities?: string[]
   stepKey?: string
+  timeout?: number
+  dependsOn?: string[]
+  // Category info from tool
+  categoryIcon?: string
+  categoryColor?: string
+  // Available tools for selection (with capabilities for auto-setting)
+  availableTools?: Array<{ name: string; displayName: string; capabilities?: string[] }>
+  // Available steps for dependencies (other steps in the pipeline)
+  availableSteps?: Array<{ stepKey: string; name: string }>
+  // Callbacks for inline editing
+  onLabelChange?: (label: string) => void
+  onToolChange?: (tool: string) => void
+  onDescriptionChange?: (description: string) => void
+  onStepKeyChange?: (stepKey: string) => void
+  onTimeoutChange?: (timeout: number) => void
 }
 
 export type ScannerNode = Node<ScannerNodeData, 'scanner'>
 
-const nodeStyles = {
-  scanner: {
-    border: 'border-blue-500',
-    bg: 'bg-blue-500/10',
-    icon: Radar,
-    iconBg: 'bg-blue-500',
-    label: 'SCANNER',
-    labelColor: 'text-blue-500',
-  },
-  trigger: {
-    border: 'border-green-500',
-    bg: 'bg-green-500/10',
-    icon: Zap,
-    iconBg: 'bg-green-500',
-    label: 'TRIGGER',
-    labelColor: 'text-green-500',
-  },
-  condition: {
-    border: 'border-yellow-500',
-    bg: 'bg-yellow-500/10',
-    icon: GitBranch,
-    iconBg: 'bg-yellow-500',
-    label: 'CONDITION',
-    labelColor: 'text-yellow-500',
-  },
-  action: {
-    border: 'border-purple-500',
-    bg: 'bg-purple-500/10',
-    icon: Play,
-    iconBg: 'bg-purple-500',
-    label: 'ACTION',
-    labelColor: 'text-purple-500',
-  },
-  notification: {
-    border: 'border-orange-500',
-    bg: 'bg-orange-500/10',
-    icon: Mail,
-    iconBg: 'bg-orange-500',
-    label: 'NOTIFY',
-    labelColor: 'text-orange-500',
-  },
-  tool: {
-    border: 'border-cyan-500',
-    bg: 'bg-cyan-500/10',
-    icon: Wrench,
-    iconBg: 'bg-cyan-500',
-    label: 'TOOL',
-    labelColor: 'text-cyan-500',
-  },
+// Map category colors to Tailwind classes
+const COLOR_MAP: Record<string, { bg: string; border: string; iconBg: string }> = {
+  blue: { bg: 'bg-white dark:bg-slate-900', border: 'border-slate-200 dark:border-slate-700', iconBg: 'bg-blue-100 dark:bg-blue-900/30' },
+  purple: { bg: 'bg-white dark:bg-slate-900', border: 'border-slate-200 dark:border-slate-700', iconBg: 'bg-purple-100 dark:bg-purple-900/30' },
+  green: { bg: 'bg-white dark:bg-slate-900', border: 'border-slate-200 dark:border-slate-700', iconBg: 'bg-green-100 dark:bg-green-900/30' },
+  red: { bg: 'bg-white dark:bg-slate-900', border: 'border-slate-200 dark:border-slate-700', iconBg: 'bg-red-100 dark:bg-red-900/30' },
+  orange: { bg: 'bg-white dark:bg-slate-900', border: 'border-slate-200 dark:border-slate-700', iconBg: 'bg-orange-100 dark:bg-orange-900/30' },
+  cyan: { bg: 'bg-white dark:bg-slate-900', border: 'border-slate-200 dark:border-slate-700', iconBg: 'bg-cyan-100 dark:bg-cyan-900/30' },
+  yellow: { bg: 'bg-white dark:bg-slate-900', border: 'border-slate-200 dark:border-slate-700', iconBg: 'bg-yellow-100 dark:bg-yellow-900/30' },
+  pink: { bg: 'bg-white dark:bg-slate-900', border: 'border-slate-200 dark:border-slate-700', iconBg: 'bg-pink-100 dark:bg-pink-900/30' },
+  indigo: { bg: 'bg-white dark:bg-slate-900', border: 'border-slate-200 dark:border-slate-700', iconBg: 'bg-indigo-100 dark:bg-indigo-900/30' },
+  violet: { bg: 'bg-white dark:bg-slate-900', border: 'border-slate-200 dark:border-slate-700', iconBg: 'bg-violet-100 dark:bg-violet-900/30' },
+  emerald: { bg: 'bg-white dark:bg-slate-900', border: 'border-slate-200 dark:border-slate-700', iconBg: 'bg-emerald-100 dark:bg-emerald-900/30' },
+  amber: { bg: 'bg-white dark:bg-slate-900', border: 'border-slate-200 dark:border-slate-700', iconBg: 'bg-amber-100 dark:bg-amber-900/30' },
+  slate: { bg: 'bg-white dark:bg-slate-900', border: 'border-slate-200 dark:border-slate-700', iconBg: 'bg-slate-100 dark:bg-slate-800' },
 }
 
-type NodeType = keyof typeof nodeStyles
+const DEFAULT_COLORS = COLOR_MAP.slate
 
-function getNodeStyle(type: string | undefined): (typeof nodeStyles)[NodeType] {
-  if (type && type in nodeStyles) {
-    return nodeStyles[type as NodeType]
+function getColorsForCategory(categoryColor?: string) {
+  if (categoryColor && COLOR_MAP[categoryColor]) {
+    return COLOR_MAP[categoryColor]
   }
-  return nodeStyles.scanner
+  return DEFAULT_COLORS
 }
 
-function ScannerNodeComponent({ data, type, selected }: NodeProps<ScannerNode>) {
-  const style = getNodeStyle(type)
-  const Icon = style.icon
+function ScannerNodeComponent({ data, selected }: NodeProps<ScannerNode>) {
+  const colors = getColorsForCategory(data.categoryColor)
+
+  // Local state for controlled inputs
+  const [localLabel, setLocalLabel] = useState(data.label)
+  const [localDescription, setLocalDescription] = useState(data.description || '')
+  const [localTimeout, setLocalTimeout] = useState(data.timeout || 3600)
+  const [localStepKey, setLocalStepKey] = useState(data.stepKey || '')
+  const [localCapabilities, setLocalCapabilities] = useState<string[]>(data.capabilities || [])
+  const [showDescription, setShowDescription] = useState(!!data.description)
+
+  // Track if step key was manually edited
+  const stepKeyManualRef = useRef(false)
+
+  // Sync local state when data changes from outside
+  useEffect(() => {
+    setLocalLabel(data.label)
+  }, [data.label])
+
+  useEffect(() => {
+    setLocalDescription(data.description || '')
+    setShowDescription(!!data.description)
+  }, [data.description])
+
+  useEffect(() => {
+    setLocalTimeout(data.timeout || 3600)
+  }, [data.timeout])
+
+  useEffect(() => {
+    setLocalStepKey(data.stepKey || '')
+  }, [data.stepKey])
+
+  // Sync capabilities when data changes (e.g., when tool is changed)
+  // Use JSON.stringify to detect array content changes (not just reference)
+  const capabilitiesJson = JSON.stringify(data.capabilities || [])
+  useEffect(() => {
+    setLocalCapabilities(data.capabilities || [])
+  }, [capabilitiesJson, data.capabilities])
+
+  // Handle label change with auto step key generation
+  const handleLabelChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const newLabel = e.target.value
+    setLocalLabel(newLabel)
+    data.onLabelChange?.(newLabel)
+
+    // Auto-generate step key if not manually edited
+    if (!stepKeyManualRef.current) {
+      const newKey = slugify(newLabel)
+      setLocalStepKey(newKey)
+      data.onStepKeyChange?.(newKey)
+    }
+  }, [data])
+
+  const handleStepKeyChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    stepKeyManualRef.current = true
+    const newKey = e.target.value
+    setLocalStepKey(newKey)
+    data.onStepKeyChange?.(newKey)
+  }, [data])
+
+  const handleToolChange = useCallback((value: string) => {
+    const toolName = value === '__none__' ? '' : value
+    data.onToolChange?.(toolName)
+  }, [data])
+
+  const handleDescriptionChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newDesc = e.target.value
+    setLocalDescription(newDesc)
+    data.onDescriptionChange?.(newDesc)
+  }, [data])
+
+  const handleTimeoutChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const newTimeout = parseInt(e.target.value) || 3600
+    setLocalTimeout(newTimeout)
+    data.onTimeoutChange?.(newTimeout)
+  }, [data])
+
+  // Get display names for dependencies (read-only, managed via drag-drop arrows)
+  const dependencyLabels = useMemo(() => {
+    return (data.dependsOn || []).map(key => {
+      const step = data.availableSteps?.find(s => s.stepKey === key)
+      return step?.name || key
+    })
+  }, [data.dependsOn, data.availableSteps])
 
   return (
     <div
-      className={`rounded-lg border-2 ${style.border} ${style.bg} p-3 min-w-[180px] max-w-[220px] ${
-        selected ? 'ring-2 ring-offset-2 ring-offset-background ring-primary' : ''
-      }`}
+      className={cn(
+        'rounded-xl shadow-sm border w-[280px] overflow-hidden transition-all',
+        colors.bg,
+        colors.border,
+        selected ? 'shadow-lg ring-2 ring-primary ring-offset-2' : 'hover:shadow-md'
+      )}
     >
+      {/* Target Handle */}
       <Handle
         type="target"
-        position={Position.Top}
-        className={`!${style.iconBg.replace('bg-', '!bg-')} !w-3 !h-3`}
+        position={Position.Left}
+        className="!w-2.5 !h-2.5 !bg-slate-400 !border-2 !border-white dark:!border-slate-800 !-left-1"
       />
 
-      <div className="flex items-center gap-2 mb-2">
-        <div className={`h-6 w-6 rounded ${style.iconBg} flex items-center justify-center`}>
-          <Icon className="h-4 w-4 text-white" />
+      {/* Header with icon and name */}
+      <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800">
+        <div className="flex items-center gap-2">
+          <div
+            className={cn(
+              'h-7 w-7 rounded-lg flex items-center justify-center flex-shrink-0',
+              colors.iconBg
+            )}
+          >
+            <Radar className="h-3.5 w-3.5 text-slate-600 dark:text-slate-400" />
+          </div>
+          <Input
+            value={localLabel}
+            onChange={handleLabelChange}
+            className="h-7 px-1.5 text-sm font-medium border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 p-0"
+            placeholder="Step name"
+          />
         </div>
-        <span className={`text-xs font-medium ${style.labelColor}`}>{style.label}</span>
-        {data.tool && (
-          <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-            {data.tool}
-          </span>
+      </div>
+
+      {/* Body with inline form */}
+      <div className="px-3 py-2 space-y-2">
+        {/* Step Key (auto-generated) */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] text-muted-foreground w-12 shrink-0">Key:</span>
+          <Input
+            value={localStepKey}
+            onChange={handleStepKeyChange}
+            className="h-5 px-1 text-[10px] font-mono border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/50 focus-visible:ring-0"
+            placeholder="step-key"
+          />
+        </div>
+
+        {/* Tool Selector */}
+        <Select
+          value={data.tool || '__none__'}
+          onValueChange={handleToolChange}
+        >
+          <SelectTrigger className="h-7 text-xs bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700">
+            <SelectValue placeholder="Select scanner">
+              {data.toolDisplayName || data.tool || 'No scanner'}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent position="popper" className="max-h-60">
+            <SelectItem value="__none__">
+              <span className="text-muted-foreground">No scanner</span>
+            </SelectItem>
+            {data.availableTools?.map((tool) => (
+              <SelectItem key={tool.name} value={tool.name}>
+                {tool.displayName}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Timeout */}
+        <div className="flex items-center gap-1.5">
+          <Clock className="h-3 w-3 text-muted-foreground shrink-0" />
+          <Input
+            type="number"
+            min={60}
+            max={86400}
+            step={60}
+            value={localTimeout}
+            onChange={handleTimeoutChange}
+            className="h-6 px-1.5 text-xs flex-1 border-slate-200 dark:border-slate-700"
+          />
+          <Badge variant="secondary" className="text-[9px] px-1 py-0 shrink-0">
+            {formatTimeout(localTimeout)}
+          </Badge>
+        </div>
+
+        {/* Capabilities (read-only, derived from selected tool) */}
+        {localCapabilities.length > 0 && (
+          <CapabilityBadgeList capabilities={localCapabilities} size="sm" />
+        )}
+
+        {/* Dependencies (read-only, managed via drag-drop arrows) */}
+        {dependencyLabels.length > 0 && (
+          <div className="flex flex-wrap gap-1 items-center">
+            <Link2 className="h-3 w-3 text-muted-foreground shrink-0" />
+            {dependencyLabels.map((label, i) => (
+              <Badge
+                key={data.dependsOn?.[i] || i}
+                variant="outline"
+                className="text-[9px] px-1 py-0 bg-blue-500/10 border-blue-500/30"
+              >
+                {label}
+              </Badge>
+            ))}
+          </div>
+        )}
+
+        {/* Description toggle and textarea */}
+        {!showDescription ? (
+          <button
+            type="button"
+            onClick={() => setShowDescription(true)}
+            className="text-[10px] text-muted-foreground hover:text-foreground"
+          >
+            + Add description
+          </button>
+        ) : (
+          <Textarea
+            value={localDescription}
+            onChange={handleDescriptionChange}
+            placeholder="Optional description..."
+            rows={2}
+            className="text-xs resize-none border-slate-200 dark:border-slate-700"
+          />
         )}
       </div>
 
-      <p className="text-sm font-medium truncate">{data.label}</p>
-
-      {data.description && (
-        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{data.description}</p>
-      )}
-
-      {data.capabilities && data.capabilities.length > 0 && (
-        <div className="flex flex-wrap gap-1 mt-2">
-          {data.capabilities.slice(0, 2).map((cap, idx) => (
-            <span
-              key={idx}
-              className="text-[10px] text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded"
-            >
-              {cap}
-            </span>
-          ))}
-          {data.capabilities.length > 2 && (
-            <span className="text-[10px] text-muted-foreground">
-              +{data.capabilities.length - 2}
-            </span>
-          )}
-        </div>
-      )}
-
+      {/* Source Handle */}
       <Handle
         type="source"
-        position={Position.Bottom}
-        className={`!${style.iconBg.replace('bg-', '!bg-')} !w-3 !h-3`}
+        position={Position.Right}
+        className="!w-2.5 !h-2.5 !bg-slate-400 !border-2 !border-white dark:!border-slate-800 !-right-1"
       />
     </div>
   )
 }
 
-export const ScannerNode = memo(ScannerNodeComponent)
+// Note: Not using memo() here because ReactFlow's internal caching can prevent
+// re-renders when node data changes (e.g., when tool/capabilities are updated inline).
+// The component uses local state synced via useEffect to handle data updates.
+export const ScannerNode = ScannerNodeComponent
+
+// =============================================================================
+// START NODE - Entry point of the pipeline
+// =============================================================================
+
+export type StartNodeData = {
+  label?: string
+}
+
+export type StartNode = Node<StartNodeData, 'start'>
+
+function StartNodeComponent({ selected }: NodeProps<StartNode>) {
+  return (
+    <div
+      className={cn(
+        'bg-emerald-50 dark:bg-emerald-900/30 rounded-full w-12 h-12 flex items-center justify-center border-2 border-emerald-500 shadow-sm transition-all',
+        selected ? 'shadow-md ring-2 ring-primary ring-offset-1' : 'hover:shadow-md'
+      )}
+    >
+      <Play className="h-5 w-5 text-emerald-600 dark:text-emerald-400 ml-0.5" />
+
+      {/* Source Handle only - Start nodes connect forward */}
+      <Handle
+        type="source"
+        position={Position.Right}
+        className="!w-2.5 !h-2.5 !bg-emerald-500 !border-2 !border-white dark:!border-slate-800 !-right-1"
+      />
+    </div>
+  )
+}
+
+export const StartNode = memo(StartNodeComponent)
+
+// =============================================================================
+// END NODE - Exit point of the pipeline
+// =============================================================================
+
+export type EndNodeData = {
+  label?: string
+}
+
+export type EndNode = Node<EndNodeData, 'end'>
+
+function EndNodeComponent({ selected }: NodeProps<EndNode>) {
+  return (
+    <div
+      className={cn(
+        'bg-red-50 dark:bg-red-900/30 rounded-full w-12 h-12 flex items-center justify-center border-2 border-red-500 shadow-sm transition-all',
+        selected ? 'shadow-md ring-2 ring-primary ring-offset-1' : 'hover:shadow-md'
+      )}
+    >
+      <Flag className="h-5 w-5 text-red-600 dark:text-red-400" />
+
+      {/* Target Handle only - End nodes receive connections */}
+      <Handle
+        type="target"
+        position={Position.Left}
+        className="!w-2.5 !h-2.5 !bg-red-500 !border-2 !border-white dark:!border-slate-800 !-left-1"
+      />
+    </div>
+  )
+}
+
+export const EndNode = memo(EndNodeComponent)

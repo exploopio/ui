@@ -1,3 +1,3 @@
 // Components
-export { ScannerNode, WorkflowBuilder, NodePalette } from './components'
-export type { ScannerNodeData, WorkflowBuilderProps } from './components'
+export { ScannerNode, WorkflowBuilder, NodePalette, PipelineForm, VisualBuilderDialog } from './components'
+export type { ScannerNodeData, WorkflowBuilderProps, AddNodeData, AvailableTool } from './components'
