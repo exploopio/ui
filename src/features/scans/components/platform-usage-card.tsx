@@ -41,11 +41,6 @@ interface PlatformUsageCardProps {
   data?: PlatformUsageData
 
   /**
-   * Loading state
-   */
-  isLoading?: boolean
-
-  /**
    * Callback when upgrade is clicked
    */
   onUpgrade?: () => void
@@ -99,7 +94,6 @@ function getStatusColor(percentage: number): string {
 
 export function PlatformUsageCard({
   data = mockUsageData,
-  isLoading = false,
   onUpgrade,
   className,
   variant = 'default',
