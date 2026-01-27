@@ -19,6 +19,7 @@ import type {
   CreateScanProfileRequest,
   UpdateScanProfileRequest,
   CloneScanProfileRequest,
+  UpdateQualityGateRequest,
 } from './scan-profile-types'
 
 // ============================================
@@ -189,6 +190,20 @@ export function useCloneScanProfile(profileId: string) {
     currentTenant && profileId ? scanProfileEndpoints.clone(profileId) : null,
     async (url: string, { arg }: { arg: CloneScanProfileRequest }) => {
       return post<ScanProfile>(url, arg)
+    }
+  )
+}
+
+/**
+ * Update quality gate configuration for a scan profile
+ */
+export function useUpdateQualityGate(profileId: string) {
+  const { currentTenant } = useTenant()
+
+  return useSWRMutation(
+    currentTenant && profileId ? scanProfileEndpoints.updateQualityGate(profileId) : null,
+    async (url: string, { arg }: { arg: UpdateQualityGateRequest }) => {
+      return put<ScanProfile>(url, arg)
     }
   )
 }
