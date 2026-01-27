@@ -17,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import {
   Select,
   SelectContent,
@@ -48,7 +48,12 @@ import {
   Calendar,
   Activity,
   Loader2,
+  Copy,
+  ScrollText,
+  ArrowUpDown,
 } from 'lucide-react'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
 import {
   useAuditLogs,
   useAuditStats,
@@ -292,6 +297,20 @@ export default function AuditLogPage() {
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
+                {/* System Event Filter */}
+                <div className="flex items-center space-x-2 border rounded-md px-3 py-2 bg-background">
+                  <Switch
+                    id="exclude-system"
+                    checked={filters.exclude_system}
+                    onCheckedChange={(checked) =>
+                      setFilters({ ...filters, exclude_system: checked, page: 0 })
+                    }
+                  />
+                  <Label htmlFor="exclude-system" className="text-sm font-normal cursor-pointer">
+                    Exclude System
+                  </Label>
+                </div>
+
                 {/* Result Filter */}
                 <Select
                   value={filters.result?.[0] || 'all'}
@@ -373,12 +392,100 @@ export default function AuditLogPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-[180px]">Time</TableHead>
-                        <TableHead>Actor</TableHead>
-                        <TableHead>Action</TableHead>
-                        <TableHead>Resource</TableHead>
-                        <TableHead className="w-[100px]">Result</TableHead>
-                        <TableHead className="w-[100px]">Severity</TableHead>
+                        <TableHead
+                          className="w-[180px] cursor-pointer hover:bg-muted/50 transition-colors"
+                          onClick={() => {
+                            const isAsc = filters.sort_by === 'logged_at' && filters.sort_order === 'asc'
+                            setFilters({
+                              ...filters,
+                              sort_by: 'logged_at',
+                              sort_order: isAsc ? 'desc' : 'asc',
+                            })
+                          }}
+                        >
+                          <div className="flex items-center gap-1">
+                            Time
+                            {filters.sort_by === 'logged_at' && (
+                              <ArrowUpDown className={`h-3 w-3 ${filters.sort_order === 'asc' ? 'rotate-180' : ''}`} />
+                            )}
+                            {!filters.sort_by && <ArrowUpDown className="h-3 w-3 opacity-50" />}
+                          </div>
+                        </TableHead>
+                        <TableHead>
+                          <div className="flex items-center gap-1">Actor</div>
+                        </TableHead>
+                        <TableHead
+                          className="cursor-pointer hover:bg-muted/50 transition-colors"
+                          onClick={() => {
+                            const isAsc = filters.sort_by === 'action' && filters.sort_order === 'asc'
+                            setFilters({
+                              ...filters,
+                              sort_by: 'action',
+                              sort_order: isAsc ? 'desc' : 'asc',
+                            })
+                          }}
+                        >
+                          <div className="flex items-center gap-1">
+                            Action
+                            {filters.sort_by === 'action' && (
+                              <ArrowUpDown className={`h-3 w-3 ${filters.sort_order === 'asc' ? 'rotate-180' : ''}`} />
+                            )}
+                          </div>
+                        </TableHead>
+                        <TableHead
+                          className="cursor-pointer hover:bg-muted/50 transition-colors"
+                          onClick={() => {
+                            const isAsc = filters.sort_by === 'resource_type' && filters.sort_order === 'asc'
+                            setFilters({
+                              ...filters,
+                              sort_by: 'resource_type',
+                              sort_order: isAsc ? 'desc' : 'asc',
+                            })
+                          }}
+                        >
+                          <div className="flex items-center gap-1">
+                            Resource
+                            {filters.sort_by === 'resource_type' && (
+                              <ArrowUpDown className={`h-3 w-3 ${filters.sort_order === 'asc' ? 'rotate-180' : ''}`} />
+                            )}
+                          </div>
+                        </TableHead>
+                        <TableHead
+                          className="w-[100px] cursor-pointer hover:bg-muted/50 transition-colors"
+                          onClick={() => {
+                            const isAsc = filters.sort_by === 'result' && filters.sort_order === 'asc'
+                            setFilters({
+                              ...filters,
+                              sort_by: 'result',
+                              sort_order: isAsc ? 'desc' : 'asc',
+                            })
+                          }}
+                        >
+                          <div className="flex items-center gap-1">
+                            Result
+                            {filters.sort_by === 'result' && (
+                              <ArrowUpDown className={`h-3 w-3 ${filters.sort_order === 'asc' ? 'rotate-180' : ''}`} />
+                            )}
+                          </div>
+                        </TableHead>
+                        <TableHead
+                          className="w-[100px] cursor-pointer hover:bg-muted/50 transition-colors"
+                          onClick={() => {
+                            const isAsc = filters.sort_by === 'severity' && filters.sort_order === 'asc'
+                            setFilters({
+                              ...filters,
+                              sort_by: 'severity',
+                              sort_order: isAsc ? 'desc' : 'asc',
+                            })
+                          }}
+                        >
+                          <div className="flex items-center gap-1">
+                            Severity
+                            {filters.sort_by === 'severity' && (
+                              <ArrowUpDown className={`h-3 w-3 ${filters.sort_order === 'asc' ? 'rotate-180' : ''}`} />
+                            )}
+                          </div>
+                        </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -513,114 +620,147 @@ export default function AuditLogPage() {
 
       {/* Audit Log Detail Sheet */}
       <Sheet open={!!selectedLog} onOpenChange={() => setSelectedLog(null)}>
-        <SheetContent className="sm:max-w-lg overflow-y-auto">
+        <SheetContent className="sm:max-w-2xl overflow-y-auto p-0 gap-0">
           <VisuallyHidden>
             <SheetTitle>Audit Log Details</SheetTitle>
           </VisuallyHidden>
           {selectedLog && (
-            <>
-              {/* Header */}
-              <div
-                className={`-mx-6 -mt-6 px-6 py-6 ${
-                  selectedLog.result === 'success'
-                    ? 'bg-gradient-to-r from-green-500/20 to-green-500/5'
-                    : selectedLog.result === 'failure'
-                      ? 'bg-gradient-to-r from-red-500/20 to-red-500/5'
-                      : 'bg-gradient-to-r from-orange-500/20 to-orange-500/5'
-                }`}
-              >
-                <SheetHeader className="text-left">
-                  <div className="flex items-center gap-2 mb-2">
+            <div className="flex flex-col h-full">
+              {/* Header - Clean Design */}
+              <div className="pl-6 pr-16 py-6 border-b bg-muted/10">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      {(() => {
+                        const Icon = getResultIcon(selectedLog.result)
+                        return (
+                          <Icon
+                            className={`h-5 w-5 ${RESULT_DISPLAY[selectedLog.result].color.replace(
+                              'text-',
+                              'text-opacity-90 text-'
+                            )}`}
+                          />
+                        )
+                      })()}
+                      <h2 className="text-xl font-semibold leading-none">{formatAction(selectedLog.action)}</h2>
+                    </div>
+                    <p className="text-sm text-muted-foreground">{selectedLog.message}</p>
+                  </div>
+                  <div className="flex flex-col items-end gap-2">
                     <Badge
-                      className={`${RESULT_DISPLAY[selectedLog.result].bgColor} ${RESULT_DISPLAY[selectedLog.result].color} border-0`}
+                      variant="outline"
+                      className={`${RESULT_DISPLAY[selectedLog.result].color} border-current/20 bg-transparent`}
                     >
                       {RESULT_DISPLAY[selectedLog.result].label}
                     </Badge>
                     <Badge
-                      className={`${SEVERITY_DISPLAY[selectedLog.severity].bgColor} ${SEVERITY_DISPLAY[selectedLog.severity].color} border-0`}
+                      variant="outline"
+                      className={`${SEVERITY_DISPLAY[selectedLog.severity].color} border-current/20 bg-transparent`}
                     >
                       {SEVERITY_DISPLAY[selectedLog.severity].label}
                     </Badge>
                   </div>
-                  <h2 className="text-lg font-semibold">{formatAction(selectedLog.action)}</h2>
-                  <p className="text-sm text-muted-foreground">{selectedLog.message}</p>
-                </SheetHeader>
+                </div>
               </div>
 
-              <div className="space-y-6 mt-6">
-                {/* Actor Info */}
-                <div className="space-y-3">
-                  <h4 className="text-sm font-medium text-muted-foreground">Actor</h4>
-                  <div className="flex items-center gap-3 p-3 rounded-lg border">
-                    <Avatar className="h-10 w-10">
-                      <AvatarFallback>
-                        {selectedLog.actor_email?.substring(0, 2).toUpperCase() || '?'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="font-medium">{selectedLog.actor_email || 'System'}</p>
-                      {selectedLog.actor_ip && (
-                        <p className="text-xs text-muted-foreground">IP: {selectedLog.actor_ip}</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Resource Info */}
-                <div className="space-y-3">
-                  <h4 className="text-sm font-medium text-muted-foreground">Resource</h4>
-                  <div className="p-3 rounded-lg border space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Type</span>
-                      <Badge variant="outline">{selectedLog.resource_type}</Badge>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">ID</span>
-                      <code className="text-xs bg-muted px-2 py-1 rounded">
-                        {selectedLog.resource_id}
-                      </code>
-                    </div>
-                    {selectedLog.resource_name && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Name</span>
-                        <span className="text-sm font-medium">{selectedLog.resource_name}</span>
+              <div className="p-6 space-y-8">
+                {/* 2-Column Grid for High-Level Info */}
+                <div className="grid grid-cols-2 gap-6">
+                  {/* Actor */}
+                  <div>
+                    <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-3 flex items-center gap-2">
+                      <User className="h-3.5 w-3.5" /> Actor
+                    </h4>
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-10 w-10 border">
+                        <AvatarFallback className="bg-muted">
+                          {selectedLog.actor_email?.substring(0, 2).toUpperCase() || '?'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="overflow-hidden">
+                        <p className="font-medium text-sm truncate" title={selectedLog.actor_email || 'System'}>
+                          {selectedLog.actor_email || 'System'}
+                        </p>
+                        {selectedLog.actor_ip && (
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="text-xs text-muted-foreground font-mono bg-muted/50 px-1.5 py-0.5 rounded">
+                              {selectedLog.actor_ip}
+                            </span>
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </div>
                   </div>
-                </div>
 
-                {/* Timestamp */}
-                <div className="space-y-3">
-                  <h4 className="text-sm font-medium text-muted-foreground">Timestamp</h4>
-                  <div className="flex items-center gap-3 p-3 rounded-lg border">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm font-medium">{formatDate(selectedLog.timestamp)}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatTime(selectedLog.timestamp)}
+                  {/* Timestamp */}
+                  <div>
+                    <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-3 flex items-center gap-2">
+                      <Calendar className="h-3.5 w-3.5" /> Timestamp
+                    </h4>
+                    <div className="space-y-0.5">
+                      <p className="font-medium text-sm">
+                        {new Date(selectedLog.timestamp).toLocaleString(undefined, {
+                          weekday: 'short',
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric'
+                        })}
+                      </p>
+                      <p className="text-xs text-muted-foreground font-mono">
+                        {new Date(selectedLog.timestamp).toLocaleTimeString()}
                       </p>
                     </div>
                   </div>
                 </div>
 
-                {/* Changes */}
+                {/* Resource Info */}
+                <div>
+                  <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-3 flex items-center gap-2">
+                    <Settings className="h-3.5 w-3.5" /> Resource
+                  </h4>
+                  <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
+                    <div className="flex flex-col divide-y">
+                      <div className="flex items-center justify-between p-3 text-sm">
+                        <span className="text-muted-foreground">Type</span>
+                        <span className="font-medium">{selectedLog.resource_type}</span>
+                      </div>
+                      <div className="flex items-center justify-between p-3 text-sm">
+                        <span className="text-muted-foreground">Name</span>
+                        <span className="font-medium">{selectedLog.resource_name || '-'}</span>
+                      </div>
+                      <div className="flex items-center justify-between p-3 text-sm">
+                        <span className="text-muted-foreground">ID</span>
+                        <div className="flex items-center gap-2">
+                          <code className="text-xs font-mono bg-muted px-2 py-0.5 rounded">
+                            {selectedLog.resource_id}
+                          </code>
+                          <CopyButton value={selectedLog.resource_id} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Changes (Diff View) */}
                 {selectedLog.changes?.field_changes &&
                   Object.keys(selectedLog.changes.field_changes).length > 0 && (
-                    <div className="space-y-3">
-                      <h4 className="text-sm font-medium text-muted-foreground">Changes</h4>
-                      <div className="p-3 rounded-lg border space-y-2">
+                    <div>
+                      <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-3 flex items-center gap-2">
+                        <Activity className="h-3.5 w-3.5" /> Changes
+                      </h4>
+                      <div className="rounded-lg border divide-y">
                         {Object.entries(selectedLog.changes.field_changes).map(
                           ([field, change]) => (
-                            <div key={field} className="text-sm">
-                              <span className="font-medium">{field}</span>
-                              <div className="flex items-center gap-2 mt-1">
-                                <code className="text-xs bg-red-500/10 text-red-500 px-2 py-1 rounded line-through">
+                            <div key={field} className="p-3 text-sm grid grid-cols-[1fr,2fr] gap-4 items-center">
+                              <span className="font-medium text-muted-foreground break-all">{field}</span>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/10 dark:bg-red-400/10 dark:text-red-400 mb-1 sm:mb-0">
                                   {String(change.old)}
-                                </code>
+                                </span>
                                 <span className="text-muted-foreground">→</span>
-                                <code className="text-xs bg-green-500/10 text-green-500 px-2 py-1 rounded">
+                                <span className="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/10 dark:bg-green-400/10 dark:text-green-400">
                                   {String(change.new)}
-                                </code>
+                                </span>
                               </div>
                             </div>
                           )
@@ -631,30 +771,56 @@ export default function AuditLogPage() {
 
                 {/* Metadata */}
                 {selectedLog.metadata && Object.keys(selectedLog.metadata).length > 0 && (
-                  <div className="space-y-3">
-                    <h4 className="text-sm font-medium text-muted-foreground">Metadata</h4>
-                    <div className="p-3 rounded-lg border">
-                      <pre className="text-xs overflow-x-auto">
-                        {JSON.stringify(selectedLog.metadata, null, 2)}
-                      </pre>
+                  <div>
+                    <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-3 flex items-center gap-2">
+                      <ScrollText className="h-3.5 w-3.5" /> Metadata
+                    </h4>
+                    <div className="rounded-lg border bg-muted/30 p-4">
+                      <dl className="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2">
+                        {Object.entries(selectedLog.metadata).map(([key, value]) => (
+                          <div key={key} className="sm:col-span-1">
+                            <dt className="text-xs font-medium text-muted-foreground mb-1">{key}</dt>
+                            <dd className="text-sm font-mono break-all">
+                              {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                            </dd>
+                          </div>
+                        ))}
+                      </dl>
                     </div>
                   </div>
                 )}
 
-                {/* Request ID */}
+                {/* Request ID Footer */}
                 {selectedLog.request_id && (
-                  <div className="space-y-3">
-                    <h4 className="text-sm font-medium text-muted-foreground">Request ID</h4>
-                    <code className="block text-xs bg-muted px-3 py-2 rounded overflow-x-auto">
-                      {selectedLog.request_id}
-                    </code>
+                  <div className="pt-4 border-t flex items-center justify-between text-xs text-muted-foreground">
+                    <span>Request ID</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono">{selectedLog.request_id}</span>
+                      <CopyButton value={selectedLog.request_id} />
+                    </div>
                   </div>
                 )}
               </div>
-            </>
+            </div>
           )}
         </SheetContent>
       </Sheet>
     </>
+  )
+}
+
+function CopyButton({ value }: { value: string }) {
+  const [copied, setCopied] = useState(false)
+
+  const onCopy = () => {
+    navigator.clipboard.writeText(value)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onCopy}>
+      {copied ? <CheckCircle className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3 text-muted-foreground" />}
+    </Button>
   )
 }

@@ -3,7 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Main } from '@/components/layout'
 import { ProcessStepper, StatsCard } from '@/features/shared'
-import { ActivityItem, QuickStat, useGlobalDashboardStats } from '@/features/dashboard'
+import { ActivityItem, QuickStat, useDashboardStats } from '@/features/dashboard'
 import { Can, Permission } from '@/lib/permissions'
 import { ModuleGate } from '@/features/licensing'
 import {
@@ -96,8 +96,11 @@ function DashboardSkeleton() {
   )
 }
 
+import { useTenant } from '@/context/tenant-provider'
+
 export default function Dashboard() {
-  const { stats, isLoading, error } = useGlobalDashboardStats()
+  const { currentTenant } = useTenant()
+  const { stats, isLoading, error } = useDashboardStats(currentTenant?.id || null)
 
   // Calculate active findings count
   const activeFindings = Object.entries(stats.findings.byStatus)

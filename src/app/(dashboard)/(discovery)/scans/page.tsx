@@ -897,13 +897,12 @@ function ConfigDetailSheet({ config, onClose }: ConfigDetailSheetProps) {
     <>
       {/* Hero Header */}
       <div
-        className={`px-6 pt-6 pb-4 ${
-          config.status === 'active'
+        className={`px-6 pt-6 pb-4 ${config.status === 'active'
             ? 'bg-gradient-to-br from-blue-500/20 via-blue-500/10 to-transparent'
             : config.status === 'paused'
               ? 'bg-gradient-to-br from-yellow-500/20 via-yellow-500/10 to-transparent'
               : 'bg-gradient-to-br from-gray-500/20 via-gray-500/10 to-transparent'
-        }`}
+          }`}
       >
         {/* Status & Type Row */}
         <div className="flex items-center justify-between mb-3">
@@ -932,30 +931,28 @@ function ConfigDetailSheet({ config, onClose }: ConfigDetailSheetProps) {
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium">Success Rate</span>
             <span
-              className={`text-2xl font-bold ${
-                progress >= 80
+              className={`text-2xl font-bold ${progress >= 80
                   ? 'text-green-500'
                   : progress >= 50
                     ? 'text-yellow-500'
                     : progress === 0
                       ? 'text-muted-foreground'
                       : 'text-red-500'
-              }`}
+                }`}
             >
               {progress}%
             </span>
           </div>
           <Progress
             value={progress}
-            className={`h-3 ${
-              config.status === 'active'
+            className={`h-3 ${config.status === 'active'
                 ? '[&>div]:animate-pulse [&>div]:bg-blue-500'
                 : progress >= 80
                   ? '[&>div]:bg-green-500'
                   : progress >= 50
                     ? '[&>div]:bg-yellow-500'
                     : '[&>div]:bg-red-500'
-            }`}
+              }`}
           />
           <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
             <span>{config.total_runs} total runs</span>
@@ -1897,15 +1894,14 @@ function RunDetailSheet({ run }: RunDetailSheetProps) {
     <>
       {/* Hero Header */}
       <div
-        className={`px-6 pt-6 pb-4 ${
-          run.status === 'active'
+        className={`px-6 pt-6 pb-4 ${run.status === 'active'
             ? 'bg-gradient-to-br from-blue-500/20 via-blue-500/10 to-transparent'
             : run.status === 'completed'
               ? 'bg-gradient-to-br from-green-500/20 via-green-500/10 to-transparent'
               : run.status === 'pending'
                 ? 'bg-gradient-to-br from-yellow-500/20 via-yellow-500/10 to-transparent'
                 : 'bg-gradient-to-br from-red-500/20 via-red-500/10 to-transparent'
-        }`}
+          }`}
       >
         {/* Status & Type Row */}
         <div className="flex items-center justify-between mb-3">
@@ -1935,28 +1931,26 @@ function RunDetailSheet({ run }: RunDetailSheetProps) {
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium">Progress</span>
             <span
-              className={`text-2xl font-bold ${
-                run.progress === 100
+              className={`text-2xl font-bold ${run.progress === 100
                   ? 'text-green-500'
                   : run.status === 'failed'
                     ? 'text-red-500'
                     : 'text-blue-500'
-              }`}
+                }`}
             >
               {run.progress}%
             </span>
           </div>
           <Progress
             value={run.progress}
-            className={`h-3 ${
-              run.status === 'active'
+            className={`h-3 ${run.status === 'active'
                 ? '[&>div]:animate-pulse [&>div]:bg-blue-500'
                 : run.progress === 100
                   ? '[&>div]:bg-green-500'
                   : run.status === 'failed'
                     ? '[&>div]:bg-red-500'
                     : '[&>div]:bg-yellow-500'
-            }`}
+              }`}
           />
           <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
             <span>{run.targetCount} targets</span>
