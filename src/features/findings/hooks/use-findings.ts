@@ -72,11 +72,11 @@ function transformFinding(backend: BackendFinding): Finding {
     },
     assignee: backend.assignee_id
       ? {
-          id: backend.assignee_id,
-          name: backend.assignee_name || 'Unknown',
-          email: '',
-          role: 'analyst',
-        }
+        id: backend.assignee_id,
+        name: backend.assignee_name || 'Unknown',
+        email: '',
+        role: 'analyst',
+      }
       : undefined,
     team: backend.team,
     duplicateOf: backend.duplicate_of,
@@ -292,6 +292,30 @@ export async function deleteFinding(_tenantId: string, findingId: string): Promi
  * Hook for finding stats (uses tenant-scoped dashboard stats)
  * Only fetches if user has findings:read or dashboard:read permission
  */
+const emptyStats: FindingStats = {
+  total: 0,
+  bySeverity: { critical: 0, high: 0, medium: 0, low: 0, info: 0 },
+  byStatus: {
+    new: 0,
+    triaged: 0,
+    confirmed: 0,
+    in_progress: 0,
+    resolved: 0,
+    verified: 0,
+    closed: 0,
+    duplicate: 0,
+    false_positive: 0,
+  },
+  averageCvss: 0,
+  overdueCount: 0,
+  resolvedThisWeek: 0,
+  newThisWeek: 0,
+}
+
+/**
+ * Hook for finding stats (uses tenant-scoped dashboard stats)
+ * Only fetches if user has findings:read or dashboard:read permission
+ */
 export function useFindingStats(tenantId: string | null) {
   const { canAny } = usePermissions()
   const canReadStats = canAny(Permission.FindingsRead, Permission.DashboardRead)
@@ -303,7 +327,7 @@ export function useFindingStats(tenantId: string | null) {
     shouldFetch ? ['finding-stats', tenantId] : null,
     async () => {
       const response = await get<{ findings: BackendFindingStats }>(
-        endpoints.dashboard.stats(tenantId!)
+        endpoints.dashboard.stats()
       )
       return response
     },
@@ -312,26 +336,6 @@ export function useFindingStats(tenantId: string | null) {
       dedupingInterval: 30000,
     }
   )
-
-  const emptyStats: FindingStats = {
-    total: 0,
-    bySeverity: { critical: 0, high: 0, medium: 0, low: 0, info: 0 },
-    byStatus: {
-      new: 0,
-      triaged: 0,
-      confirmed: 0,
-      in_progress: 0,
-      resolved: 0,
-      verified: 0,
-      closed: 0,
-      duplicate: 0,
-      false_positive: 0,
-    },
-    averageCvss: 0,
-    overdueCount: 0,
-    resolvedThisWeek: 0,
-    newThisWeek: 0,
-  }
 
   const memoizedResult = useMemo(
     () => ({

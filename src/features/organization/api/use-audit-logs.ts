@@ -31,6 +31,9 @@ function buildAuditLogsUrl(filters?: AuditLogFilters): string {
   if (filters?.search) params.append('search', filters.search)
   if (filters?.page !== undefined) params.append('page', filters.page.toString())
   if (filters?.per_page) params.append('per_page', filters.per_page.toString())
+  if (filters?.sort_by) params.append('sort_by', filters.sort_by)
+  if (filters?.sort_order) params.append('sort_order', filters.sort_order)
+  if (filters?.exclude_system) params.append('exclude_system', 'true')
 
   // Array params
   if (filters?.action?.length) {

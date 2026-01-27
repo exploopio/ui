@@ -15,5 +15,5 @@ export { ActivityItem, Analytics, AnalyticsChart, Overview, QuickStat, RecentSal
 // HOOKS
 // ============================================
 
-export { useDashboardStats, useGlobalDashboardStats, useRecentActivity } from './hooks/use-dashboard-stats'
+export { useDashboardStats, useRecentActivity } from './hooks/use-dashboard-stats'
 export type { DashboardStats } from './hooks/use-dashboard-stats'

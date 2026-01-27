@@ -3,8 +3,10 @@
 import { useMemo } from "react";
 import { useTools } from "@/lib/api/tool-hooks";
 import { useAllToolCategories, getCategoryNameById } from "@/lib/api/tool-category-hooks";
+import { useAllCapabilities } from "@/lib/api/capability-hooks";
 import type { Tool } from "@/lib/api/tool-types";
 import type { ToolListFilters } from "@/lib/api/tool-types";
+import type { Capability } from "@/lib/api/capability-types";
 
 // Static filter to prevent new object reference on every render
 const ACTIVE_TOOLS_FILTER: ToolListFilters = { is_active: true, per_page: 100 };
@@ -47,23 +49,21 @@ export interface UseAgentFormOptionsReturn {
 }
 
 // ============================================
-// CAPABILITY LABELS
+// HELPERS
 // ============================================
 
-const CAPABILITY_LABELS: Record<string, { label: string; description: string }> = {
-  sast: { label: "SAST", description: "Static Application Security Testing" },
-  sca: { label: "SCA", description: "Software Composition Analysis" },
-  dast: { label: "DAST", description: "Dynamic Application Security Testing" },
-  secrets: { label: "Secrets", description: "Secret Detection" },
-  iac: { label: "IaC", description: "Infrastructure as Code Scanning" },
-  infra: { label: "Infra", description: "Infrastructure Scanning" },
-  container: { label: "Container", description: "Container Security Scanning" },
-  web3: { label: "Web3", description: "Web3/Blockchain Security" },
-  collector: { label: "Collector", description: "Data Collection" },
-  api: { label: "API", description: "API Security Testing" },
-  recon: { label: "Recon", description: "Reconnaissance" },
-  osint: { label: "OSINT", description: "Open Source Intelligence" },
-};
+/**
+ * Build a lookup map from capability name to Capability object.
+ * This is used to get display_name and description from the capabilities registry.
+ */
+function buildCapabilityLookup(capabilities: Capability[] | undefined): Map<string, Capability> {
+  const lookup = new Map<string, Capability>();
+  if (!capabilities) return lookup;
+  for (const cap of capabilities) {
+    lookup.set(cap.name, cap);
+  }
+  return lookup;
+}
 
 // ============================================
 // HOOK
@@ -99,6 +99,15 @@ export function useAgentFormOptions(): UseAgentFormOptionsReturn {
   // Fetch tool categories
   const { data: categoriesData } = useAllToolCategories();
 
+  // Fetch capabilities from registry (platform + tenant custom)
+  const { data: capabilitiesData } = useAllCapabilities(SWR_CONFIG);
+
+  // Build capability lookup map for efficient access
+  const capabilityLookup = useMemo(
+    () => buildCapabilityLookup(capabilitiesData?.items),
+    [capabilitiesData?.items]
+  );
+
   // Memoize tools to prevent unnecessary re-renders
   const tools = useMemo(() => data?.items ?? [], [data?.items]);
 
@@ -117,7 +126,7 @@ export function useAgentFormOptions(): UseAgentFormOptionsReturn {
     });
   }, [tools, categoriesData]);
 
-  // Derive unique capabilities from all tools
+  // Derive unique capabilities from all tools, using registry metadata
   const capabilityOptions = useMemo<CapabilityOption[]>(() => {
     // Count tools per capability
     const capabilityCount = new Map<string, number>();
@@ -128,19 +137,20 @@ export function useAgentFormOptions(): UseAgentFormOptionsReturn {
       }
     }
 
-    // Convert to options array
+    // Convert to options array using capability registry for metadata
     const options: CapabilityOption[] = [];
 
-    for (const [capability, count] of capabilityCount) {
-      const labelInfo = CAPABILITY_LABELS[capability] || {
-        label: capability.toUpperCase(),
-        description: `${capability} capability`,
-      };
+    for (const [capabilityName, count] of capabilityCount) {
+      // Look up capability in registry for display_name and description
+      const registryCapability = capabilityLookup.get(capabilityName);
+
+      const label = registryCapability?.display_name || capabilityName.toUpperCase();
+      const description = registryCapability?.description || `${capabilityName} capability`;
 
       options.push({
-        value: capability,
-        label: labelInfo.label,
-        description: labelInfo.description,
+        value: capabilityName,
+        label,
+        description,
         toolCount: count,
       });
     }
@@ -152,7 +162,7 @@ export function useAgentFormOptions(): UseAgentFormOptionsReturn {
       }
       return a.label.localeCompare(b.label);
     });
-  }, [tools]);
+  }, [tools, capabilityLookup]);
 
   // Helper: Get tools that have ANY of the specified capabilities
   const getToolsByCapabilities = useMemo(() => {

@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 
 import type { Agent } from '@/lib/api/agent-types';
+import { CapabilityBadge } from '@/components/capability-badge';
 import { AgentTypeIcon, AGENT_TYPE_LABELS, AGENT_TYPE_COLORS } from './agent-type-icon';
 import { AgentAuditLog } from './agent-audit-log';
 import { Can, Permission } from '@/lib/permissions';
@@ -300,7 +301,7 @@ export function AgentDetailSheet({
                       className="flex items-center gap-2 rounded-lg bg-muted/50 p-2"
                     >
                       <CheckCircle className="h-4 w-4 text-green-500" />
-                      <span className="text-sm font-medium uppercase">{cap}</span>
+                      <CapabilityBadge name={cap} showIcon />
                     </div>
                   ))}
                 </div>

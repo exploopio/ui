@@ -67,6 +67,12 @@ import {
   Shield,
   Bell,
   CreditCard,
+  // Pipeline icons
+  GitMerge,
+  // Template & Secret Store icons
+  FolderGit2,
+  Lock,
+  FileCode2,
 } from 'lucide-react'
 import { type SidebarData } from '@/components/types'
 import { Permission, Role } from '@/lib/permissions'
@@ -76,8 +82,8 @@ export { Permission, Role }
 
 export const sidebarData: SidebarData = {
   user: {
-    name: 'Nguyen Van An',
-    email: 'an.nguyen@company.vn',
+    name: 'User',
+    email: 'user@rediver.io',
     avatar: '',
   },
   teams: [
@@ -467,6 +473,13 @@ export const sidebarData: SidebarData = {
           permission: Permission.WorkflowsRead,
           module: 'remediation',
         },
+        {
+          title: 'Scan Pipelines',
+          url: '/pipelines',
+          icon: GitMerge,
+          permission: Permission.PipelinesRead,
+          module: 'scans',
+        },
       ],
     },
 
@@ -525,6 +538,27 @@ export const sidebarData: SidebarData = {
               url: '/tools',
               icon: Wrench,
               permission: Permission.ToolsRead,
+              module: 'scans',
+            },
+            {
+              title: 'Scanner Templates',
+              url: '/scanner-templates',
+              icon: FileCode2,
+              permission: Permission.ScannerTemplatesRead,
+              module: 'scans',
+            },
+            {
+              title: 'Template Sources',
+              url: '/template-sources',
+              icon: FolderGit2,
+              permission: Permission.TemplateSourcesRead,
+              module: 'scans',
+            },
+            {
+              title: 'Secret Store',
+              url: '/secret-store',
+              icon: Lock,
+              permission: Permission.SecretStoreRead,
               module: 'scans',
             },
           ],
