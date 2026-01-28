@@ -12,6 +12,7 @@ import {
   useAddFindingCommentApi,
   useFindingCommentsApi,
 } from '@/features/findings/api/use-findings-api'
+import { useFindingActivitiesApi } from '@/features/findings/api/use-finding-activities-api'
 import { useAsset } from '@/features/assets/hooks/use-assets'
 import type { ApiFinding, ApiFindingComment } from '@/features/findings/api/finding-api.types'
 import { toast } from 'sonner'
@@ -248,6 +249,7 @@ export default function FindingDetailPage() {
   const { data: apiFinding, error, isLoading } = useFindingApi(id)
   const { data: commentsData, mutate: mutateComments } = useFindingCommentsApi(id)
   const { trigger: addComment } = useAddFindingCommentApi(id)
+  const { activities: apiActivities, mutate: mutateActivities } = useFindingActivitiesApi(id)
 
   // Fetch asset details for name resolution
   const { asset } = useAsset(apiFinding?.asset_id || null)
@@ -255,10 +257,19 @@ export default function FindingDetailPage() {
   // Transform API data to FindingDetail format, passing asset name if available
   const finding = apiFinding ? transformApiToFindingDetail(apiFinding, asset?.name) : null
 
-  // Merge API comments with finding activities
+  // Use API activities if available, otherwise fall back to transformed comments + synthetic activities
+  // Activities from the backend are preferred as they include the complete audit trail
   const apiComments = commentsData?.data || []
   const commentActivities = transformCommentsToActivities(apiComments)
-  const allActivities = finding ? [...finding.activities, ...commentActivities] : []
+
+  // If we have API activities, use them; otherwise use the fallback (synthetic + comments)
+  // API activities already include comment events, so we don't need to merge
+  const allActivities =
+    apiActivities.length > 0
+      ? apiActivities
+      : finding
+        ? [...finding.activities, ...commentActivities]
+        : []
 
   // Handler for adding new comments
   const handleAddComment = async (content: string, _isInternal: boolean) => {
@@ -266,9 +277,9 @@ export default function FindingDetailPage() {
 
     try {
       await addComment({ content })
-      // Only revalidate comments, not the entire findings cache
-      // This prevents page flicker when adding comments
-      await mutateComments()
+      // Revalidate both comments and activities
+      // Activities are updated because adding a comment creates an activity record
+      await Promise.all([mutateComments(), mutateActivities()])
       toast.success('Comment added')
     } catch (error) {
       toast.error('Failed to add comment')
