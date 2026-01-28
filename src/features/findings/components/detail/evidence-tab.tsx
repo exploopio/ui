@@ -20,40 +20,13 @@ import {
   Calendar,
   Layers,
   MapPin,
+  Link2,
+  FileImage,
+  FileCode,
+  ExternalLink,
 } from 'lucide-react'
 import type { Evidence, EvidenceType, FindingDetail } from '../../types'
 import { EVIDENCE_TYPE_CONFIG } from '../../types'
-
-// Stack trace types (from API)
-interface StackFrame {
-  location?: {
-    uri?: string
-    startLine?: number
-    startColumn?: number
-  }
-  module?: string
-  threadId?: number
-}
-
-interface Stack {
-  message?: string
-  frames?: StackFrame[]
-}
-
-// Related location types (from API)
-interface RelatedLocation {
-  id?: number
-  physicalLocation?: {
-    artifactLocation?: {
-      uri?: string
-    }
-    region?: {
-      startLine?: number
-      startColumn?: number
-    }
-  }
-  message?: string
-}
 
 interface EvidenceTabProps {
   evidence: Evidence[]
@@ -74,9 +47,10 @@ export function EvidenceTab({ evidence, finding }: EvidenceTabProps) {
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
   const [expandedStacks, setExpandedStacks] = useState<Set<number>>(new Set())
 
-  // Extract stacks and related locations from finding
+  // Extract stacks, related locations, and attachments from finding
   const stacks = finding?.stacks || []
   const relatedLocations = finding?.relatedLocations || []
+  const attachments = finding?.attachments || []
 
   const toggleStackExpand = (index: number) => {
     setExpandedStacks((prev) => {
@@ -210,7 +184,8 @@ export function EvidenceTab({ evidence, finding }: EvidenceTabProps) {
   const hasEvidence = evidence.length > 0
   const hasStacks = stacks.length > 0
   const hasRelatedLocations = relatedLocations.length > 0
-  const hasAnyContent = hasEvidence || hasStacks || hasRelatedLocations
+  const hasAttachments = attachments.length > 0
+  const hasAnyContent = hasEvidence || hasStacks || hasRelatedLocations || hasAttachments
 
   if (!hasAnyContent) {
     return (
@@ -320,14 +295,14 @@ export function EvidenceTab({ evidence, finding }: EvidenceTabProps) {
                               {frameIndex + 1}.
                             </span>
                             <div className="flex-1 min-w-0">
-                              {frame.location?.uri && (
+                              {frame.location?.path && (
                                 <span className="text-blue-400 break-all">
-                                  {frame.location.uri}
-                                  {frame.location.startLine && (
+                                  {frame.location.path}
+                                  {frame.location.start_line && (
                                     <span className="text-muted-foreground">
-                                      :{frame.location.startLine}
-                                      {frame.location.startColumn &&
-                                        `:${frame.location.startColumn}`}
+                                      :{frame.location.start_line}
+                                      {frame.location.start_column &&
+                                        `:${frame.location.start_column}`}
                                     </span>
                                   )}
                                 </span>
@@ -385,16 +360,19 @@ export function EvidenceTab({ evidence, finding }: EvidenceTabProps) {
                       {loc.id || index + 1}
                     </div>
                     <div className="flex-1 min-w-0">
-                      {loc.physicalLocation?.artifactLocation?.uri && (
+                      {loc.path ? (
                         <p className="text-sm font-mono text-blue-400 break-all">
-                          {loc.physicalLocation.artifactLocation.uri}
-                          {loc.physicalLocation.region?.startLine && (
+                          {loc.path}
+                          {loc.start_line && (
                             <span className="text-muted-foreground">
-                              :{loc.physicalLocation.region.startLine}
-                              {loc.physicalLocation.region.startColumn &&
-                                `:${loc.physicalLocation.region.startColumn}`}
+                              :{loc.start_line}
+                              {loc.start_column && `:${loc.start_column}`}
                             </span>
                           )}
+                        </p>
+                      ) : (
+                        <p className="text-sm font-mono text-muted-foreground">
+                          Location {index + 1}
                         </p>
                       )}
                       {loc.message && (
@@ -404,6 +382,100 @@ export function EvidenceTab({ evidence, finding }: EvidenceTabProps) {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Attachments */}
+      {hasAttachments && (
+        <>
+          {(hasEvidence || hasStacks || hasRelatedLocations) && <Separator />}
+          <div className="space-y-4">
+            <h3 className="flex items-center gap-2 font-semibold">
+              <Link2 className="h-4 w-4" />
+              Attachments ({attachments.length})
+            </h3>
+
+            <div className="space-y-2">
+              {attachments.map((attachment, index) => {
+                const uri = attachment.artifact_location?.uri
+                const isExternal = uri?.startsWith('http://') || uri?.startsWith('https://')
+
+                // Get icon based on attachment type
+                const getAttachmentIcon = () => {
+                  switch (attachment.type) {
+                    case 'screenshot':
+                      return <FileImage className="h-4 w-4" />
+                    case 'code':
+                      return <FileCode className="h-4 w-4" />
+                    case 'document':
+                      return <FileText className="h-4 w-4" />
+                    case 'reference':
+                    case 'evidence':
+                      return <ExternalLink className="h-4 w-4" />
+                    default:
+                      return <Paperclip className="h-4 w-4" />
+                  }
+                }
+
+                // Get type label
+                const getTypeLabel = () => {
+                  switch (attachment.type) {
+                    case 'evidence':
+                      return 'Evidence'
+                    case 'screenshot':
+                      return 'Screenshot'
+                    case 'document':
+                      return 'Document'
+                    case 'reference':
+                      return 'Reference'
+                    case 'code':
+                      return 'Code'
+                    default:
+                      return 'Attachment'
+                  }
+                }
+
+                return (
+                  <div key={index} className="rounded-lg border bg-muted/30 p-3">
+                    <div className="flex items-start gap-3">
+                      <div className="bg-muted flex h-8 w-8 items-center justify-center rounded">
+                        {getAttachmentIcon()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs">
+                            {getTypeLabel()}
+                          </Badge>
+                        </div>
+                        {attachment.description && (
+                          <p className="text-sm mt-1">{attachment.description}</p>
+                        )}
+                        {uri && (
+                          <div className="mt-2">
+                            {isExternal ? (
+                              <a
+                                href={uri}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm text-blue-400 hover:underline break-all inline-flex items-center gap-1"
+                              >
+                                {uri}
+                                <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                              </a>
+                            ) : (
+                              <p className="text-sm font-mono text-muted-foreground break-all">
+                                {uri}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </div>
         </>

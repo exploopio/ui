@@ -140,26 +140,37 @@ export interface ApiFinding {
     message?: string
     frames?: Array<{
       location?: {
-        uri?: string
-        startLine?: number
-        startColumn?: number
+        // Backend format (snake_case)
+        path?: string
+        start_line?: number
+        start_column?: number
+        message?: string
       }
       module?: string
-      threadId?: number
+      thread_id?: number
     }>
   }>
   related_locations?: Array<{
-    id?: number
-    physicalLocation?: {
-      artifactLocation?: {
-        uri?: string
-      }
-      region?: {
-        startLine?: number
-        startColumn?: number
-      }
-    }
+    // Backend format (snake_case)
+    id?: number // Optional index for display
+    path?: string
+    start_line?: number
+    end_line?: number
+    start_column?: number
+    end_column?: number
     message?: string
+    snippet?: string
+    context_snippet?: string
+    branch?: string
+    commit_sha?: string
+  }>
+  attachments?: Array<{
+    type?: 'evidence' | 'screenshot' | 'document' | 'reference' | 'code' | 'other'
+    description?: string
+    artifact_location?: {
+      uri?: string
+      uri_base_id?: string
+    }
   }>
   partial_fingerprints?: Record<string, string>
 }
