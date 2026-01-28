@@ -8,11 +8,32 @@
 // Common Types
 // ============================================
 
-export type Severity = 'critical' | 'high' | 'medium' | 'low' | 'info'
+export type Severity = 'critical' | 'high' | 'medium' | 'low' | 'info' | 'none'
 
-export type FindingStatus = 'open' | 'confirmed' | 'in_progress' | 'resolved' | 'false_positive' | 'accepted' | 'wont_fix'
+/**
+ * Finding status - simplified workflow
+ *
+ * Workflow: new → confirmed → in_progress → resolved
+ * Terminal states: false_positive, accepted, duplicate (can reopen to confirmed)
+ */
+export type FindingStatus =
+  | 'new' // Scanner just found it
+  | 'confirmed' // Verified as real issue, needs fix
+  | 'in_progress' // Developer working on fix
+  | 'resolved' // Fix applied - REMEDIATED
+  | 'false_positive' // Not a real issue (requires approval)
+  | 'accepted' // Risk accepted (requires approval, has expiration)
+  | 'duplicate' // Linked to another finding
 
-export type FindingSource = 'sast' | 'dast' | 'sca' | 'secret' | 'iac' | 'container' | 'manual' | 'external'
+export type FindingSource =
+  | 'sast'
+  | 'dast'
+  | 'sca'
+  | 'secret'
+  | 'iac'
+  | 'container'
+  | 'manual'
+  | 'external'
 
 // ============================================
 // API Response Types
@@ -26,6 +47,12 @@ export interface ApiFinding {
   tenant_id: string
   vulnerability_id?: string
   asset_id: string
+  asset?: {
+    id: string
+    name: string
+    type: string
+    web_url?: string
+  }
   branch_id?: string
   component_id?: string
   source: FindingSource
@@ -51,12 +78,16 @@ export interface ApiFinding {
   owasp_ids?: string[]
   tags?: string[]
   status: FindingStatus
+  is_triaged: boolean // true if status != "new"
   resolution?: string
   resolved_at?: string
   resolved_by?: string
-  triage_status?: string
-  triage_reason?: string
   assigned_to?: string
+  assigned_to_user?: {
+    id: string
+    name: string
+    email: string
+  }
   assigned_at?: string
   assigned_by?: string
   first_detected_at?: string
@@ -71,6 +102,66 @@ export interface ApiFinding {
   metadata?: Record<string, unknown>
   created_at: string
   updated_at: string
+
+  // Extended fields from SARIF/scanner output
+  confidence?: number // 0-100 confidence score
+  impact?: string // high/medium/low
+  likelihood?: string // high/medium/low
+  rank?: number // priority rank score
+  vulnerability_class?: string[] // e.g., ["SQL Injection", "Injection"]
+  subcategory?: string[] // additional categorization
+  baseline_state?: string // new/existing/unchanged
+  kind?: string // fail/pass/warning/note
+  occurrence_count?: number // number of occurrences
+  duplicate_count?: number // number of duplicates
+  comments_count?: number // number of comments
+  sla_status?: string // on_track/at_risk/breached/not_applicable
+
+  // Security context
+  exposure_vector?: string // network/local/adjacent/physical
+  is_network_accessible?: boolean // whether accessible from network
+  attack_prerequisites?: string // what's needed to exploit
+  data_exposure_risk?: string // critical/high/medium/low
+  reputational_impact?: boolean // whether has reputational impact
+  compliance_impact?: string[] // e.g., ["PCI-DSS", "SOC2", "OWASP"]
+
+  // Remediation context
+  remediation_type?: string // patch/config/code/workaround
+  estimated_fix_time?: number // minutes
+  fix_complexity?: string // simple/moderate/complex
+  remedy_available?: boolean // whether fix is available
+
+  // Tracking
+  work_item_uris?: string[] // linked issue URLs
+  correlation_id?: string // for grouping related findings
+
+  // Technical details
+  stacks?: Array<{
+    message?: string
+    frames?: Array<{
+      location?: {
+        uri?: string
+        startLine?: number
+        startColumn?: number
+      }
+      module?: string
+      threadId?: number
+    }>
+  }>
+  related_locations?: Array<{
+    id?: number
+    physicalLocation?: {
+      artifactLocation?: {
+        uri?: string
+      }
+      region?: {
+        startLine?: number
+        startColumn?: number
+      }
+    }
+    message?: string
+  }>
+  partial_fingerprints?: Record<string, string>
 }
 
 /**
@@ -186,8 +277,7 @@ export interface AssignFindingInput {
 }
 
 export interface TriageFindingInput {
-  triage_status: 'accepted' | 'rejected' | 'deferred'
-  triage_reason?: string
+  reason?: string // Optional reason for confirming the finding
 }
 
 export interface ClassifyFindingInput {
@@ -279,4 +369,3 @@ export interface FindingStatsResponse {
   open_count: number
   resolved_count: number
 }
-

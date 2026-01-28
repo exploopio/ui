@@ -38,7 +38,6 @@ interface BackendFinding {
   remediation_task_id?: string
   due_date?: string
   discovered_at?: string
-  triaged_at?: string
   resolved_at?: string
   verified_at?: string
   created_at: string
@@ -72,18 +71,17 @@ function transformFinding(backend: BackendFinding): Finding {
     },
     assignee: backend.assignee_id
       ? {
-        id: backend.assignee_id,
-        name: backend.assignee_name || 'Unknown',
-        email: '',
-        role: 'analyst',
-      }
+          id: backend.assignee_id,
+          name: backend.assignee_name || 'Unknown',
+          email: '',
+          role: 'analyst',
+        }
       : undefined,
     team: backend.team,
     duplicateOf: backend.duplicate_of,
     relatedFindings: [],
     remediationTaskId: backend.remediation_task_id,
     discoveredAt: backend.discovered_at || backend.created_at,
-    triagedAt: backend.triaged_at,
     resolvedAt: backend.resolved_at,
     verifiedAt: backend.verified_at,
     createdAt: backend.created_at,
@@ -294,17 +292,15 @@ export async function deleteFinding(_tenantId: string, findingId: string): Promi
  */
 const emptyStats: FindingStats = {
   total: 0,
-  bySeverity: { critical: 0, high: 0, medium: 0, low: 0, info: 0 },
+  bySeverity: { critical: 0, high: 0, medium: 0, low: 0, info: 0, none: 0 },
   byStatus: {
     new: 0,
-    triaged: 0,
     confirmed: 0,
     in_progress: 0,
     resolved: 0,
-    verified: 0,
-    closed: 0,
-    duplicate: 0,
     false_positive: 0,
+    accepted: 0,
+    duplicate: 0,
   },
   averageCvss: 0,
   overdueCount: 0,
@@ -326,9 +322,7 @@ export function useFindingStats(tenantId: string | null) {
   const { data, error, isLoading } = useSWR<{ findings: BackendFindingStats }>(
     shouldFetch ? ['finding-stats', tenantId] : null,
     async () => {
-      const response = await get<{ findings: BackendFindingStats }>(
-        endpoints.dashboard.stats()
-      )
+      const response = await get<{ findings: BackendFindingStats }>(endpoints.dashboard.stats())
       return response
     },
     {

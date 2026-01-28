@@ -1,22 +1,40 @@
-"use client";
+'use client'
 
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { ExternalLink, FileText, AlertTriangle, Info, Shield, FolderCode, Scan } from "lucide-react";
-import type { FindingDetail } from "../../types";
-import { SEVERITY_CONFIG } from "../../types";
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import {
+  ExternalLink,
+  FileText,
+  AlertTriangle,
+  Info,
+  Shield,
+  FolderCode,
+  Scan,
+  Tag,
+  Target,
+  Clock,
+  Link2,
+  ShieldAlert,
+  Wrench,
+  CheckCircle2,
+  XCircle,
+  Network,
+  Building2,
+} from 'lucide-react'
+import type { FindingDetail } from '../../types'
+import { SEVERITY_CONFIG } from '../../types'
 
 interface OverviewTabProps {
-  finding: FindingDetail;
+  finding: FindingDetail
 }
 
 export function OverviewTab({ finding }: OverviewTabProps) {
   // Parse AI Triage if exists
-  const aiTriageActivity = finding.activities.find((a) => a.type === "ai_triage");
-  let aiTriage = null;
-  if (aiTriageActivity && typeof aiTriageActivity.content === "string") {
+  const aiTriageActivity = finding.activities.find((a) => a.type === 'ai_triage')
+  let aiTriage = null
+  if (aiTriageActivity && typeof aiTriageActivity.content === 'string') {
     try {
-      aiTriage = JSON.parse(aiTriageActivity.content);
+      aiTriage = JSON.parse(aiTriageActivity.content)
     } catch {
       // ignore parse errors
     }
@@ -40,7 +58,7 @@ export function OverviewTab({ finding }: OverviewTabProps) {
             <div>
               <p className="text-muted-foreground text-xs">Risk Level</p>
               <p
-                className={`font-medium capitalize ${SEVERITY_CONFIG[aiTriage.risk as keyof typeof SEVERITY_CONFIG]?.textColor || ""}`}
+                className={`font-medium capitalize ${SEVERITY_CONFIG[aiTriage.risk as keyof typeof SEVERITY_CONFIG]?.textColor || ''}`}
               >
                 {aiTriage.risk}
               </p>
@@ -61,9 +79,7 @@ export function OverviewTab({ finding }: OverviewTabProps) {
 
           {aiTriage.recommendations && aiTriage.recommendations.length > 0 && (
             <div>
-              <p className="text-muted-foreground mb-2 text-xs">
-                AI Recommendations
-              </p>
+              <p className="text-muted-foreground mb-2 text-xs">AI Recommendations</p>
               <ul className="list-inside list-disc space-y-1 text-sm">
                 {aiTriage.recommendations.map((rec: string, index: number) => (
                   <li key={index}>{rec}</li>
@@ -80,10 +96,320 @@ export function OverviewTab({ finding }: OverviewTabProps) {
           <FileText className="h-4 w-4" />
           Description
         </h3>
-        <p className="text-muted-foreground whitespace-pre-wrap text-sm">
-          {finding.description}
-        </p>
+        <p className="text-muted-foreground whitespace-pre-wrap text-sm">{finding.description}</p>
       </div>
+
+      {/* Risk Assessment - show if any risk data exists */}
+      {(finding.confidence !== undefined ||
+        finding.impact ||
+        finding.likelihood ||
+        finding.rank !== undefined) && (
+        <>
+          <Separator />
+          <div>
+            <h3 className="mb-3 flex items-center gap-2 font-semibold">
+              <Target className="h-4 w-4" />
+              Risk Assessment
+            </h3>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-4">
+              {finding.confidence !== undefined && (
+                <div className="bg-muted/50 rounded-lg p-3">
+                  <p className="text-muted-foreground text-xs mb-1">Confidence</p>
+                  <p className="font-medium">{finding.confidence}%</p>
+                </div>
+              )}
+              {finding.impact && (
+                <div className="bg-muted/50 rounded-lg p-3">
+                  <p className="text-muted-foreground text-xs mb-1">Impact</p>
+                  <Badge
+                    variant="outline"
+                    className={`capitalize ${
+                      finding.impact === 'high' || finding.impact === 'critical'
+                        ? 'border-red-500/50 text-red-400'
+                        : finding.impact === 'medium'
+                          ? 'border-yellow-500/50 text-yellow-400'
+                          : 'border-green-500/50 text-green-400'
+                    }`}
+                  >
+                    {finding.impact}
+                  </Badge>
+                </div>
+              )}
+              {finding.likelihood && (
+                <div className="bg-muted/50 rounded-lg p-3">
+                  <p className="text-muted-foreground text-xs mb-1">Likelihood</p>
+                  <Badge
+                    variant="outline"
+                    className={`capitalize ${
+                      finding.likelihood === 'high' || finding.likelihood === 'critical'
+                        ? 'border-red-500/50 text-red-400'
+                        : finding.likelihood === 'medium'
+                          ? 'border-yellow-500/50 text-yellow-400'
+                          : 'border-green-500/50 text-green-400'
+                    }`}
+                  >
+                    {finding.likelihood}
+                  </Badge>
+                </div>
+              )}
+              {finding.rank !== undefined && (
+                <div className="bg-muted/50 rounded-lg p-3">
+                  <p className="text-muted-foreground text-xs mb-1">Priority Rank</p>
+                  <p className="font-mono font-medium">{finding.rank}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Security Context - show if any security context data exists */}
+      {(finding.exposureVector ||
+        finding.isNetworkAccessible !== undefined ||
+        finding.dataExposureRisk ||
+        finding.attackPrerequisites) && (
+        <>
+          <Separator />
+          <div>
+            <h3 className="mb-3 flex items-center gap-2 font-semibold">
+              <ShieldAlert className="h-4 w-4" />
+              Security Context
+            </h3>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-4">
+                {finding.exposureVector && (
+                  <div className="bg-muted/50 rounded-lg p-3">
+                    <p className="text-muted-foreground text-xs mb-1">Exposure Vector</p>
+                    <div className="flex items-center gap-1.5">
+                      <Network className="h-3.5 w-3.5" />
+                      <span className="font-medium capitalize">{finding.exposureVector}</span>
+                    </div>
+                  </div>
+                )}
+                {finding.isNetworkAccessible !== undefined && (
+                  <div className="bg-muted/50 rounded-lg p-3">
+                    <p className="text-muted-foreground text-xs mb-1">Network Accessible</p>
+                    <div className="flex items-center gap-1.5">
+                      {finding.isNetworkAccessible ? (
+                        <>
+                          <CheckCircle2 className="h-3.5 w-3.5 text-red-400" />
+                          <span className="font-medium text-red-400">Yes</span>
+                        </>
+                      ) : (
+                        <>
+                          <XCircle className="h-3.5 w-3.5 text-green-400" />
+                          <span className="font-medium text-green-400">No</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+                {finding.dataExposureRisk && (
+                  <div className="bg-muted/50 rounded-lg p-3">
+                    <p className="text-muted-foreground text-xs mb-1">Data Exposure Risk</p>
+                    <Badge
+                      variant="outline"
+                      className={`capitalize ${
+                        finding.dataExposureRisk === 'critical'
+                          ? 'border-red-500/50 text-red-400'
+                          : finding.dataExposureRisk === 'high'
+                            ? 'border-orange-500/50 text-orange-400'
+                            : finding.dataExposureRisk === 'medium'
+                              ? 'border-yellow-500/50 text-yellow-400'
+                              : 'border-green-500/50 text-green-400'
+                      }`}
+                    >
+                      {finding.dataExposureRisk}
+                    </Badge>
+                  </div>
+                )}
+                {finding.reputationalImpact !== undefined && (
+                  <div className="bg-muted/50 rounded-lg p-3">
+                    <p className="text-muted-foreground text-xs mb-1">Reputational Impact</p>
+                    <div className="flex items-center gap-1.5">
+                      <Building2 className="h-3.5 w-3.5" />
+                      <span className="font-medium">
+                        {finding.reputationalImpact ? 'Yes' : 'No'}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+              {finding.attackPrerequisites && (
+                <div className="bg-muted/50 rounded-lg p-3">
+                  <p className="text-muted-foreground text-xs mb-1">Attack Prerequisites</p>
+                  <p className="text-sm">{finding.attackPrerequisites}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Compliance Impact - show if compliance data exists */}
+      {finding.complianceImpact && finding.complianceImpact.length > 0 && (
+        <>
+          <Separator />
+          <div>
+            <h3 className="mb-3 flex items-center gap-2 font-semibold">
+              <Shield className="h-4 w-4" />
+              Compliance Impact
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {finding.complianceImpact.map((standard) => (
+                <Badge
+                  key={standard}
+                  variant="outline"
+                  className="border-purple-500/50 text-purple-400"
+                >
+                  {standard}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Remediation Info - show if any remediation context exists */}
+      {(finding.remediationType ||
+        finding.estimatedFixTime !== undefined ||
+        finding.fixComplexity ||
+        finding.remedyAvailable !== undefined) && (
+        <>
+          <Separator />
+          <div>
+            <h3 className="mb-3 flex items-center gap-2 font-semibold">
+              <Wrench className="h-4 w-4" />
+              Remediation Info
+            </h3>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-4">
+              {finding.remediationType && (
+                <div className="bg-muted/50 rounded-lg p-3">
+                  <p className="text-muted-foreground text-xs mb-1">Remediation Type</p>
+                  <Badge variant="outline" className="capitalize">
+                    {finding.remediationType}
+                  </Badge>
+                </div>
+              )}
+              {finding.fixComplexity && (
+                <div className="bg-muted/50 rounded-lg p-3">
+                  <p className="text-muted-foreground text-xs mb-1">Fix Complexity</p>
+                  <Badge
+                    variant="outline"
+                    className={`capitalize ${
+                      finding.fixComplexity === 'complex'
+                        ? 'border-red-500/50 text-red-400'
+                        : finding.fixComplexity === 'moderate'
+                          ? 'border-yellow-500/50 text-yellow-400'
+                          : 'border-green-500/50 text-green-400'
+                    }`}
+                  >
+                    {finding.fixComplexity}
+                  </Badge>
+                </div>
+              )}
+              {finding.estimatedFixTime !== undefined && (
+                <div className="bg-muted/50 rounded-lg p-3">
+                  <p className="text-muted-foreground text-xs mb-1">Estimated Fix Time</p>
+                  <div className="flex items-center gap-1.5">
+                    <Clock className="h-3.5 w-3.5" />
+                    <span className="font-medium">
+                      {finding.estimatedFixTime >= 60
+                        ? `${Math.floor(finding.estimatedFixTime / 60)}h ${finding.estimatedFixTime % 60}m`
+                        : `${finding.estimatedFixTime}m`}
+                    </span>
+                  </div>
+                </div>
+              )}
+              {finding.remedyAvailable !== undefined && (
+                <div className="bg-muted/50 rounded-lg p-3">
+                  <p className="text-muted-foreground text-xs mb-1">Remedy Available</p>
+                  <div className="flex items-center gap-1.5">
+                    {finding.remedyAvailable ? (
+                      <>
+                        <CheckCircle2 className="h-3.5 w-3.5 text-green-400" />
+                        <span className="font-medium text-green-400">Yes</span>
+                      </>
+                    ) : (
+                      <>
+                        <XCircle className="h-3.5 w-3.5 text-yellow-400" />
+                        <span className="font-medium text-yellow-400">No</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Linked Issues - show if work item URIs exist */}
+      {finding.workItemUris && finding.workItemUris.length > 0 && (
+        <>
+          <Separator />
+          <div>
+            <h3 className="mb-3 flex items-center gap-2 font-semibold">
+              <Link2 className="h-4 w-4" />
+              Linked Issues ({finding.workItemUris.length})
+            </h3>
+            <div className="space-y-2">
+              {finding.workItemUris.map((uri, index) => (
+                <a
+                  key={index}
+                  href={uri}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-sm text-blue-400 hover:underline bg-muted/50 rounded-lg p-3"
+                >
+                  <ExternalLink className="h-3.5 w-3.5 flex-shrink-0" />
+                  <span className="truncate">{uri}</span>
+                </a>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Vulnerability Classification - show if vulnerability class exists */}
+      {finding.vulnerabilityClass && finding.vulnerabilityClass.length > 0 && (
+        <>
+          <Separator />
+          <div>
+            <h3 className="mb-3 flex items-center gap-2 font-semibold">
+              <AlertTriangle className="h-4 w-4" />
+              Vulnerability Classification
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {finding.vulnerabilityClass.map((cls) => (
+                <Badge key={cls} variant="secondary">
+                  {cls}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Tags - moved from header for cleaner layout */}
+      {finding.tags && finding.tags.length > 0 && (
+        <>
+          <Separator />
+          <div>
+            <h3 className="mb-3 flex items-center gap-2 font-semibold">
+              <Tag className="h-4 w-4" />
+              Tags
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {finding.tags.map((tag) => (
+                <Badge key={tag} variant="outline">
+                  {tag}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
 
       <Separator />
 
@@ -186,7 +512,11 @@ export function OverviewTab({ finding }: OverviewTabProps) {
       </div>
 
       {/* Technical Details - CVE/CWE/CVSS (only show section if any values exist) */}
-      {(finding.cvss !== undefined || finding.cvssVector || finding.cve || finding.cwe || finding.owasp) && (
+      {(finding.cvss !== undefined ||
+        finding.cvssVector ||
+        finding.cve ||
+        finding.cwe ||
+        finding.owasp) && (
         <>
           <Separator />
           <div>
@@ -225,7 +555,7 @@ export function OverviewTab({ finding }: OverviewTabProps) {
                 <div>
                   <p className="text-muted-foreground text-xs">CWE ID</p>
                   <a
-                    href={`https://cwe.mitre.org/data/definitions/${finding.cwe.replace("CWE-", "")}.html`}
+                    href={`https://cwe.mitre.org/data/definitions/${finding.cwe.replace('CWE-', '')}.html`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1 font-mono text-sm text-blue-400 hover:underline"
@@ -291,5 +621,5 @@ export function OverviewTab({ finding }: OverviewTabProps) {
         </div>
       </div>
     </div>
-  );
+  )
 }

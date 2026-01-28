@@ -71,17 +71,6 @@ import { toast } from 'sonner'
 // ============================================
 
 function transformApiToUiFinding(api: ApiFinding): Finding {
-  // Map API status to UI status
-  const statusMap: Record<ApiFindingStatus, FindingStatus> = {
-    open: 'new',
-    confirmed: 'confirmed',
-    in_progress: 'in_progress',
-    resolved: 'resolved',
-    false_positive: 'false_positive',
-    accepted: 'closed',
-    wont_fix: 'closed',
-  }
-
   // Build location string with branch/commit context
   let locationName = api.file_path || api.asset_id
   if (api.first_detected_branch) {
@@ -96,7 +85,7 @@ function transformApiToUiFinding(api: ApiFinding): Finding {
     title: api.title || api.rule_name || api.message,
     description: api.description || api.snippet || api.message,
     severity: api.severity as Severity,
-    status: statusMap[api.status] || 'new',
+    status: api.status as FindingStatus,
     cvss: api.cvss_score,
     cvssVector: api.cvss_vector,
     cve: api.cve_id,
@@ -140,7 +129,6 @@ function transformApiToUiFinding(api: ApiFinding): Finding {
     relatedFindings: [],
     remediationTaskId: undefined,
     discoveredAt: api.first_detected_at || api.created_at,
-    triagedAt: undefined,
     resolvedAt: api.resolved_at,
     verifiedAt: undefined,
     createdAt: api.created_at,
@@ -243,6 +231,7 @@ export default function FindingsPage() {
       medium: 0,
       low: 0,
       info: 0,
+      none: 0,
     }
 
     if (!findingStats) {
@@ -259,7 +248,8 @@ export default function FindingsPage() {
       high: findingStats.by_severity?.high || 0,
       medium: findingStats.by_severity?.medium || 0,
       low: findingStats.by_severity?.low || 0,
-      info: findingStats.by_severity?.none || findingStats.by_severity?.info || 0,
+      info: findingStats.by_severity?.info || 0,
+      none: findingStats.by_severity?.none || 0,
     }
 
     return {

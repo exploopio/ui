@@ -1,20 +1,15 @@
 'use client'
 
 import { useParams, useRouter } from 'next/navigation'
-import { Header, Main } from '@/components/layout'
+import { Main } from '@/components/layout'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ArrowLeft } from 'lucide-react'
-import {
-  useFindingApi,
-  useAddFindingCommentApi,
-  useFindingCommentsApi,
-} from '@/features/findings/api/use-findings-api'
-import { useFindingActivitiesApi } from '@/features/findings/api/use-finding-activities-api'
-import { useAsset } from '@/features/assets/hooks/use-assets'
-import type { ApiFinding, ApiFindingComment } from '@/features/findings/api/finding-api.types'
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable'
+import { useFindingApi, useAddFindingCommentApi } from '@/features/findings/api/use-findings-api'
+import { useFindingActivitiesInfinite } from '@/features/findings/api/use-finding-activities-api'
+import type { ApiFinding } from '@/features/findings/api/finding-api.types'
 import { toast } from 'sonner'
 import type { FindingDetail, FindingStatus, Activity } from '@/features/findings/types'
 import type { Severity } from '@/features/shared/types'
@@ -29,17 +24,21 @@ import {
 
 /**
  * Transform API response to FindingDetail format for UI components
+ * Asset info now comes from api.asset (enriched by backend)
  */
-function transformApiToFindingDetail(api: ApiFinding, assetName?: string): FindingDetail {
-  // Map API status to internal status
+function transformApiToFindingDetail(api: ApiFinding): FindingDetail {
+  // Use asset info from API (enriched by backend) or fall back to asset_id
+  const assetName = api.asset?.name || api.asset_id
+  const assetWebUrl = api.asset?.web_url
   const statusMap: Record<string, FindingStatus> = {
+    new: 'new',
     open: 'new',
     confirmed: 'confirmed',
     in_progress: 'in_progress',
     resolved: 'resolved',
     false_positive: 'false_positive',
-    accepted: 'closed',
-    wont_fix: 'closed',
+    accepted: 'accepted',
+    duplicate: 'duplicate',
   }
 
   // Create initial activity from creation
@@ -115,13 +114,13 @@ function transformApiToFindingDetail(api: ApiFinding, assetName?: string): Findi
     // Code snippet
     snippet: api.snippet,
 
-    // Asset - use resolved asset name
+    // Asset - use resolved asset name and webUrl
     assets: [
       {
         id: api.asset_id,
         type: 'repository',
         name: displayAssetName,
-        url: api.file_path ? undefined : undefined, // URL will be constructed in component
+        url: assetWebUrl,
       },
     ],
 
@@ -161,6 +160,16 @@ function transformApiToFindingDetail(api: ApiFinding, assetName?: string): Findi
     // Relations - empty for now
     relatedFindings: [],
 
+    // Assignment - use assigned_to_user if available (from backend enrichment)
+    assignee: api.assigned_to
+      ? {
+          id: api.assigned_to,
+          name: api.assigned_to_user?.name || api.assigned_to, // Use enriched name or fall back to ID
+          email: api.assigned_to_user?.email || '',
+          role: 'analyst' as const,
+        }
+      : undefined,
+
     // Timestamps
     discoveredAt: api.first_detected_at || api.created_at,
     resolvedAt: api.resolved_at,
@@ -169,75 +178,108 @@ function transformApiToFindingDetail(api: ApiFinding, assetName?: string): Findi
 
     // Activities
     activities,
+
+    // Extended: Risk Assessment
+    isTriaged: api.is_triaged,
+    confidence: api.confidence,
+    impact: api.impact,
+    likelihood: api.likelihood,
+    rank: api.rank,
+    slaStatus: api.sla_status,
+
+    // Extended: Security Context
+    exposureVector: api.exposure_vector,
+    isNetworkAccessible: api.is_network_accessible,
+    attackPrerequisites: api.attack_prerequisites,
+    dataExposureRisk: api.data_exposure_risk,
+    reputationalImpact: api.reputational_impact,
+    complianceImpact: api.compliance_impact,
+
+    // Extended: Classification
+    vulnerabilityClass: api.vulnerability_class,
+    baselineState: api.baseline_state,
+    kind: api.kind,
+
+    // Extended: Remediation Info
+    remediationType: api.remediation_type,
+    estimatedFixTime: api.estimated_fix_time,
+    fixComplexity: api.fix_complexity,
+    remedyAvailable: api.remedy_available,
+
+    // Extended: Tracking
+    workItemUris: api.work_item_uris,
+    occurrenceCount: api.occurrence_count,
+    duplicateCount: api.duplicate_count,
+    lastSeenAt: api.last_seen_at,
+    correlationId: api.correlation_id,
+
+    // Extended: Technical context
+    stacks: api.stacks,
+    relatedLocations: api.related_locations,
   }
 }
 
 function LoadingSkeleton() {
   return (
-    <div className="flex h-full gap-4 lg:gap-6">
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <Card className="mb-4 flex-shrink-0">
-          <CardContent className="pt-6">
-            <Skeleton className="h-8 w-3/4 mb-4" />
-            <div className="flex gap-2 mb-4">
-              <Skeleton className="h-6 w-20" />
-              <Skeleton className="h-6 w-24" />
-            </div>
-            <Skeleton className="h-4 w-1/2" />
-          </CardContent>
-        </Card>
-        <Card className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <CardHeader className="flex-shrink-0 pb-0">
-            <div className="flex gap-2">
-              <Skeleton className="h-10 w-24" />
-              <Skeleton className="h-10 w-24" />
-              <Skeleton className="h-10 w-28" />
-              <Skeleton className="h-10 w-20" />
-            </div>
-          </CardHeader>
-          <CardContent className="flex-1 overflow-auto p-6 pt-4">
-            <div className="space-y-4">
-              <Skeleton className="h-24 w-full" />
-              <Skeleton className="h-32 w-full" />
-              <Skeleton className="h-20 w-full" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-      <Card className="hidden w-[320px] flex-shrink-0 overflow-hidden xl:w-[380px] lg:flex lg:flex-col">
-        <CardHeader className="flex-shrink-0 pb-2">
+    <div className="flex h-[calc(100vh-7rem)] gap-4">
+      {/* Left Panel - Header + Tabs */}
+      <Card className="flex flex-1 flex-col overflow-hidden">
+        {/* Header skeleton */}
+        <CardHeader className="flex-shrink-0 border-b pb-4">
+          <Skeleton className="mb-2 h-4 w-32" />
+          <Skeleton className="mb-2 h-7 w-3/4" />
+          <div className="flex gap-2">
+            <Skeleton className="h-7 w-20" />
+            <Skeleton className="h-7 w-24" />
+            <Skeleton className="h-7 w-28" />
+          </div>
+        </CardHeader>
+
+        {/* Tabs skeleton - underline style */}
+        <div className="flex-shrink-0 border-b px-6">
+          <div className="flex gap-4 py-3">
+            <Skeleton className="h-5 w-20" />
+            <Skeleton className="h-5 w-20" />
+            <Skeleton className="h-5 w-24" />
+            <Skeleton className="h-5 w-16" />
+          </div>
+        </div>
+
+        {/* Content skeleton */}
+        <CardContent className="min-h-0 flex-1 overflow-y-auto p-6">
+          <div className="space-y-4">
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-20 w-full" />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Right Panel - Activity */}
+      <Card className="hidden w-[320px] flex-shrink-0 flex-col overflow-hidden lg:flex xl:w-[380px]">
+        <CardHeader className="flex-shrink-0 border-b pb-2">
           <Skeleton className="h-6 w-20" />
         </CardHeader>
-        <div className="flex-1 overflow-hidden p-4">
+        <div className="min-h-0 flex-1 overflow-hidden p-4">
           <div className="space-y-4">
             <Skeleton className="h-16 w-full" />
             <Skeleton className="h-16 w-full" />
             <Skeleton className="h-16 w-full" />
           </div>
         </div>
+        {/* Comment form skeleton */}
+        <div className="flex-shrink-0 border-t p-2">
+          <Skeleton className="mb-1.5 h-[50px] w-full" />
+          <div className="flex justify-between">
+            <div className="flex gap-1">
+              <Skeleton className="h-5 w-5" />
+              <Skeleton className="h-5 w-5" />
+            </div>
+            <Skeleton className="h-6 w-16" />
+          </div>
+        </div>
       </Card>
     </div>
-  )
-}
-
-// Transform API comments to Activity format
-function transformCommentsToActivities(comments: ApiFindingComment[]): Activity[] {
-  return comments.map(
-    (comment): Activity => ({
-      id: comment.id,
-      type: comment.is_status_change ? 'status_changed' : 'comment',
-      actor: {
-        id: comment.author_id,
-        name: comment.author_name || 'Unknown User',
-        email: comment.author_email || '',
-        role: 'analyst',
-      },
-      content: comment.content,
-      previousValue: comment.old_status,
-      newValue: comment.new_status,
-      createdAt: comment.created_at,
-      editedAt: comment.updated_at,
-    })
   )
 }
 
@@ -247,29 +289,24 @@ export default function FindingDetailPage() {
   const id = params.id as string
 
   const { data: apiFinding, error, isLoading } = useFindingApi(id)
-  const { data: commentsData, mutate: mutateComments } = useFindingCommentsApi(id)
   const { trigger: addComment } = useAddFindingCommentApi(id)
-  const { activities: apiActivities, mutate: mutateActivities } = useFindingActivitiesApi(id)
+  const {
+    activities: apiActivities,
+    total: activitiesTotal,
+    isLoadingMore,
+    isReachingEnd,
+    loadMore,
+    mutate: mutateActivities,
+  } = useFindingActivitiesInfinite(id)
 
-  // Fetch asset details for name resolution
-  const { asset } = useAsset(apiFinding?.asset_id || null)
+  // Transform API data to FindingDetail format
+  // Asset info now comes from api.asset (enriched by backend), no need for separate fetch
+  const finding = apiFinding ? transformApiToFindingDetail(apiFinding) : null
 
-  // Transform API data to FindingDetail format, passing asset name if available
-  const finding = apiFinding ? transformApiToFindingDetail(apiFinding, asset?.name) : null
-
-  // Use API activities if available, otherwise fall back to transformed comments + synthetic activities
-  // Activities from the backend are preferred as they include the complete audit trail
-  const apiComments = commentsData?.data || []
-  const commentActivities = transformCommentsToActivities(apiComments)
-
-  // If we have API activities, use them; otherwise use the fallback (synthetic + comments)
-  // API activities already include comment events, so we don't need to merge
-  const allActivities =
-    apiActivities.length > 0
-      ? apiActivities
-      : finding
-        ? [...finding.activities, ...commentActivities]
-        : []
+  // Activities from backend include all events: status changes, comments, assignments, etc.
+  // Comments are included as activity_type='comment_added' with full content in changes.content
+  // No need for separate /comments API call - everything is in activities
+  const allActivities = apiActivities.length > 0 ? apiActivities : finding ? finding.activities : []
 
   // Handler for adding new comments
   const handleAddComment = async (content: string, _isInternal: boolean) => {
@@ -277,9 +314,8 @@ export default function FindingDetailPage() {
 
     try {
       await addComment({ content })
-      // Revalidate both comments and activities
-      // Activities are updated because adding a comment creates an activity record
-      await Promise.all([mutateComments(), mutateActivities()])
+      // Revalidate activities - comment is created as an activity record
+      await mutateActivities()
       toast.success('Comment added')
     } catch (error) {
       toast.error('Failed to add comment')
@@ -289,111 +325,125 @@ export default function FindingDetailPage() {
 
   if (isLoading) {
     return (
-      <>
-        <Header fixed>
-          <Button variant="ghost" size="sm" onClick={() => router.push('/findings')}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Findings
-          </Button>
-        </Header>
-        <Main fixed>
-          <LoadingSkeleton />
-        </Main>
-      </>
+      <Main>
+        <LoadingSkeleton />
+      </Main>
     )
   }
 
   if (error || !finding) {
     return (
-      <>
-        <Header fixed>
-          <Button variant="ghost" size="sm" onClick={() => router.push('/findings')}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Findings
-          </Button>
-        </Header>
-        <Main>
-          <div className="flex h-[50vh] items-center justify-center">
-            <div className="text-center">
-              <h2 className="text-2xl font-semibold">Finding Not Found</h2>
-              <p className="text-muted-foreground mt-2">
-                The finding with ID &quot;{id}&quot; does not exist.
-              </p>
-              <Button className="mt-4" onClick={() => router.push('/findings')}>
-                Return to Findings
-              </Button>
-            </div>
+      <Main>
+        <div className="flex h-[50vh] items-center justify-center">
+          <div className="text-center">
+            <h2 className="text-2xl font-semibold">Finding Not Found</h2>
+            <p className="text-muted-foreground mt-2">
+              The finding with ID &quot;{id}&quot; does not exist.
+            </p>
+            <Button className="mt-4" onClick={() => router.push('/findings')}>
+              Return to Findings
+            </Button>
           </div>
-        </Main>
-      </>
+        </div>
+      </Main>
     )
   }
 
   return (
-    <>
-      <Header fixed>
-        <Button variant="ghost" size="sm" onClick={() => router.push('/findings')}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back
-        </Button>
-        <div className="flex-1">
-          <span className="text-muted-foreground ml-4 font-mono text-sm">{finding.id}</span>
-        </div>
-      </Header>
-
-      <Main fixed>
-        {/* Two-panel layout */}
-        <div className="flex h-full gap-4 lg:gap-6">
-          {/* Left Panel - Main Content */}
-          <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-            {/* Finding Header Card */}
-            <Card className="mb-4 flex-shrink-0">
-              <CardContent className="pt-6">
-                <FindingHeader finding={finding} />
-              </CardContent>
-            </Card>
+    <Main fixed>
+      {/* Two-panel resizable layout */}
+      <ResizablePanelGroup
+        direction="horizontal"
+        className="flex-1 rounded-lg"
+        autoSaveId="finding-detail-layout"
+      >
+        {/* Left Panel - Header + Tabs */}
+        <ResizablePanel defaultSize={70} minSize={40}>
+          <Card className="flex h-full flex-col overflow-hidden pb-4 gap-0">
+            {/* Finding Header */}
+            <CardHeader className="flex-shrink-0 pb-1">
+              <FindingHeader finding={finding} />
+            </CardHeader>
 
             {/* Tabs */}
-            <Card className="flex min-h-0 flex-1 flex-col overflow-hidden">
-              <Tabs defaultValue="overview" className="flex h-full flex-col overflow-hidden">
-                <CardHeader className="flex-shrink-0 pb-0">
-                  <TabsList>
-                    <TabsTrigger value="overview">Overview</TabsTrigger>
-                    <TabsTrigger value="evidence">Evidence ({finding.evidence.length})</TabsTrigger>
-                    <TabsTrigger value="remediation">Remediation</TabsTrigger>
-                    <TabsTrigger value="related">Related</TabsTrigger>
-                  </TabsList>
-                </CardHeader>
+            <Tabs defaultValue="overview" className="flex min-h-0 flex-1 flex-col">
+              <div className="flex-shrink-0 border-b px-6">
+                <TabsList className="h-auto gap-4 rounded-none bg-transparent p-0">
+                  <TabsTrigger
+                    value="overview"
+                    className="rounded-none border-b-2 border-transparent bg-transparent px-0 pb-3 pt-3 shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                  >
+                    Overview
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="evidence"
+                    className="rounded-none border-b-2 border-transparent bg-transparent px-0 pb-3 pt-3 shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                  >
+                    Evidence (
+                    {finding.evidence.length +
+                      (finding.stacks?.length || 0) +
+                      (finding.relatedLocations?.length || 0)}
+                    )
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="remediation"
+                    className="rounded-none border-b-2 border-transparent bg-transparent px-0 pb-3 pt-3 shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                  >
+                    Remediation
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="related"
+                    className="rounded-none border-b-2 border-transparent bg-transparent px-0 pb-3 pt-3 shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                  >
+                    Related
+                  </TabsTrigger>
+                </TabsList>
+              </div>
 
-                <CardContent className="flex-1 overflow-auto p-6 pt-4">
-                  <TabsContent value="overview" className="m-0 mt-0">
-                    <OverviewTab finding={finding} />
-                  </TabsContent>
-                  <TabsContent value="evidence" className="m-0 mt-0">
-                    <EvidenceTab evidence={finding.evidence} />
-                  </TabsContent>
-                  <TabsContent value="remediation" className="m-0 mt-0">
-                    <RemediationTab remediation={finding.remediation} />
-                  </TabsContent>
-                  <TabsContent value="related" className="m-0 mt-0">
-                    <RelatedTab finding={finding} />
-                  </TabsContent>
-                </CardContent>
-              </Tabs>
-            </Card>
-          </div>
+              <CardContent className="min-h-0 flex-1 overflow-y-auto p-6">
+                <TabsContent value="overview" className="m-0 mt-0">
+                  <OverviewTab finding={finding} />
+                </TabsContent>
+                <TabsContent value="evidence" className="m-0 mt-0">
+                  <EvidenceTab evidence={finding.evidence} finding={finding} />
+                </TabsContent>
+                <TabsContent value="remediation" className="m-0 mt-0">
+                  <RemediationTab remediation={finding.remediation} finding={finding} />
+                </TabsContent>
+                <TabsContent value="related" className="m-0 mt-0">
+                  <RelatedTab finding={finding} />
+                </TabsContent>
+              </CardContent>
+            </Tabs>
+          </Card>
+        </ResizablePanel>
 
-          {/* Right Panel - Activity */}
-          <Card className="hidden w-[320px] flex-shrink-0 overflow-hidden xl:w-[380px] lg:flex lg:flex-col">
-            <CardHeader className="flex-shrink-0 pb-2">
-              <CardTitle className="text-base">Activity</CardTitle>
-            </CardHeader>
-            <div className="flex-1 overflow-hidden">
-              <ActivityPanel activities={allActivities} onAddComment={handleAddComment} />
+        {/* Resize Handle */}
+        <ResizableHandle withHandle className="mx-2 hidden lg:flex" />
+
+        {/* Right Panel - Activity */}
+        <ResizablePanel defaultSize={30} minSize={20} maxSize={50} className="hidden lg:block">
+          <Card className="h-full overflow-hidden py-1">
+            <div className="flex h-full flex-col">
+              <CardHeader className="flex-shrink-0 border-b [.border-b]:pb-3 py-1">
+                <CardTitle className="text-base">Activity ({activitiesTotal})</CardTitle>
+              </CardHeader>
+              <div className="relative flex-1">
+                <div className="absolute inset-0 overflow-hidden">
+                  <ActivityPanel
+                    activities={allActivities}
+                    onAddComment={handleAddComment}
+                    total={activitiesTotal}
+                    hasMore={!isReachingEnd}
+                    isLoadingMore={isLoadingMore}
+                    onLoadMore={loadMore}
+                  />
+                </div>
+              </div>
             </div>
           </Card>
-        </div>
-      </Main>
-    </>
+        </ResizablePanel>
+      </ResizablePanelGroup>
+    </Main>
   )
 }

@@ -7,6 +7,7 @@
 'use client'
 
 import useSWR, { type SWRConfiguration } from 'swr'
+import useSWRInfinite, { type SWRInfiniteConfiguration } from 'swr/infinite'
 import { get } from '@/lib/api/client'
 import { handleApiError } from '@/lib/api/error-handler'
 import { useTenant } from '@/context/tenant-provider'
@@ -133,14 +134,30 @@ function mapActivity(api: ApiFindingActivity): Activity {
   const previousValue = (changes.old_status as string) || (changes.old_severity as string)
   const newValue = (changes.new_status as string) || (changes.new_severity as string)
   const reason = changes.reason as string | undefined
-  const content = changes.preview as string | undefined
+  // For comments: use full content if available, fallback to preview for backward compatibility
+  const content = (changes.content as string) || (changes.preview as string) || undefined
+
+  // Extract assignment-related fields
+  const assigneeName = changes.assignee_name as string | undefined
+  const assigneeEmail = changes.assignee_email as string | undefined
+  const assigneeId = changes.assignee_id as string | undefined
+  const previousAssigneeName = changes.previous_assignee_name as string | undefined
+
+  // Merge assignment data into metadata for UI consumption
+  const metadata = {
+    ...api.source_metadata,
+    assigneeName,
+    assigneeEmail,
+    assigneeId,
+    previousAssigneeName,
+  }
 
   return {
     id: api.id,
     type: mapActivityType(api.activity_type),
     actor,
     content,
-    metadata: api.source_metadata,
+    metadata,
     previousValue,
     newValue,
     reason,
@@ -228,6 +245,71 @@ export function useFindingActivityApi(
   return {
     activity,
     isLoading,
+    error,
+    mutate,
+  }
+}
+
+/**
+ * Infinite loading hook for activities with "Load More" support
+ */
+export function useFindingActivitiesInfinite(
+  findingId: string | null,
+  pageSize: number = 20,
+  config?: SWRInfiniteConfiguration<ApiFindingActivityListResponse>
+) {
+  const { currentTenant } = useTenant()
+
+  // Key function for SWR infinite
+  const getKey = (pageIndex: number, previousPageData: ApiFindingActivityListResponse | null) => {
+    // No more data
+    if (previousPageData && previousPageData.data.length === 0) return null
+    // Reached last page
+    if (previousPageData && pageIndex >= previousPageData.total_pages) return null
+    // Not ready
+    if (!currentTenant || !findingId) return null
+
+    // Return URL with page param (1-indexed for backend)
+    return `/api/v1/findings/${findingId}/activities?page=${pageIndex + 1}&page_size=${pageSize}`
+  }
+
+  const { data, error, isLoading, isValidating, size, setSize, mutate } =
+    useSWRInfinite<ApiFindingActivityListResponse>(getKey, fetchActivities, {
+      revalidateFirstPage: false,
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+      ...config,
+    })
+
+  // Flatten all pages into single activities array
+  const activities: Activity[] = data
+    ? data.flatMap((page) => page.data?.map(mapActivity) || [])
+    : []
+
+  // Calculate pagination state
+  const totalFromFirstPage = data?.[0]?.total || 0
+  const totalPagesFromFirstPage = data?.[0]?.total_pages || 0
+  const isLoadingMore = isLoading || (size > 0 && data && typeof data[size - 1] === 'undefined')
+  const isEmpty = data?.[0]?.data?.length === 0
+  const isReachingEnd = isEmpty || (data && size >= totalPagesFromFirstPage)
+
+  // Load more function
+  const loadMore = () => {
+    if (!isReachingEnd && !isLoadingMore) {
+      setSize(size + 1)
+    }
+  }
+
+  return {
+    activities,
+    total: totalFromFirstPage,
+    totalPages: totalPagesFromFirstPage,
+    isLoading,
+    isLoadingMore: isLoadingMore && !isLoading,
+    isValidating,
+    isEmpty,
+    isReachingEnd,
+    loadMore,
     error,
     mutate,
   }
