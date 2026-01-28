@@ -1,13 +1,13 @@
-'use client';
+'use client'
 
-import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Loader2, Eye, EyeOff } from 'lucide-react';
-import { toast } from 'sonner';
+import { useEffect, useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { Loader2, Eye, EyeOff } from 'lucide-react'
+import { toast } from 'sonner'
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -15,7 +15,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from '@/components/ui/dialog'
 import {
   Form,
   FormControl,
@@ -23,22 +23,22 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+} from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Separator } from '@/components/ui/separator'
+import { Badge } from '@/components/ui/badge'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 
 import {
   useUpdateSecretStoreCredential,
   invalidateSecretStoreCache,
-} from '@/lib/api/secret-store-hooks';
-import {
-  CREDENTIAL_TYPE_DISPLAY_NAMES,
-  CREDENTIAL_TYPES,
-} from '@/lib/api/secret-store-types';
-import type { SecretStoreCredential, UpdateSecretStoreCredentialRequest, CredentialType } from '@/lib/api/secret-store-types';
+} from '@/lib/api/secret-store-hooks'
+import { CREDENTIAL_TYPE_DISPLAY_NAMES } from '@/lib/api/secret-store-types'
+import type {
+  SecretStoreCredential,
+  UpdateSecretStoreCredentialRequest,
+} from '@/lib/api/secret-store-types'
 
 // Form schema - matches all credential types
 const formSchema = z.object({
@@ -70,15 +70,15 @@ const formSchema = z.object({
   github_private_key: z.string().optional(),
   // GitLab Token
   gitlab_token: z.string().optional(),
-});
+})
 
-type FormData = z.infer<typeof formSchema>;
+type FormData = z.infer<typeof formSchema>
 
 interface EditCredentialDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  credential: SecretStoreCredential;
-  onSuccess?: () => void;
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  credential: SecretStoreCredential
+  onSuccess?: () => void
 }
 
 export function EditCredentialDialog({
@@ -87,7 +87,7 @@ export function EditCredentialDialog({
   credential,
   onSuccess,
 }: EditCredentialDialogProps) {
-  const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
+  const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({})
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -95,9 +95,9 @@ export function EditCredentialDialog({
       name: '',
       description: '',
     },
-  });
+  })
 
-  const { trigger: updateCredential, isMutating } = useUpdateSecretStoreCredential(credential.id);
+  const { trigger: updateCredential, isMutating } = useUpdateSecretStoreCredential(credential.id)
 
   // Reset form when credential changes
   useEffect(() => {
@@ -108,98 +108,98 @@ export function EditCredentialDialog({
         expires_at: credential.expires_at ? credential.expires_at.split('T')[0] : '',
         // Note: We don't populate secret values for security reasons
         // Users must re-enter them to update
-      });
+      })
     }
-  }, [credential, open, form]);
+  }, [credential, open, form])
 
   const toggleShowSecret = (field: string) => {
-    setShowSecrets((prev) => ({ ...prev, [field]: !prev[field] }));
-  };
+    setShowSecrets((prev) => ({ ...prev, [field]: !prev[field] }))
+  }
 
   const onSubmit = async (data: FormData) => {
     const request: UpdateSecretStoreCredentialRequest = {
       name: data.name,
       description: data.description,
       expires_at: data.expires_at || undefined,
-    };
+    }
 
     // Add credential-specific data based on type
     switch (credential.credential_type) {
       case 'api_key':
         if (data.api_key_value) {
-          request.api_key = { key: data.api_key_value };
+          request.api_key = { key: data.api_key_value }
         }
-        break;
+        break
       case 'basic_auth':
         if (data.basic_username || data.basic_password) {
           request.basic_auth = {
             username: data.basic_username || '',
             password: data.basic_password || '',
-          };
+          }
         }
-        break;
+        break
       case 'bearer_token':
         if (data.bearer_token) {
-          request.bearer_token = { token: data.bearer_token };
+          request.bearer_token = { token: data.bearer_token }
         }
-        break;
+        break
       case 'ssh_key':
         if (data.ssh_private_key) {
           request.ssh_key = {
             private_key: data.ssh_private_key,
             passphrase: data.ssh_passphrase || undefined,
-          };
+          }
         }
-        break;
+        break
       case 'aws_role':
         if (data.aws_role_arn) {
           request.aws_role = {
             role_arn: data.aws_role_arn,
             external_id: data.aws_external_id || undefined,
-          };
+          }
         }
-        break;
+        break
       case 'gcp_service_account':
         if (data.gcp_json_key) {
-          request.gcp_service_account = { json_key: data.gcp_json_key };
+          request.gcp_service_account = { json_key: data.gcp_json_key }
         }
-        break;
+        break
       case 'azure_service_principal':
         if (data.azure_tenant_id || data.azure_client_id || data.azure_client_secret) {
           request.azure_service_principal = {
             tenant_id: data.azure_tenant_id || '',
             client_id: data.azure_client_id || '',
             client_secret: data.azure_client_secret || '',
-          };
+          }
         }
-        break;
+        break
       case 'github_app':
         if (data.github_app_id || data.github_installation_id || data.github_private_key) {
           request.github_app = {
             app_id: data.github_app_id || '',
             installation_id: data.github_installation_id || '',
             private_key: data.github_private_key || '',
-          };
+          }
         }
-        break;
+        break
       case 'gitlab_token':
         if (data.gitlab_token) {
-          request.gitlab_token = { token: data.gitlab_token };
+          request.gitlab_token = { token: data.gitlab_token }
         }
-        break;
+        break
     }
 
     try {
-      await updateCredential(request);
-      toast.success(`Credential "${data.name}" updated`);
-      await invalidateSecretStoreCache();
-      setShowSecrets({});
-      onOpenChange(false);
-      onSuccess?.();
+      await updateCredential(request)
+      toast.success(`Credential "${data.name}" updated`)
+      await invalidateSecretStoreCache()
+      setShowSecrets({})
+      onOpenChange(false)
+      onSuccess?.()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to update credential');
+      toast.error(err instanceof Error ? err.message : 'Failed to update credential')
     }
-  };
+  }
 
   const renderCredentialFields = () => {
     switch (credential.credential_type) {
@@ -237,7 +237,7 @@ export function EditCredentialDialog({
               </FormItem>
             )}
           />
-        );
+        )
 
       case 'ssh_key':
         return (
@@ -278,7 +278,7 @@ export function EditCredentialDialog({
               )}
             />
           </>
-        );
+        )
 
       case 'api_key':
         return (
@@ -314,7 +314,7 @@ export function EditCredentialDialog({
               </FormItem>
             )}
           />
-        );
+        )
 
       case 'basic_auth':
         return (
@@ -365,7 +365,7 @@ export function EditCredentialDialog({
               )}
             />
           </>
-        );
+        )
 
       case 'aws_role':
         return (
@@ -397,7 +397,7 @@ export function EditCredentialDialog({
               )}
             />
           </>
-        );
+        )
 
       case 'gcp_service_account':
         return (
@@ -419,7 +419,7 @@ export function EditCredentialDialog({
               </FormItem>
             )}
           />
-        );
+        )
 
       case 'azure_service_principal':
         return (
@@ -483,7 +483,7 @@ export function EditCredentialDialog({
               )}
             />
           </>
-        );
+        )
 
       case 'github_app':
         return (
@@ -533,7 +533,7 @@ export function EditCredentialDialog({
               )}
             />
           </>
-        );
+        )
 
       case 'gitlab_token':
         return (
@@ -569,12 +569,12 @@ export function EditCredentialDialog({
               </FormItem>
             )}
           />
-        );
+        )
 
       default:
-        return null;
+        return null
     }
-  };
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -678,5 +678,5 @@ export function EditCredentialDialog({
         </Form>
       </DialogContent>
     </Dialog>
-  );
+  )
 }
