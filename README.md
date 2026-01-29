@@ -1,9 +1,9 @@
-# Rediver CTEM Platform
+# Exploop CTEM Platform
 
 [![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=next.js)](https://nextjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript)](https://www.typescriptlang.org)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Docker](https://img.shields.io/badge/Docker-Hub-2496ED?logo=docker)](https://hub.docker.com/r/rediverio/ui)
+[![Docker](https://img.shields.io/badge/Docker-Hub-2496ED?logo=docker)](https://hub.docker.com/r/exploopio/ui)
 
 Continuous Threat Exposure Management (CTEM) platform built with Next.js 16, featuring the complete 5-stage CTEM process: Scoping, Discovery, Prioritization, Validation, and Mobilization.
 
@@ -66,14 +66,14 @@ Rediver is an enterprise-grade Attack Surface Management (ASM) and Vulnerability
 
 | Guide                                                                      | Description               |
 | -------------------------------------------------------------------------- | ------------------------- |
-| [Getting Started](https://docs.rediver.io/docs/getting-started)            | Quick start guide         |
-| [Development Setup](https://docs.rediver.io/docs/development-setup)        | IDE, debugging, testing   |
-| [Authentication](https://docs.rediver.io/docs/guides/authentication)       | JWT & OIDC auth flow      |
-| [Multi-tenancy](https://docs.rediver.io/docs/guides/multi-tenancy)         | Teams & tenant switching  |
-| [Permissions](https://docs.rediver.io/docs/guides/permissions)             | Role-based access control |
-| [API Reference](https://docs.rediver.io/docs/api/reference)                | Complete API endpoints    |
-| [Configuration](https://docs.rediver.io/docs/operations/configuration)     | Environment variables     |
-| [Troubleshooting](https://docs.rediver.io/docs/operations/troubleshooting) | Common issues             |
+| [Getting Started](https://docs.exploop.io/docs/getting-started)            | Quick start guide         |
+| [Development Setup](https://docs.exploop.io/docs/development-setup)        | IDE, debugging, testing   |
+| [Authentication](https://docs.exploop.io/docs/guides/authentication)       | JWT & OIDC auth flow      |
+| [Multi-tenancy](https://docs.exploop.io/docs/guides/multi-tenancy)         | Teams & tenant switching  |
+| [Permissions](https://docs.exploop.io/docs/guides/permissions)             | Role-based access control |
+| [API Reference](https://docs.exploop.io/docs/api/reference)                | Complete API endpoints    |
+| [Configuration](https://docs.exploop.io/docs/operations/configuration)     | Environment variables     |
+| [Troubleshooting](https://docs.exploop.io/docs/operations/troubleshooting) | Common issues             |
 
 ---
 

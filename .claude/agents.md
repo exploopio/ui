@@ -349,7 +349,7 @@ docker run -d \
   -e API_KEY=<YOUR_API_KEY> \
   -e AGENT_ID=<AGENT_UUID> \
   -e REGION=ap-southeast-1 \
-  rediverio/agent:latest \
+  exploopio/agent:latest \
   -daemon -config /app/agent.yaml
 ```
 
