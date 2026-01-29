@@ -1,6 +1,6 @@
 {
-  "name": "ui",
-  "version": "v0.6.9-staging",
+  "name": "exploop-ui",
+  "version": "v0.1.0-staging",
   "private": true,
   "scripts": {
     "dev": "next dev",
