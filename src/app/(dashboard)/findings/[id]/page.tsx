@@ -11,7 +11,15 @@ import { useFindingApi, useAddFindingCommentApi } from '@/features/findings/api/
 import { useFindingActivitiesInfinite } from '@/features/findings/api/use-finding-activities-api'
 import type { ApiFinding } from '@/features/findings/api/finding-api.types'
 import { toast } from 'sonner'
-import type { FindingDetail, FindingStatus, Activity } from '@/features/findings/types'
+import type {
+  FindingDetail,
+  FindingStatus,
+  Activity,
+  FindingType,
+  SecretType,
+  ComplianceFramework,
+  ComplianceResult,
+} from '@/features/findings/types'
 import type { Severity } from '@/features/shared/types'
 import {
   FindingHeader,
@@ -20,6 +28,7 @@ import {
   RemediationTab,
   RelatedTab,
   ActivityPanel,
+  DataFlowTab,
 } from '@/features/findings/components/detail'
 
 /**
@@ -216,6 +225,66 @@ function transformApiToFindingDetail(api: ApiFinding): FindingDetail {
     // Extended: Technical context
     stacks: api.stacks,
     relatedLocations: api.related_locations,
+
+    // Data Flow (Attack Path / Taint Tracking)
+    dataFlow: api.data_flow
+      ? {
+          sources: api.data_flow.sources?.map((loc) => ({
+            path: loc.path,
+            line: loc.line,
+            column: loc.column,
+            content: loc.content,
+            label: loc.label,
+            index: loc.index,
+            type: loc.location_type,
+          })),
+          intermediates: api.data_flow.intermediates?.map((loc) => ({
+            path: loc.path,
+            line: loc.line,
+            column: loc.column,
+            content: loc.content,
+            label: loc.label,
+            index: loc.index,
+            type: loc.location_type,
+          })),
+          sinks: api.data_flow.sinks?.map((loc) => ({
+            path: loc.path,
+            line: loc.line,
+            column: loc.column,
+            content: loc.content,
+            label: loc.label,
+            index: loc.index,
+            type: loc.location_type,
+          })),
+        }
+      : undefined,
+
+    // Finding Type discriminator
+    findingType: api.finding_type as FindingType | undefined,
+
+    // Type-specific details
+    secretDetails: api.secret_type
+      ? {
+          secretType: api.secret_type as SecretType,
+          service: api.secret_service,
+          valid: api.secret_valid,
+          revoked: api.secret_revoked,
+        }
+      : undefined,
+    complianceDetails: api.compliance_framework
+      ? {
+          framework: api.compliance_framework as ComplianceFramework,
+          controlId: api.compliance_control_id,
+          result: api.compliance_result as ComplianceResult | undefined,
+        }
+      : undefined,
+    web3Details: api.web3_chain
+      ? {
+          chain: api.web3_chain,
+          contractAddress: api.web3_contract_address,
+          swcId: api.web3_swc_id,
+        }
+      : undefined,
   }
 }
 
@@ -392,6 +461,19 @@ export default function FindingDetailPage() {
                     Remediation
                   </TabsTrigger>
                   <TabsTrigger
+                    value="attack-path"
+                    className="rounded-none border-b-2 border-transparent bg-transparent px-0 pb-3 pt-3 shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                  >
+                    Attack Path
+                    {finding.dataFlow && (
+                      <span className="ml-1.5 rounded-full bg-blue-500/20 px-1.5 py-0.5 text-[10px] text-blue-400">
+                        {(finding.dataFlow.sources?.length || 0) +
+                          (finding.dataFlow.intermediates?.length || 0) +
+                          (finding.dataFlow.sinks?.length || 0)}
+                      </span>
+                    )}
+                  </TabsTrigger>
+                  <TabsTrigger
                     value="related"
                     className="rounded-none border-b-2 border-transparent bg-transparent px-0 pb-3 pt-3 shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
                   >
@@ -409,6 +491,9 @@ export default function FindingDetailPage() {
                 </TabsContent>
                 <TabsContent value="remediation" className="m-0 mt-0">
                   <RemediationTab remediation={finding.remediation} finding={finding} />
+                </TabsContent>
+                <TabsContent value="attack-path" className="m-0 mt-0">
+                  <DataFlowTab finding={finding} />
                 </TabsContent>
                 <TabsContent value="related" className="m-0 mt-0">
                   <RelatedTab finding={finding} />

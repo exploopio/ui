@@ -1,20 +1,20 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
   SheetDescription,
-} from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Progress } from "@/components/ui/progress";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Textarea } from "@/components/ui/textarea";
+} from '@/components/ui/sheet'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import { Progress } from '@/components/ui/progress'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Textarea } from '@/components/ui/textarea'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,7 +22,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
   DropdownMenuLabel,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu'
 import {
   ExternalLink,
   ChevronDown,
@@ -40,24 +40,74 @@ import {
   MessageSquare,
   MoreHorizontal,
   Check,
-} from "lucide-react";
+  Route,
+  LogIn,
+  ArrowRight,
+} from 'lucide-react'
 import {
   FINDING_STATUS_CONFIG,
   SEVERITY_CONFIG,
   STATUS_TRANSITIONS,
   MOCK_USERS,
-} from "../types";
-import type { Finding, FindingStatus, FindingUser } from "../types";
-import type { Severity } from "@/features/shared/types";
+  DATA_FLOW_LOCATION_CONFIG,
+} from '../types'
+import type {
+  Finding,
+  FindingStatus,
+  FindingUser,
+  DataFlowLocation,
+  DataFlowLocationType,
+} from '../types'
+import type { Severity } from '@/features/shared/types'
+
+// Compact data flow location for drawer preview
+function DataFlowLocationCompact({
+  location,
+  type,
+}: {
+  location: DataFlowLocation
+  type: DataFlowLocationType
+}) {
+  const config = DATA_FLOW_LOCATION_CONFIG[type]
+  const Icon = type === 'source' ? LogIn : type === 'sink' ? AlertTriangle : ArrowRight
+
+  return (
+    <div className="flex items-start gap-2">
+      <div
+        className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full ${config.bgColor}`}
+      >
+        <Icon className={`h-3 w-3 ${config.color}`} />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5">
+          <Badge className={`text-[10px] px-1.5 py-0 ${config.bgColor} ${config.color} border-0`}>
+            {config.label}
+          </Badge>
+          {location.label && (
+            <code className="text-muted-foreground text-[10px] bg-muted px-1 rounded truncate max-w-[100px]">
+              {location.label}
+            </code>
+          )}
+        </div>
+        {location.path && (
+          <p className="text-[10px] text-muted-foreground font-mono truncate mt-0.5">
+            {location.path}
+            {location.line && `:${location.line}`}
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}
 
 interface FindingDetailDrawerProps {
-  finding: Finding | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onStatusChange?: (findingId: string, status: FindingStatus) => void;
-  onSeverityChange?: (findingId: string, severity: Severity) => void;
-  onAssigneeChange?: (findingId: string, assignee: FindingUser | null) => void;
-  onAddComment?: (findingId: string, comment: string) => void;
+  finding: Finding | null
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onStatusChange?: (findingId: string, status: FindingStatus) => void
+  onSeverityChange?: (findingId: string, severity: Severity) => void
+  onAssigneeChange?: (findingId: string, assignee: FindingUser | null) => void
+  onAddComment?: (findingId: string, comment: string) => void
 }
 
 export function FindingDetailDrawer({
@@ -69,75 +119,75 @@ export function FindingDetailDrawer({
   onAssigneeChange,
   onAddComment,
 }: FindingDetailDrawerProps) {
-  const router = useRouter();
-  const [status, setStatus] = useState<FindingStatus | null>(null);
-  const [severity, setSeverity] = useState<Severity | null>(null);
-  const [assignee, setAssignee] = useState<FindingUser | null | undefined>(undefined);
-  const [comment, setComment] = useState("");
-  const [showCommentInput, setShowCommentInput] = useState(false);
+  const router = useRouter()
+  const [status, setStatus] = useState<FindingStatus | null>(null)
+  const [severity, setSeverity] = useState<Severity | null>(null)
+  const [assignee, setAssignee] = useState<FindingUser | null | undefined>(undefined)
+  const [comment, setComment] = useState('')
+  const [showCommentInput, setShowCommentInput] = useState(false)
 
-  if (!finding) return null;
+  if (!finding) return null
 
   // Use local state if changed, otherwise use finding value
-  const currentStatus = status ?? finding.status;
-  const currentSeverity = severity ?? finding.severity;
-  const currentAssignee = assignee !== undefined ? assignee : finding.assignee;
+  const currentStatus = status ?? finding.status
+  const currentSeverity = severity ?? finding.severity
+  const currentAssignee = assignee !== undefined ? assignee : finding.assignee
 
-  const statusConfig = FINDING_STATUS_CONFIG[currentStatus];
-  const severityConfig = SEVERITY_CONFIG[currentSeverity];
-  const availableTransitions = STATUS_TRANSITIONS[currentStatus];
+  const statusConfig = FINDING_STATUS_CONFIG[currentStatus]
+  const severityConfig = SEVERITY_CONFIG[currentSeverity]
+  const availableTransitions = STATUS_TRANSITIONS[currentStatus]
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  };
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    })
+  }
 
   const getInitials = (name: string) => {
     return name
-      .split(" ")
+      .split(' ')
       .map((n) => n[0])
-      .join("")
+      .join('')
       .toUpperCase()
-      .slice(0, 2);
-  };
+      .slice(0, 2)
+  }
 
   const handleStatusChange = (newStatus: FindingStatus) => {
-    setStatus(newStatus);
-    onStatusChange?.(finding.id, newStatus);
-  };
+    setStatus(newStatus)
+    onStatusChange?.(finding.id, newStatus)
+  }
 
   const handleSeverityChange = (newSeverity: Severity) => {
-    setSeverity(newSeverity);
-    onSeverityChange?.(finding.id, newSeverity);
-  };
+    setSeverity(newSeverity)
+    onSeverityChange?.(finding.id, newSeverity)
+  }
 
   const handleAssigneeChange = (user: FindingUser | null) => {
-    setAssignee(user);
-    onAssigneeChange?.(finding.id, user);
-  };
+    setAssignee(user)
+    onAssigneeChange?.(finding.id, user)
+  }
 
   const handleAddComment = () => {
-    if (!comment.trim()) return;
-    onAddComment?.(finding.id, comment);
-    setComment("");
-    setShowCommentInput(false);
-  };
+    if (!comment.trim()) return
+    onAddComment?.(finding.id, comment)
+    setComment('')
+    setShowCommentInput(false)
+  }
 
   const handleViewDetails = () => {
-    onOpenChange(false);
-    router.push(`/findings/${finding.id}`);
-  };
+    onOpenChange(false)
+    router.push(`/findings/${finding.id}`)
+  }
 
   const handleMarkDuplicate = () => {
-    handleStatusChange("duplicate");
-  };
+    handleStatusChange('duplicate')
+  }
 
   const handleMarkFalsePositive = () => {
-    handleStatusChange("false_positive");
-  };
+    handleStatusChange('false_positive')
+  }
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -145,12 +195,8 @@ export function FindingDetailDrawer({
         {/* Header */}
         <SheetHeader className="space-y-3 border-b px-4 sm:px-6 py-4 text-left">
           <div className="space-y-1">
-            <p className="text-muted-foreground font-mono text-xs">
-              {finding.id}
-            </p>
-            <SheetTitle className="text-lg leading-snug pr-8">
-              {finding.title}
-            </SheetTitle>
+            <p className="text-muted-foreground font-mono text-xs">{finding.id}</p>
+            <SheetTitle className="text-lg leading-snug pr-8">{finding.title}</SheetTitle>
           </div>
 
           {/* CVE/CWE badges */}
@@ -192,22 +238,18 @@ export function FindingDetailDrawer({
               <DropdownMenuLabel className="text-xs">Change Status</DropdownMenuLabel>
               <DropdownMenuSeparator />
               {availableTransitions.map((s) => {
-                const config = FINDING_STATUS_CONFIG[s];
+                const config = FINDING_STATUS_CONFIG[s]
                 return (
                   <DropdownMenuItem
                     key={s}
                     onClick={() => handleStatusChange(s)}
                     className="flex items-center gap-2"
                   >
-                    <div
-                      className={`h-2 w-2 rounded-full ${config.bgColor.replace("/20", "")}`}
-                    />
+                    <div className={`h-2 w-2 rounded-full ${config.bgColor.replace('/20', '')}`} />
                     {config.label}
-                    {s === currentStatus && (
-                      <Check className="ml-auto h-3 w-3" />
-                    )}
+                    {s === currentStatus && <Check className="ml-auto h-3 w-3" />}
                   </DropdownMenuItem>
-                );
+                )
               })}
             </DropdownMenuContent>
           </DropdownMenu>
@@ -229,25 +271,21 @@ export function FindingDetailDrawer({
               <DropdownMenuLabel className="text-xs">Change Severity</DropdownMenuLabel>
               <DropdownMenuSeparator />
               {(Object.keys(SEVERITY_CONFIG) as Severity[]).map((s) => {
-                const config = SEVERITY_CONFIG[s];
+                const config = SEVERITY_CONFIG[s]
                 return (
                   <DropdownMenuItem
                     key={s}
                     onClick={() => handleSeverityChange(s)}
                     className="flex items-center gap-2"
                   >
-                    <div
-                      className={`h-2 w-2 rounded-full ${config.bgColor.replace("/20", "")}`}
-                    />
+                    <div className={`h-2 w-2 rounded-full ${config.bgColor.replace('/20', '')}`} />
                     {config.label}
                     <span className="text-muted-foreground ml-auto text-xs">
                       {config.cvssRange}
                     </span>
-                    {s === currentSeverity && (
-                      <Check className="ml-1 h-3 w-3" />
-                    )}
+                    {s === currentSeverity && <Check className="ml-1 h-3 w-3" />}
                   </DropdownMenuItem>
-                );
+                )
               })}
             </DropdownMenuContent>
           </DropdownMenu>
@@ -264,7 +302,7 @@ export function FindingDetailDrawer({
                       </AvatarFallback>
                     </Avatar>
                     <span className="max-w-[80px] truncate text-xs">
-                      {currentAssignee.name.split(" ")[0]}
+                      {currentAssignee.name.split(' ')[0]}
                     </span>
                   </>
                 ) : (
@@ -305,9 +343,7 @@ export function FindingDetailDrawer({
                     <p className="text-sm truncate">{user.name}</p>
                     <p className="text-muted-foreground text-xs capitalize">{user.role}</p>
                   </div>
-                  {currentAssignee?.id === user.id && (
-                    <Check className="h-3 w-3" />
-                  )}
+                  {currentAssignee?.id === user.id && <Check className="h-3 w-3" />}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
@@ -346,7 +382,7 @@ export function FindingDetailDrawer({
               <div className="space-y-0.5">
                 <p className="text-muted-foreground text-xs">CVSS Score</p>
                 <p className="text-sm font-semibold font-mono">
-                  {finding.cvss !== undefined ? finding.cvss : "-"}
+                  {finding.cvss !== undefined ? finding.cvss : '-'}
                 </p>
               </div>
               <div className="space-y-0.5">
@@ -413,9 +449,7 @@ export function FindingDetailDrawer({
                 <FileText className="h-4 w-4" />
                 Description
               </h4>
-              <p className="text-muted-foreground text-sm leading-relaxed">
-                {finding.description}
-              </p>
+              <p className="text-muted-foreground text-sm leading-relaxed">{finding.description}</p>
             </div>
 
             <Separator />
@@ -427,9 +461,7 @@ export function FindingDetailDrawer({
                   <Wrench className="h-4 w-4" />
                   Remediation
                 </h4>
-                <span className="text-sm font-semibold">
-                  {finding.remediation.progress}%
-                </span>
+                <span className="text-sm font-semibold">{finding.remediation.progress}%</span>
               </div>
               <Progress value={finding.remediation.progress} className="h-2" />
               <p className="text-muted-foreground text-xs line-clamp-2">
@@ -466,15 +498,78 @@ export function FindingDetailDrawer({
                         className="rounded-md border p-2 text-xs hover:bg-muted/50 cursor-pointer transition-colors"
                       >
                         <p className="truncate font-medium">{ev.title}</p>
-                        <p className="text-muted-foreground capitalize">
-                          {ev.type}
-                        </p>
+                        <p className="text-muted-foreground capitalize">{ev.type}</p>
                       </div>
                     ))}
                   </div>
                 </div>
               </>
             )}
+
+            {/* Attack Path / Data Flow */}
+            {finding.dataFlow &&
+              ((finding.dataFlow.sources?.length ?? 0) > 0 ||
+                (finding.dataFlow.intermediates?.length ?? 0) > 0 ||
+                (finding.dataFlow.sinks?.length ?? 0) > 0) && (
+                <>
+                  <Separator />
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="flex items-center gap-2 text-sm font-semibold">
+                        <Route className="h-4 w-4" />
+                        Attack Path
+                      </h4>
+                      <Badge variant="secondary" className="text-xs">
+                        {(finding.dataFlow.sources?.length ?? 0) +
+                          (finding.dataFlow.intermediates?.length ?? 0) +
+                          (finding.dataFlow.sinks?.length ?? 0)}{' '}
+                        steps
+                      </Badge>
+                    </div>
+
+                    {/* Compact flow visualization */}
+                    <div className="space-y-2">
+                      {/* Sources */}
+                      {finding.dataFlow.sources?.map((loc, idx) => (
+                        <DataFlowLocationCompact
+                          key={`source-${idx}`}
+                          location={loc}
+                          type="source"
+                        />
+                      ))}
+
+                      {/* Intermediates - show max 2 */}
+                      {finding.dataFlow.intermediates?.slice(0, 2).map((loc, idx) => (
+                        <DataFlowLocationCompact
+                          key={`intermediate-${idx}`}
+                          location={loc}
+                          type="intermediate"
+                        />
+                      ))}
+                      {(finding.dataFlow.intermediates?.length ?? 0) > 2 && (
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground pl-6">
+                          <ArrowRight className="h-3 w-3" />+
+                          {(finding.dataFlow.intermediates?.length ?? 0) - 2} more steps
+                        </div>
+                      )}
+
+                      {/* Sinks */}
+                      {finding.dataFlow.sinks?.map((loc, idx) => (
+                        <DataFlowLocationCompact key={`sink-${idx}`} location={loc} type="sink" />
+                      ))}
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full text-xs h-7"
+                      onClick={handleViewDetails}
+                    >
+                      View Full Attack Path
+                    </Button>
+                  </div>
+                </>
+              )}
 
             {/* Tags */}
             {finding.tags && finding.tags.length > 0 && (
@@ -512,17 +607,13 @@ export function FindingDetailDrawer({
                   variant="ghost"
                   size="sm"
                   onClick={() => {
-                    setShowCommentInput(false);
-                    setComment("");
+                    setShowCommentInput(false)
+                    setComment('')
                   }}
                 >
                   Cancel
                 </Button>
-                <Button
-                  size="sm"
-                  onClick={handleAddComment}
-                  disabled={!comment.trim()}
-                >
+                <Button size="sm" onClick={handleAddComment} disabled={!comment.trim()}>
                   <Send className="mr-1.5 h-3 w-3" />
                   Send
                 </Button>
@@ -552,5 +643,5 @@ export function FindingDetailDrawer({
         </div>
       </SheetContent>
     </Sheet>
-  );
+  )
 }

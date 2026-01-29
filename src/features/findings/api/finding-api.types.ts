@@ -35,6 +35,26 @@ export type FindingSource =
   | 'manual'
   | 'external'
 
+export type ApiFindingType = 'vulnerability' | 'secret' | 'misconfiguration' | 'compliance' | 'web3'
+
+export type ApiDataFlowLocationType = 'source' | 'intermediate' | 'sink'
+
+export interface ApiDataFlowLocation {
+  path?: string
+  line?: number
+  column?: number
+  content?: string
+  label?: string
+  index?: number
+  location_type?: ApiDataFlowLocationType
+}
+
+export interface ApiDataFlow {
+  sources?: ApiDataFlowLocation[]
+  intermediates?: ApiDataFlowLocation[]
+  sinks?: ApiDataFlowLocation[]
+}
+
 // ============================================
 // API Response Types
 // ============================================
@@ -173,6 +193,35 @@ export interface ApiFinding {
     }
   }>
   partial_fingerprints?: Record<string, string>
+
+  // Finding type discriminator
+  finding_type?: ApiFindingType
+
+  // Data flow / taint tracking
+  has_data_flow?: boolean // Lightweight flag for list views
+  data_flow?: ApiDataFlow // Full data when fetching single finding
+
+  // Secret-specific fields
+  secret_type?: string
+  secret_service?: string
+  secret_valid?: boolean
+  secret_revoked?: boolean
+
+  // Compliance-specific fields
+  compliance_framework?: string
+  compliance_control_id?: string
+  compliance_result?: string
+
+  // Web3-specific fields
+  web3_chain?: string
+  web3_contract_address?: string
+  web3_swc_id?: string
+
+  // Misconfiguration-specific fields
+  misconfig_policy_id?: string
+  misconfig_resource_type?: string
+  misconfig_expected?: string
+  misconfig_actual?: string
 }
 
 /**

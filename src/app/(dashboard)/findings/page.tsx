@@ -34,7 +34,9 @@ import {
   Filter,
   AlertCircle,
   Loader2,
+  Route,
 } from 'lucide-react'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   FindingStatusBadge,
   FindingDetailDrawer,
@@ -133,6 +135,35 @@ function transformApiToUiFinding(api: ApiFinding): Finding {
     verifiedAt: undefined,
     createdAt: api.created_at,
     updatedAt: api.updated_at,
+    // Data Flow (Attack Path / Taint Tracking)
+    // Use has_data_flow flag for list view (no full data loaded)
+    // When api.data_flow is present (detail view), use full data
+    hasDataFlow: api.has_data_flow || false,
+    dataFlow: api.data_flow
+      ? {
+          sources: api.data_flow.sources?.map((loc) => ({
+            path: loc.path,
+            line: loc.line,
+            column: loc.column,
+            content: loc.content,
+            label: loc.label,
+          })),
+          intermediates: api.data_flow.intermediates?.map((loc) => ({
+            path: loc.path,
+            line: loc.line,
+            column: loc.column,
+            content: loc.content,
+            label: loc.label,
+          })),
+          sinks: api.data_flow.sinks?.map((loc) => ({
+            path: loc.path,
+            line: loc.line,
+            column: loc.column,
+            content: loc.content,
+            label: loc.label,
+          })),
+        }
+      : undefined,
   }
 }
 
@@ -418,14 +449,39 @@ export default function FindingsPage() {
       {
         accessorKey: 'title',
         header: ({ column }) => <DataTableColumnHeader column={column} title="Title" />,
-        cell: ({ row }) => (
-          <div className="cursor-pointer max-w-md" onClick={() => handleRowClick(row.original)}>
-            <p className="font-medium truncate">{row.getValue('title')}</p>
-            {row.original.scanner && (
-              <p className="text-muted-foreground text-xs">{row.original.scanner}</p>
-            )}
-          </div>
-        ),
+        cell: ({ row }) => {
+          // Use hasDataFlow flag from API (populated via subquery in list view)
+          // Fall back to checking dataFlow object for detail view compatibility
+          const hasDataFlow =
+            row.original.hasDataFlow ||
+            (row.original.dataFlow &&
+              ((row.original.dataFlow.sources?.length ?? 0) > 0 ||
+                (row.original.dataFlow.intermediates?.length ?? 0) > 0 ||
+                (row.original.dataFlow.sinks?.length ?? 0) > 0))
+
+          return (
+            <div className="cursor-pointer max-w-md" onClick={() => handleRowClick(row.original)}>
+              <div className="flex items-center gap-1.5">
+                <p className="font-medium truncate">{row.getValue('title')}</p>
+                {hasDataFlow && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="inline-flex items-center gap-0.5 rounded-full bg-blue-500/20 px-1.5 py-0.5 text-[10px] font-medium text-blue-400">
+                        <Route className="h-2.5 w-2.5" />
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="text-xs">
+                      Has attack path data
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+              </div>
+              {row.original.scanner && (
+                <p className="text-muted-foreground text-xs">{row.original.scanner}</p>
+              )}
+            </div>
+          )
+        },
       },
       {
         accessorKey: 'severity',

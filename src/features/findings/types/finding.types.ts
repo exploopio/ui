@@ -482,6 +482,9 @@ export interface Finding {
   severity: Severity
   status: FindingStatus
 
+  // Finding Type (discriminator for specialized fields)
+  findingType?: FindingType
+
   // Technical Details
   cvss?: number
   cvssVector?: string
@@ -607,6 +610,225 @@ export interface Finding {
       uri_base_id?: string
     }
   }>
+
+  // Data Flow (Attack Path / Taint Tracking)
+  hasDataFlow?: boolean // Lightweight flag for list views
+  dataFlow?: DataFlow // Full data when fetching single finding
+
+  // Type-specific details (based on findingType)
+  secretDetails?: SecretDetails
+  complianceDetails?: ComplianceDetails
+  web3Details?: Web3Details
+  misconfigDetails?: MisconfigurationDetails
+}
+
+// ============================================
+// FINDING TYPE (Discriminator)
+// ============================================
+
+/**
+ * Finding type discriminator - determines specialized fields and fingerprint strategy
+ */
+export type FindingType =
+  | 'vulnerability' // SAST, SCA, DAST findings
+  | 'secret' // Secret detection (Gitleaks, Trufflehog)
+  | 'misconfiguration' // IaC findings (Checkov, Trivy-config)
+  | 'compliance' // Compliance framework violations
+  | 'web3' // Smart contract findings
+
+export const FINDING_TYPE_CONFIG: Record<
+  FindingType,
+  { label: string; icon: string; color: string; bgColor: string }
+> = {
+  vulnerability: {
+    label: 'Vulnerability',
+    icon: 'bug',
+    color: 'text-red-400',
+    bgColor: 'bg-red-500/20',
+  },
+  secret: {
+    label: 'Secret',
+    icon: 'key',
+    color: 'text-amber-400',
+    bgColor: 'bg-amber-500/20',
+  },
+  misconfiguration: {
+    label: 'Misconfiguration',
+    icon: 'settings',
+    color: 'text-orange-400',
+    bgColor: 'bg-orange-500/20',
+  },
+  compliance: {
+    label: 'Compliance',
+    icon: 'shield-check',
+    color: 'text-blue-400',
+    bgColor: 'bg-blue-500/20',
+  },
+  web3: {
+    label: 'Web3',
+    icon: 'coins',
+    color: 'text-purple-400',
+    bgColor: 'bg-purple-500/20',
+  },
+}
+
+// ============================================
+// DATA FLOW (Taint Tracking / Attack Path)
+// ============================================
+
+/**
+ * Location type in data flow trace
+ */
+export type DataFlowLocationType = 'source' | 'intermediate' | 'sink' | 'sanitizer'
+
+/**
+ * Location in a data flow trace (source → intermediate → sink)
+ */
+export interface DataFlowLocation {
+  /** File path */
+  path?: string
+  /** Line number (1-indexed) */
+  line?: number
+  /** Column number (1-indexed) */
+  column?: number
+  /** Code snippet at this location */
+  content?: string
+  /** Variable/expression name being tracked */
+  label?: string
+  /** Step index in the flow (for ordering) */
+  index?: number
+  /** Location type */
+  type?: DataFlowLocationType
+  /** Function name containing this location */
+  functionName?: string
+  /** Class name containing this location */
+  className?: string
+}
+
+/**
+ * Data flow trace representing taint propagation from source to sink
+ */
+export interface DataFlow {
+  /** Where tainted data enters (e.g., user input) */
+  sources?: DataFlowLocation[]
+  /** Transformation/propagation steps */
+  intermediates?: DataFlowLocation[]
+  /** Where the vulnerability occurs (e.g., SQL execution) */
+  sinks?: DataFlowLocation[]
+}
+
+export const DATA_FLOW_LOCATION_CONFIG: Record<
+  DataFlowLocationType,
+  { label: string; icon: string; color: string; bgColor: string; description: string }
+> = {
+  source: {
+    label: 'Source',
+    icon: 'log-in',
+    color: 'text-blue-400',
+    bgColor: 'bg-blue-500/20',
+    description: 'Where untrusted data enters',
+  },
+  intermediate: {
+    label: 'Propagation',
+    icon: 'arrow-right',
+    color: 'text-yellow-400',
+    bgColor: 'bg-yellow-500/20',
+    description: 'Data transformation step',
+  },
+  sink: {
+    label: 'Sink',
+    icon: 'alert-triangle',
+    color: 'text-red-400',
+    bgColor: 'bg-red-500/20',
+    description: 'Where vulnerability occurs',
+  },
+  sanitizer: {
+    label: 'Sanitizer',
+    icon: 'shield',
+    color: 'text-green-400',
+    bgColor: 'bg-green-500/20',
+    description: 'Where data is sanitized',
+  },
+}
+
+// ============================================
+// SECRET DETAILS (when findingType === 'secret')
+// ============================================
+
+export type SecretType =
+  | 'api_key'
+  | 'password'
+  | 'token'
+  | 'certificate'
+  | 'private_key'
+  | 'oauth'
+  | 'jwt'
+  | 'ssh_key'
+  | 'aws_key'
+  | 'gcp_key'
+  | 'azure_key'
+  | 'generic_secret'
+  | 'database_credential'
+  | 'encryption_key'
+
+export interface SecretDetails {
+  secretType?: SecretType
+  service?: string // aws, github, stripe, etc.
+  maskedValue?: string // First/last chars visible
+  valid?: boolean // Is secret still valid
+  revoked?: boolean // Has been revoked
+  scopes?: string[] // API permissions
+  expiresAt?: string
+}
+
+// ============================================
+// COMPLIANCE DETAILS (when findingType === 'compliance')
+// ============================================
+
+export type ComplianceFramework =
+  | 'pci-dss'
+  | 'hipaa'
+  | 'soc2'
+  | 'cis'
+  | 'nist'
+  | 'iso27001'
+  | 'gdpr'
+  | 'fedramp'
+
+export type ComplianceResult = 'pass' | 'fail' | 'manual' | 'not_applicable'
+
+export interface ComplianceDetails {
+  framework?: ComplianceFramework
+  frameworkVersion?: string
+  controlId?: string
+  controlName?: string
+  controlDescription?: string
+  result?: ComplianceResult
+}
+
+// ============================================
+// WEB3 DETAILS (when findingType === 'web3')
+// ============================================
+
+export interface Web3Details {
+  chain?: string // ethereum, bsc, polygon
+  contractAddress?: string
+  swcId?: string // SWC-107, SWC-101
+  functionSelector?: string
+}
+
+// ============================================
+// MISCONFIGURATION DETAILS (when findingType === 'misconfiguration')
+// ============================================
+
+export interface MisconfigurationDetails {
+  policyId?: string
+  policyName?: string
+  resourceType?: string
+  resourceName?: string
+  expected?: string
+  actual?: string
+  cause?: string
 }
 
 // ============================================
