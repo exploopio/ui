@@ -93,8 +93,12 @@ export function SubModuleGate({
   // Get sub-modules for the parent module
   const parentSubModules = subModules[parentModule] || []
 
-  // Find the specific sub-module
-  const subModuleInfo = parentSubModules.find((m) => m.slug === subModule)
+  // Find the specific sub-module by slug OR by ID pattern (parent.subModule)
+  // This supports both simple slugs (e.g., 'cloud') and prefixed slugs (e.g., 'integrations-scm')
+  const expectedId = `${parentModule}.${subModule}`
+  const subModuleInfo = parentSubModules.find(
+    (m) => m.slug === subModule || m.id === expectedId || m.slug === `${parentModule}-${subModule}`
+  )
 
   // Check if sub-module exists, is active, and has accessible release status
   // Only 'released' and 'beta' statuses allow access
@@ -147,7 +151,13 @@ export function useSubModuleAccess(parentModule: string, subModule: string) {
   const { subModules, isLoading } = useTenantModules()
 
   const parentSubModules = subModules[parentModule] || []
-  const subModuleInfo = parentSubModules.find((m) => m.slug === subModule)
+
+  // Find the specific sub-module by slug OR by ID pattern (parent.subModule)
+  // This supports both simple slugs (e.g., 'cloud') and prefixed slugs (e.g., 'integrations-scm')
+  const expectedId = `${parentModule}.${subModule}`
+  const subModuleInfo = parentSubModules.find(
+    (m) => m.slug === subModule || m.id === expectedId || m.slug === `${parentModule}-${subModule}`
+  )
 
   // Only 'released' and 'beta' statuses allow access
   const isAccessibleStatus =

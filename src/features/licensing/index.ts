@@ -30,9 +30,12 @@
 export {
   ModuleGate,
   useModuleAccess,
+  SubModuleGate,
+  useSubModuleAccess,
   UpgradePrompt,
   LimitIndicator,
   type ModuleGateProps,
+  type SubModuleGateProps,
   type UpgradePromptProps,
   type LimitIndicatorProps,
 } from './components'

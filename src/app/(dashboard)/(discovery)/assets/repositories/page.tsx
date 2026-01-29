@@ -113,7 +113,7 @@ import {
   SYNC_STATUS_LABELS,
 } from '@/features/repositories'
 import { useSCMConnections } from '@/features/repositories/hooks/use-repositories'
-import { useHasModule } from '@/features/integrations/api/use-tenant-modules'
+import { useSubModuleAccess } from '@/features/licensing'
 import type { AssetWithRepository } from '@/features/assets/types/asset.types'
 import type { Status } from '@/features/shared/types'
 
@@ -484,7 +484,10 @@ function RepositoryStatusBadge({ status }: { status: RepositoryStatus }) {
 
 function SCMConnectionsBanner() {
   const router = useRouter()
-  const { hasModule: hasSCMModule, isLoading: moduleLoading } = useHasModule('scm')
+  const { hasSubModule: hasSCMModule, isLoading: moduleLoading } = useSubModuleAccess(
+    'integrations',
+    'scm'
+  )
   const { data: connectionsData, isLoading } = useSCMConnections()
 
   // Don't render if SCM module is not available (free plan doesn't have SCM)

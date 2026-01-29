@@ -119,8 +119,9 @@ function getReleaseStatusBadge(
 /**
  * Filter sub-items based on sub-modules from API.
  * - Items without assetModuleKey are always shown (like "Overview")
- * - Items with assetModuleKey are filtered by sub-module release_status and is_active
- * - "disabled" modules or is_active=false are hidden completely
+ * - Items with assetModuleKey are filtered by sub-module presence in API response
+ * - API only returns active modules, so if not in response = hidden
+ * - "disabled" release status hides completely
  * - "coming_soon" and "beta" modules get their release status applied
  */
 function useFilteredSubItems(
@@ -149,7 +150,7 @@ function useFilteredSubItems(
         const subModule = parentSubModules.find((m) => m.slug === item.assetModuleKey)
 
         // If sub-module not found in API response, hide the item
-        // This means it's either not configured or the parent module has no sub-modules
+        // API only returns active modules, so absence = not available
         if (!subModule) {
           // If sub-modules exist for parent but this item not found, hide it
           if (parentSubModules.length > 0) {
@@ -158,9 +159,6 @@ function useFilteredSubItems(
           // If no sub-modules at all for parent, show item as-is (backward compat)
           return item
         }
-
-        // If sub-module is inactive (is_active=false), hide completely
-        if (!subModule.is_active) return null
 
         // If sub-module is disabled, hide completely
         if (subModule.release_status === 'disabled') return null

@@ -11,7 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { AddConnectionDialog } from './add-connection-dialog'
 import { SCMConnectionCard } from './scm-connection-card'
 import { useSCMIntegrationsApi, invalidateSCMIntegrationsCache } from '@/features/integrations'
-import { useHasModule } from '@/features/integrations/api/use-tenant-modules'
+import { useSubModuleAccess } from '@/features/licensing'
 
 interface SCMConnectionsSectionProps {
   onConnectionSelect?: (connectionId: string | null) => void
@@ -25,7 +25,10 @@ export function SCMConnectionsSection({
   const [isOpen, setIsOpen] = useState(false) // Collapsed by default
   const [addDialogOpen, setAddDialogOpen] = useState(false)
 
-  const { hasModule: hasSCMModule, isLoading: moduleLoading } = useHasModule('scm')
+  const { hasSubModule: hasSCMModule, isLoading: moduleLoading } = useSubModuleAccess(
+    'integrations',
+    'scm'
+  )
   const { data: connectionsData, error, isLoading, mutate } = useSCMIntegrationsApi()
 
   // Don't render if SCM module is not available (free plan doesn't have SCM)

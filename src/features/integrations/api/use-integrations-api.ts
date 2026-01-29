@@ -183,7 +183,7 @@ export function useSCMIntegrationsApi(config?: SWRConfiguration) {
   const { currentTenant } = useTenant()
   const { moduleIds, isLoading: modulesLoading } = useTenantModules()
 
-  const hasSCMModule = moduleIds.includes('scm')
+  const hasSCMModule = moduleIds.includes('integrations.scm')
 
   // Only fetch if SCM module is enabled - prevents 403 MODULE_NOT_ENABLED
   const key = currentTenant && hasSCMModule && !modulesLoading ? `${BASE_URL}/scm` : null

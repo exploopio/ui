@@ -631,7 +631,7 @@ export function useSCMConnections(config?: SWRConfiguration) {
   const { moduleIds, isLoading: modulesLoading } = useTenantModules()
 
   const canReadScmConnections = can(Permission.ScmConnectionsRead)
-  const hasSCMModule = moduleIds.includes('scm')
+  const hasSCMModule = moduleIds.includes('integrations.scm')
 
   // Only fetch if user has permission AND SCM module is enabled
   // This prevents 403 MODULE_NOT_ENABLED errors for tenants without SCM module
@@ -657,7 +657,7 @@ export function useSCMConnection(connectionId: string | null, config?: SWRConfig
   const { moduleIds, isLoading: modulesLoading } = useTenantModules()
 
   const canReadScmConnections = can(Permission.ScmConnectionsRead)
-  const hasSCMModule = moduleIds.includes('scm')
+  const hasSCMModule = moduleIds.includes('integrations.scm')
 
   // Only fetch if user has permission AND SCM module is enabled
   const shouldFetch =
@@ -831,7 +831,7 @@ export function useSCMRepositories(
   const { moduleIds, isLoading: modulesLoading } = useTenantModules()
 
   const canReadScmConnections = can(Permission.ScmConnectionsRead)
-  const hasSCMModule = moduleIds.includes('scm')
+  const hasSCMModule = moduleIds.includes('integrations.scm')
 
   // Only fetch if user has permission AND SCM module is enabled
   const shouldFetch =

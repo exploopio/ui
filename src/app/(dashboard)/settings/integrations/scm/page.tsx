@@ -65,7 +65,7 @@ import {
   invalidateSCMConnectionsCache,
 } from '@/features/repositories/hooks/use-repositories'
 import type { SCMConnection } from '@/features/repositories/types/repository.types'
-import { useHasModule } from '@/features/integrations/api/use-tenant-modules'
+import { useSubModuleAccess } from '@/features/licensing'
 import { cn } from '@/lib/utils'
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
@@ -107,8 +107,11 @@ export default function SCMConnectionsPage() {
   const [selectedConnection, setSelectedConnection] = useState<SCMConnection | null>(null)
   const [actionInProgress, setActionInProgress] = useState<string | null>(null)
 
-  // Check if SCM module is enabled for this tenant
-  const { hasModule: hasSCMModule, isLoading: moduleLoading } = useHasModule('scm')
+  // Check if SCM sub-module is enabled for this tenant
+  const { hasSubModule: hasSCMModule, isLoading: moduleLoading } = useSubModuleAccess(
+    'integrations',
+    'scm'
+  )
 
   // Fetch SCM connections - this hook handles module check internally
   const { data: connectionsData, error, isLoading: dataLoading, mutate } = useSCMConnections()
