@@ -53,6 +53,7 @@
 **Responsibilities:**
 
 **Frontend (Next.js):**
+
 - ✅ User Interface & UX
 - ✅ Authentication Flow (Keycloak OAuth)
 - ✅ Token Management (access token in memory)
@@ -63,6 +64,7 @@
 - ✅ Error Display & User Feedback
 
 **Backend API (Separate Service):**
+
 - ✅ Business Logic
 - ✅ Database Operations (CRUD)
 - ✅ Data Validation & Processing
@@ -79,12 +81,14 @@
 ### Current Setup
 
 **Environment Variable:**
+
 ```env
 # .env.local
 NEXT_PUBLIC_BACKEND_API_URL=https://api.example.com
 ```
 
 **API Client Location:**
+
 ```
 src/lib/api/
 ├── client.ts          # API client with auth
@@ -128,10 +132,7 @@ src/lib/api/
 // src/lib/api/client.ts
 import { useAuthStore } from '@/stores/auth-store'
 
-export async function apiClient<T>(
-  endpoint: string,
-  options?: RequestInit
-): Promise<T> {
+export async function apiClient<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const accessToken = useAuthStore.getState().accessToken
   const baseUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL
 
@@ -206,6 +207,7 @@ async function UsersPage() {
 ```
 
 **Pros:**
+
 - SEO friendly
 - Faster initial load
 - No loading state needed
@@ -228,6 +230,7 @@ function UsersList() {
 ```
 
 **Pros:**
+
 - Client-side caching
 - Auto-revalidation
 - Optimistic updates
@@ -252,6 +255,7 @@ export async function createUser(formData: FormData) {
 ```
 
 **Pros:**
+
 - Type-safe
 - Progressive enhancement
 - No client-side JS needed
@@ -265,8 +269,8 @@ export async function createUser(formData: FormData) {
 ```json
 {
   "dependencies": {
-    "swr": "^2.x",              // Client-side data fetching
-    "@tanstack/react-query": "^5.x"  // Alternative to SWR
+    "swr": "^2.x", // Client-side data fetching
+    "@tanstack/react-query": "^5.x" // Alternative to SWR
   }
 }
 ```
@@ -358,6 +362,7 @@ NEXT_PUBLIC_ENABLE_MOCK_API=false  # Disable mock data
 ### What Backend SHOULD Provide
 
 1. **RESTful API Endpoints**
+
    ```
    GET    /api/users
    POST   /api/users
@@ -493,20 +498,21 @@ npm run dev
 
 With separate backend API:
 
-| Category | Score | Status |
-|----------|-------|--------|
-| Security | 95/100 | ✅ Excellent |
-| Architecture | 90/100 | ✅ Excellent |
-| Testing | 85/100 | ✅ Good |
-| **Database** | N/A | ✅ Backend handles it |
-| **API/Backend** | N/A | ✅ Separate service |
-| **Frontend Integration** | 70/100 | ⚠️ Needs API client |
-| CI/CD | 20/100 | ❌ Missing |
-| Monitoring | 10/100 | ❌ Missing |
+| Category                 | Score  | Status                |
+| ------------------------ | ------ | --------------------- |
+| Security                 | 95/100 | ✅ Excellent          |
+| Architecture             | 90/100 | ✅ Excellent          |
+| Testing                  | 85/100 | ✅ Good               |
+| **Database**             | N/A    | ✅ Backend handles it |
+| **API/Backend**          | N/A    | ✅ Separate service   |
+| **Frontend Integration** | 70/100 | ⚠️ Needs API client   |
+| CI/CD                    | 20/100 | ❌ Missing            |
+| Monitoring               | 10/100 | ❌ Missing            |
 
 **Updated Score: 82/100 (B+ Grade)**
 
 **Status:** Much closer to production-ready! Just need:
+
 1. API client implementation (1-2 days)
 2. CI/CD setup (1 day)
 3. Monitoring (1 day)
@@ -554,5 +560,60 @@ With separate backend API:
 
 ---
 
-**Last Updated:** 2025-12-11
-**Version:** 1.0.0
+---
+
+## 🧩 Dashboard UI Architecture (New 2026)
+
+### **Header Centralization Strategy**
+
+To optimize performance and maintainability, the Dashboard Header architecture follows a **Hybrid Server/Client Split**:
+
+```mermaid
+graph TD
+    RootLayout["(dashboard)/layout.tsx\n(Server Component)"] --> DashboardHeader["DashboardHeader\n(Client Component)"]
+    DashboardHeader -->|Default| AppHeader["Header (Global)"]
+    DashboardHeader -->|Regex Match| Null["null (Hidden)"]
+
+    RootLayout --> PageContent["Page Content"]
+
+    subgraph "Finding Detail Page"
+    PageContent --> LocalHeader["Header (Custom/Local)"]
+    end
+```
+
+#### **1. Layout Layer (Server Component)**
+
+- File: `src/app/(dashboard)/layout.tsx`
+- **Role**: Acts as the skeleton shell. Handles SEO metadata, cookies (Sidebar state), and wraps content in Providers.
+- **Why**: Must remain a Server Component to access `cookies()` and avoid de-optimizing the entire tree.
+
+#### **2. Header Layer (Client Component)**
+
+- File: `src/components/layout/dashboard-header.tsx`
+- **Role**: Determines _visibility_ logic based on the current route.
+- **Logic**:
+  - **Default**: Renders the global `<Header />`.
+  - **Exceptions**: Hides global header if route matches specific patterns (e.g. specialized detail pages).
+  - **Implementation**: Uses `usePathname()` hook and Regex testing.
+    ```typescript
+    // Example: Hide global header only on Finding Detail pages
+    const shouldHideHeader = /^\/findings\/[^/]+$/.test(pathname)
+    ```
+
+#### **3. Page Layer (Server/Client Hybrid)**
+
+- **Standard Pages**: Do _not_ render their own header. They rely on the Global Header from the Layout.
+- **Exception Pages** (e.g., `findings/[id]`):
+  - The Global Header is hidden via the Regex logic above.
+  - The Page renders its _own_ custom `<Header>` with specific context (e.g., Back button, Breadcrumbs, Status actions).
+
+### **Advantages**
+
+1.  **Duplicate Removal**: Removed redundant `<Header fixed />` from 80+ pages.
+2.  **Performance**: `layout.tsx` stays Server-Side. Only the Header island is Client-Side.
+3.  **Flexibility**: Strict Regex allows precise exceptions (e.g., hiding header on `findings/123` but showing it on `findings/123/edit`).
+
+---
+
+**Last Updated:** 2026-01-25
+**Version:** 3.1.0 (UI Architecture Update)

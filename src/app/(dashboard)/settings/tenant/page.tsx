@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Header, Main } from '@/components/layout'
+import { Main } from '@/components/layout'
 import { PageHeader } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -337,7 +337,6 @@ export default function TenantPage() {
   if (isLoading) {
     return (
       <>
-        <Header fixed />
         <Main>
           <PageHeader
             title="Tenant Settings"
@@ -357,7 +356,6 @@ export default function TenantPage() {
   if (isError) {
     return (
       <>
-        <Header fixed />
         <Main>
           <PageHeader
             title="Tenant Settings"
@@ -376,8 +374,6 @@ export default function TenantPage() {
 
   return (
     <>
-      <Header fixed />
-
       <Main>
         <PageHeader
           title="Tenant Settings"

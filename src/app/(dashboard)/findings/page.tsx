@@ -3,7 +3,7 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { ColumnDef } from '@tanstack/react-table'
-import { Header, Main } from '@/components/layout'
+import { Main } from '@/components/layout'
 import { PageHeader, SeverityBadge, DataTable, DataTableColumnHeader } from '@/features/shared'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -34,7 +34,9 @@ import {
   Filter,
   AlertCircle,
   Loader2,
+  Route,
 } from 'lucide-react'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   FindingStatusBadge,
   FindingDetailDrawer,
@@ -71,17 +73,6 @@ import { toast } from 'sonner'
 // ============================================
 
 function transformApiToUiFinding(api: ApiFinding): Finding {
-  // Map API status to UI status
-  const statusMap: Record<ApiFindingStatus, FindingStatus> = {
-    open: 'new',
-    confirmed: 'confirmed',
-    in_progress: 'in_progress',
-    resolved: 'resolved',
-    false_positive: 'false_positive',
-    accepted: 'closed',
-    wont_fix: 'closed',
-  }
-
   // Build location string with branch/commit context
   let locationName = api.file_path || api.asset_id
   if (api.first_detected_branch) {
@@ -96,7 +87,7 @@ function transformApiToUiFinding(api: ApiFinding): Finding {
     title: api.title || api.rule_name || api.message,
     description: api.description || api.snippet || api.message,
     severity: api.severity as Severity,
-    status: statusMap[api.status] || 'new',
+    status: api.status as FindingStatus,
     cvss: api.cvss_score,
     cvssVector: api.cvss_vector,
     cve: api.cve_id,
@@ -140,11 +131,39 @@ function transformApiToUiFinding(api: ApiFinding): Finding {
     relatedFindings: [],
     remediationTaskId: undefined,
     discoveredAt: api.first_detected_at || api.created_at,
-    triagedAt: undefined,
     resolvedAt: api.resolved_at,
     verifiedAt: undefined,
     createdAt: api.created_at,
     updatedAt: api.updated_at,
+    // Data Flow (Attack Path / Taint Tracking)
+    // Use has_data_flow flag for list view (no full data loaded)
+    // When api.data_flow is present (detail view), use full data
+    hasDataFlow: api.has_data_flow || false,
+    dataFlow: api.data_flow
+      ? {
+          sources: api.data_flow.sources?.map((loc) => ({
+            path: loc.path,
+            line: loc.line,
+            column: loc.column,
+            content: loc.content,
+            label: loc.label,
+          })),
+          intermediates: api.data_flow.intermediates?.map((loc) => ({
+            path: loc.path,
+            line: loc.line,
+            column: loc.column,
+            content: loc.content,
+            label: loc.label,
+          })),
+          sinks: api.data_flow.sinks?.map((loc) => ({
+            path: loc.path,
+            line: loc.line,
+            column: loc.column,
+            content: loc.content,
+            label: loc.label,
+          })),
+        }
+      : undefined,
   }
 }
 
@@ -243,6 +262,7 @@ export default function FindingsPage() {
       medium: 0,
       low: 0,
       info: 0,
+      none: 0,
     }
 
     if (!findingStats) {
@@ -259,7 +279,8 @@ export default function FindingsPage() {
       high: findingStats.by_severity?.high || 0,
       medium: findingStats.by_severity?.medium || 0,
       low: findingStats.by_severity?.low || 0,
-      info: findingStats.by_severity?.none || findingStats.by_severity?.info || 0,
+      info: findingStats.by_severity?.info || 0,
+      none: findingStats.by_severity?.none || 0,
     }
 
     return {
@@ -428,14 +449,39 @@ export default function FindingsPage() {
       {
         accessorKey: 'title',
         header: ({ column }) => <DataTableColumnHeader column={column} title="Title" />,
-        cell: ({ row }) => (
-          <div className="cursor-pointer max-w-md" onClick={() => handleRowClick(row.original)}>
-            <p className="font-medium truncate">{row.getValue('title')}</p>
-            {row.original.scanner && (
-              <p className="text-muted-foreground text-xs">{row.original.scanner}</p>
-            )}
-          </div>
-        ),
+        cell: ({ row }) => {
+          // Use hasDataFlow flag from API (populated via subquery in list view)
+          // Fall back to checking dataFlow object for detail view compatibility
+          const hasDataFlow =
+            row.original.hasDataFlow ||
+            (row.original.dataFlow &&
+              ((row.original.dataFlow.sources?.length ?? 0) > 0 ||
+                (row.original.dataFlow.intermediates?.length ?? 0) > 0 ||
+                (row.original.dataFlow.sinks?.length ?? 0) > 0))
+
+          return (
+            <div className="cursor-pointer max-w-md" onClick={() => handleRowClick(row.original)}>
+              <div className="flex items-center gap-1.5">
+                <p className="font-medium truncate">{row.getValue('title')}</p>
+                {hasDataFlow && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="inline-flex items-center gap-0.5 rounded-full bg-blue-500/20 px-1.5 py-0.5 text-[10px] font-medium text-blue-400">
+                        <Route className="h-2.5 w-2.5" />
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="text-xs">
+                      Has attack path data
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+              </div>
+              {row.original.scanner && (
+                <p className="text-muted-foreground text-xs">{row.original.scanner}</p>
+              )}
+            </div>
+          )
+        },
       },
       {
         accessorKey: 'severity',
@@ -544,7 +590,6 @@ export default function FindingsPage() {
   if (error) {
     return (
       <>
-        <Header fixed />
         <Main>
           <div className="flex flex-col items-center justify-center py-20">
             <AlertCircle className="h-12 w-12 text-destructive mb-4" />
@@ -564,8 +609,6 @@ export default function FindingsPage() {
 
   return (
     <>
-      <Header fixed />
-
       <Main>
         <PageHeader
           title="Security Findings"

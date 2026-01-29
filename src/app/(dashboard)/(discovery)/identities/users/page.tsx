@@ -1,6 +1,6 @@
 'use client'
 
-import { Header, Main } from '@/components/layout'
+import { Main } from '@/components/layout'
 import { PageHeader } from '@/features/shared'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Users, UserCheck, UserX, Shield } from 'lucide-react'
@@ -44,8 +44,6 @@ const userStats = [
 export default function UsersPage() {
   return (
     <>
-      <Header fixed />
-
       <Main>
         <PageHeader title="Users" description="Human user accounts" />
 

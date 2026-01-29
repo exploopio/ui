@@ -21,7 +21,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { Header, Main } from '@/components/layout'
+import { Main } from '@/components/layout'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -284,7 +284,6 @@ export default function NotificationOutboxPage() {
 
   return (
     <>
-      <Header fixed />
       <Main>
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">

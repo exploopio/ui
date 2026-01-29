@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Header, Main } from '@/components/layout'
+import { Main } from '@/components/layout'
 import { PageHeader } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import {
@@ -82,8 +82,6 @@ export default function BillingPage() {
 
   return (
     <>
-      <Header fixed />
-
       <Main>
         <PageHeader title="Billing" description="Manage your subscription and billing information">
           <Button variant="outline" onClick={handleUpdatePayment}>

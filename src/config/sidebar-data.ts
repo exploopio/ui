@@ -67,6 +67,12 @@ import {
   Shield,
   Bell,
   CreditCard,
+  // Pipeline icons
+  GitMerge,
+  // Template & Secret Store icons
+  FolderGit2,
+  Lock,
+  FileCode2,
 } from 'lucide-react'
 import { type SidebarData } from '@/components/types'
 import { Permission, Role } from '@/lib/permissions'
@@ -76,8 +82,8 @@ export { Permission, Role }
 
 export const sidebarData: SidebarData = {
   user: {
-    name: 'Nguyen Van An',
-    email: 'an.nguyen@company.vn',
+    name: 'User',
+    email: 'user@rediver.io',
     avatar: '',
   },
   teams: [
@@ -158,8 +164,7 @@ export const sidebarData: SidebarData = {
         // ----------------------------------------
         // ASSET INVENTORY
         // Module: assets (core - available in all plans)
-        // Note: New CTEM asset types (certificates, ip_address, cloud_account,
-        // compute, storage, serverless, network) are documented in docs/ROADMAP.md
+        // Organized by CTEM categories for comprehensive attack surface visibility
         // ----------------------------------------
         {
           title: 'Asset Inventory',
@@ -167,55 +172,118 @@ export const sidebarData: SidebarData = {
           permission: Permission.AssetsRead,
           module: 'assets',
           items: [
+            // Overview - Entry point with asset statistics (always shown)
+            {
+              title: 'Overview',
+              url: '/assets',
+              icon: Container,
+            },
+            // External Attack Surface - Internet-facing assets
             {
               title: 'Domains',
               url: '/assets/domains',
               icon: Globe,
+              assetModuleKey: 'domains',
             },
+            {
+              title: 'Certificates',
+              url: '/assets/certificates',
+              icon: ShieldCheck,
+              assetModuleKey: 'certificates',
+            },
+            {
+              title: 'IP Addresses',
+              url: '/assets/ip-addresses',
+              icon: Target,
+              assetModuleKey: 'ip-addresses',
+            },
+            // Applications - Web, mobile, API services
             {
               title: 'Websites',
               url: '/assets/websites',
               icon: MonitorSmartphone,
-            },
-            {
-              title: 'Services',
-              url: '/assets/services',
-              icon: Zap,
-            },
-            {
-              title: 'Repositories',
-              url: '/assets/repositories',
-              icon: GitBranch,
-            },
-            {
-              title: 'Cloud',
-              url: '/assets/cloud',
-              icon: Cloud,
-            },
-            {
-              title: 'Hosts',
-              url: '/assets/hosts',
-              icon: Server,
-            },
-            {
-              title: 'Kubernetes',
-              url: '/assets/containers',
-              icon: Boxes,
-            },
-            {
-              title: 'Databases',
-              url: '/assets/databases',
-              icon: Database,
-            },
-            {
-              title: 'Mobile Apps',
-              url: '/assets/mobile',
-              icon: Smartphone,
+              assetModuleKey: 'websites',
             },
             {
               title: 'APIs',
               url: '/assets/apis',
               icon: Zap,
+              assetModuleKey: 'apis',
+            },
+            {
+              title: 'Mobile Apps',
+              url: '/assets/mobile',
+              icon: Smartphone,
+              assetModuleKey: 'mobile',
+            },
+            {
+              title: 'Services',
+              url: '/assets/services',
+              icon: Zap,
+              assetModuleKey: 'services',
+            },
+            // Cloud Infrastructure
+            {
+              title: 'Cloud Accounts',
+              url: '/assets/cloud-accounts',
+              icon: Cloud,
+              assetModuleKey: 'cloud-accounts',
+            },
+            {
+              title: 'Cloud Resources',
+              url: '/assets/cloud',
+              icon: Cloud,
+              assetModuleKey: 'cloud',
+            },
+            {
+              title: 'Compute',
+              url: '/assets/compute',
+              icon: Server,
+              assetModuleKey: 'compute',
+            },
+            {
+              title: 'Storage',
+              url: '/assets/storage',
+              icon: Database,
+              assetModuleKey: 'storage',
+            },
+            {
+              title: 'Serverless',
+              url: '/assets/serverless',
+              icon: Zap,
+              assetModuleKey: 'serverless',
+            },
+            // Infrastructure - Servers, containers, networks
+            {
+              title: 'Hosts',
+              url: '/assets/hosts',
+              icon: Server,
+              assetModuleKey: 'hosts',
+            },
+            {
+              title: 'Kubernetes',
+              url: '/assets/containers',
+              icon: Boxes,
+              assetModuleKey: 'containers',
+            },
+            {
+              title: 'Databases',
+              url: '/assets/databases',
+              icon: Database,
+              assetModuleKey: 'databases',
+            },
+            {
+              title: 'Networks',
+              url: '/assets/networks',
+              icon: Target,
+              assetModuleKey: 'networks',
+            },
+            // Code & CI/CD
+            {
+              title: 'Repositories',
+              url: '/assets/repositories',
+              icon: GitBranch,
+              assetModuleKey: 'repositories',
             },
           ],
         },
@@ -405,6 +473,13 @@ export const sidebarData: SidebarData = {
           permission: Permission.WorkflowsRead,
           module: 'remediation',
         },
+        {
+          title: 'Scan Pipelines',
+          url: '/pipelines',
+          icon: GitMerge,
+          permission: Permission.PipelinesRead,
+          module: 'scans',
+        },
       ],
     },
 
@@ -449,18 +524,42 @@ export const sidebarData: SidebarData = {
               url: '/agents',
               icon: Bot,
               permission: Permission.AgentsRead,
+              module: 'scans', // Agents are required to run scans, so bundle with scans module
             },
             {
               title: 'Profiles',
               url: '/scan-profiles',
               icon: FileSliders,
               permission: Permission.ScanProfilesRead,
+              module: 'scans',
             },
             {
               title: 'Tools',
               url: '/tools',
               icon: Wrench,
               permission: Permission.ToolsRead,
+              module: 'scans',
+            },
+            {
+              title: 'Scanner Templates',
+              url: '/scanner-templates',
+              icon: FileCode2,
+              permission: Permission.ScannerTemplatesRead,
+              module: 'scans',
+            },
+            {
+              title: 'Template Sources',
+              url: '/template-sources',
+              icon: FolderGit2,
+              permission: Permission.TemplateSourcesRead,
+              module: 'scans',
+            },
+            {
+              title: 'Secret Store',
+              url: '/secret-store',
+              icon: Lock,
+              permission: Permission.SecretStoreRead,
+              module: 'scans',
             },
           ],
         },

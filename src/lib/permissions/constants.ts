@@ -155,6 +155,21 @@ export const Permission = {
   TenantToolsWrite: 'scans:tenant_tools:write',
   TenantToolsDelete: 'scans:tenant_tools:delete',
 
+  // Scanner Templates (scans:templates:*)
+  ScannerTemplatesRead: 'scans:templates:read',
+  ScannerTemplatesWrite: 'scans:templates:write',
+  ScannerTemplatesDelete: 'scans:templates:delete',
+
+  // Template Sources (scans:sources:* - shared with Sources)
+  TemplateSourcesRead: 'scans:sources:read',
+  TemplateSourcesWrite: 'scans:sources:write',
+  TemplateSourcesDelete: 'scans:sources:delete',
+
+  // Secret Store (scans:secret_store:*)
+  SecretStoreRead: 'scans:secret_store:read',
+  SecretStoreWrite: 'scans:secret_store:write',
+  SecretStoreDelete: 'scans:secret_store:delete',
+
   // ===========================================
   // AGENTS MODULE
   // ===========================================
@@ -316,6 +331,9 @@ export const PermissionGroups = {
     Permission.SourcesRead,
     Permission.ToolsRead,
     Permission.TenantToolsRead,
+    Permission.ScannerTemplatesRead,
+    Permission.TemplateSourcesRead,
+    Permission.SecretStoreRead,
     Permission.AgentsRead,
     Permission.CommandsRead,
     Permission.TeamRead,
@@ -354,6 +372,9 @@ export const PermissionGroups = {
     Permission.SourcesWrite,
     Permission.ToolsWrite,
     Permission.TenantToolsWrite,
+    Permission.ScannerTemplatesWrite,
+    Permission.TemplateSourcesWrite,
+    Permission.SecretStoreWrite,
     Permission.AgentsWrite,
     Permission.CommandsWrite,
     Permission.TeamUpdate,
@@ -387,6 +408,9 @@ export const PermissionGroups = {
     Permission.SourcesDelete,
     Permission.ToolsDelete,
     Permission.TenantToolsDelete,
+    Permission.ScannerTemplatesDelete,
+    Permission.TemplateSourcesDelete,
+    Permission.SecretStoreDelete,
     Permission.AgentsDelete,
     Permission.CommandsDelete,
     Permission.TeamDelete,
@@ -491,6 +515,14 @@ export const PermissionLabels: Partial<Record<PermissionString, string>> = {
   [Permission.TenantToolsRead]: 'View Tool Configs',
   [Permission.TenantToolsWrite]: 'Manage Tool Configs',
   [Permission.TenantToolsDelete]: 'Delete Tool Configs',
+  [Permission.ScannerTemplatesRead]: 'View Scanner Templates',
+  [Permission.ScannerTemplatesWrite]: 'Manage Scanner Templates',
+  [Permission.ScannerTemplatesDelete]: 'Delete Scanner Templates',
+  // Note: TemplateSourcesRead/Write/Delete use the same permission strings as SourcesRead/Write/Delete
+  // so they share the same labels
+  [Permission.SecretStoreRead]: 'View Secret Store',
+  [Permission.SecretStoreWrite]: 'Manage Secret Store',
+  [Permission.SecretStoreDelete]: 'Delete Secrets',
 
   // Agents
   [Permission.AgentsRead]: 'View Agents',
@@ -626,6 +658,18 @@ export const RolePermissions: Record<RoleString, PermissionString[]> = {
     Permission.TenantToolsRead,
     Permission.TenantToolsWrite,
     Permission.TenantToolsDelete,
+    // Scanner Templates
+    Permission.ScannerTemplatesRead,
+    Permission.ScannerTemplatesWrite,
+    Permission.ScannerTemplatesDelete,
+    // Template Sources
+    Permission.TemplateSourcesRead,
+    Permission.TemplateSourcesWrite,
+    Permission.TemplateSourcesDelete,
+    // Secret Store
+    Permission.SecretStoreRead,
+    Permission.SecretStoreWrite,
+    Permission.SecretStoreDelete,
     // Credentials
     Permission.CredentialsRead,
     Permission.CredentialsWrite,
@@ -732,6 +776,18 @@ export const RolePermissions: Record<RoleString, PermissionString[]> = {
     Permission.TenantToolsRead,
     Permission.TenantToolsWrite,
     Permission.TenantToolsDelete,
+    // Scanner Templates
+    Permission.ScannerTemplatesRead,
+    Permission.ScannerTemplatesWrite,
+    Permission.ScannerTemplatesDelete,
+    // Template Sources
+    Permission.TemplateSourcesRead,
+    Permission.TemplateSourcesWrite,
+    Permission.TemplateSourcesDelete,
+    // Secret Store
+    Permission.SecretStoreRead,
+    Permission.SecretStoreWrite,
+    Permission.SecretStoreDelete,
     // Credentials
     Permission.CredentialsRead,
     Permission.CredentialsWrite,
@@ -824,6 +880,14 @@ export const RolePermissions: Record<RoleString, PermissionString[]> = {
     Permission.ToolsRead,
     Permission.TenantToolsRead,
     Permission.TenantToolsWrite,
+    // Scanner Templates (read + write)
+    Permission.ScannerTemplatesRead,
+    Permission.ScannerTemplatesWrite,
+    // Template Sources (read + write)
+    Permission.TemplateSourcesRead,
+    Permission.TemplateSourcesWrite,
+    // Secret Store (read only for members)
+    Permission.SecretStoreRead,
     // Credentials (read only)
     Permission.CredentialsRead,
     // Reports (read + write)
@@ -877,6 +941,12 @@ export const RolePermissions: Record<RoleString, PermissionString[]> = {
     // Tool Registry (read only)
     Permission.ToolsRead,
     Permission.TenantToolsRead,
+    // Scanner Templates (read only)
+    Permission.ScannerTemplatesRead,
+    // Template Sources (read only)
+    Permission.TemplateSourcesRead,
+    // Secret Store (read only)
+    Permission.SecretStoreRead,
     // Credentials (read only)
     Permission.CredentialsRead,
     // Reports (read only)

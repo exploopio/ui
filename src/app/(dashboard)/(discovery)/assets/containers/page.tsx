@@ -11,7 +11,7 @@ import {
   SortingState,
   useReactTable,
 } from '@tanstack/react-table'
-import { Header, Main } from '@/components/layout'
+import { Main } from '@/components/layout'
 import { PageHeader, RiskScoreBadge } from '@/features/shared'
 import { ContainerDetailSheet, StatCard, StatsGrid, SectionTitle } from '@/features/assets'
 import { Button } from '@/components/ui/button'
@@ -1333,8 +1333,6 @@ export default function KubernetesPage() {
 
   return (
     <>
-      <Header fixed />
-
       <Main>
         <PageHeader
           title="Kubernetes"

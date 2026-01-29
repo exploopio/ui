@@ -35,6 +35,7 @@ import { cn } from '@/lib/utils'
 
 import { ProviderIcon } from './provider-icon'
 import type { Integration, SCMRepository } from '@/features/integrations'
+import type { SCMConnection } from '@/features/repositories/types/repository.types'
 import { useIntegrationRepositoriesApi } from '@/features/integrations'
 import {
   useCreateRepository,
@@ -44,10 +45,23 @@ import {
 } from '@/features/repositories/hooks/use-repositories'
 import type { SCMProvider } from '@/features/assets/types/asset.types'
 
+// Helper to get scmOrganization from either Integration or SCMConnection
+function getScmOrganization(connection: Integration | SCMConnection): string | undefined {
+  // SCMConnection uses camelCase
+  if ('scmOrganization' in connection && connection.scmOrganization) {
+    return connection.scmOrganization
+  }
+  // Integration uses scm_extension
+  if ('scm_extension' in connection && connection.scm_extension?.scm_organization) {
+    return connection.scm_extension.scm_organization
+  }
+  return undefined
+}
+
 interface SyncRepositoriesDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  connection: Integration
+  connection: Integration | SCMConnection
   onSuccess?: () => void
 }
 
@@ -239,7 +253,7 @@ export function SyncRepositoriesDialog({
           provider: connection.provider as SCMProvider,
           externalId: repo.id,
           repoId: repo.id,
-          scmOrganization: connection.scm_extension?.scm_organization,
+          scmOrganization: getScmOrganization(connection),
           // URLs
           cloneUrl: repo.clone_url,
           webUrl: repo.html_url,
@@ -362,9 +376,9 @@ export function SyncRepositoriesDialog({
           <DialogDescription className="flex items-center gap-2">
             <ProviderIcon provider={connection.provider} className="h-4 w-4" />
             {connection.name}
-            {connection.scm_extension?.scm_organization && (
+            {getScmOrganization(connection) && (
               <Badge variant="secondary" className="text-xs">
-                {connection.scm_extension.scm_organization}
+                {getScmOrganization(connection)}
               </Badge>
             )}
           </DialogDescription>

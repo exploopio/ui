@@ -4,37 +4,51 @@
  * Step 1: Scan name, mode (single/workflow) and type selection
  */
 
-"use client";
+'use client'
 
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Badge } from "@/components/ui/badge";
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Badge } from '@/components/ui/badge'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Radar, GitBranch, Clock, Layers, ChevronRight } from "lucide-react";
-import type { ScanType, ScanMode, NewScanFormData } from "../../types";
-import { SCAN_TYPE_CONFIG, SCAN_MODE_CONFIG, mockWorkflows } from "../../types";
+} from '@/components/ui/select'
+import {
+  Radar,
+  GitBranch,
+  Clock,
+  Layers,
+  ChevronRight,
+  Sparkles,
+  Server,
+  Cloud,
+} from 'lucide-react'
+import type { ScanType, ScanMode, AgentPreference, NewScanFormData } from '../../types'
+import {
+  SCAN_TYPE_CONFIG,
+  SCAN_MODE_CONFIG,
+  AGENT_PREFERENCE_CONFIG,
+  mockWorkflows,
+} from '../../types'
 
 interface BasicInfoStepProps {
-  data: NewScanFormData;
-  onChange: (data: Partial<NewScanFormData>) => void;
+  data: NewScanFormData
+  onChange: (data: Partial<NewScanFormData>) => void
 }
 
 const categoryColors: Record<string, string> = {
-  recon: "bg-blue-500/20 text-blue-400",
-  vuln: "bg-orange-500/20 text-orange-400",
-  compliance: "bg-purple-500/20 text-purple-400",
-  full: "bg-green-500/20 text-green-400",
-};
+  recon: 'bg-blue-500/20 text-blue-400',
+  vuln: 'bg-orange-500/20 text-orange-400',
+  compliance: 'bg-purple-500/20 text-purple-400',
+  full: 'bg-green-500/20 text-green-400',
+}
 
 export function BasicInfoStep({ data, onChange }: BasicInfoStepProps) {
-  const selectedWorkflow = mockWorkflows.find((w) => w.id === data.workflowId);
+  const selectedWorkflow = mockWorkflows.find((w) => w.id === data.workflowId)
 
   return (
     <div className="space-y-6 p-4">
@@ -61,16 +75,16 @@ export function BasicInfoStep({ data, onChange }: BasicInfoStepProps) {
           onValueChange={(value: ScanMode) =>
             onChange({
               mode: value,
-              workflowId: value === "single" ? undefined : data.workflowId,
+              workflowId: value === 'single' ? undefined : data.workflowId,
             })
           }
           className="grid grid-cols-1 gap-3 sm:grid-cols-2"
         >
           <div
             className={`flex items-start space-x-3 rounded-lg border p-4 transition-colors cursor-pointer ${
-              data.mode === "single"
-                ? "border-primary bg-primary/5"
-                : "border-border hover:border-primary/50"
+              data.mode === 'single'
+                ? 'border-primary bg-primary/5'
+                : 'border-border hover:border-primary/50'
             }`}
           >
             <RadioGroupItem value="single" id="mode-single" className="mt-1" />
@@ -88,9 +102,9 @@ export function BasicInfoStep({ data, onChange }: BasicInfoStepProps) {
           </div>
           <div
             className={`flex items-start space-x-3 rounded-lg border p-4 transition-colors cursor-pointer ${
-              data.mode === "workflow"
-                ? "border-primary bg-primary/5"
-                : "border-border hover:border-primary/50"
+              data.mode === 'workflow'
+                ? 'border-primary bg-primary/5'
+                : 'border-border hover:border-primary/50'
             }`}
           >
             <RadioGroupItem value="workflow" id="mode-workflow" className="mt-1" />
@@ -109,8 +123,82 @@ export function BasicInfoStep({ data, onChange }: BasicInfoStepProps) {
         </RadioGroup>
       </div>
 
+      {/* Agent Preference Selection */}
+      <div className="space-y-3">
+        <Label>
+          Agent Preference <span className="text-destructive">*</span>
+        </Label>
+        <p className="text-xs text-muted-foreground">Choose which agent should execute this scan</p>
+        <RadioGroup
+          value={data.agentPreference}
+          onValueChange={(value: AgentPreference) => onChange({ agentPreference: value })}
+          className="grid grid-cols-1 gap-3 sm:grid-cols-3"
+        >
+          <div
+            className={`flex items-start space-x-3 rounded-lg border p-3 transition-colors cursor-pointer ${
+              data.agentPreference === 'auto'
+                ? 'border-primary bg-primary/5'
+                : 'border-border hover:border-primary/50'
+            }`}
+          >
+            <RadioGroupItem value="auto" id="agent-auto" className="mt-1" />
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-primary" />
+                <Label htmlFor="agent-auto" className="cursor-pointer font-medium text-sm">
+                  {AGENT_PREFERENCE_CONFIG.auto.label}
+                </Label>
+              </div>
+              <p className="text-muted-foreground text-xs mt-1">
+                {AGENT_PREFERENCE_CONFIG.auto.description}
+              </p>
+            </div>
+          </div>
+          <div
+            className={`flex items-start space-x-3 rounded-lg border p-3 transition-colors cursor-pointer ${
+              data.agentPreference === 'tenant'
+                ? 'border-primary bg-primary/5'
+                : 'border-border hover:border-primary/50'
+            }`}
+          >
+            <RadioGroupItem value="tenant" id="agent-tenant" className="mt-1" />
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <Server className="h-4 w-4 text-primary" />
+                <Label htmlFor="agent-tenant" className="cursor-pointer font-medium text-sm">
+                  {AGENT_PREFERENCE_CONFIG.tenant.label}
+                </Label>
+              </div>
+              <p className="text-muted-foreground text-xs mt-1">
+                {AGENT_PREFERENCE_CONFIG.tenant.description}
+              </p>
+            </div>
+          </div>
+          <div
+            className={`flex items-start space-x-3 rounded-lg border p-3 transition-colors cursor-pointer ${
+              data.agentPreference === 'platform'
+                ? 'border-primary bg-primary/5'
+                : 'border-border hover:border-primary/50'
+            }`}
+          >
+            <RadioGroupItem value="platform" id="agent-platform" className="mt-1" />
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <Cloud className="h-4 w-4 text-primary" />
+                <Label htmlFor="agent-platform" className="cursor-pointer font-medium text-sm">
+                  {AGENT_PREFERENCE_CONFIG.platform.label}
+                </Label>
+              </div>
+              <p className="text-muted-foreground text-xs mt-1">
+                {AGENT_PREFERENCE_CONFIG.platform.description}
+              </p>
+            </div>
+          </div>
+        </RadioGroup>
+      </div>
+
       {/* Single Scan: Scan Type Selection */}
-      {data.mode === "single" && (
+      {data.mode === 'single' && (
         <div className="space-y-3">
           <Label>
             Scan Type <span className="text-destructive">*</span>
@@ -125,8 +213,8 @@ export function BasicInfoStep({ data, onChange }: BasicInfoStepProps) {
                 key={type}
                 className={`flex items-start space-x-3 rounded-lg border p-4 transition-colors ${
                   data.type === type
-                    ? "border-primary bg-primary/5"
-                    : "border-border hover:border-primary/50"
+                    ? 'border-primary bg-primary/5'
+                    : 'border-border hover:border-primary/50'
                 }`}
               >
                 <RadioGroupItem value={type} id={`type-${type}`} className="mt-1" />
@@ -145,13 +233,13 @@ export function BasicInfoStep({ data, onChange }: BasicInfoStepProps) {
       )}
 
       {/* Workflow Scan: Workflow Selection */}
-      {data.mode === "workflow" && (
+      {data.mode === 'workflow' && (
         <div className="space-y-3">
           <Label>
             Select Workflow <span className="text-destructive">*</span>
           </Label>
           <Select
-            value={data.workflowId || ""}
+            value={data.workflowId || ''}
             onValueChange={(value) => onChange({ workflowId: value })}
           >
             <SelectTrigger>
@@ -180,9 +268,7 @@ export function BasicInfoStep({ data, onChange }: BasicInfoStepProps) {
               <div className="flex items-center justify-between">
                 <div>
                   <h4 className="font-medium">{selectedWorkflow.name}</h4>
-                  <p className="text-sm text-muted-foreground">
-                    {selectedWorkflow.description}
-                  </p>
+                  <p className="text-sm text-muted-foreground">{selectedWorkflow.description}</p>
                 </div>
                 <Badge className={categoryColors[selectedWorkflow.category]}>
                   {selectedWorkflow.category}
@@ -221,5 +307,5 @@ export function BasicInfoStep({ data, onChange }: BasicInfoStepProps) {
         </div>
       )}
     </div>
-  );
+  )
 }

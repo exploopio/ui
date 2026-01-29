@@ -11,7 +11,7 @@ import {
   SortingState,
   useReactTable,
 } from '@tanstack/react-table'
-import { Header, Main } from '@/components/layout'
+import { Main } from '@/components/layout'
 import { PageHeader, RiskScoreBadge } from '@/features/shared'
 import { ApiDetailSheet, StatCard, StatsGrid, SectionTitle } from '@/features/assets'
 import {
@@ -618,8 +618,6 @@ export default function ApisPage() {
 
   return (
     <>
-      <Header fixed />
-
       <Main>
         <PageHeader title="API Assets" description={`${apis.length} APIs in your infrastructure`}>
           <div className="flex gap-2">

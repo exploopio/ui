@@ -428,3 +428,74 @@ export function extractValidationErrors(
 
   return null
 }
+
+// ============================================
+// ERROR MESSAGE EXTRACTION
+// ============================================
+
+/**
+ * Extract user-friendly error message from any error type
+ *
+ * Use this in catch blocks to get a displayable error message
+ *
+ * @param error - Error from API call or any other source
+ * @param fallback - Fallback message if error message cannot be extracted
+ * @returns User-friendly error message
+ *
+ * @example
+ * ```typescript
+ * try {
+ *   await updatePipeline(data)
+ *   toast.success('Pipeline updated')
+ * } catch (error) {
+ *   toast.error(getErrorMessage(error, 'Failed to update pipeline'))
+ * }
+ * ```
+ */
+export function getErrorMessage(error: unknown, fallback: string = 'An unexpected error occurred'): string {
+  // Handle ApiClientError
+  if (error instanceof ApiClientError) {
+    // If message is technical/long, try to get a friendlier version
+    if (error.message && error.message.length < 200 && !error.message.includes('Error:')) {
+      return error.message
+    }
+
+    // Check for validation errors in details
+    if (error.details && typeof error.details === 'object') {
+      // Handle { errors: [{ field, message }] } format
+      if (Array.isArray((error.details as Record<string, unknown>).errors)) {
+        const errors = (error.details as { errors: { field: string; message: string }[] }).errors
+        if (errors.length > 0) {
+          return errors.map(e => e.message).join('. ')
+        }
+      }
+
+      // Handle { message: string } format in details
+      if ((error.details as Record<string, unknown>).message) {
+        return (error.details as { message: string }).message
+      }
+    }
+
+    return error.message || fallback
+  }
+
+  // Handle standard Error
+  if (error instanceof Error) {
+    return error.message || fallback
+  }
+
+  // Handle string errors
+  if (typeof error === 'string') {
+    return error
+  }
+
+  // Handle object with message property
+  if (error && typeof error === 'object' && 'message' in error) {
+    const msg = (error as { message: unknown }).message
+    if (typeof msg === 'string') {
+      return msg
+    }
+  }
+
+  return fallback
+}

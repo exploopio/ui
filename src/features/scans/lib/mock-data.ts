@@ -4,25 +4,25 @@
  * Scan data for development and testing
  */
 
-import type { Scan, ScanStats } from "../types";
+import type { Scan, ScanStats } from '../types'
 
 // Helper to generate dates
 const daysAgo = (days: number) => {
-  const date = new Date();
-  date.setDate(date.getDate() - days);
-  return date.toISOString();
-};
+  const date = new Date()
+  date.setDate(date.getDate() - days)
+  return date.toISOString()
+}
 
 export const mockScans: Scan[] = [
   {
-    id: "scan-001",
-    name: "Weekly Full Scan - Production",
-    description: "Scheduled weekly vulnerability scan for production environment",
-    type: "full",
-    status: "active",
+    id: 'scan-001',
+    name: 'Weekly Full Scan - Production',
+    description: 'Scheduled weekly vulnerability scan for production environment',
+    type: 'full',
+    status: 'active',
     targets: {
-      type: "asset_groups",
-      assetGroupIds: ["grp-001", "grp-002"],
+      type: 'asset_groups',
+      assetGroupIds: ['grp-001', 'grp-002'],
       assetIds: [],
       customTargets: [],
     },
@@ -36,7 +36,7 @@ export const mockScans: Scan[] = [
       techDetection: true,
       apiSecurity: true,
     },
-    intensity: "medium",
+    intensity: 'medium',
     maxConcurrent: 10,
     findingsCount: 8,
     criticalCount: 1,
@@ -46,28 +46,33 @@ export const mockScans: Scan[] = [
     startedAt: daysAgo(0),
     schedule: {
       runImmediately: false,
-      frequency: "weekly",
+      frequency: 'weekly',
       dayOfWeek: 1,
-      time: "02:00",
+      time: '02:00',
     },
     notifications: {
       notifyOnComplete: true,
       autoCreateTasks: true,
     },
-    createdBy: "usr-001",
-    createdByName: "Nguyen Van An",
+    createdBy: 'usr-001',
+    createdByName: 'Nguyen Van An',
     createdAt: daysAgo(7),
     updatedAt: daysAgo(0),
+    // Platform agent
+    agentPreference: 'platform',
+    agentType: 'platform',
+    agentId: 'agent-platform-us-east-1',
+    agentName: 'Platform Agent US-East-1',
   },
   {
-    id: "scan-002",
-    name: "Quick Scan - E-commerce",
-    description: "Fast check for critical issues on e-commerce sites",
-    type: "quick",
-    status: "completed",
+    id: 'scan-002',
+    name: 'Quick Scan - E-commerce',
+    description: 'Fast check for critical issues on e-commerce sites',
+    type: 'quick',
+    status: 'completed',
     targets: {
-      type: "asset_groups",
-      assetGroupIds: ["grp-003"],
+      type: 'asset_groups',
+      assetGroupIds: ['grp-003'],
       assetIds: [],
       customTargets: [],
     },
@@ -81,7 +86,7 @@ export const mockScans: Scan[] = [
       techDetection: true,
       apiSecurity: false,
     },
-    intensity: "low",
+    intensity: 'low',
     maxConcurrent: 5,
     findingsCount: 2,
     criticalCount: 0,
@@ -98,20 +103,25 @@ export const mockScans: Scan[] = [
       notifyOnComplete: true,
       autoCreateTasks: false,
     },
-    createdBy: "usr-002",
-    createdByName: "Tran Thi Binh",
+    createdBy: 'usr-002',
+    createdByName: 'Tran Thi Binh',
     createdAt: daysAgo(2),
     updatedAt: daysAgo(2),
+    // Tenant agent
+    agentPreference: 'tenant',
+    agentType: 'tenant',
+    agentId: 'agent-tenant-001',
+    agentName: 'Tenant Agent 1',
   },
   {
-    id: "scan-003",
-    name: "Compliance Scan - PCI DSS",
-    description: "PCI DSS compliance audit for payment systems",
-    type: "compliance",
-    status: "completed",
+    id: 'scan-003',
+    name: 'Compliance Scan - PCI DSS',
+    description: 'PCI DSS compliance audit for payment systems',
+    type: 'compliance',
+    status: 'completed',
     targets: {
-      type: "asset_groups",
-      assetGroupIds: ["grp-001"],
+      type: 'asset_groups',
+      assetGroupIds: ['grp-001'],
       assetIds: [],
       customTargets: [],
     },
@@ -125,7 +135,7 @@ export const mockScans: Scan[] = [
       techDetection: true,
       apiSecurity: true,
     },
-    intensity: "high",
+    intensity: 'high',
     maxConcurrent: 15,
     findingsCount: 5,
     criticalCount: 0,
@@ -137,29 +147,34 @@ export const mockScans: Scan[] = [
     duration: 3600,
     schedule: {
       runImmediately: false,
-      frequency: "monthly",
+      frequency: 'monthly',
       dayOfWeek: 1,
-      time: "03:00",
+      time: '03:00',
     },
     notifications: {
       notifyOnComplete: true,
       autoCreateTasks: true,
     },
-    createdBy: "usr-003",
-    createdByName: "Le Van Cuong",
+    createdBy: 'usr-003',
+    createdByName: 'Le Van Cuong',
     createdAt: daysAgo(5),
     updatedAt: daysAgo(5),
+    // Platform agent
+    agentPreference: 'auto',
+    agentType: 'platform',
+    agentId: 'agent-platform-ap-southeast-1',
+    agentName: 'Platform Agent AP-Southeast-1',
   },
   {
-    id: "scan-004",
-    name: "Custom Scan - API Security",
-    description: "Custom API security testing for customer-facing APIs",
-    type: "custom",
-    status: "active",
+    id: 'scan-004',
+    name: 'Custom Scan - API Security',
+    description: 'Custom API security testing for customer-facing APIs',
+    type: 'custom',
+    status: 'active',
     targets: {
-      type: "individual",
+      type: 'individual',
       assetGroupIds: [],
-      assetIds: ["asset-010", "asset-011", "asset-012"],
+      assetIds: ['asset-010', 'asset-011', 'asset-012'],
       customTargets: [],
     },
     targetCount: 3,
@@ -172,7 +187,7 @@ export const mockScans: Scan[] = [
       techDetection: true,
       apiSecurity: true,
     },
-    intensity: "medium",
+    intensity: 'medium',
     maxConcurrent: 5,
     findingsCount: 4,
     criticalCount: 1,
@@ -187,20 +202,25 @@ export const mockScans: Scan[] = [
       notifyOnComplete: true,
       autoCreateTasks: true,
     },
-    createdBy: "usr-004",
-    createdByName: "Pham Thi Dung",
+    createdBy: 'usr-004',
+    createdByName: 'Pham Thi Dung',
     createdAt: daysAgo(1),
     updatedAt: daysAgo(0),
+    // Tenant agent
+    agentPreference: 'tenant',
+    agentType: 'tenant',
+    agentId: 'agent-tenant-002',
+    agentName: 'Tenant Agent 2',
   },
   {
-    id: "scan-005",
-    name: "Full Scan - Cloud Infrastructure",
-    description: "Complete vulnerability assessment for cloud assets",
-    type: "full",
-    status: "completed",
+    id: 'scan-005',
+    name: 'Full Scan - Cloud Infrastructure',
+    description: 'Complete vulnerability assessment for cloud assets',
+    type: 'full',
+    status: 'completed',
     targets: {
-      type: "asset_groups",
-      assetGroupIds: ["grp-007"],
+      type: 'asset_groups',
+      assetGroupIds: ['grp-007'],
       assetIds: [],
       customTargets: [],
     },
@@ -214,7 +234,7 @@ export const mockScans: Scan[] = [
       techDetection: true,
       apiSecurity: true,
     },
-    intensity: "high",
+    intensity: 'high',
     maxConcurrent: 20,
     findingsCount: 3,
     criticalCount: 2,
@@ -231,20 +251,25 @@ export const mockScans: Scan[] = [
       notifyOnComplete: true,
       autoCreateTasks: true,
     },
-    createdBy: "usr-001",
-    createdByName: "Nguyen Van An",
+    createdBy: 'usr-001',
+    createdByName: 'Nguyen Van An',
     createdAt: daysAgo(3),
     updatedAt: daysAgo(3),
+    // Platform agent
+    agentPreference: 'platform',
+    agentType: 'platform',
+    agentId: 'agent-platform-us-west-2',
+    agentName: 'Platform Agent US-West-2',
   },
   {
-    id: "scan-006",
-    name: "Quick Scan - Staging Environment",
-    description: "Fast security check before production deployment",
-    type: "quick",
-    status: "pending",
+    id: 'scan-006',
+    name: 'Quick Scan - Staging Environment',
+    description: 'Fast security check before production deployment',
+    type: 'quick',
+    status: 'pending',
     targets: {
-      type: "asset_groups",
-      assetGroupIds: ["grp-004"],
+      type: 'asset_groups',
+      assetGroupIds: ['grp-004'],
       assetIds: [],
       customTargets: [],
     },
@@ -258,7 +283,7 @@ export const mockScans: Scan[] = [
       techDetection: true,
       apiSecurity: false,
     },
-    intensity: "low",
+    intensity: 'low',
     maxConcurrent: 10,
     findingsCount: 0,
     criticalCount: 0,
@@ -267,34 +292,32 @@ export const mockScans: Scan[] = [
     lowCount: 0,
     schedule: {
       runImmediately: false,
-      frequency: "daily",
-      time: "06:00",
+      frequency: 'daily',
+      time: '06:00',
     },
     notifications: {
       notifyOnComplete: true,
       autoCreateTasks: false,
     },
-    createdBy: "usr-002",
-    createdByName: "Tran Thi Binh",
+    createdBy: 'usr-002',
+    createdByName: 'Tran Thi Binh',
     createdAt: daysAgo(1),
     updatedAt: daysAgo(1),
+    // Pending platform job with queue position
+    agentPreference: 'platform',
+    queuePosition: 3,
   },
   {
-    id: "scan-007",
-    name: "Monthly Compliance - ISO 27001",
-    description: "Monthly ISO 27001 compliance audit",
-    type: "compliance",
-    status: "completed",
+    id: 'scan-007',
+    name: 'Monthly Compliance - ISO 27001',
+    description: 'Monthly ISO 27001 compliance audit',
+    type: 'compliance',
+    status: 'completed',
     targets: {
-      type: "custom",
+      type: 'custom',
       assetGroupIds: [],
       assetIds: [],
-      customTargets: [
-        "vingroup.vn",
-        "fpt.com.vn",
-        "techcombank.com.vn",
-        "10.0.0.0/24",
-      ],
+      customTargets: ['vingroup.vn', 'fpt.com.vn', 'techcombank.com.vn', '10.0.0.0/24'],
     },
     targetCount: 259,
     progress: 100,
@@ -306,7 +329,7 @@ export const mockScans: Scan[] = [
       techDetection: true,
       apiSecurity: true,
     },
-    intensity: "high",
+    intensity: 'high',
     maxConcurrent: 25,
     findingsCount: 24,
     criticalCount: 4,
@@ -318,30 +341,35 @@ export const mockScans: Scan[] = [
     duration: 86400,
     schedule: {
       runImmediately: false,
-      frequency: "monthly",
+      frequency: 'monthly',
       dayOfWeek: 1,
-      time: "00:00",
+      time: '00:00',
     },
     notifications: {
       notifyOnComplete: true,
       autoCreateTasks: true,
     },
-    createdBy: "usr-003",
-    createdByName: "Le Van Cuong",
+    createdBy: 'usr-003',
+    createdByName: 'Le Van Cuong',
     createdAt: daysAgo(7),
     updatedAt: daysAgo(6),
+    // Auto preference selected tenant agent
+    agentPreference: 'auto',
+    agentType: 'tenant',
+    agentId: 'agent-tenant-001',
+    agentName: 'Tenant Agent 1',
   },
   {
-    id: "scan-008",
-    name: "Custom Scan - Partner Integration",
-    description: "Security validation for partner API integrations",
-    type: "custom",
-    status: "failed",
+    id: 'scan-008',
+    name: 'Custom Scan - Partner Integration',
+    description: 'Security validation for partner API integrations',
+    type: 'custom',
+    status: 'failed',
     targets: {
-      type: "custom",
+      type: 'custom',
       assetGroupIds: [],
       assetIds: [],
-      customTargets: ["partner-api.company.vn", "integration.partner.com"],
+      customTargets: ['partner-api.company.vn', 'integration.partner.com'],
     },
     targetCount: 2,
     progress: 45,
@@ -353,7 +381,7 @@ export const mockScans: Scan[] = [
       techDetection: true,
       apiSecurity: true,
     },
-    intensity: "medium",
+    intensity: 'medium',
     maxConcurrent: 5,
     findingsCount: 0,
     criticalCount: 0,
@@ -368,33 +396,34 @@ export const mockScans: Scan[] = [
       notifyOnComplete: true,
       autoCreateTasks: false,
     },
-    createdBy: "usr-004",
-    createdByName: "Pham Thi Dung",
+    createdBy: 'usr-004',
+    createdByName: 'Pham Thi Dung',
     createdAt: daysAgo(4),
     updatedAt: daysAgo(4),
+    // Failed tenant agent job
+    agentPreference: 'tenant',
+    agentType: 'tenant',
+    agentId: 'agent-tenant-002',
+    agentName: 'Tenant Agent 2',
   },
-];
+]
 
 // Stats
 export const getScanStats = (): ScanStats => ({
   totalScans: mockScans.length,
-  activeScans: mockScans.filter((s) => s.status === "active").length,
-  completedScans: mockScans.filter((s) => s.status === "completed").length,
-  failedScans: mockScans.filter((s) => s.status === "failed").length,
-  scheduledScans: mockScans.filter((s) => s.status === "pending").length,
+  activeScans: mockScans.filter((s) => s.status === 'active').length,
+  completedScans: mockScans.filter((s) => s.status === 'completed').length,
+  failedScans: mockScans.filter((s) => s.status === 'failed').length,
+  scheduledScans: mockScans.filter((s) => s.status === 'pending').length,
   totalFindings: mockScans.reduce((acc, s) => acc + s.findingsCount, 0),
   averageDuration: Math.round(
-    mockScans
-      .filter((s) => s.duration)
-      .reduce((acc, s) => acc + (s.duration || 0), 0) /
+    mockScans.filter((s) => s.duration).reduce((acc, s) => acc + (s.duration || 0), 0) /
       mockScans.filter((s) => s.duration).length
   ),
-});
+})
 
 // Active scans only
-export const getActiveScans = () =>
-  mockScans.filter((s) => s.status === "active");
+export const getActiveScans = () => mockScans.filter((s) => s.status === 'active')
 
 // Scheduled scans only
-export const getScheduledScans = () =>
-  mockScans.filter((s) => s.status === "pending");
+export const getScheduledScans = () => mockScans.filter((s) => s.status === 'pending')

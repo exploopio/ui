@@ -3,7 +3,7 @@
 import { Suspense, useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { formatDistanceToNow } from 'date-fns'
-import { Header, Main } from '@/components/layout'
+import { Main } from '@/components/layout'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -558,7 +558,6 @@ function HistoryContent() {
 export default function NotificationHistoryPage() {
   return (
     <>
-      <Header fixed />
       <Main>
         <Suspense
           fallback={

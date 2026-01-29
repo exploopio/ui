@@ -11,7 +11,7 @@ import {
   SortingState,
   useReactTable,
 } from '@tanstack/react-table'
-import { Header, Main } from '@/components/layout'
+import { Main } from '@/components/layout'
 import { PageHeader, StatusBadge, RiskScoreBadge } from '@/features/shared'
 import {
   AssetDetailSheet,
@@ -555,8 +555,6 @@ export default function CredentialsPage() {
 
   return (
     <>
-      <Header fixed />
-
       <Main>
         <div className="flex items-center justify-between">
           <PageHeader

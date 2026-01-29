@@ -17,10 +17,7 @@ import { env } from '@/lib/env'
 import { setServerCookie, removeServerCookie } from '@/lib/cookies-server'
 import { authEndpoints, userEndpoints } from '@/lib/api/endpoints'
 
-import type {
-  AuthSuccessResponse,
-  AuthErrorResponse,
-} from '../schemas/auth.schema'
+import type { AuthSuccessResponse, AuthErrorResponse } from '../schemas/auth.schema'
 
 // ============================================
 // TYPES
@@ -120,10 +117,7 @@ function getBackendUrl(): string {
 // NOTE: Permissions are NOT stored in cookies anymore (too large, > 4KB limit)
 // Frontend fetches permissions via /api/v1/me/permissions API instead
 
-async function backendFetch<T>(
-  endpoint: string,
-  options: RequestInit = {}
-): Promise<T> {
+async function backendFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const baseUrl = getBackendUrl()
   const url = `${baseUrl}${endpoint}`
 
@@ -182,7 +176,8 @@ export async function registerAction(
     return {
       success: true,
       data: user,
-      message: data.message || 'Registration successful. Please check your email to verify your account.',
+      message:
+        data.message || 'Registration successful. Please check your email to verify your account.',
     }
   } catch (error) {
     console.error('Registration error:', error)
@@ -207,21 +202,16 @@ export async function registerAction(
  * 4. If user has > 1 tenant → return tenants list for selection
  * 5. If user has 0 tenants → return success but no tenant
  */
-export async function loginAction(
-  input: LoginInput
-): Promise<LoginResult> {
+export async function loginAction(input: LoginInput): Promise<LoginResult> {
   try {
     // Step 1: Login - get refresh token and tenant list
-    const loginData = await backendFetch<LoginBackendResponse>(
-      authEndpoints.login(),
-      {
-        method: 'POST',
-        body: JSON.stringify({
-          email: input.email,
-          password: input.password,
-        }),
-      }
-    )
+    const loginData = await backendFetch<LoginBackendResponse>(authEndpoints.login(), {
+      method: 'POST',
+      body: JSON.stringify({
+        email: input.email,
+        password: input.password,
+      }),
+    })
 
     // Store refresh token in httpOnly cookie
     await setServerCookie(env.auth.refreshCookieName, loginData.refresh_token, {
@@ -247,17 +237,21 @@ export async function loginAction(
       console.log('[Login] No tenants found for user - user needs to create or join a team')
 
       // Store user info for the Create Team page to use as suggested name
-      await setServerCookie(env.cookies.userInfo, JSON.stringify({
-        id: user.id,
-        email: user.email,
-        name: user.name,
-      }), {
-        httpOnly: false, // Frontend needs to read this
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 5 * 60, // 5 minutes - short lived, only needed for initial team creation
-        path: '/',
-      })
+      await setServerCookie(
+        env.cookies.userInfo,
+        JSON.stringify({
+          id: user.id,
+          email: user.email,
+          name: user.name,
+        }),
+        {
+          httpOnly: false, // Frontend needs to read this
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: 5 * 60, // 5 minutes - short lived, only needed for initial team creation
+          path: '/',
+        }
+      )
 
       return {
         success: true,
@@ -270,7 +264,11 @@ export async function loginAction(
 
     // Case 2: Multiple tenants - require user to select
     if (loginData.tenants.length > 1) {
-      console.log('[Login] Multiple tenants found:', loginData.tenants.length, '- requiring selection')
+      console.log(
+        '[Login] Multiple tenants found:',
+        loginData.tenants.length,
+        '- requiring selection'
+      )
 
       // Store tenants temporarily in cookie for selection page
       await setServerCookie(env.cookies.pendingTenants, JSON.stringify(loginData.tenants), {
@@ -295,20 +293,22 @@ export async function loginAction(
     console.log('[Login] Single tenant found, auto-selecting:', firstTenant.id, firstTenant.slug)
 
     try {
-      const tokenData = await backendFetch<TokenExchangeResponse>(
-        authEndpoints.token(),
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            refresh_token: loginData.refresh_token,
-            tenant_id: firstTenant.id,
-          }),
-        }
-      )
+      const tokenData = await backendFetch<TokenExchangeResponse>(authEndpoints.token(), {
+        method: 'POST',
+        body: JSON.stringify({
+          refresh_token: loginData.refresh_token,
+          tenant_id: firstTenant.id,
+        }),
+      })
       console.log('[Login] Token exchange successful, got access_token:', !!tokenData.access_token)
 
       // Store access token in httpOnly cookie
-      console.log('[Login] Setting access token cookie:', env.auth.cookieName, 'token length:', tokenData.access_token.length)
+      console.log(
+        '[Login] Setting access token cookie:',
+        env.auth.cookieName,
+        'token length:',
+        tokenData.access_token.length
+      )
       await setServerCookie(env.auth.cookieName, tokenData.access_token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
@@ -331,23 +331,29 @@ export async function loginAction(
       }
 
       // Store current tenant info in a separate cookie for reference
-      await setServerCookie(env.cookies.tenant, JSON.stringify({
-        id: tokenData.tenant_id,
-        slug: tokenData.tenant_slug,
-        name: firstTenant.name,
-        role: tokenData.role,
-      }), {
-        httpOnly: false, // Can be read by client
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 7 * 24 * 60 * 60,
-        path: '/',
-      })
+      await setServerCookie(
+        env.cookies.tenant,
+        JSON.stringify({
+          id: tokenData.tenant_id,
+          slug: tokenData.tenant_slug,
+          name: firstTenant.name,
+          role: tokenData.role,
+        }),
+        {
+          httpOnly: false, // Can be read by client
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: 7 * 24 * 60 * 60,
+          path: '/',
+        }
+      )
       console.log('[Login] Tenant cookie set:', tokenData.tenant_slug, firstTenant.name)
       // NOTE: Permissions fetched via /api/v1/me/permissions API (not stored in cookie)
     } catch (tokenError) {
       console.error('[Login] Token exchange FAILED:', tokenError)
-      throw new Error(`Login succeeded but token exchange failed: ${tokenError instanceof Error ? tokenError.message : 'Unknown error'}`)
+      throw new Error(
+        `Login succeeded but token exchange failed: ${tokenError instanceof Error ? tokenError.message : 'Unknown error'}`
+      )
     }
 
     return {
@@ -369,9 +375,7 @@ export async function loginAction(
  * Complete login by selecting a tenant
  * Called after loginAction returns requiresTenantSelection: true
  */
-export async function selectTenantAction(
-  tenantId: string
-): Promise<LoginResult> {
+export async function selectTenantAction(tenantId: string): Promise<LoginResult> {
   try {
     const cookieStore = await cookies()
     const refreshToken = cookieStore.get(env.auth.refreshCookieName)?.value
@@ -390,7 +394,7 @@ export async function selectTenantAction(
     if (pendingTenantsStr) {
       try {
         const pendingTenants: LoginTenant[] = JSON.parse(pendingTenantsStr)
-        selectedTenant = pendingTenants.find(t => t.id === tenantId)
+        selectedTenant = pendingTenants.find((t) => t.id === tenantId)
       } catch {
         console.error('[SelectTenant] Failed to parse pending tenants')
       }
@@ -398,16 +402,13 @@ export async function selectTenantAction(
 
     console.log('[SelectTenant] Exchanging token for tenant:', tenantId)
 
-    const tokenData = await backendFetch<TokenExchangeResponse>(
-      authEndpoints.token(),
-      {
-        method: 'POST',
-        body: JSON.stringify({
-          refresh_token: refreshToken,
-          tenant_id: tenantId,
-        }),
-      }
-    )
+    const tokenData = await backendFetch<TokenExchangeResponse>(authEndpoints.token(), {
+      method: 'POST',
+      body: JSON.stringify({
+        refresh_token: refreshToken,
+        tenant_id: tenantId,
+      }),
+    })
     console.log('[SelectTenant] Token exchange successful')
     console.log('[SelectTenant] access_token length:', tokenData.access_token?.length)
     console.log('[SelectTenant] expires_in:', tokenData.expires_in)
@@ -433,18 +434,22 @@ export async function selectTenantAction(
     }
 
     // Store current tenant info
-    await setServerCookie(env.cookies.tenant, JSON.stringify({
-      id: tokenData.tenant_id,
-      slug: tokenData.tenant_slug,
-      name: selectedTenant?.name || tokenData.tenant_slug,
-      role: tokenData.role,
-    }), {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60,
-      path: '/',
-    })
+    await setServerCookie(
+      env.cookies.tenant,
+      JSON.stringify({
+        id: tokenData.tenant_id,
+        slug: tokenData.tenant_slug,
+        name: selectedTenant?.name || tokenData.tenant_slug,
+        role: tokenData.role,
+      }),
+      {
+        httpOnly: false,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60,
+        path: '/',
+      }
+    )
     // NOTE: Permissions fetched via /api/v1/me/permissions API (not stored in cookie)
 
     // Clear pending tenants cookie
@@ -482,15 +487,12 @@ export async function refreshLocalTokenAction(): Promise<RefreshTokenResult> {
       }
     }
 
-    const data = await backendFetch<TokenResponse>(
-      authEndpoints.refresh(),
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${refreshToken}`,
-        },
-      }
-    )
+    const data = await backendFetch<TokenResponse>(authEndpoints.refresh(), {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${refreshToken}`,
+      },
+    })
 
     // Update cookies with new tokens
     await setServerCookie(env.auth.cookieName, data.access_token, {
@@ -519,9 +521,11 @@ export async function refreshLocalTokenAction(): Promise<RefreshTokenResult> {
   } catch (error) {
     console.error('Token refresh error:', error)
 
-    // Clean up cookies on refresh failure
+    // Clean up ALL cookies on refresh failure to prevent login loops
     await removeServerCookie(env.auth.cookieName)
     await removeServerCookie(env.auth.refreshCookieName)
+    await removeServerCookie(env.cookies.tenant)
+    await removeServerCookie(env.cookies.pendingTenants)
 
     return {
       success: false,
@@ -544,9 +548,7 @@ export async function refreshLocalTokenAction(): Promise<RefreshTokenResult> {
  * - user_info cookie (user info for Create Team page)
  * - pending_tenants cookie (for tenant selection)
  */
-export async function localLogoutAction(
-  redirectTo?: string
-): Promise<never> {
+export async function localLogoutAction(redirectTo?: string): Promise<never> {
   try {
     const cookieStore = await cookies()
     const accessToken = cookieStore.get(env.auth.cookieName)?.value
@@ -555,15 +557,12 @@ export async function localLogoutAction(
     // Backend will clear: refresh_token (path: /api/v1/auth), csrf_token
     if (accessToken) {
       try {
-        await backendFetch(
-          authEndpoints.logout(),
-          {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${accessToken}`,
-            },
-          }
-        )
+        await backendFetch(authEndpoints.logout(), {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        })
         console.log('[Logout] Backend logout successful')
       } catch (error) {
         console.error('[Logout] Backend logout error (continuing with local cleanup):', error)
@@ -572,12 +571,12 @@ export async function localLogoutAction(
 
     // Clear all auth cookies (frontend-set)
     // Using env.auth.refreshCookieName which should be 'refresh_token' to match backend
-    await removeServerCookie(env.auth.cookieName)        // Access token
+    await removeServerCookie(env.auth.cookieName) // Access token
     await removeServerCookie(env.auth.refreshCookieName) // Refresh token (matches backend)
-    await removeServerCookie(env.cookies.tenant)           // Current tenant info
-    await removeServerCookie(env.cookies.userInfo)        // User info for Create Team
-    await removeServerCookie(env.cookies.pendingTenants)  // Pending tenant selection
-    await removeServerCookie('app_permissions')          // Legacy permissions cookie (cleanup)
+    await removeServerCookie(env.cookies.tenant) // Current tenant info
+    await removeServerCookie(env.cookies.userInfo) // User info for Create Team
+    await removeServerCookie(env.cookies.pendingTenants) // Pending tenant selection
+    await removeServerCookie('app_permissions') // Legacy permissions cookie (cleanup)
 
     console.log('[Logout] All cookies cleared, redirecting to:', redirectTo || '/login')
 
@@ -599,7 +598,9 @@ export async function localLogoutAction(
 /**
  * Get current authenticated user
  */
-export async function getLocalCurrentUser(): Promise<AuthSuccessResponse<LocalUser> | AuthErrorResponse> {
+export async function getLocalCurrentUser(): Promise<
+  AuthSuccessResponse<LocalUser> | AuthErrorResponse
+> {
   try {
     const cookieStore = await cookies()
     const accessToken = cookieStore.get(env.auth.cookieName)?.value
@@ -611,15 +612,12 @@ export async function getLocalCurrentUser(): Promise<AuthSuccessResponse<LocalUs
       }
     }
 
-    const data = await backendFetch<LocalUser>(
-      userEndpoints.me(),
-      {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-        },
-      }
-    )
+    const data = await backendFetch<LocalUser>(userEndpoints.me(), {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    })
 
     return {
       success: true,
@@ -653,12 +651,9 @@ export async function verifyEmailAction(
   token: string
 ): Promise<AuthSuccessResponse<null> | AuthErrorResponse> {
   try {
-    await backendFetch<{ message: string }>(
-      authEndpoints.verifyEmail(token),
-      {
-        method: 'POST',
-      }
-    )
+    await backendFetch<{ message: string }>(authEndpoints.verifyEmail(token), {
+      method: 'POST',
+    })
 
     return {
       success: true,
@@ -681,13 +676,10 @@ export async function resendVerificationAction(
   email: string
 ): Promise<AuthSuccessResponse<null> | AuthErrorResponse> {
   try {
-    await backendFetch<{ message: string }>(
-      authEndpoints.resendVerification(),
-      {
-        method: 'POST',
-        body: JSON.stringify({ email }),
-      }
-    )
+    await backendFetch<{ message: string }>(authEndpoints.resendVerification(), {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    })
 
     return {
       success: true,
@@ -768,7 +760,7 @@ export async function createFirstTeamAction(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Cookie': `refresh_token=${refreshToken}`, // Send refresh token in cookie
+        Cookie: `refresh_token=${refreshToken}`, // Send refresh token in cookie
       },
       body: JSON.stringify({
         team_name: input.teamName,
@@ -803,18 +795,22 @@ export async function createFirstTeamAction(
     })
 
     // Store tenant info cookie
-    await setServerCookie(env.cookies.tenant, JSON.stringify({
-      id: data.tenant_id,
-      slug: data.tenant_slug,
-      name: data.tenant_name,
-      role: data.role,
-    }), {
-      httpOnly: false, // Frontend needs to read this
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60,
-      path: '/',
-    })
+    await setServerCookie(
+      env.cookies.tenant,
+      JSON.stringify({
+        id: data.tenant_id,
+        slug: data.tenant_slug,
+        name: data.tenant_name,
+        role: data.role,
+      }),
+      {
+        httpOnly: false, // Frontend needs to read this
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60,
+        path: '/',
+      }
+    )
     // NOTE: Permissions fetched via /api/v1/me/permissions API (not stored in cookie)
 
     // Clear user info cookie (no longer needed after team created)
@@ -851,13 +847,10 @@ export async function forgotPasswordAction(
   email: string
 ): Promise<AuthSuccessResponse<null> | AuthErrorResponse> {
   try {
-    await backendFetch<{ message: string }>(
-      authEndpoints.forgotPassword(),
-      {
-        method: 'POST',
-        body: JSON.stringify({ email }),
-      }
-    )
+    await backendFetch<{ message: string }>(authEndpoints.forgotPassword(), {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    })
 
     return {
       success: true,
@@ -883,16 +876,13 @@ export async function resetPasswordAction(
   newPassword: string
 ): Promise<AuthSuccessResponse<null> | AuthErrorResponse> {
   try {
-    await backendFetch<{ message: string }>(
-      authEndpoints.resetPassword(),
-      {
-        method: 'POST',
-        body: JSON.stringify({
-          token,
-          new_password: newPassword,
-        }),
-      }
-    )
+    await backendFetch<{ message: string }>(authEndpoints.resetPassword(), {
+      method: 'POST',
+      body: JSON.stringify({
+        token,
+        new_password: newPassword,
+      }),
+    })
 
     return {
       success: true,
@@ -930,19 +920,16 @@ export async function changePasswordAction(
       }
     }
 
-    await backendFetch<{ message: string }>(
-      userEndpoints.changePassword(),
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          current_password: currentPassword,
-          new_password: newPassword,
-        }),
-      }
-    )
+    await backendFetch<{ message: string }>(userEndpoints.changePassword(), {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        current_password: currentPassword,
+        new_password: newPassword,
+      }),
+    })
 
     return {
       success: true,
@@ -974,7 +961,9 @@ export interface UserSession {
 /**
  * List active sessions
  */
-export async function listSessionsAction(): Promise<AuthSuccessResponse<UserSession[]> | AuthErrorResponse> {
+export async function listSessionsAction(): Promise<
+  AuthSuccessResponse<UserSession[]> | AuthErrorResponse
+> {
   try {
     const cookieStore = await cookies()
     const accessToken = cookieStore.get(env.auth.cookieName)?.value
@@ -986,15 +975,12 @@ export async function listSessionsAction(): Promise<AuthSuccessResponse<UserSess
       }
     }
 
-    const data = await backendFetch<{ sessions: UserSession[] }>(
-      userEndpoints.sessions(),
-      {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-        },
-      }
-    )
+    const data = await backendFetch<{ sessions: UserSession[] }>(userEndpoints.sessions(), {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    })
 
     return {
       success: true,
@@ -1026,15 +1012,12 @@ export async function revokeSessionAction(
       }
     }
 
-    await backendFetch<{ message: string }>(
-      userEndpoints.revokeSession(sessionId),
-      {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-        },
-      }
-    )
+    await backendFetch<{ message: string }>(userEndpoints.revokeSession(sessionId), {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    })
 
     return {
       success: true,
@@ -1053,7 +1036,9 @@ export async function revokeSessionAction(
 /**
  * Revoke all sessions except current
  */
-export async function revokeAllSessionsAction(): Promise<AuthSuccessResponse<null> | AuthErrorResponse> {
+export async function revokeAllSessionsAction(): Promise<
+  AuthSuccessResponse<null> | AuthErrorResponse
+> {
   try {
     const cookieStore = await cookies()
     const accessToken = cookieStore.get(env.auth.cookieName)?.value
@@ -1065,15 +1050,12 @@ export async function revokeAllSessionsAction(): Promise<AuthSuccessResponse<nul
       }
     }
 
-    await backendFetch<{ message: string }>(
-      userEndpoints.revokeAllSessions(),
-      {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-        },
-      }
-    )
+    await backendFetch<{ message: string }>(userEndpoints.revokeAllSessions(), {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    })
 
     return {
       success: true,

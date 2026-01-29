@@ -9,6 +9,7 @@ import useSWR from 'swr'
 import { fetcher } from '@/lib/api/client'
 import { auditLogEndpoints } from '@/lib/api/endpoints'
 import { useTenant } from '@/context/tenant-provider'
+import { useTenantModules } from '@/features/integrations/api/use-tenant-modules'
 import type {
   AuditLogListResponse,
   AuditStatsResponse,
@@ -30,19 +31,22 @@ function buildAuditLogsUrl(filters?: AuditLogFilters): string {
   if (filters?.search) params.append('search', filters.search)
   if (filters?.page !== undefined) params.append('page', filters.page.toString())
   if (filters?.per_page) params.append('per_page', filters.per_page.toString())
+  if (filters?.sort_by) params.append('sort_by', filters.sort_by)
+  if (filters?.sort_order) params.append('sort_order', filters.sort_order)
+  if (filters?.exclude_system) params.append('exclude_system', 'true')
 
   // Array params
   if (filters?.action?.length) {
-    filters.action.forEach(a => params.append('action', a))
+    filters.action.forEach((a) => params.append('action', a))
   }
   if (filters?.resource_type?.length) {
-    filters.resource_type.forEach(rt => params.append('resource_type', rt))
+    filters.resource_type.forEach((rt) => params.append('resource_type', rt))
   }
   if (filters?.result?.length) {
-    filters.result.forEach(r => params.append('result', r))
+    filters.result.forEach((r) => params.append('result', r))
   }
   if (filters?.severity?.length) {
-    filters.severity.forEach(s => params.append('severity', s))
+    filters.severity.forEach((s) => params.append('severity', s))
   }
 
   const queryString = params.toString()
@@ -55,15 +59,19 @@ function buildAuditLogsUrl(filters?: AuditLogFilters): string {
 
 /**
  * Hook to fetch audit logs with filtering and pagination
- * Requires tenant context - won't fetch if no tenant selected
+ * Requires tenant context and audit module enabled
  */
 export function useAuditLogs(filters?: AuditLogFilters) {
   const { currentTenant } = useTenant()
+  const { moduleIds, isLoading: modulesLoading } = useTenantModules()
   const url = buildAuditLogsUrl(filters)
 
-  // Only fetch if tenant is selected (JWT will have tenant context)
+  const hasAuditModule = moduleIds.includes('audit')
+
+  // Only fetch if tenant is selected AND audit module is enabled
+  const shouldFetch = currentTenant && hasAuditModule && !modulesLoading
   const { data, error, isLoading, mutate } = useSWR<AuditLogListResponse>(
-    currentTenant ? url : null,
+    shouldFetch ? url : null,
     fetcher,
     {
       revalidateOnFocus: false,
@@ -77,7 +85,7 @@ export function useAuditLogs(filters?: AuditLogFilters) {
     page: data?.page ?? 0,
     perPage: data?.per_page ?? 20,
     totalPages: data?.total_pages ?? 0,
-    isLoading: currentTenant ? isLoading : false,
+    isLoading: shouldFetch ? isLoading : false,
     isError: !!error,
     error,
     mutate,
@@ -86,14 +94,17 @@ export function useAuditLogs(filters?: AuditLogFilters) {
 
 /**
  * Hook to fetch audit log statistics
- * Requires tenant context - won't fetch if no tenant selected
+ * Requires tenant context and audit module enabled
  */
 export function useAuditStats() {
   const { currentTenant } = useTenant()
+  const { moduleIds, isLoading: modulesLoading } = useTenantModules()
 
-  // Only fetch if tenant is selected
+  const hasAuditModule = moduleIds.includes('audit')
+  const shouldFetch = currentTenant && hasAuditModule && !modulesLoading
+
   const { data, error, isLoading, mutate } = useSWR<AuditStatsResponse>(
-    currentTenant ? auditLogEndpoints.stats() : null,
+    shouldFetch ? auditLogEndpoints.stats() : null,
     fetcher,
     {
       revalidateOnFocus: false,
@@ -103,7 +114,7 @@ export function useAuditStats() {
 
   return {
     stats: data,
-    isLoading: currentTenant ? isLoading : false,
+    isLoading: shouldFetch ? isLoading : false,
     isError: !!error,
     error,
     mutate,
@@ -112,13 +123,17 @@ export function useAuditStats() {
 
 /**
  * Hook to fetch a single audit log by ID
- * Requires tenant context
+ * Requires tenant context and audit module enabled
  */
 export function useAuditLog(id: string | undefined) {
   const { currentTenant } = useTenant()
+  const { moduleIds, isLoading: modulesLoading } = useTenantModules()
+
+  const hasAuditModule = moduleIds.includes('audit')
+  const shouldFetch = currentTenant && id && hasAuditModule && !modulesLoading
 
   const { data, error, isLoading, mutate } = useSWR<AuditLog>(
-    currentTenant && id ? auditLogEndpoints.get(id) : null,
+    shouldFetch ? auditLogEndpoints.get(id) : null,
     fetcher,
     {
       revalidateOnFocus: false,
@@ -127,7 +142,7 @@ export function useAuditLog(id: string | undefined) {
 
   return {
     log: data,
-    isLoading: currentTenant ? isLoading : false,
+    isLoading: shouldFetch ? isLoading : false,
     isError: !!error,
     error,
     mutate,
@@ -136,7 +151,7 @@ export function useAuditLog(id: string | undefined) {
 
 /**
  * Hook to fetch audit history for a specific resource
- * Requires tenant context
+ * Requires tenant context and audit module enabled
  */
 export function useResourceAuditHistory(
   resourceType: string | undefined,
@@ -145,13 +160,19 @@ export function useResourceAuditHistory(
   perPage = 10
 ) {
   const { currentTenant } = useTenant()
+  const { moduleIds, isLoading: modulesLoading } = useTenantModules()
 
-  const url = resourceType && resourceId
-    ? `${auditLogEndpoints.resourceHistory(resourceType, resourceId)}?page=${page}&per_page=${perPage}`
-    : null
+  const hasAuditModule = moduleIds.includes('audit')
+
+  const url =
+    resourceType && resourceId
+      ? `${auditLogEndpoints.resourceHistory(resourceType, resourceId)}?page=${page}&per_page=${perPage}`
+      : null
+
+  const shouldFetch = currentTenant && url && hasAuditModule && !modulesLoading
 
   const { data, error, isLoading, mutate } = useSWR<AuditLogListResponse>(
-    currentTenant ? url : null,
+    shouldFetch ? url : null,
     fetcher,
     {
       revalidateOnFocus: false,
@@ -161,7 +182,7 @@ export function useResourceAuditHistory(
   return {
     logs: data?.data ?? [],
     total: data?.total ?? 0,
-    isLoading: currentTenant ? isLoading : false,
+    isLoading: shouldFetch ? isLoading : false,
     isError: !!error,
     error,
     mutate,
@@ -170,21 +191,22 @@ export function useResourceAuditHistory(
 
 /**
  * Hook to fetch audit logs for a specific user
- * Requires tenant context
+ * Requires tenant context and audit module enabled
  */
-export function useUserAuditActivity(
-  userId: string | undefined,
-  page = 0,
-  perPage = 10
-) {
+export function useUserAuditActivity(userId: string | undefined, page = 0, perPage = 10) {
   const { currentTenant } = useTenant()
+  const { moduleIds, isLoading: modulesLoading } = useTenantModules()
+
+  const hasAuditModule = moduleIds.includes('audit')
 
   const url = userId
     ? `${auditLogEndpoints.userActivity(userId)}?page=${page}&per_page=${perPage}`
     : null
 
+  const shouldFetch = currentTenant && url && hasAuditModule && !modulesLoading
+
   const { data, error, isLoading, mutate } = useSWR<AuditLogListResponse>(
-    currentTenant ? url : null,
+    shouldFetch ? url : null,
     fetcher,
     {
       revalidateOnFocus: false,
@@ -194,7 +216,7 @@ export function useUserAuditActivity(
   return {
     logs: data?.data ?? [],
     total: data?.total ?? 0,
-    isLoading: currentTenant ? isLoading : false,
+    isLoading: shouldFetch ? isLoading : false,
     isError: !!error,
     error,
     mutate,

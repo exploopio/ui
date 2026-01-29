@@ -1,6 +1,6 @@
 'use client'
 
-import { Header, Main } from '@/components/layout'
+import { Main } from '@/components/layout'
 import { PageHeader } from '@/features/shared'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Lock, ShieldAlert, UserX, AlertTriangle } from 'lucide-react'
@@ -44,8 +44,6 @@ const accessAnalysisStats = [
 export default function AccessAnalysisPage() {
   return (
     <>
-      <Header fixed />
-
       <Main>
         <PageHeader title="Access Analysis" description="Permission and access analysis" />
 

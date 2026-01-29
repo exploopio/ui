@@ -1,9 +1,9 @@
-# Rediver CTEM Platform
+# Exploop CTEM Platform
 
 [![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=next.js)](https://nextjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript)](https://www.typescriptlang.org)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Docker](https://img.shields.io/badge/Docker-Hub-2496ED?logo=docker)](https://hub.docker.com/r/rediverio/ui)
+[![Docker](https://img.shields.io/badge/Docker-Hub-2496ED?logo=docker)](https://hub.docker.com/r/exploopio/ui)
 
 Continuous Threat Exposure Management (CTEM) platform built with Next.js 16, featuring the complete 5-stage CTEM process: Scoping, Discovery, Prioritization, Validation, and Mobilization.
 
@@ -34,6 +34,10 @@ Rediver is an enterprise-grade Attack Surface Management (ASM) and Vulnerability
 - **Single Scans** - One-time scans with custom configuration
 - **Workflow Scans** - Predefined multi-tool workflows (Full Recon, Vuln Assessment, etc.)
 - **Scan Runners** - Distributed scan execution with runner management
+- **Agent Preference** - Choose between tenant-owned or platform agents:
+  - `Auto` - Platform decides based on quota and availability
+  - `Tenant` - Use only tenant-owned agents
+  - `Platform` - Use shared platform agents (quota-based)
 
 ### Findings & Remediation
 
@@ -62,14 +66,14 @@ Rediver is an enterprise-grade Attack Surface Management (ASM) and Vulnerability
 
 | Guide                                                                      | Description               |
 | -------------------------------------------------------------------------- | ------------------------- |
-| [Getting Started](https://docs.rediver.io/docs/getting-started)            | Quick start guide         |
-| [Development Setup](https://docs.rediver.io/docs/development-setup)        | IDE, debugging, testing   |
-| [Authentication](https://docs.rediver.io/docs/guides/authentication)       | JWT & OIDC auth flow      |
-| [Multi-tenancy](https://docs.rediver.io/docs/guides/multi-tenancy)         | Teams & tenant switching  |
-| [Permissions](https://docs.rediver.io/docs/guides/permissions)             | Role-based access control |
-| [API Reference](https://docs.rediver.io/docs/api/reference)                | Complete API endpoints    |
-| [Configuration](https://docs.rediver.io/docs/operations/configuration)     | Environment variables     |
-| [Troubleshooting](https://docs.rediver.io/docs/operations/troubleshooting) | Common issues             |
+| [Getting Started](https://docs.exploop.io/docs/getting-started)            | Quick start guide         |
+| [Development Setup](https://docs.exploop.io/docs/development-setup)        | IDE, debugging, testing   |
+| [Authentication](https://docs.exploop.io/docs/guides/authentication)       | JWT & OIDC auth flow      |
+| [Multi-tenancy](https://docs.exploop.io/docs/guides/multi-tenancy)         | Teams & tenant switching  |
+| [Permissions](https://docs.exploop.io/docs/guides/permissions)             | Role-based access control |
+| [API Reference](https://docs.exploop.io/docs/api/reference)                | Complete API endpoints    |
+| [Configuration](https://docs.exploop.io/docs/operations/configuration)     | Environment variables     |
+| [Troubleshooting](https://docs.exploop.io/docs/operations/troubleshooting) | Common issues             |
 
 ---
 
@@ -497,7 +501,7 @@ See [Security Documentation](./docs/auth/KEYCLOAK_SETUP.md#security-consideratio
 **Status:** UI Complete - Ready for Backend Integration
 **Last Updated:** 2026-01-08
 
-### Completed (UI - 90%)
+### Completed (UI - 95%)
 
 - CTEM Dashboard with 5-stage process visualization
 - Asset Management (6 types with full CRUD)
@@ -509,6 +513,11 @@ See [Security Documentation](./docs/auth/KEYCLOAK_SETUP.md#security-consideratio
 - Docker deployment with health checks
 - Keycloak authentication integration
 - Security hardening
+- **Platform Agent Support:**
+  - Agent preference selection in Create Scan form
+  - Platform agent status indicator in Runs table
+  - Queue position display for platform jobs
+  - Platform usage quota card
 
 ### Pending (Backend - 0%)
 

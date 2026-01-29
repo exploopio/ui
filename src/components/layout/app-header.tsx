@@ -59,7 +59,7 @@ export function Header({
     <header
       className={cn(
         'z-50 h-16 transition-shadow duration-200',
-        fixed && 'sticky top-0 w-full backdrop-blur-sm',
+        fixed && 'sticky top-0 w-full flex-shrink-0 backdrop-blur-sm',
         offset > 10 && fixed ? 'shadow-sm' : 'shadow-none',
         className
       )}

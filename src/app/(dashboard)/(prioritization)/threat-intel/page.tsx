@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Header, Main } from '@/components/layout'
+import { Main } from '@/components/layout'
 import { cn } from '@/lib/utils'
 import {
   TrendingUp,
@@ -51,8 +51,6 @@ export default function ThreatIntelPage() {
 
   return (
     <>
-      <Header fixed />
-
       <Main>
         <div className="space-y-6">
           {/* Page Header */}

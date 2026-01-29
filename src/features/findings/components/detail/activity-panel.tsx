@@ -1,16 +1,13 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { useState } from 'react'
+import { memo, useMemo } from 'react'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
+import { MarkdownPreview } from '@/components/ui/markdown-editor'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   PlusCircle,
   MessageSquare,
@@ -30,17 +27,22 @@ import {
   Bot,
   Paperclip,
   Send,
-  Image as ImageIcon,
   ChevronDown,
   ChevronUp,
-} from "lucide-react";
-import type { Activity, ActivityType } from "../../types";
-import { ACTIVITY_TYPE_CONFIG, FINDING_STATUS_CONFIG, SEVERITY_CONFIG } from "../../types";
-import type { Severity } from "@/features/shared/types";
+  Loader2,
+} from 'lucide-react'
+import type { Activity, ActivityType } from '../../types'
+import { ACTIVITY_TYPE_CONFIG, FINDING_STATUS_CONFIG, SEVERITY_CONFIG } from '../../types'
+import type { Severity } from '@/features/shared/types'
 
 interface ActivityPanelProps {
-  activities: Activity[];
-  onAddComment?: (comment: string, isInternal: boolean) => void;
+  activities: Activity[]
+  onAddComment?: (comment: string, isInternal: boolean) => void
+  // Pagination props
+  total?: number
+  hasMore?: boolean
+  isLoadingMore?: boolean
+  onLoadMore?: () => void
 }
 
 const ACTIVITY_ICONS: Record<ActivityType, React.ReactNode> = {
@@ -60,98 +62,127 @@ const ACTIVITY_ICONS: Record<ActivityType, React.ReactNode> = {
   linked: <Link className="h-4 w-4" />,
   duplicate_marked: <Copy className="h-4 w-4" />,
   false_positive_marked: <XCircle className="h-4 w-4" />,
-};
+}
 
-export function ActivityPanel({ activities, onAddComment }: ActivityPanelProps) {
-  const [comment, setComment] = useState("");
-  const [isInternal, setIsInternal] = useState(false);
-  const [expandedReplies, setExpandedReplies] = useState<Set<string>>(
-    new Set()
-  );
+export function ActivityPanel({
+  activities,
+  onAddComment,
+  total,
+  hasMore,
+  isLoadingMore,
+  onLoadMore,
+}: ActivityPanelProps) {
+  const [comment, setComment] = useState('')
+  const [isInternal, setIsInternal] = useState(false)
+  const [expandedReplies, setExpandedReplies] = useState<Set<string>>(new Set())
+  const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set())
+
+  // Character limit for comment truncation (display)
+  const COMMENT_TRUNCATE_LENGTH = 200
+  // Character limit for comment input (API validation)
+  // 10000 chars allows detailed technical discussions with code snippets
+  const MAX_COMMENT_LENGTH = 10000
 
   const sortedActivities = [...activities].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
+  )
 
   const toggleReplies = (activityId: string) => {
     setExpandedReplies((prev) => {
-      const next = new Set(prev);
+      const next = new Set(prev)
       if (next.has(activityId)) {
-        next.delete(activityId);
+        next.delete(activityId)
       } else {
-        next.add(activityId);
+        next.add(activityId)
       }
-      return next;
-    });
-  };
+      return next
+    })
+  }
+
+  const toggleCommentExpand = (activityId: string) => {
+    setExpandedComments((prev) => {
+      const next = new Set(prev)
+      if (next.has(activityId)) {
+        next.delete(activityId)
+      } else {
+        next.add(activityId)
+      }
+      return next
+    })
+  }
+
+  // Truncate text with ellipsis
+  const truncateText = (text: string, maxLength: number) => {
+    if (text.length <= maxLength) return text
+    // Find last space before maxLength to avoid cutting words
+    const lastSpace = text.lastIndexOf(' ', maxLength)
+    const cutoff = lastSpace > maxLength * 0.7 ? lastSpace : maxLength
+    return text.slice(0, cutoff) + '...'
+  }
 
   const formatTimeAgo = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+    const date = new Date(dateString)
+    const now = new Date()
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000)
 
-    if (seconds < 60) return "just now";
-    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-    if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
+    if (seconds < 60) return 'just now'
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`
+    if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`
 
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    });
-  };
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+    })
+  }
 
-  const getActorName = (actor: Activity["actor"]) => {
-    if (actor === "system") return "System";
-    if (actor === "ai") return "AI Assistant";
-    return actor.name;
-  };
-
-  const getActorInitials = (actor: Activity["actor"]) => {
-    if (actor === "system") return "SYS";
-    if (actor === "ai") return "AI";
+  const getActorName = (actor: Activity['actor']) => {
+    if (actor === 'system') return 'System'
+    if (actor === 'ai') return 'AI Assistant'
     return actor.name
-      .split(" ")
+  }
+
+  const getActorInitials = (actor: Activity['actor']) => {
+    if (actor === 'system') return 'SYS'
+    if (actor === 'ai') return 'AI'
+    return actor.name
+      .split(' ')
       .map((n) => n[0])
-      .join("")
+      .join('')
       .toUpperCase()
-      .slice(0, 2);
-  };
+      .slice(0, 2)
+  }
 
   const handleSubmitComment = () => {
-    if (!comment.trim()) return;
-    onAddComment?.(comment, isInternal);
-    setComment("");
-  };
+    if (!comment.trim()) return
+    onAddComment?.(comment, isInternal)
+    setComment('')
+  }
 
   const renderActivityContent = (activity: Activity) => {
-    const config = ACTIVITY_TYPE_CONFIG[activity.type];
+    const config = ACTIVITY_TYPE_CONFIG[activity.type]
 
     switch (activity.type) {
-      case "status_changed":
+      case 'status_changed':
         const prevStatus = activity.previousValue
           ? FINDING_STATUS_CONFIG[activity.previousValue as keyof typeof FINDING_STATUS_CONFIG]
-          : null;
+          : null
         const newStatus = activity.newValue
           ? FINDING_STATUS_CONFIG[activity.newValue as keyof typeof FINDING_STATUS_CONFIG]
-          : null;
+          : null
 
         return (
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-sm">
               <span>Changed status from</span>
               {prevStatus && (
-                <Badge
-                  className={`${prevStatus.bgColor} ${prevStatus.textColor} border-0 text-xs`}
-                >
+                <Badge className={`${prevStatus.bgColor} ${prevStatus.textColor} border-0 text-xs`}>
                   {prevStatus.label}
                 </Badge>
               )}
               <span>to</span>
               {newStatus && (
-                <Badge
-                  className={`${newStatus.bgColor} ${newStatus.textColor} border-0 text-xs`}
-                >
+                <Badge className={`${newStatus.bgColor} ${newStatus.textColor} border-0 text-xs`}>
                   {newStatus.label}
                 </Badge>
               )}
@@ -160,15 +191,15 @@ export function ActivityPanel({ activities, onAddComment }: ActivityPanelProps) 
               <p className="text-muted-foreground text-sm">{activity.content}</p>
             )}
           </div>
-        );
+        )
 
-      case "severity_changed":
+      case 'severity_changed':
         const prevSeverity = activity.previousValue
           ? SEVERITY_CONFIG[activity.previousValue as Severity]
-          : null;
+          : null
         const newSeverity = activity.newValue
           ? SEVERITY_CONFIG[activity.newValue as Severity]
-          : null;
+          : null
 
         return (
           <div className="space-y-2">
@@ -190,16 +221,14 @@ export function ActivityPanel({ activities, onAddComment }: ActivityPanelProps) 
                 </Badge>
               )}
             </div>
-            {activity.reason && (
-              <p className="text-muted-foreground text-sm">{activity.reason}</p>
-            )}
+            {activity.reason && <p className="text-muted-foreground text-sm">{activity.reason}</p>}
           </div>
-        );
+        )
 
-      case "ai_triage":
-        let aiData = null;
+      case 'ai_triage':
+        let aiData = null
         try {
-          aiData = activity.content ? JSON.parse(activity.content) : null;
+          aiData = activity.content ? JSON.parse(activity.content) : null
         } catch {
           // ignore
         }
@@ -208,9 +237,7 @@ export function ActivityPanel({ activities, onAddComment }: ActivityPanelProps) 
           <div className="bg-purple-500/10 space-y-2 rounded-lg border border-purple-500/20 p-3">
             <div className="flex items-center gap-2">
               <Bot className="h-4 w-4 text-purple-400" />
-              <span className="text-sm font-medium text-purple-400">
-                AI Analysis Complete
-              </span>
+              <span className="text-sm font-medium text-purple-400">AI Analysis Complete</span>
             </div>
             {aiData && (
               <>
@@ -218,42 +245,72 @@ export function ActivityPanel({ activities, onAddComment }: ActivityPanelProps) 
                 <div className="flex flex-wrap gap-2 text-xs">
                   <Badge variant="outline">Risk: {aiData.risk}</Badge>
                   <Badge variant="outline">CVSS: {aiData.cvss}</Badge>
-                  <Badge variant="outline">
-                    Exploitability: {aiData.exploitability}
-                  </Badge>
+                  <Badge variant="outline">Exploitability: {aiData.exploitability}</Badge>
                 </div>
               </>
             )}
           </div>
-        );
+        )
 
-      case "comment":
-      case "internal_note":
-        const showReplies = expandedReplies.has(activity.id);
-        const hasReplies = activity.replies && activity.replies.length > 0;
+      case 'comment':
+      case 'internal_note':
+        const showReplies = expandedReplies.has(activity.id)
+        const hasReplies = activity.replies && activity.replies.length > 0
+        const isCommentExpanded = expandedComments.has(activity.id)
+        const commentContent = activity.content || ''
+        // Check if content is long OR was already truncated by backend (ends with "...")
+        const wasBackendTruncated = commentContent.endsWith('...')
+        const isLongComment = commentContent.length > COMMENT_TRUNCATE_LENGTH || wasBackendTruncated
+        const displayContent =
+          isLongComment && !isCommentExpanded
+            ? wasBackendTruncated
+              ? commentContent
+              : truncateText(commentContent, COMMENT_TRUNCATE_LENGTH)
+            : commentContent
 
         return (
           <div className="space-y-3">
             <div
-              className={`rounded-lg p-3 ${activity.type === "internal_note" ? "border border-amber-500/20 bg-amber-500/10" : "bg-muted/50"}`}
+              className={`rounded-lg p-3 ${activity.type === 'internal_note' ? 'border border-amber-500/20 bg-amber-500/10' : 'bg-muted/50'}`}
             >
-              {activity.type === "internal_note" && (
+              {activity.type === 'internal_note' && (
                 <div className="mb-2 flex items-center gap-1 text-xs text-amber-400">
                   <Lock className="h-3 w-3" />
                   Internal Note
                 </div>
               )}
-              <p className="whitespace-pre-wrap text-sm">{activity.content}</p>
+              <div className="text-sm prose prose-sm dark:prose-invert max-w-none [&_pre]:text-xs [&_code]:text-xs [&_p]:my-1">
+                <MarkdownPreview content={displayContent} />
+              </div>
+              {isLongComment && !wasBackendTruncated && (
+                <Button
+                  variant="link"
+                  size="sm"
+                  className="h-auto p-0 text-xs text-primary"
+                  onClick={() => toggleCommentExpand(activity.id)}
+                >
+                  {isCommentExpanded ? (
+                    <>
+                      <ChevronUp className="mr-1 h-3 w-3" />
+                      Show less
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="mr-1 h-3 w-3" />
+                      Show more
+                    </>
+                  )}
+                </Button>
+              )}
+              {wasBackendTruncated && (
+                <span className="text-xs text-muted-foreground italic">(Content truncated)</span>
+              )}
 
               {/* Attachments */}
               {activity.attachments && activity.attachments.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-2">
                   {activity.attachments.map((att) => (
-                    <Badge
-                      key={att.id}
-                      variant="secondary"
-                      className="cursor-pointer gap-1"
-                    >
+                    <Badge key={att.id} variant="secondary" className="cursor-pointer gap-1">
                       <Paperclip className="h-3 w-3" />
                       {att.filename}
                     </Badge>
@@ -268,16 +325,13 @@ export function ActivityPanel({ activities, onAddComment }: ActivityPanelProps) 
                     <TooltipProvider key={idx}>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Badge
-                            variant="outline"
-                            className="cursor-pointer gap-1 text-xs"
-                          >
+                          <Badge variant="outline" className="cursor-pointer gap-1 text-xs">
                             {reaction.emoji} {reaction.count}
                           </Badge>
                         </TooltipTrigger>
                         <TooltipContent>
                           <p>
-                            {reaction.users.map((u) => u.name).join(", ") ||
+                            {reaction.users.map((u) => u.name).join(', ') ||
                               `${reaction.count} reactions`}
                           </p>
                         </TooltipContent>
@@ -303,7 +357,7 @@ export function ActivityPanel({ activities, onAddComment }: ActivityPanelProps) 
                     <ChevronDown className="mr-1 h-3 w-3" />
                   )}
                   {activity.replies!.length} repl
-                  {activity.replies!.length === 1 ? "y" : "ies"}
+                  {activity.replies!.length === 1 ? 'y' : 'ies'}
                 </Button>
 
                 {showReplies && (
@@ -316,9 +370,7 @@ export function ActivityPanel({ activities, onAddComment }: ActivityPanelProps) 
                               {getActorInitials(reply.actor)}
                             </AvatarFallback>
                           </Avatar>
-                          <span className="text-xs font-medium">
-                            {getActorName(reply.actor)}
-                          </span>
+                          <span className="text-xs font-medium">{getActorName(reply.actor)}</span>
                           <span className="text-muted-foreground text-xs">
                             {formatTimeAgo(reply.createdAt)}
                           </span>
@@ -331,9 +383,9 @@ export function ActivityPanel({ activities, onAddComment }: ActivityPanelProps) 
               </div>
             )}
           </div>
-        );
+        )
 
-      case "assigned":
+      case 'assigned':
         return (
           <div className="text-sm">
             <span>Assigned to </span>
@@ -341,10 +393,10 @@ export function ActivityPanel({ activities, onAddComment }: ActivityPanelProps) 
               {(activity.metadata?.assigneeName as string) || activity.content}
             </span>
           </div>
-        );
+        )
 
-      case "evidence_added":
-        const evidenceType = activity.metadata?.evidenceType as string | undefined;
+      case 'evidence_added':
+        const evidenceType = activity.metadata?.evidenceType as string | undefined
         return (
           <div className="text-sm">
             <span>{activity.content}</span>
@@ -354,10 +406,10 @@ export function ActivityPanel({ activities, onAddComment }: ActivityPanelProps) 
               </Badge>
             )}
           </div>
-        );
+        )
 
-      case "created":
-        const scanName = activity.metadata?.scanName as string | undefined;
+      case 'created':
+        const scanName = activity.metadata?.scanName as string | undefined
         return (
           <div className="space-y-1 text-sm">
             <p>{activity.content}</p>
@@ -367,32 +419,28 @@ export function ActivityPanel({ activities, onAddComment }: ActivityPanelProps) 
               </Badge>
             )}
           </div>
-        );
+        )
 
       default:
-        return (
-          <p className="text-sm">
-            {activity.content || config.label}
-          </p>
-        );
+        return <p className="text-sm">{activity.content || config.label}</p>
     }
-  };
+  }
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
-      {/* Activity Timeline */}
-      <div className="flex-1 overflow-auto">
-        <div className="space-y-4 p-4">
+    <div className="flex flex-col h-full max-h-full overflow-hidden">
+      {/* Activity Timeline - Scrollable */}
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        <div className="space-y-2 p-2">
           {sortedActivities.map((activity) => {
-            const config = ACTIVITY_TYPE_CONFIG[activity.type];
+            const config = ACTIVITY_TYPE_CONFIG[activity.type]
 
             return (
-              <div key={activity.id} className="flex gap-3">
+              <div key={activity.id} className="flex gap-2">
                 {/* Avatar */}
                 <div className="flex-shrink-0">
-                  <Avatar className="h-8 w-8">
+                  <Avatar className="h-7 w-7">
                     <AvatarFallback
-                      className={`text-xs ${activity.actor === "ai" ? "bg-purple-500/20 text-purple-400" : activity.actor === "system" ? "bg-blue-500/20 text-blue-400" : ""}`}
+                      className={`text-xs ${activity.actor === 'ai' ? 'bg-purple-500/20 text-purple-400' : activity.actor === 'system' ? 'bg-blue-500/20 text-blue-400' : ''}`}
                     >
                       {getActorInitials(activity.actor)}
                     </AvatarFallback>
@@ -401,11 +449,9 @@ export function ActivityPanel({ activities, onAddComment }: ActivityPanelProps) 
 
                 {/* Content */}
                 <div className="min-w-0 flex-1">
-                  <div className="mb-1 flex items-center gap-2">
-                    <span className="text-sm font-medium">
-                      {getActorName(activity.actor)}
-                    </span>
-                    <div className={`flex items-center gap-1 ${config.color}`}>
+                  <div className="mb-0.5 flex items-center gap-1.5 flex-wrap">
+                    <span className="text-xs font-medium">{getActorName(activity.actor)}</span>
+                    <div className={`flex items-center gap-0.5 ${config.color}`}>
                       {ACTIVITY_ICONS[activity.type]}
                     </div>
                     <span className="text-muted-foreground text-xs">
@@ -415,49 +461,82 @@ export function ActivityPanel({ activities, onAddComment }: ActivityPanelProps) 
                   {renderActivityContent(activity)}
                 </div>
               </div>
-            );
+            )
           })}
+
+          {/* Load More Button */}
+          {hasMore && onLoadMore && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onLoadMore}
+              disabled={isLoadingMore}
+              className="w-full h-6 text-xs"
+            >
+              {isLoadingMore ? (
+                <>
+                  <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                  Loading...
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="mr-1 h-3 w-3" />
+                  Load More
+                </>
+              )}
+            </Button>
+          )}
+
+          {/* Empty state */}
+          {sortedActivities.length === 0 && (
+            <div className="text-center text-muted-foreground text-xs py-4">No activities yet</div>
+          )}
         </div>
       </div>
 
-      {/* Comment Input */}
-      <div className="flex-shrink-0 border-t p-4">
-        <div className="space-y-2">
-          <Textarea
-            placeholder="Add a comment..."
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            className="min-h-[80px] resize-none"
-          />
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                <Paperclip className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                <ImageIcon className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={isInternal ? "secondary" : "ghost"}
-                size="sm"
-                className="h-7 gap-1 px-2"
-                onClick={() => setIsInternal(!isInternal)}
-              >
-                <Lock className="h-3 w-3" />
-                <span className="text-xs">Internal</span>
-              </Button>
-            </div>
-            <Button
-              size="sm"
-              onClick={handleSubmitComment}
-              disabled={!comment.trim()}
-            >
-              <Send className="mr-2 h-4 w-4" />
-              Send
+      {/* Comment Input - Fixed at bottom */}
+      <div className="flex-shrink-0 border-t p-2">
+        <Textarea
+          placeholder="Add a comment..."
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+          maxLength={MAX_COMMENT_LENGTH}
+          className="min-h-[60px] max-h-[120px] resize-none text-sm mb-1.5"
+        />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="sm" className="h-5 w-5 p-0">
+              <Paperclip className="h-3 w-3" />
             </Button>
+            <Button
+              variant={isInternal ? 'secondary' : 'ghost'}
+              size="sm"
+              className="h-5 gap-0.5 px-1 text-[10px]"
+              onClick={() => setIsInternal(!isInternal)}
+            >
+              <Lock className="h-2.5 w-2.5" />
+              Internal
+            </Button>
+            {/* Character counter - show when approaching limit */}
+            {comment.length > MAX_COMMENT_LENGTH * 0.8 && (
+              <span
+                className={`text-[10px] ${comment.length >= MAX_COMMENT_LENGTH ? 'text-destructive' : 'text-muted-foreground'}`}
+              >
+                {comment.length}/{MAX_COMMENT_LENGTH}
+              </span>
+            )}
           </div>
+          <Button
+            size="sm"
+            className="h-6 text-xs"
+            onClick={handleSubmitComment}
+            disabled={!comment.trim() || comment.length > MAX_COMMENT_LENGTH}
+          >
+            <Send className="mr-1 h-3 w-3" />
+            Send
+          </Button>
         </div>
       </div>
     </div>
-  );
+  )
 }

@@ -11,7 +11,7 @@ import {
   SortingState,
   useReactTable,
 } from '@tanstack/react-table'
-import { Header, Main } from '@/components/layout'
+import { Main } from '@/components/layout'
 import { PageHeader, StatusBadge, RiskScoreBadge } from '@/features/shared'
 import {
   AssetDetailSheet,
@@ -680,8 +680,6 @@ export default function DomainsPage() {
 
   return (
     <>
-      <Header fixed />
-
       <Main>
         <PageHeader
           title="Domain Assets"

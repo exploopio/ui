@@ -9,7 +9,9 @@ if (process.env.ANALYZE === 'true') {
     const bundleAnalyzer = require('@next/bundle-analyzer')
     withBundleAnalyzer = bundleAnalyzer({ enabled: true })
   } catch {
-    console.warn('Bundle analyzer not available - install @next/bundle-analyzer to use ANALYZE=true')
+    console.warn(
+      'Bundle analyzer not available - install @next/bundle-analyzer to use ANALYZE=true'
+    )
   }
 }
 
@@ -20,8 +22,9 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  reactCompiler: true,
+  reactStrictMode: true,
+  // Note: reactCompiler requires babel-plugin-react-compiler package
+  // Disabled until package is added to dependencies
 
   /**
    * Output Configuration for Docker
@@ -76,7 +79,7 @@ const nextConfig: NextConfig = {
               "style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com", // Google Fonts stylesheets
               "img-src 'self' data: https:",
               "font-src 'self' data: https://fonts.gstatic.com", // Google Fonts files
-              "connect-src 'self'", // API calls through /api/proxy (same-origin)
+              "connect-src 'self' http://localhost:* https://*.rediver.io", // API calls (dev: localhost, prod: rediver.io)
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",
@@ -86,17 +89,8 @@ const nextConfig: NextConfig = {
       },
     ]
   },
-  // Allow cross-origin requests in development (for accessing from other devices/IPs)
-  // Note: Add your local IP to this list during development if needed
-  allowedDevOrigins: [
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-    'http://localhost:8080',
-    'http://127.0.0.1:8080',
-    // Production domains
-    'https://app.rediver.io',
-    'http://app.rediver.io',
-  ],
+  // Allow cross-origin requests in development (all origins)
+  allowedDevOrigins: ['*'],
 }
 
 export default withBundleAnalyzer(nextConfig)

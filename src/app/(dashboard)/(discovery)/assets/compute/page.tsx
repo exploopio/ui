@@ -11,7 +11,7 @@ import {
   SortingState,
   useReactTable,
 } from '@tanstack/react-table'
-import { Header, Main } from '@/components/layout'
+import { Main } from '@/components/layout'
 import { PageHeader, StatusBadge, RiskScoreBadge } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -595,8 +595,6 @@ export default function ComputePage() {
 
   return (
     <>
-      <Header fixed />
-
       <Main>
         <PageHeader
           title="Compute"

@@ -14,6 +14,7 @@ import useSWRMutation from 'swr/mutation'
 import { get, post, put, del } from '@/lib/api/client'
 import { handleApiError } from '@/lib/api/error-handler'
 import { useTenant } from '@/context/tenant-provider'
+import { useTenantModules } from './use-tenant-modules'
 import type {
   Integration,
   IntegrationListFilters,
@@ -176,11 +177,16 @@ export function useIntegrationsApi(filters?: IntegrationListFilters, config?: SW
 
 /**
  * Fetch SCM integrations with their extensions
+ * Only fetches if tenant has SCM module enabled (prevents 403 MODULE_NOT_ENABLED)
  */
 export function useSCMIntegrationsApi(config?: SWRConfiguration) {
   const { currentTenant } = useTenant()
+  const { moduleIds, isLoading: modulesLoading } = useTenantModules()
 
-  const key = currentTenant ? `${BASE_URL}/scm` : null
+  const hasSCMModule = moduleIds.includes('scm')
+
+  // Only fetch if SCM module is enabled - prevents 403 MODULE_NOT_ENABLED
+  const key = currentTenant && hasSCMModule && !modulesLoading ? `${BASE_URL}/scm` : null
 
   return useSWR<SCMIntegrationsResponse>(key, fetchSCMIntegrations, {
     ...defaultConfig,

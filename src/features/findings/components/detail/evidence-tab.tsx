@@ -1,10 +1,11 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Separator } from '@/components/ui/separator'
 import {
   Image as ImageIcon,
   Video,
@@ -17,12 +18,19 @@ import {
   ChevronDown,
   ChevronUp,
   Calendar,
-} from "lucide-react";
-import type { Evidence, EvidenceType } from "../../types";
-import { EVIDENCE_TYPE_CONFIG } from "../../types";
+  Layers,
+  MapPin,
+  Link2,
+  FileImage,
+  FileCode,
+  ExternalLink,
+} from 'lucide-react'
+import type { Evidence, EvidenceType, FindingDetail } from '../../types'
+import { EVIDENCE_TYPE_CONFIG } from '../../types'
 
 interface EvidenceTabProps {
-  evidence: Evidence[];
+  evidence: Evidence[]
+  finding?: FindingDetail // Optional: for stack traces and related locations
 }
 
 const EVIDENCE_ICONS: Record<EvidenceType, React.ReactNode> = {
@@ -33,86 +41,100 @@ const EVIDENCE_ICONS: Record<EvidenceType, React.ReactNode> = {
   response: <ArrowDownLeft className="h-4 w-4" />,
   code: <Code className="h-4 w-4" />,
   file: <Paperclip className="h-4 w-4" />,
-};
+}
 
-export function EvidenceTab({ evidence }: EvidenceTabProps) {
-  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+export function EvidenceTab({ evidence, finding }: EvidenceTabProps) {
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
+  const [expandedStacks, setExpandedStacks] = useState<Set<number>>(new Set())
+
+  // Extract stacks, related locations, and attachments from finding
+  const stacks = finding?.stacks || []
+  const relatedLocations = finding?.relatedLocations || []
+  const attachments = finding?.attachments || []
+
+  const toggleStackExpand = (index: number) => {
+    setExpandedStacks((prev) => {
+      const next = new Set(prev)
+      if (next.has(index)) {
+        next.delete(index)
+      } else {
+        next.add(index)
+      }
+      return next
+    })
+  }
 
   const toggleExpand = (id: string) => {
     setExpandedItems((prev) => {
-      const next = new Set(prev);
+      const next = new Set(prev)
       if (next.has(id)) {
-        next.delete(id);
+        next.delete(id)
       } else {
-        next.add(id);
+        next.add(id)
       }
-      return next;
-    });
-  };
+      return next
+    })
+  }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  }
 
   const getInitials = (name: string) => {
     return name
-      .split(" ")
+      .split(' ')
       .map((n) => n[0])
-      .join("")
+      .join('')
       .toUpperCase()
-      .slice(0, 2);
-  };
+      .slice(0, 2)
+  }
 
   const renderEvidenceContent = (item: Evidence) => {
-    const isExpanded = expandedItems.has(item.id);
+    const isExpanded = expandedItems.has(item.id)
 
     switch (item.type) {
-      case "screenshot":
+      case 'screenshot':
         return (
           <div className="bg-muted/30 rounded-lg border p-4">
             <div className="flex aspect-video items-center justify-center rounded bg-neutral-800/50">
               <ImageIcon className="text-muted-foreground h-12 w-12" />
-              <span className="text-muted-foreground ml-2 text-sm">
-                [Screenshot Preview]
-              </span>
+              <span className="text-muted-foreground ml-2 text-sm">[Screenshot Preview]</span>
             </div>
           </div>
-        );
+        )
 
-      case "video":
+      case 'video':
         return (
           <div className="bg-muted/30 rounded-lg border p-4">
             <div className="flex aspect-video items-center justify-center rounded bg-neutral-800/50">
               <Video className="text-muted-foreground h-12 w-12" />
-              <span className="text-muted-foreground ml-2 text-sm">
-                [Video Preview]
-              </span>
+              <span className="text-muted-foreground ml-2 text-sm">[Video Preview]</span>
             </div>
           </div>
-        );
+        )
 
-      case "request":
-      case "response":
-      case "log":
-      case "code":
-        const lines = item.content.split("\n");
-        const previewLines = isExpanded ? lines : lines.slice(0, 8);
-        const hasMore = lines.length > 8;
+      case 'request':
+      case 'response':
+      case 'log':
+      case 'code':
+        const lines = item.content.split('\n')
+        const previewLines = isExpanded ? lines : lines.slice(0, 8)
+        const hasMore = lines.length > 8
 
         return (
           <div className="space-y-2">
             <ScrollArea className="rounded-lg border bg-neutral-900/50 p-4">
               <pre className="font-mono text-xs text-neutral-300">
-                {previewLines.join("\n")}
+                {previewLines.join('\n')}
                 {!isExpanded && hasMore && (
                   <span className="text-muted-foreground">
-                    {"\n"}... ({lines.length - 8} more lines)
+                    {'\n'}... ({lines.length - 8} more lines)
                   </span>
                 )}
               </pre>
@@ -130,16 +152,15 @@ export function EvidenceTab({ evidence }: EvidenceTabProps) {
                   </>
                 ) : (
                   <>
-                    <ChevronDown className="mr-1 h-3 w-3" /> Show All{" "}
-                    {lines.length} Lines
+                    <ChevronDown className="mr-1 h-3 w-3" /> Show All {lines.length} Lines
                   </>
                 )}
               </Button>
             )}
           </div>
-        );
+        )
 
-      case "file":
+      case 'file':
         return (
           <div className="bg-muted/30 flex items-center gap-3 rounded-lg border p-4">
             <Paperclip className="text-muted-foreground h-8 w-8" />
@@ -148,20 +169,25 @@ export function EvidenceTab({ evidence }: EvidenceTabProps) {
               <p className="text-muted-foreground text-xs">{item.mimeType}</p>
             </div>
           </div>
-        );
+        )
 
       default:
         return (
           <div className="bg-muted/30 rounded-lg border p-4">
-            <p className="text-muted-foreground text-sm">
-              {item.content}
-            </p>
+            <p className="text-muted-foreground text-sm">{item.content}</p>
           </div>
-        );
+        )
     }
-  };
+  }
 
-  if (evidence.length === 0) {
+  // Check if there's any content to show
+  const hasEvidence = evidence.length > 0
+  const hasStacks = stacks.length > 0
+  const hasRelatedLocations = relatedLocations.length > 0
+  const hasAttachments = attachments.length > 0
+  const hasAnyContent = hasEvidence || hasStacks || hasRelatedLocations || hasAttachments
+
+  if (!hasAnyContent) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
         <Paperclip className="text-muted-foreground mb-4 h-12 w-12" />
@@ -174,61 +200,286 @@ export function EvidenceTab({ evidence }: EvidenceTabProps) {
           Add Evidence
         </Button>
       </div>
-    );
+    )
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-muted-foreground text-sm">
-          {evidence.length} evidence item{evidence.length !== 1 ? "s" : ""}
-        </h3>
-        <Button size="sm" variant="outline">
-          <Plus className="mr-2 h-4 w-4" />
-          Add Evidence
-        </Button>
-      </div>
+    <div className="space-y-6">
+      {/* Evidence Items */}
+      {hasEvidence && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="flex items-center gap-2 font-semibold">
+              <Paperclip className="h-4 w-4" />
+              Evidence ({evidence.length})
+            </h3>
+            <Button size="sm" variant="outline">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Evidence
+            </Button>
+          </div>
 
-      <div className="space-y-4">
-        {evidence.map((item) => {
-          const typeConfig = EVIDENCE_TYPE_CONFIG[item.type];
+          <div className="space-y-4">
+            {evidence.map((item) => {
+              const typeConfig = EVIDENCE_TYPE_CONFIG[item.type]
 
-          return (
-            <div key={item.id} className="rounded-lg border p-4">
-              <div className="mb-3 flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="bg-muted flex h-8 w-8 items-center justify-center rounded">
-                    {EVIDENCE_ICONS[item.type]}
+              return (
+                <div key={item.id} className="rounded-lg border p-4">
+                  <div className="mb-3 flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-muted flex h-8 w-8 items-center justify-center rounded">
+                        {EVIDENCE_ICONS[item.type]}
+                      </div>
+                      <div>
+                        <h4 className="font-medium">{item.title}</h4>
+                        <div className="text-muted-foreground mt-1 flex items-center gap-2 text-xs">
+                          <Badge variant="outline" className="text-xs">
+                            {typeConfig.label}
+                          </Badge>
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {formatDate(item.createdAt)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-6 w-6">
+                        <AvatarFallback className="text-[10px]">
+                          {getInitials(item.createdBy.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-muted-foreground text-xs">{item.createdBy.name}</span>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="font-medium">{item.title}</h4>
-                    <div className="text-muted-foreground mt-1 flex items-center gap-2 text-xs">
-                      <Badge variant="outline" className="text-xs">
-                        {typeConfig.label}
-                      </Badge>
-                      <span className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {formatDate(item.createdAt)}
-                      </span>
+                  {renderEvidenceContent(item)}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Stack Traces */}
+      {hasStacks && (
+        <>
+          {hasEvidence && <Separator />}
+          <div className="space-y-4">
+            <h3 className="flex items-center gap-2 font-semibold">
+              <Layers className="h-4 w-4" />
+              Stack Traces ({stacks.length})
+            </h3>
+
+            <div className="space-y-3">
+              {stacks.map((stack, stackIndex) => {
+                const isExpanded = expandedStacks.has(stackIndex)
+                const frames = stack.frames || []
+                const displayFrames = isExpanded ? frames : frames.slice(0, 3)
+                const hasMoreFrames = frames.length > 3
+
+                return (
+                  <div key={stackIndex} className="rounded-lg border">
+                    {stack.message && (
+                      <div className="border-b bg-muted/30 px-4 py-2">
+                        <p className="text-sm font-medium">{stack.message}</p>
+                      </div>
+                    )}
+                    <div className="p-4">
+                      <div className="space-y-2">
+                        {displayFrames.map((frame, frameIndex) => (
+                          <div
+                            key={frameIndex}
+                            className="flex items-start gap-2 text-sm font-mono"
+                          >
+                            <span className="text-muted-foreground w-6 text-right">
+                              {frameIndex + 1}.
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              {frame.location?.path && (
+                                <span className="text-blue-400 break-all">
+                                  {frame.location.path}
+                                  {frame.location.start_line && (
+                                    <span className="text-muted-foreground">
+                                      :{frame.location.start_line}
+                                      {frame.location.start_column &&
+                                        `:${frame.location.start_column}`}
+                                    </span>
+                                  )}
+                                </span>
+                              )}
+                              {frame.module && (
+                                <span className="text-muted-foreground ml-2">({frame.module})</span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      {hasMoreFrames && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="mt-2 w-full text-xs"
+                          onClick={() => toggleStackExpand(stackIndex)}
+                        >
+                          {isExpanded ? (
+                            <>
+                              <ChevronUp className="mr-1 h-3 w-3" /> Show Less
+                            </>
+                          ) : (
+                            <>
+                              <ChevronDown className="mr-1 h-3 w-3" /> Show All {frames.length}{' '}
+                              Frames
+                            </>
+                          )}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Related Locations */}
+      {hasRelatedLocations && (
+        <>
+          {(hasEvidence || hasStacks) && <Separator />}
+          <div className="space-y-4">
+            <h3 className="flex items-center gap-2 font-semibold">
+              <MapPin className="h-4 w-4" />
+              Related Locations ({relatedLocations.length})
+            </h3>
+
+            <div className="space-y-2">
+              {relatedLocations.map((loc, index) => (
+                <div key={loc.id || index} className="rounded-lg border bg-muted/30 p-3">
+                  <div className="flex items-start gap-3">
+                    <div className="bg-muted flex h-6 w-6 items-center justify-center rounded text-xs font-mono">
+                      {loc.id || index + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      {loc.path ? (
+                        <p className="text-sm font-mono text-blue-400 break-all">
+                          {loc.path}
+                          {loc.start_line && (
+                            <span className="text-muted-foreground">
+                              :{loc.start_line}
+                              {loc.start_column && `:${loc.start_column}`}
+                            </span>
+                          )}
+                        </p>
+                      ) : (
+                        <p className="text-sm font-mono text-muted-foreground">
+                          Location {index + 1}
+                        </p>
+                      )}
+                      {loc.message && (
+                        <p className="text-muted-foreground text-sm mt-1">{loc.message}</p>
+                      )}
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Avatar className="h-6 w-6">
-                    <AvatarFallback className="text-[10px]">
-                      {getInitials(item.createdBy.name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-muted-foreground text-xs">
-                    {item.createdBy.name}
-                  </span>
-                </div>
-              </div>
-              {renderEvidenceContent(item)}
+              ))}
             </div>
-          );
-        })}
-      </div>
+          </div>
+        </>
+      )}
+
+      {/* Attachments */}
+      {hasAttachments && (
+        <>
+          {(hasEvidence || hasStacks || hasRelatedLocations) && <Separator />}
+          <div className="space-y-4">
+            <h3 className="flex items-center gap-2 font-semibold">
+              <Link2 className="h-4 w-4" />
+              Attachments ({attachments.length})
+            </h3>
+
+            <div className="space-y-2">
+              {attachments.map((attachment, index) => {
+                const uri = attachment.artifact_location?.uri
+                const isExternal = uri?.startsWith('http://') || uri?.startsWith('https://')
+
+                // Get icon based on attachment type
+                const getAttachmentIcon = () => {
+                  switch (attachment.type) {
+                    case 'screenshot':
+                      return <FileImage className="h-4 w-4" />
+                    case 'code':
+                      return <FileCode className="h-4 w-4" />
+                    case 'document':
+                      return <FileText className="h-4 w-4" />
+                    case 'reference':
+                    case 'evidence':
+                      return <ExternalLink className="h-4 w-4" />
+                    default:
+                      return <Paperclip className="h-4 w-4" />
+                  }
+                }
+
+                // Get type label
+                const getTypeLabel = () => {
+                  switch (attachment.type) {
+                    case 'evidence':
+                      return 'Evidence'
+                    case 'screenshot':
+                      return 'Screenshot'
+                    case 'document':
+                      return 'Document'
+                    case 'reference':
+                      return 'Reference'
+                    case 'code':
+                      return 'Code'
+                    default:
+                      return 'Attachment'
+                  }
+                }
+
+                return (
+                  <div key={index} className="rounded-lg border bg-muted/30 p-3">
+                    <div className="flex items-start gap-3">
+                      <div className="bg-muted flex h-8 w-8 items-center justify-center rounded">
+                        {getAttachmentIcon()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs">
+                            {getTypeLabel()}
+                          </Badge>
+                        </div>
+                        {attachment.description && (
+                          <p className="text-sm mt-1">{attachment.description}</p>
+                        )}
+                        {uri && (
+                          <div className="mt-2">
+                            {isExternal ? (
+                              <a
+                                href={uri}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm text-blue-400 hover:underline break-all inline-flex items-center gap-1"
+                              >
+                                {uri}
+                                <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                              </a>
+                            ) : (
+                              <p className="text-sm font-mono text-muted-foreground break-all">
+                                {uri}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </>
+      )}
     </div>
-  );
+  )
 }

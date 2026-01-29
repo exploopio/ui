@@ -61,8 +61,7 @@ export function requiresAuth(pathname: string): boolean {
  */
 export function isAuthenticated(req: NextRequest): boolean {
   // Check for local auth token
-  const localAuthCookieName =
-    process.env.NEXT_PUBLIC_AUTH_COOKIE_NAME || 'auth_token'
+  const localAuthCookieName = process.env.NEXT_PUBLIC_AUTH_COOKIE_NAME || 'auth_token'
   const localAuthToken = req.cookies.get(localAuthCookieName)
 
   if (localAuthToken?.value) {
@@ -70,8 +69,7 @@ export function isAuthenticated(req: NextRequest): boolean {
   }
 
   // Check for local auth refresh token
-  const localRefreshCookieName =
-    process.env.NEXT_PUBLIC_REFRESH_COOKIE_NAME || 'refresh_token'
+  const localRefreshCookieName = process.env.NEXT_PUBLIC_REFRESH_COOKIE_NAME || 'refresh_token'
   const localRefreshToken = req.cookies.get(localRefreshCookieName)
 
   if (localRefreshToken?.value) {
@@ -168,8 +166,21 @@ export function handleAuth(req: NextRequest): NextResponse | null {
     const response = NextResponse.redirect(loginUrl)
 
     // Clear cookies that might cause issues (e.g. tenant selection loop)
+    // IMPORTANT: Must use .set() with maxAge: 0 and specify path to properly clear
+    // Using .delete() alone doesn't work because the cookie was set with path: '/'
     const tenantCookieName = process.env.NEXT_PUBLIC_TENANT_COOKIE_NAME || 'app_tenant'
-    response.cookies.delete(tenantCookieName)
+    response.cookies.set(tenantCookieName, '', {
+      maxAge: 0,
+      path: '/',
+    })
+
+    // Also clear pending tenants cookie to prevent stale state
+    const pendingTenantsCookieName =
+      process.env.NEXT_PUBLIC_PENDING_TENANTS_COOKIE_NAME || 'app_pending_tenants'
+    response.cookies.set(pendingTenantsCookieName, '', {
+      maxAge: 0,
+      path: '/',
+    })
 
     return response
   }

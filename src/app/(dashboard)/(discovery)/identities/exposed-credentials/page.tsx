@@ -1,6 +1,6 @@
 'use client'
 
-import { Header, Main } from '@/components/layout'
+import { Main } from '@/components/layout'
 import { PageHeader } from '@/features/shared'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { KeyRound, FileCode, FileText, Globe } from 'lucide-react'
@@ -44,8 +44,6 @@ const exposedCredentialStats = [
 export default function ExposedCredentialsPage() {
   return (
     <>
-      <Header fixed />
-
       <Main>
         <PageHeader
           title="Exposed Credentials"

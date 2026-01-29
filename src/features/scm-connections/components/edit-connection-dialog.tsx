@@ -1,13 +1,13 @@
-"use client";
+'use client'
 
-import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, Settings, Eye, EyeOff } from "lucide-react";
-import { toast } from "sonner";
-import { z } from "zod";
+import { useState, useEffect } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { Loader2, Settings, Eye, EyeOff } from 'lucide-react'
+import { toast } from 'sonner'
+import { z } from 'zod'
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -15,7 +15,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog'
 import {
   Form,
   FormControl,
@@ -24,40 +24,48 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+} from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
 
-import { ProviderIcon } from "./provider-icon";
-import type { Integration } from "@/features/integrations";
-import { SCM_PROVIDER_LABELS } from "@/features/assets/types/asset.types";
+import { ProviderIcon } from './provider-icon'
+import type { Integration } from '@/features/integrations'
+import type { SCMConnection } from '@/features/repositories/types/repository.types'
+import { SCM_PROVIDER_LABELS } from '@/features/assets/types/asset.types'
 import {
   useUpdateIntegrationApi,
   useTestIntegrationApi,
   invalidateSCMIntegrationsCache,
-} from "@/features/integrations";
+} from '@/features/integrations'
+
+// Helper to get scmOrganization from either Integration or SCMConnection
+function getScmOrganization(connection: Integration | SCMConnection): string {
+  // SCMConnection uses camelCase
+  if ('scmOrganization' in connection && connection.scmOrganization) {
+    return connection.scmOrganization
+  }
+  // Integration uses scm_extension
+  if ('scm_extension' in connection && connection.scm_extension?.scm_organization) {
+    return connection.scm_extension.scm_organization
+  }
+  return ''
+}
 
 const editConnectionSchema = z.object({
-  name: z
-    .string()
-    .min(1, "Name is required")
-    .max(100, "Name must be less than 100 characters"),
-  accessToken: z
-    .string()
-    .max(500, "Token is too long")
-    .optional(),
+  name: z.string().min(1, 'Name is required').max(100, 'Name must be less than 100 characters'),
+  accessToken: z.string().max(500, 'Token is too long').optional(),
   scmOrganization: z
     .string()
-    .max(100, "Organization name must be less than 100 characters")
+    .max(100, 'Organization name must be less than 100 characters')
     .optional(),
-});
+})
 
-type EditConnectionFormData = z.infer<typeof editConnectionSchema>;
+type EditConnectionFormData = z.infer<typeof editConnectionSchema>
 
 interface EditConnectionDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  connection: Integration;
-  onSuccess?: () => void;
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  connection: Integration | SCMConnection
+  onSuccess?: () => void
 }
 
 export function EditConnectionDialog({
@@ -66,90 +74,97 @@ export function EditConnectionDialog({
   connection,
   onSuccess,
 }: EditConnectionDialogProps) {
-  const [showToken, setShowToken] = useState(false);
+  const [showToken, setShowToken] = useState(false)
+
+  const initialScmOrganization = getScmOrganization(connection)
 
   const form = useForm<EditConnectionFormData>({
     resolver: zodResolver(editConnectionSchema),
     defaultValues: {
       name: connection.name,
-      accessToken: "",
-      scmOrganization: connection.scm_extension?.scm_organization || "",
+      accessToken: '',
+      scmOrganization: initialScmOrganization,
     },
-  });
+  })
 
-  const { trigger: updateConnection, isMutating: isUpdating } = useUpdateIntegrationApi(connection.id);
-  const { trigger: validateConnection, isMutating: isValidating } = useTestIntegrationApi(connection.id);
+  const { trigger: updateConnection, isMutating: isUpdating } = useUpdateIntegrationApi(
+    connection.id
+  )
+  const { trigger: validateConnection, isMutating: isValidating } = useTestIntegrationApi(
+    connection.id
+  )
 
   // Reset form when dialog opens or connection changes
   useEffect(() => {
     if (open) {
       form.reset({
         name: connection.name,
-        accessToken: "",
-        scmOrganization: connection.scm_extension?.scm_organization || "",
-      });
-      setShowToken(false);
+        accessToken: '',
+        scmOrganization: getScmOrganization(connection),
+      })
+      setShowToken(false)
     }
-  }, [open, connection, form]);
+  }, [open, connection, form])
 
   const onSubmit = async (data: EditConnectionFormData) => {
     try {
       // Only include fields that have changed
-      const updateData: { name?: string; credentials?: string; scm_organization?: string } = {};
+      const updateData: { name?: string; credentials?: string; scm_organization?: string } = {}
+      const currentScmOrganization = getScmOrganization(connection)
 
       if (data.name !== connection.name) {
-        updateData.name = data.name;
+        updateData.name = data.name
       }
       if (data.accessToken && data.accessToken.length > 0) {
-        updateData.credentials = data.accessToken;
+        updateData.credentials = data.accessToken
       }
-      if (data.scmOrganization !== (connection.scm_extension?.scm_organization || "")) {
-        updateData.scm_organization = data.scmOrganization || undefined;
+      if (data.scmOrganization !== currentScmOrganization) {
+        updateData.scm_organization = data.scmOrganization || undefined
       }
 
       // Only call API if there are changes
       if (Object.keys(updateData).length === 0) {
-        toast.info("No changes to save");
-        onOpenChange(false);
-        return;
+        toast.info('No changes to save')
+        onOpenChange(false)
+        return
       }
 
-      await updateConnection(updateData);
+      await updateConnection(updateData)
 
       // If token was updated, test the connection
       if (updateData.credentials) {
-        toast.info("Testing updated credentials...");
+        toast.info('Testing updated credentials...')
         try {
-          const result = await validateConnection();
-          if (result?.status === "connected") {
-            toast.success(`Connection "${data.name}" updated and verified successfully`);
+          const result = await validateConnection()
+          if (result?.status === 'connected') {
+            toast.success(`Connection "${data.name}" updated and verified successfully`)
           } else {
-            toast.warning(`Connection updated but verification failed: ${result?.status_message || "Unknown error"}`);
+            toast.warning(
+              `Connection updated but verification failed: ${result?.status_message || 'Unknown error'}`
+            )
           }
         } catch {
-          toast.warning("Connection updated but verification failed");
+          toast.warning('Connection updated but verification failed')
         }
       } else {
-        toast.success(`Connection "${data.name}" updated successfully`);
+        toast.success(`Connection "${data.name}" updated successfully`)
       }
 
-      await invalidateSCMIntegrationsCache();
-      onOpenChange(false);
-      onSuccess?.();
+      await invalidateSCMIntegrationsCache()
+      onOpenChange(false)
+      onSuccess?.()
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to update connection"
-      );
+      toast.error(error instanceof Error ? error.message : 'Failed to update connection')
     }
-  };
+  }
 
   const handleClose = () => {
-    form.reset();
-    setShowToken(false);
-    onOpenChange(false);
-  };
+    form.reset()
+    setShowToken(false)
+    onOpenChange(false)
+  }
 
-  const isSaving = isUpdating || isValidating;
+  const isSaving = isUpdating || isValidating
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -161,7 +176,8 @@ export function EditConnectionDialog({
           </DialogTitle>
           <DialogDescription className="flex items-center gap-2">
             <ProviderIcon provider={connection.provider} className="h-4 w-4" />
-            {SCM_PROVIDER_LABELS[connection.provider as keyof typeof SCM_PROVIDER_LABELS] || connection.provider}
+            {SCM_PROVIDER_LABELS[connection.provider as keyof typeof SCM_PROVIDER_LABELS] ||
+              connection.provider}
           </DialogDescription>
         </DialogHeader>
 
@@ -175,14 +191,9 @@ export function EditConnectionDialog({
                 <FormItem>
                   <FormLabel>Connection Name</FormLabel>
                   <FormControl>
-                    <Input
-                      placeholder="e.g., My GitHub Enterprise"
-                      {...field}
-                    />
+                    <Input placeholder="e.g., My GitHub Enterprise" {...field} />
                   </FormControl>
-                  <FormDescription>
-                    A friendly name to identify this connection
-                  </FormDescription>
+                  <FormDescription>A friendly name to identify this connection</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -196,10 +207,7 @@ export function EditConnectionDialog({
                 <FormItem>
                   <FormLabel>Organization / Group (Optional)</FormLabel>
                   <FormControl>
-                    <Input
-                      placeholder="e.g., my-org"
-                      {...field}
-                    />
+                    <Input placeholder="e.g., my-org" {...field} />
                   </FormControl>
                   <FormDescription>
                     Limit repositories to a specific organization or group
@@ -219,7 +227,7 @@ export function EditConnectionDialog({
                   <FormControl>
                     <div className="relative">
                       <Input
-                        type={showToken ? "text" : "password"}
+                        type={showToken ? 'text' : 'password'}
                         placeholder="Leave empty to keep current token"
                         className="pr-10"
                         {...field}
@@ -248,18 +256,11 @@ export function EditConnectionDialog({
             />
 
             <DialogFooter className="gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleClose}
-                disabled={isSaving}
-              >
+              <Button type="button" variant="outline" onClick={handleClose} disabled={isSaving}>
                 Cancel
               </Button>
               <Button type="submit" disabled={isSaving}>
-                {isSaving ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : null}
+                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 Save Changes
               </Button>
             </DialogFooter>
@@ -267,5 +268,5 @@ export function EditConnectionDialog({
         </Form>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

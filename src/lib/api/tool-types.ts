@@ -40,6 +40,17 @@ export const EXECUTION_STATUSES = [
 export type ExecutionStatus = (typeof EXECUTION_STATUSES)[number];
 
 /**
+ * Embedded category info for tool grouping in UI
+ */
+export interface EmbeddedCategory {
+  id: string;
+  name: string; // slug: 'sast', 'dast', etc.
+  display_name: string; // 'SAST', 'DAST', etc.
+  icon: string;
+  color: string;
+}
+
+/**
  * Tool entity - System-wide tool definition
  */
 export interface Tool {
@@ -50,6 +61,7 @@ export interface Tool {
   description?: string;
   logo_url?: string;
   category_id?: string; // Foreign key to tool_categories table
+  category?: EmbeddedCategory; // Embedded category info for UI grouping
   install_method: InstallMethod;
   install_cmd?: string;
   update_cmd?: string;
@@ -215,6 +227,7 @@ export interface ToolWithConfig {
   tenant_config?: TenantToolConfig;
   effective_config: Record<string, unknown>;
   is_enabled: boolean;
+  is_available: boolean; // True if at least one agent (tenant or platform) supports this tool
 }
 
 /**

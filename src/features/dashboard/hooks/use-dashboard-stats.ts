@@ -3,7 +3,6 @@
 import useSWR from 'swr'
 import { get } from '@/lib/api/client'
 import { endpoints } from '@/lib/api/endpoints'
-import { useTenant } from '@/context/tenant-provider'
 import { usePermissions, Permission } from '@/lib/permissions'
 
 // Types matching backend response
@@ -123,7 +122,7 @@ export function useDashboardStats(tenantId: string | null) {
 
   const { data, error, isLoading, mutate } = useSWR<DashboardStatsResponse>(
     shouldFetch ? ['dashboard-stats', tenantId] : null,
-    () => get<DashboardStatsResponse>(endpoints.dashboard.stats(tenantId!)),
+    () => get<DashboardStatsResponse>(endpoints.dashboard.stats()),
     {
       revalidateOnFocus: false,
       dedupingInterval: 30000, // 30 seconds
@@ -138,34 +137,7 @@ export function useDashboardStats(tenantId: string | null) {
   }
 }
 
-/**
- * Hook to fetch global dashboard statistics (not tenant-scoped)
- * Only fetches if user has dashboard:read permission
- */
-export function useGlobalDashboardStats() {
-  const { currentTenant } = useTenant()
-  const { can } = usePermissions()
-  const canReadDashboard = can(Permission.DashboardRead)
 
-  // Only fetch if user has permission and tenant context
-  const shouldFetch = currentTenant && canReadDashboard
-
-  const { data, error, isLoading, mutate } = useSWR<DashboardStatsResponse>(
-    shouldFetch ? 'dashboard-global-stats' : null,
-    () => get<DashboardStatsResponse>(endpoints.dashboard.globalStats()),
-    {
-      revalidateOnFocus: false,
-      dedupingInterval: 30000, // 30 seconds
-    }
-  )
-
-  return {
-    stats: data ? transformStats(data) : emptyStats,
-    isLoading: shouldFetch ? isLoading : false,
-    error,
-    mutate,
-  }
-}
 
 /**
  * Hook to get recent activity from dashboard stats

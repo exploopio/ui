@@ -103,6 +103,9 @@ export interface AuditLogFilters {
   search?: string
   page?: number
   per_page?: number
+  sort_by?: string
+  sort_order?: 'asc' | 'desc'
+  exclude_system?: boolean
 }
 
 // ============================================

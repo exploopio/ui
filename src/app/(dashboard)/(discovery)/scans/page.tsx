@@ -11,7 +11,7 @@ import {
   SortingState,
   useReactTable,
 } from '@tanstack/react-table'
-import { Header, Main } from '@/components/layout'
+import { Main } from '@/components/layout'
 import { PageHeader, StatusBadge } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -70,6 +70,8 @@ import {
   Copy,
   Tag,
   Settings,
+  Cloud,
+  Server,
 } from 'lucide-react'
 import { Can, Permission } from '@/lib/permissions'
 import { useScanConfigs, useScanConfigStats } from '@/lib/api/scan-hooks'
@@ -83,7 +85,8 @@ import {
 import type { ScanConfig, ScanConfigStatus, ScanType as ApiScanType } from '@/lib/api/scan-types'
 // Mock data for Runs tab
 import { mockScans, getScanStats } from '@/features/scans/lib/mock-data'
-import { SCAN_TYPE_CONFIG } from '@/features/scans/types'
+import { SCAN_TYPE_CONFIG, AGENT_TYPE_CONFIG } from '@/features/scans/types'
+import { PlatformUsageCard } from '@/features/scans/components'
 import type { Scan, ScanType as MockScanType } from '@/features/scans/types'
 
 // ============================================
@@ -164,8 +167,6 @@ export default function ScansPage() {
 
   return (
     <>
-      <Header fixed />
-
       <Main>
         <PageHeader
           title="Scan Management"
@@ -896,13 +897,12 @@ function ConfigDetailSheet({ config, onClose }: ConfigDetailSheetProps) {
     <>
       {/* Hero Header */}
       <div
-        className={`px-6 pt-6 pb-4 ${
-          config.status === 'active'
+        className={`px-6 pt-6 pb-4 ${config.status === 'active'
             ? 'bg-gradient-to-br from-blue-500/20 via-blue-500/10 to-transparent'
             : config.status === 'paused'
               ? 'bg-gradient-to-br from-yellow-500/20 via-yellow-500/10 to-transparent'
               : 'bg-gradient-to-br from-gray-500/20 via-gray-500/10 to-transparent'
-        }`}
+          }`}
       >
         {/* Status & Type Row */}
         <div className="flex items-center justify-between mb-3">
@@ -931,30 +931,28 @@ function ConfigDetailSheet({ config, onClose }: ConfigDetailSheetProps) {
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium">Success Rate</span>
             <span
-              className={`text-2xl font-bold ${
-                progress >= 80
+              className={`text-2xl font-bold ${progress >= 80
                   ? 'text-green-500'
                   : progress >= 50
                     ? 'text-yellow-500'
                     : progress === 0
                       ? 'text-muted-foreground'
                       : 'text-red-500'
-              }`}
+                }`}
             >
               {progress}%
             </span>
           </div>
           <Progress
             value={progress}
-            className={`h-3 ${
-              config.status === 'active'
+            className={`h-3 ${config.status === 'active'
                 ? '[&>div]:animate-pulse [&>div]:bg-blue-500'
                 : progress >= 80
                   ? '[&>div]:bg-green-500'
                   : progress >= 50
                     ? '[&>div]:bg-yellow-500'
                     : '[&>div]:bg-red-500'
-            }`}
+              }`}
           />
           <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
             <span>{config.total_runs} total runs</span>
@@ -1490,6 +1488,41 @@ function RunsTab() {
         },
       },
       {
+        accessorKey: 'agentType',
+        header: 'Agent',
+        cell: ({ row }) => {
+          const scan = row.original
+          const isPlatform = scan.agentType === 'platform'
+          const hasPendingQueue = scan.queuePosition !== undefined && scan.status === 'pending'
+
+          if (hasPendingQueue) {
+            return (
+              <div className="flex items-center gap-1.5">
+                <Cloud className="h-4 w-4 text-purple-500" />
+                <span className="text-xs text-muted-foreground">Queue #{scan.queuePosition}</span>
+              </div>
+            )
+          }
+
+          if (!scan.agentType) {
+            return <span className="text-muted-foreground text-xs">-</span>
+          }
+
+          return (
+            <div className="flex items-center gap-1.5">
+              {isPlatform ? (
+                <Cloud className="h-4 w-4 text-purple-500" />
+              ) : (
+                <Server className="h-4 w-4 text-blue-500" />
+              )}
+              <span className="text-xs truncate max-w-[100px]">
+                {scan.agentName || AGENT_TYPE_CONFIG[scan.agentType].label}
+              </span>
+            </div>
+          )
+        },
+      },
+      {
         accessorKey: 'createdByName',
         header: 'Created By',
         cell: ({ row }) => (
@@ -1539,7 +1572,7 @@ function RunsTab() {
   return (
     <>
       {/* Stats Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
         <Card
           className="cursor-pointer hover:border-primary transition-colors"
           onClick={() => setStatusFilter('all')}
@@ -1597,6 +1630,7 @@ function RunsTab() {
             <CardTitle className="text-3xl">{stats.totalFindings}</CardTitle>
           </CardHeader>
         </Card>
+        <PlatformUsageCard variant="compact" />
       </div>
 
       {/* Table Card */}
@@ -1860,15 +1894,14 @@ function RunDetailSheet({ run }: RunDetailSheetProps) {
     <>
       {/* Hero Header */}
       <div
-        className={`px-6 pt-6 pb-4 ${
-          run.status === 'active'
+        className={`px-6 pt-6 pb-4 ${run.status === 'active'
             ? 'bg-gradient-to-br from-blue-500/20 via-blue-500/10 to-transparent'
             : run.status === 'completed'
               ? 'bg-gradient-to-br from-green-500/20 via-green-500/10 to-transparent'
               : run.status === 'pending'
                 ? 'bg-gradient-to-br from-yellow-500/20 via-yellow-500/10 to-transparent'
                 : 'bg-gradient-to-br from-red-500/20 via-red-500/10 to-transparent'
-        }`}
+          }`}
       >
         {/* Status & Type Row */}
         <div className="flex items-center justify-between mb-3">
@@ -1898,28 +1931,26 @@ function RunDetailSheet({ run }: RunDetailSheetProps) {
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium">Progress</span>
             <span
-              className={`text-2xl font-bold ${
-                run.progress === 100
+              className={`text-2xl font-bold ${run.progress === 100
                   ? 'text-green-500'
                   : run.status === 'failed'
                     ? 'text-red-500'
                     : 'text-blue-500'
-              }`}
+                }`}
             >
               {run.progress}%
             </span>
           </div>
           <Progress
             value={run.progress}
-            className={`h-3 ${
-              run.status === 'active'
+            className={`h-3 ${run.status === 'active'
                 ? '[&>div]:animate-pulse [&>div]:bg-blue-500'
                 : run.progress === 100
                   ? '[&>div]:bg-green-500'
                   : run.status === 'failed'
                     ? '[&>div]:bg-red-500'
                     : '[&>div]:bg-yellow-500'
-            }`}
+              }`}
           />
           <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
             <span>{run.targetCount} targets</span>
@@ -2114,6 +2145,48 @@ function RunDetailSheet({ run }: RunDetailSheetProps) {
                 <p className="font-medium">{run.createdByName}</p>
                 <p className="text-xs text-muted-foreground">{formatDate(run.createdAt)}</p>
               </div>
+            </div>
+          </div>
+
+          {/* Agent Info */}
+          <div className="rounded-xl border p-4 bg-card">
+            <h4 className="text-sm font-medium mb-3">Agent Information</h4>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Preference</span>
+                <Badge variant="outline" className="capitalize">
+                  {run.agentPreference}
+                </Badge>
+              </div>
+              {run.agentType && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Agent Type</span>
+                  <div className="flex items-center gap-1.5">
+                    {run.agentType === 'platform' ? (
+                      <Cloud className="h-4 w-4 text-purple-500" />
+                    ) : (
+                      <Server className="h-4 w-4 text-blue-500" />
+                    )}
+                    <span className="text-sm font-medium">
+                      {AGENT_TYPE_CONFIG[run.agentType].label}
+                    </span>
+                  </div>
+                </div>
+              )}
+              {run.agentName && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Agent Name</span>
+                  <span className="text-sm font-medium truncate max-w-[150px]">
+                    {run.agentName}
+                  </span>
+                </div>
+              )}
+              {run.queuePosition !== undefined && run.status === 'pending' && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Queue Position</span>
+                  <Badge className="bg-purple-500">#{run.queuePosition}</Badge>
+                </div>
+              )}
             </div>
           </div>
 

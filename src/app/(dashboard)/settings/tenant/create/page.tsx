@@ -6,15 +6,13 @@
  * Page for creating a new team/tenant
  */
 
-import { Header, Main } from '@/components/layout'
+import { Main } from '@/components/layout'
 import { PageHeader } from '@/features/shared'
 import { CreateTeamForm } from '@/features/tenant'
 
 export default function CreateTeamPage() {
   return (
     <>
-      <Header fixed />
-
       <Main>
         <PageHeader
           title="Create New Team"

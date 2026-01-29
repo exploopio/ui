@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Header, Main } from '@/components/layout'
+import { Main } from '@/components/layout'
 import { PageHeader } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -143,8 +143,6 @@ export default function StoragePage() {
 
   return (
     <>
-      <Header fixed />
-
       <Main>
         <PageHeader title="Storage" description="S3 buckets, Azure Blobs, and GCS buckets" />
 

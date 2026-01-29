@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Header, Main } from '@/components/layout'
+import { Main } from '@/components/layout'
 import { PageHeader } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -51,6 +51,7 @@ import {
   ArrowLeft,
   ExternalLink,
   Clock,
+  Lock,
 } from 'lucide-react'
 import {
   AddConnectionDialog,
@@ -59,8 +60,12 @@ import {
   ProviderIcon,
   SCM_PROVIDER_COLORS,
 } from '@/features/scm-connections'
-import { useSCMIntegrationsApi, invalidateSCMIntegrationsCache } from '@/features/integrations'
-import type { Integration } from '@/features/integrations'
+import {
+  useSCMConnections,
+  invalidateSCMConnectionsCache,
+} from '@/features/repositories/hooks/use-repositories'
+import type { SCMConnection } from '@/features/repositories/types/repository.types'
+import { useHasModule } from '@/features/integrations/api/use-tenant-modules'
 import { cn } from '@/lib/utils'
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
@@ -99,33 +104,38 @@ export default function SCMConnectionsPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [syncDialogOpen, setSyncDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [selectedConnection, setSelectedConnection] = useState<Integration | null>(null)
+  const [selectedConnection, setSelectedConnection] = useState<SCMConnection | null>(null)
   const [actionInProgress, setActionInProgress] = useState<string | null>(null)
 
-  const { data: connectionsData, error, isLoading, mutate } = useSCMIntegrationsApi()
+  // Check if SCM module is enabled for this tenant
+  const { hasModule: hasSCMModule, isLoading: moduleLoading } = useHasModule('scm')
 
-  // Handle the API response format
+  // Fetch SCM connections - this hook handles module check internally
+  const { data: connectionsData, error, isLoading: dataLoading, mutate } = useSCMConnections()
+
+  // Combined loading state
+  const isLoading = moduleLoading || dataLoading
+
+  // Handle the API response format - useSCMConnections returns SCMConnection[] directly
   const connections = useMemo(() => {
     if (!connectionsData) return []
-    return connectionsData.data ?? []
+    // Handle both array format and { data: [...] } format
+    return Array.isArray(connectionsData) ? connectionsData : []
   }, [connectionsData])
 
-  // Calculate stats
+  // Calculate stats - SCMConnection uses repositoryCount (camelCase)
   const stats = useMemo(() => {
     const total = connections.length
     const connected = connections.filter((c) => c.status === 'connected').length
     const errorCount = connections.filter((c) => c.status === 'error').length
-    const totalRepos = connections.reduce(
-      (sum, c) => sum + (c.scm_extension?.repository_count || 0),
-      0
-    )
+    const totalRepos = connections.reduce((sum, c) => sum + (c.repositoryCount || 0), 0)
     return { total, connected, error: errorCount, totalRepos }
   }, [connections])
 
   const handleRefresh = useCallback(async () => {
     setActionInProgress('refresh')
     try {
-      await invalidateSCMIntegrationsCache()
+      await invalidateSCMConnectionsCache()
       await mutate()
       toast.success('Connections refreshed')
     } catch {
@@ -136,7 +146,7 @@ export default function SCMConnectionsPage() {
   }, [mutate])
 
   const handleTestConnection = useCallback(
-    async (connection: Integration) => {
+    async (connection: SCMConnection) => {
       setActionInProgress(connection.id)
       try {
         const response = await fetch(`/api/v1/integrations/${connection.id}/test`, {
@@ -168,7 +178,7 @@ export default function SCMConnectionsPage() {
       })
       if (!response.ok) throw new Error('Delete failed')
       toast.success(`Connection "${selectedConnection.name}" deleted`)
-      await invalidateSCMIntegrationsCache()
+      await invalidateSCMConnectionsCache()
       await mutate()
     } catch {
       toast.error('Failed to delete connection')
@@ -179,47 +189,82 @@ export default function SCMConnectionsPage() {
     }
   }, [selectedConnection, mutate])
 
-  const handleEditClick = (connection: Integration) => {
+  const handleEditClick = (connection: SCMConnection) => {
     setSelectedConnection(connection)
     setEditDialogOpen(true)
   }
 
-  const handleSyncClick = (connection: Integration) => {
+  const handleSyncClick = (connection: SCMConnection) => {
     setSelectedConnection(connection)
     setSyncDialogOpen(true)
   }
 
-  const handleDeleteClick = (connection: Integration) => {
+  const handleDeleteClick = (connection: SCMConnection) => {
     setSelectedConnection(connection)
     setDeleteDialogOpen(true)
+  }
+
+  // Module not enabled state
+  if (!moduleLoading && !hasSCMModule) {
+    return (
+      <Main>
+        {/* Breadcrumb */}
+        <div className="mb-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-2 -ml-2 text-muted-foreground hover:text-foreground"
+            onClick={() => router.push('/settings/integrations')}
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Integrations
+          </Button>
+        </div>
+
+        <PageHeader
+          title="SCM Connections"
+          description="Manage connections to your source code management providers"
+        />
+
+        <div className="mt-12 flex flex-col items-center justify-center py-12">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted mb-6">
+            <Lock className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <h2 className="text-xl font-semibold mb-2">SCM Module Not Available</h2>
+          <p className="text-muted-foreground mb-6 max-w-md text-center">
+            The Source Code Management (SCM) module is not enabled for your organization. Contact
+            your administrator to enable this feature.
+          </p>
+          <Button variant="outline" onClick={() => router.push('/settings/integrations')}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Integrations
+          </Button>
+        </div>
+      </Main>
+    )
   }
 
   // Error state
   if (error) {
     return (
-      <>
-        <Header fixed />
-        <Main>
-          <div className="flex flex-col items-center justify-center py-20">
-            <AlertCircle className="h-12 w-12 text-destructive mb-4" />
-            <h2 className="text-lg font-semibold mb-2">Failed to load SCM connections</h2>
-            <p className="text-muted-foreground mb-4">
-              {error?.message || 'An unexpected error occurred'}
-            </p>
-            <Button onClick={() => mutate()}>
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Retry
-            </Button>
-          </div>
-        </Main>
-      </>
+      <Main>
+        <div className="flex flex-col items-center justify-center py-20">
+          <AlertCircle className="h-12 w-12 text-destructive mb-4" />
+          <h2 className="text-lg font-semibold mb-2">Failed to load SCM connections</h2>
+          <p className="text-muted-foreground mb-4">
+            {error?.message || 'An unexpected error occurred'}
+          </p>
+          <Button onClick={() => mutate()}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Retry
+          </Button>
+        </div>
+      </Main>
     )
   }
 
   return (
     <>
-      <Header fixed />
-
       <Main>
         {/* Breadcrumb */}
         <div className="mb-4">
@@ -380,7 +425,7 @@ export default function SCMConnectionsPage() {
                               <div>
                                 <p className="font-medium">{connection.name}</p>
                                 <p className="text-xs text-muted-foreground truncate max-w-[200px]">
-                                  {connection.base_url}
+                                  {connection.baseUrl}
                                 </p>
                               </div>
                             </div>
@@ -391,18 +436,16 @@ export default function SCMConnectionsPage() {
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <span className="text-sm">
-                              {connection.scm_extension?.scm_organization || '-'}
-                            </span>
+                            <span className="text-sm">{connection.scmOrganization || '-'}</span>
                           </TableCell>
                           <TableCell>
                             <Badge variant="outline" className={cn('gap-1', statusConfig.color)}>
                               {statusConfig.icon}
                               {statusConfig.label}
                             </Badge>
-                            {connection.status_message && connection.status === 'error' && (
+                            {connection.errorMessage && connection.status === 'error' && (
                               <p className="text-xs text-red-500 mt-1 max-w-[200px] truncate">
-                                {connection.status_message}
+                                {connection.errorMessage}
                               </p>
                             )}
                           </TableCell>
@@ -413,14 +456,14 @@ export default function SCMConnectionsPage() {
                               className="h-auto p-0 text-blue-500"
                               onClick={() => handleSyncClick(connection)}
                             >
-                              {connection.scm_extension?.repository_count || 0} repos
+                              {connection.repositoryCount || 0} repos
                               <ExternalLink className="ml-1 h-3 w-3" />
                             </Button>
                           </TableCell>
                           <TableCell>
                             <span className="text-sm text-muted-foreground">
-                              {connection.last_sync_at
-                                ? new Date(connection.last_sync_at).toLocaleDateString()
+                              {connection.lastValidatedAt
+                                ? new Date(connection.lastValidatedAt).toLocaleDateString()
                                 : 'Never'}
                             </span>
                           </TableCell>
@@ -511,7 +554,7 @@ export default function SCMConnectionsPage() {
         open={addDialogOpen}
         onOpenChange={setAddDialogOpen}
         onSuccess={async () => {
-          await invalidateSCMIntegrationsCache()
+          await invalidateSCMConnectionsCache()
           await mutate()
         }}
       />
@@ -523,7 +566,7 @@ export default function SCMConnectionsPage() {
             onOpenChange={setEditDialogOpen}
             connection={selectedConnection}
             onSuccess={async () => {
-              await invalidateSCMIntegrationsCache()
+              await invalidateSCMConnectionsCache()
               await mutate()
               setSelectedConnection(null)
             }}

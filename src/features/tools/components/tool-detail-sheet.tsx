@@ -35,6 +35,7 @@ import type { Tool } from '@/lib/api/tool-types';
 import type { ToolCategory } from '@/lib/api/tool-category-types';
 import { INSTALL_METHOD_DISPLAY_NAMES } from '@/lib/api/tool-types';
 import { getCategoryNameById, getCategoryDisplayNameById } from '@/lib/api/tool-category-hooks';
+import { CapabilityBadge } from '@/components/capability-badge';
 import { ToolCategoryIcon, getCategoryBadgeColor } from './tool-category-icon';
 
 interface ToolDetailSheetProps {
@@ -394,13 +395,7 @@ export function ToolDetailSheet({
               <SectionHeader icon={Zap} title="Capabilities" />
               <div className="flex flex-wrap gap-2">
                 {tool.capabilities.map((cap) => (
-                  <Badge
-                    key={cap}
-                    variant="outline"
-                    className="text-xs font-normal bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30"
-                  >
-                    {cap}
-                  </Badge>
+                  <CapabilityBadge key={cap} name={cap} showIcon />
                 ))}
               </div>
             </div>

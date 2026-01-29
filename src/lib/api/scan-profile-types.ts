@@ -10,6 +10,9 @@ export type Intensity = 'low' | 'medium' | 'high';
 // Severity levels for tool findings
 export type Severity = 'info' | 'low' | 'medium' | 'high' | 'critical';
 
+// Template modes for scanner templates
+export type TemplateMode = 'default' | 'custom' | 'both';
+
 /**
  * Tool configuration within a scan profile
  */
@@ -18,6 +21,54 @@ export interface ToolConfig {
   severity?: Severity;
   timeout?: number;
   options?: Record<string, unknown>;
+  template_mode?: TemplateMode;          // "default", "custom", "both"
+  custom_template_ids?: string[];        // IDs of custom templates to use
+}
+
+/**
+ * Quality Gate configuration for CI/CD pass/fail decisions
+ */
+export interface QualityGate {
+  enabled: boolean;
+  fail_on_critical: boolean;
+  fail_on_high: boolean;
+  max_critical: number;  // -1 = unlimited
+  max_high: number;
+  max_medium: number;
+  max_total: number;
+  new_findings_only?: boolean;
+  baseline_branch?: string;
+}
+
+/**
+ * Quality Gate breach when threshold is exceeded
+ */
+export interface QualityGateBreach {
+  metric: 'critical' | 'high' | 'medium' | 'total';
+  limit: number;
+  actual: number;
+}
+
+/**
+ * Finding counts by severity
+ */
+export interface FindingCounts {
+  critical: number;
+  high: number;
+  medium: number;
+  low: number;
+  info: number;
+  total: number;
+}
+
+/**
+ * Quality Gate evaluation result
+ */
+export interface QualityGateResult {
+  passed: boolean;
+  reason?: string;
+  breaches?: QualityGateBreach[];
+  counts: FindingCounts;
 }
 
 /**
@@ -36,6 +87,7 @@ export interface ScanProfile {
   timeout_seconds: number;
   tags: string[];
   metadata: Record<string, unknown>;
+  quality_gate: QualityGate;
   created_by?: string;
   created_at: string;
   updated_at: string;
@@ -53,6 +105,7 @@ export interface CreateScanProfileRequest {
   timeout_seconds?: number;
   tags?: string[];
   is_default?: boolean;
+  quality_gate?: QualityGate;
 }
 
 /**
@@ -66,6 +119,22 @@ export interface UpdateScanProfileRequest {
   max_concurrent_scans?: number;
   timeout_seconds?: number;
   tags?: string[];
+  quality_gate?: QualityGate;
+}
+
+/**
+ * Update quality gate request
+ */
+export interface UpdateQualityGateRequest {
+  enabled: boolean;
+  fail_on_critical: boolean;
+  fail_on_high: boolean;
+  max_critical: number;
+  max_high: number;
+  max_medium: number;
+  max_total: number;
+  new_findings_only?: boolean;
+  baseline_branch?: string;
 }
 
 /**
@@ -156,4 +225,48 @@ export const SEVERITY_DISPLAY_NAMES: Record<Severity, string> = {
   medium: 'Medium',
   high: 'High',
   critical: 'Critical',
+};
+
+// Default Quality Gate configuration
+export const DEFAULT_QUALITY_GATE: QualityGate = {
+  enabled: false,
+  fail_on_critical: false,
+  fail_on_high: false,
+  max_critical: -1,
+  max_high: -1,
+  max_medium: -1,
+  max_total: -1,
+  new_findings_only: false,
+  baseline_branch: '',
+};
+
+/**
+ * Create a new Quality Gate with defaults
+ */
+export function createDefaultQualityGate(overrides?: Partial<QualityGate>): QualityGate {
+  return {
+    ...DEFAULT_QUALITY_GATE,
+    ...overrides,
+  };
+}
+
+/**
+ * Check if a quality gate threshold is unlimited
+ */
+export function isUnlimited(value: number): boolean {
+  return value < 0;
+}
+
+// Template mode display names
+export const TEMPLATE_MODE_DISPLAY_NAMES: Record<TemplateMode, string> = {
+  default: 'Default',
+  custom: 'Custom Only',
+  both: 'Both',
+};
+
+// Template mode descriptions
+export const TEMPLATE_MODE_DESCRIPTIONS: Record<TemplateMode, string> = {
+  default: 'Use only official/built-in templates',
+  custom: 'Use only tenant-uploaded custom templates',
+  both: 'Run both default and custom templates',
 };

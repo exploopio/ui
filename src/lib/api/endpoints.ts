@@ -26,6 +26,8 @@ export const API_BASE = {
   AUDIT_LOGS: '/api/v1/audit-logs',
   AGENTS: '/api/v1/agents',
   SCAN_PROFILES: '/api/v1/scan-profiles',
+  SCANNER_TEMPLATES: '/api/v1/scanner-templates',
+  TEMPLATE_SOURCES: '/api/v1/template-sources',
   TOOLS: '/api/v1/tools',
   PLATFORM_TOOLS: '/api/v1/tools/platform',
   CUSTOM_TOOLS: '/api/v1/custom-tools',
@@ -33,6 +35,8 @@ export const API_BASE = {
   TOOL_STATS: '/api/v1/tool-stats',
   TOOL_CATEGORIES: '/api/v1/tool-categories',
   CUSTOM_TOOL_CATEGORIES: '/api/v1/custom-tool-categories',
+  CAPABILITIES: '/api/v1/capabilities',
+  CUSTOM_CAPABILITIES: '/api/v1/custom-capabilities',
   SCANS: '/api/v1/scans',
   EXPOSURES: '/api/v1/exposures',
   AGENT_INGEST: '/api/v1/agent/ingest',
@@ -441,6 +445,17 @@ export const assetEndpoints = {
    * Archive asset (set status to archived)
    */
   archive: (assetId: string) => `${API_BASE.ASSETS}/${assetId}/archive`,
+
+  // ============================================
+  // STATISTICS
+  // ============================================
+
+  /**
+   * Get asset statistics (comprehensive stats with all breakdowns)
+   * Includes: by_type, by_status, by_criticality, by_scope, by_exposure,
+   * high_risk_count, findings_total, risk_score_avg
+   */
+  stats: () => `${API_BASE.ASSETS}/stats`,
 } as const
 
 // ============================================
@@ -653,15 +668,12 @@ export const findingEndpoints = {
  * Dashboard endpoints for aggregated statistics
  */
 export const dashboardEndpoints = {
-  /**
-   * Get global dashboard stats (not tenant-scoped)
-   */
-  globalStats: () => `${API_BASE.DASHBOARD}/stats`,
+
 
   /**
    * Get tenant-scoped dashboard stats
    */
-  stats: (tenantIdOrSlug: string) => `${API_BASE.TENANTS}/${tenantIdOrSlug}/dashboard/stats`,
+  stats: () => `${API_BASE.DASHBOARD}/stats`,
 } as const
 
 // ============================================
@@ -802,6 +814,14 @@ export const agentEndpoints = {
    * Revoke agent (permanently revoke access)
    */
   revoke: (agentId: string) => `${API_BASE.AGENTS}/${agentId}/revoke`,
+
+  /**
+   * Get available capabilities for tenant
+   * Returns unique capability names from all agents (tenant + platform) accessible to the tenant
+   * @param includePlatform - Whether to include platform agents (default: true)
+   */
+  availableCapabilities: (includePlatform: boolean = true) =>
+    `${API_BASE.AGENTS}/available-capabilities?include_platform=${includePlatform}`,
 } as const
 
 // ============================================
@@ -856,6 +876,76 @@ export const scanProfileEndpoints = {
    * Clone a scan profile
    */
   clone: (profileId: string) => `${API_BASE.SCAN_PROFILES}/${profileId}/clone`,
+
+  /**
+   * Update quality gate configuration
+   */
+  updateQualityGate: (profileId: string) => `${API_BASE.SCAN_PROFILES}/${profileId}/quality-gate`,
+
+  /**
+   * Evaluate quality gate against finding counts
+   */
+  evaluateQualityGate: (profileId: string) => `${API_BASE.SCAN_PROFILES}/${profileId}/evaluate-quality-gate`,
+} as const
+
+// ============================================
+// SCANNER TEMPLATE ENDPOINTS
+// ============================================
+
+import type { ScannerTemplateListFilters } from './scanner-template-types'
+
+/**
+ * Scanner template endpoints for managing custom detection rules
+ * Supports Nuclei (YAML), Semgrep (YAML), and Gitleaks (TOML) templates
+ */
+export const scannerTemplateEndpoints = {
+  /**
+   * List scanner templates with optional filters
+   */
+  list: (filters?: ScannerTemplateListFilters) => {
+    const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
+    return `${API_BASE.SCANNER_TEMPLATES}${queryString}`
+  },
+
+  /**
+   * Get scanner template by ID
+   */
+  get: (templateId: string) => `${API_BASE.SCANNER_TEMPLATES}/${templateId}`,
+
+  /**
+   * Create a new scanner template
+   */
+  create: () => API_BASE.SCANNER_TEMPLATES,
+
+  /**
+   * Update scanner template
+   */
+  update: (templateId: string) => `${API_BASE.SCANNER_TEMPLATES}/${templateId}`,
+
+  /**
+   * Delete scanner template
+   */
+  delete: (templateId: string) => `${API_BASE.SCANNER_TEMPLATES}/${templateId}`,
+
+  /**
+   * Validate template content before upload
+   */
+  validate: () => `${API_BASE.SCANNER_TEMPLATES}/validate`,
+
+  /**
+   * Download template content
+   */
+  download: (templateId: string) => `${API_BASE.SCANNER_TEMPLATES}/${templateId}/download`,
+
+  /**
+   * Deprecate template (mark as deprecated)
+   */
+  deprecate: (templateId: string) => `${API_BASE.SCANNER_TEMPLATES}/${templateId}/deprecate`,
+
+  /**
+   * Get template usage and quota information for the tenant
+   */
+  usage: () => `${API_BASE.SCANNER_TEMPLATES}/usage`,
 } as const
 
 // ============================================
@@ -1106,6 +1196,286 @@ export const customToolCategoryEndpoints = {
    * Delete a custom category
    */
   delete: (categoryId: string) => `${API_BASE.CUSTOM_TOOL_CATEGORIES}/${categoryId}`,
+} as const
+
+// ============================================
+// CAPABILITY ENDPOINTS
+// ============================================
+
+import type { CapabilityListFilters } from './capability-types'
+
+/**
+ * Capability endpoints (read-only for platform + tenant custom)
+ */
+export const capabilityEndpoints = {
+  /**
+   * List all capabilities (platform + tenant custom, with pagination)
+   */
+  list: (filters?: CapabilityListFilters) => {
+    const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
+    return `${API_BASE.CAPABILITIES}${queryString}`
+  },
+
+  /**
+   * List all capabilities for dropdowns (no pagination)
+   */
+  all: () => `${API_BASE.CAPABILITIES}/all`,
+
+  /**
+   * Get capability by ID
+   */
+  get: (capabilityId: string) => `${API_BASE.CAPABILITIES}/${capabilityId}`,
+
+  /**
+   * Get all capability categories (security, recon, analysis)
+   */
+  categories: () => `${API_BASE.CAPABILITIES}/categories`,
+
+  /**
+   * List capabilities by category
+   */
+  byCategory: (category: string) => `${API_BASE.CAPABILITIES}/by-category/${category}`,
+} as const
+
+/**
+ * Custom Capability endpoints (tenant custom capabilities management)
+ */
+export const customCapabilityEndpoints = {
+  /**
+   * Create a new custom capability
+   */
+  create: () => API_BASE.CUSTOM_CAPABILITIES,
+
+  /**
+   * Update a custom capability
+   */
+  update: (capabilityId: string) => `${API_BASE.CUSTOM_CAPABILITIES}/${capabilityId}`,
+
+  /**
+   * Delete a custom capability
+   */
+  delete: (capabilityId: string) => `${API_BASE.CUSTOM_CAPABILITIES}/${capabilityId}`,
+} as const
+
+// ============================================
+// PIPELINE ENDPOINTS
+// ============================================
+
+import type { PipelineListFilters, PipelineRunListFilters } from './pipeline-types'
+import type { WorkflowListFilters, WorkflowRunListFilters } from './workflow-types'
+
+/**
+ * Pipeline endpoints for managing workflow pipelines
+ * Pipelines are templates for multi-step scan orchestration
+ */
+export const pipelineEndpoints = {
+  /**
+   * List pipelines with optional filters
+   */
+  list: (filters?: PipelineListFilters) => {
+    const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
+    return `/api/v1/pipelines${queryString}`
+  },
+
+  /**
+   * Get pipeline by ID
+   */
+  get: (pipelineId: string) => `/api/v1/pipelines/${pipelineId}`,
+
+  /**
+   * Create a new pipeline
+   */
+  create: () => '/api/v1/pipelines',
+
+  /**
+   * Update pipeline
+   */
+  update: (pipelineId: string) => `/api/v1/pipelines/${pipelineId}`,
+
+  /**
+   * Delete pipeline
+   */
+  delete: (pipelineId: string) => `/api/v1/pipelines/${pipelineId}`,
+
+  /**
+   * Activate pipeline
+   */
+  activate: (pipelineId: string) => `/api/v1/pipelines/${pipelineId}/activate`,
+
+  /**
+   * Deactivate pipeline
+   */
+  deactivate: (pipelineId: string) => `/api/v1/pipelines/${pipelineId}/deactivate`,
+
+  /**
+   * Clone pipeline
+   */
+  clone: (pipelineId: string) => `/api/v1/pipelines/${pipelineId}/clone`,
+
+  /**
+   * Add step to pipeline
+   */
+  addStep: (pipelineId: string) => `/api/v1/pipelines/${pipelineId}/steps`,
+
+  /**
+   * Update step
+   */
+  updateStep: (pipelineId: string, stepId: string) =>
+    `/api/v1/pipelines/${pipelineId}/steps/${stepId}`,
+
+  /**
+   * Delete step
+   */
+  deleteStep: (pipelineId: string, stepId: string) =>
+    `/api/v1/pipelines/${pipelineId}/steps/${stepId}`,
+} as const
+
+/**
+ * Pipeline Run endpoints
+ */
+export const pipelineRunEndpoints = {
+  /**
+   * List pipeline runs with optional filters
+   */
+  list: (filters?: PipelineRunListFilters) => {
+    const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
+    return `/api/v1/pipeline-runs${queryString}`
+  },
+
+  /**
+   * Get pipeline run by ID
+   */
+  get: (runId: string) => `/api/v1/pipeline-runs/${runId}`,
+
+  /**
+   * Get step runs for a pipeline run
+   */
+  stepRuns: (runId: string) => `/api/v1/pipeline-runs/${runId}/steps`,
+
+  /**
+   * Trigger a new pipeline run
+   * Note: Uses /api/v1/pipelines/{id}/runs endpoint
+   */
+  trigger: (pipelineId: string) => `/api/v1/pipelines/${pipelineId}/runs`,
+
+  /**
+   * Cancel a running pipeline
+   */
+  cancel: (runId: string) => `/api/v1/pipeline-runs/${runId}/cancel`,
+
+  /**
+   * Retry a failed pipeline run
+   */
+  retry: (runId: string) => `/api/v1/pipeline-runs/${runId}/retry`,
+} as const
+
+/**
+ * Scan Management stats endpoint
+ */
+export const scanManagementEndpoints = {
+  /**
+   * Get overview stats (pipelines, scans, jobs)
+   */
+  stats: () => '/api/v1/scan-management/stats',
+
+  /**
+   * Quick scan targets
+   */
+  quickScan: () => '/api/v1/quick-scan',
+} as const
+
+// ============================================
+// WORKFLOW ENDPOINTS (Automation Workflows)
+// ============================================
+
+/**
+ * Workflow endpoints for managing automation workflows
+ * Workflows are event-driven automation pipelines with visual graph builder
+ */
+export const workflowEndpoints = {
+  /**
+   * List workflows with optional filters
+   */
+  list: (filters?: WorkflowListFilters) => {
+    const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
+    return `/api/v1/workflows${queryString}`
+  },
+
+  /**
+   * Get workflow by ID
+   */
+  get: (workflowId: string) => `/api/v1/workflows/${workflowId}`,
+
+  /**
+   * Create a new workflow
+   */
+  create: () => '/api/v1/workflows',
+
+  /**
+   * Update workflow
+   */
+  update: (workflowId: string) => `/api/v1/workflows/${workflowId}`,
+
+  /**
+   * Delete workflow
+   */
+  delete: (workflowId: string) => `/api/v1/workflows/${workflowId}`,
+
+  /**
+   * Add node to workflow
+   */
+  addNode: (workflowId: string) => `/api/v1/workflows/${workflowId}/nodes`,
+
+  /**
+   * Update node
+   */
+  updateNode: (workflowId: string, nodeId: string) =>
+    `/api/v1/workflows/${workflowId}/nodes/${nodeId}`,
+
+  /**
+   * Delete node
+   */
+  deleteNode: (workflowId: string, nodeId: string) =>
+    `/api/v1/workflows/${workflowId}/nodes/${nodeId}`,
+
+  /**
+   * Add edge to workflow
+   */
+  addEdge: (workflowId: string) => `/api/v1/workflows/${workflowId}/edges`,
+
+  /**
+   * Delete edge
+   */
+  deleteEdge: (workflowId: string, edgeId: string) =>
+    `/api/v1/workflows/${workflowId}/edges/${edgeId}`,
+
+  /**
+   * Trigger workflow run
+   */
+  trigger: (workflowId: string) => `/api/v1/workflows/${workflowId}/runs`,
+} as const
+
+/**
+ * Workflow Run endpoints
+ */
+export const workflowRunEndpoints = {
+  /**
+   * List workflow runs with optional filters
+   */
+  list: (filters?: WorkflowRunListFilters) => {
+    const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
+    return `/api/v1/workflow-runs${queryString}`
+  },
+
+  /**
+   * Get workflow run by ID
+   */
+  get: (runId: string) => `/api/v1/workflow-runs/${runId}`,
+
+  /**
+   * Cancel a running workflow
+   */
+  cancel: (runId: string) => `/api/v1/workflow-runs/${runId}/cancel`,
 } as const
 
 // ============================================
@@ -1396,15 +1766,21 @@ export const endpoints = {
   auditLogs: auditLogEndpoints,
   agents: agentEndpoints,
   scanProfiles: scanProfileEndpoints,
+  scannerTemplates: scannerTemplateEndpoints,
   tools: toolEndpoints,
   platformTools: platformToolEndpoints,
   customTools: customToolEndpoints,
   tenantTools: tenantToolEndpoints,
   toolStats: toolStatsEndpoints,
+  pipelines: pipelineEndpoints,
+  pipelineRuns: pipelineRunEndpoints,
+  scanManagement: scanManagementEndpoints,
   scans: scanEndpoints,
   exposures: exposureEndpoints,
   threatIntel: threatIntelEndpoints,
   ingest: ingestEndpoints,
+  workflows: workflowEndpoints,
+  workflowRuns: workflowRunEndpoints,
 } as const
 
 /**
@@ -1424,13 +1800,19 @@ export {
   auditLogEndpoints as auditLogs,
   agentEndpoints as agents,
   scanProfileEndpoints as scanProfiles,
+  scannerTemplateEndpoints as scannerTemplates,
   toolEndpoints as tools,
   platformToolEndpoints as platformTools,
   customToolEndpoints as customTools,
   tenantToolEndpoints as tenantTools,
   toolStatsEndpoints as toolStats,
+  pipelineEndpoints as pipelines,
+  pipelineRunEndpoints as pipelineRuns,
+  scanManagementEndpoints as scanManagement,
   scanEndpoints as scans,
   exposureEndpoints as exposures,
   threatIntelEndpoints as threatIntel,
   ingestEndpoints as ingest,
+  workflowEndpoints as workflows,
+  workflowRunEndpoints as workflowRuns,
 }

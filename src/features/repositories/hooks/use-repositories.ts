@@ -13,6 +13,7 @@ import { get, post, put, del } from '@/lib/api/client'
 import { handleApiError } from '@/lib/api/error-handler'
 import { useTenant } from '@/context/tenant-provider'
 import { usePermissions, Permission } from '@/lib/permissions'
+import { useTenantModules } from '@/features/integrations/api/use-tenant-modules'
 import type {
   AssetWithRepository,
   CreateRepositoryAssetInput,
@@ -620,15 +621,21 @@ export function useArchiveRepository(assetId: string) {
 
 /**
  * Fetch all SCM connections
- * Only fetches if user has scm-connections:read permission
+ * Only fetches if:
+ * - User has scm-connections:read permission
+ * - Tenant has SCM module enabled (prevents 403 MODULE_NOT_ENABLED)
  */
 export function useSCMConnections(config?: SWRConfiguration) {
   const { currentTenant } = useTenant()
   const { can } = usePermissions()
-  const canReadScmConnections = can(Permission.ScmConnectionsRead)
+  const { moduleIds, isLoading: modulesLoading } = useTenantModules()
 
-  // Only fetch if user has permission
-  const shouldFetch = currentTenant && canReadScmConnections
+  const canReadScmConnections = can(Permission.ScmConnectionsRead)
+  const hasSCMModule = moduleIds.includes('scm')
+
+  // Only fetch if user has permission AND SCM module is enabled
+  // This prevents 403 MODULE_NOT_ENABLED errors for tenants without SCM module
+  const shouldFetch = currentTenant && canReadScmConnections && hasSCMModule && !modulesLoading
 
   const key = shouldFetch ? buildSCMConnectionsEndpoint() : null
 
@@ -640,15 +647,21 @@ export function useSCMConnections(config?: SWRConfiguration) {
 
 /**
  * Fetch a single SCM connection
- * Only fetches if user has scm-connections:read permission
+ * Only fetches if:
+ * - User has scm-connections:read permission
+ * - Tenant has SCM module enabled
  */
 export function useSCMConnection(connectionId: string | null, config?: SWRConfiguration) {
   const { currentTenant } = useTenant()
   const { can } = usePermissions()
-  const canReadScmConnections = can(Permission.ScmConnectionsRead)
+  const { moduleIds, isLoading: modulesLoading } = useTenantModules()
 
-  // Only fetch if user has permission
-  const shouldFetch = currentTenant && connectionId && canReadScmConnections
+  const canReadScmConnections = can(Permission.ScmConnectionsRead)
+  const hasSCMModule = moduleIds.includes('scm')
+
+  // Only fetch if user has permission AND SCM module is enabled
+  const shouldFetch =
+    currentTenant && connectionId && canReadScmConnections && hasSCMModule && !modulesLoading
 
   const key = shouldFetch ? buildSCMConnectionEndpoint(connectionId) : null
 
@@ -804,7 +817,9 @@ async function fetchSCMRepositories(url: string): Promise<SCMRepositoriesRespons
 
 /**
  * Fetch repositories from an SCM connection (from the provider, not yet imported)
- * Only fetches if user has scm-connections:read permission
+ * Only fetches if:
+ * - User has scm-connections:read permission
+ * - Tenant has SCM module enabled
  */
 export function useSCMRepositories(
   connectionId: string | null,
@@ -813,10 +828,14 @@ export function useSCMRepositories(
 ) {
   const { currentTenant } = useTenant()
   const { can } = usePermissions()
-  const canReadScmConnections = can(Permission.ScmConnectionsRead)
+  const { moduleIds, isLoading: modulesLoading } = useTenantModules()
 
-  // Only fetch if user has permission
-  const shouldFetch = currentTenant && connectionId && canReadScmConnections
+  const canReadScmConnections = can(Permission.ScmConnectionsRead)
+  const hasSCMModule = moduleIds.includes('scm')
+
+  // Only fetch if user has permission AND SCM module is enabled
+  const shouldFetch =
+    currentTenant && connectionId && canReadScmConnections && hasSCMModule && !modulesLoading
 
   const key = shouldFetch ? buildSCMRepositoriesEndpoint(connectionId, options) : null
 
