@@ -188,9 +188,10 @@ export interface ApiVulnerableComponent {
  * License stats from API
  */
 export interface ApiLicenseStats {
-  license_id: string  // SPDX identifier (e.g., MIT, Apache-2.0)
-  name: string        // Human-readable name
-  category: string    // permissive, copyleft, weak-copyleft, proprietary, public-domain, unknown
-  risk: string        // critical, high, medium, low, none, unknown
-  count: number       // Number of components using this license
+  license_id: string // SPDX identifier (e.g., MIT, Apache-2.0)
+  name: string // Human-readable name
+  category: string // permissive, copyleft, weak-copyleft, proprietary, public-domain, unknown
+  risk: string // critical, high, medium, low, none, unknown
+  url?: string | null // Link to license text (SPDX URL)
+  count: number // Number of components using this license
 }

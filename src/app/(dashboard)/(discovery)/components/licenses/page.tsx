@@ -26,6 +26,7 @@ import {
   Download,
   ArrowRight,
   Loader2,
+  ExternalLink,
 } from 'lucide-react'
 import { LicenseRiskBadge, LicenseCategoryBadge } from '@/features/components'
 import {
@@ -105,9 +106,11 @@ export default function LicensesPage() {
     }
 
     const csv = [
-      ['License', 'Name', 'Category', 'Risk', 'Component Count'].join(','),
+      ['License', 'Name', 'Category', 'Risk', 'URL', 'Component Count'].join(','),
       ...licenseStats.map((l) =>
-        [`"${l.license_id}"`, `"${l.name}"`, l.category, l.risk, l.count].join(',')
+        [`"${l.license_id}"`, `"${l.name}"`, l.category, l.risk, `"${l.url || ''}"`, l.count].join(
+          ','
+        )
       ),
     ].join('\n')
 
@@ -402,7 +405,19 @@ export default function LicensesPage() {
                       <TableRow key={license.license_id}>
                         <TableCell>
                           <div>
-                            <span className="font-medium">{license.license_id}</span>
+                            {license.url ? (
+                              <a
+                                href={license.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
+                              >
+                                {license.license_id}
+                                <ExternalLink className="h-3 w-3" />
+                              </a>
+                            ) : (
+                              <span className="font-medium">{license.license_id}</span>
+                            )}
                             {license.name && license.name !== license.license_id && (
                               <p className="text-xs text-muted-foreground">{license.name}</p>
                             )}

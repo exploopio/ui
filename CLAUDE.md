@@ -8,6 +8,51 @@ Modern Next.js 16 with internationalization (en/vi/ar), RTL support, Zustand aut
 
 **Status**: Production-ready • TypeScript strict • React Compiler • Turbopack
 
+**CRITICAL: Backend Tenant-Scoped Isolation**
+
+> **Important for API Integration:** This UI connects to a multi-tenant backend API. Every backend repository function that works with tables containing a `tenant_id` column **MUST** enforce tenant-scoped isolation.
+>
+> - All API calls automatically include tenant context from JWT
+> - Backend enforces `WHERE tenant_id = ?` on all data queries
+> - This prevents data leakage between tenants
+> - Never attempt to access data from other tenants via API
+> - Applies to all multi-tenant endpoints (findings, assets, scans, etc.)
+
+**Backend Query Optimization:**
+
+> **Important for API Usage:** All backend database queries are optimized for performance. When using API endpoints:
+>
+> - Always use pagination parameters (`page`, `limit`) for list endpoints
+> - Use filtering and sorting parameters to reduce data transfer
+> - Avoid making multiple API calls in loops - use batch endpoints when available
+> - Cache frequently accessed data on the frontend when appropriate
+> - Be aware of query limits and implement proper error handling
+
+**Frontend Caching Best Practices:**
+
+> **Important:** The UI uses SWR (stale-while-revalidate) for API caching. Follow these guidelines:
+>
+> 1. **Use SWR hooks for API calls**
+>    - Automatic caching, revalidation, and deduplication
+>    - Set appropriate `revalidateOnFocus` and `revalidateOnReconnect`
+>    - Use `mutate()` to invalidate cache after mutations
+> 2. **localStorage caching**
+>    - Cache user preferences (theme, language)
+>    - Cache permissions for instant UI render (sync with server)
+>    - Always set expiration timestamp
+>    - Clear on logout
+> 3. **When NOT to cache**
+>    - Real-time data (scan progress, live updates)
+>    - Sensitive data (tokens should be in httpOnly cookies)
+>    - Large datasets (use pagination instead)
+> 4. **Cache invalidation**
+>    ```tsx
+>    // After mutation, invalidate related queries
+>    const { mutate } = useSWRConfig()
+>    await createFinding(data)
+>    mutate('/api/v1/findings') // Revalidate list
+>    ```
+
 ## 🛠️ Tech Stack
 
 **Core:**
@@ -86,6 +131,57 @@ project/
 ```
 
 **See [architecture.md](.claude/architecture.md) for detailed explanation.**
+
+## Test-Driven Development (TDD)
+
+**CRITICAL:** When implementing any new feature or significant change:
+
+1. **Research thoroughly** before writing code
+   - Analyze requirements and objectives
+   - Identify ALL use cases and edge cases
+   - Understand boundary conditions and special scenarios
+   - Review existing components and patterns
+
+2. **Write Tests FIRST** before implementation
+   - Write tests to cover ALL use cases
+   - Write tests for ALL edge cases (loading states, error states, empty states)
+   - Tests must fail initially (no implementation yet)
+   - Tests must be clear, understandable, and maintainable
+   - Test both component behavior and user interactions
+
+3. **Develop the feature** to pass tests
+   - Implement code to pass each test
+   - Refactor code to improve quality
+   - Ensure all tests pass
+   - Do not skip any failing tests
+
+**Benefits:**
+
+- Ensures high code coverage
+- Catches bugs early
+- Components are easier to maintain and refactor
+- Tests serve as documentation
+- Confidence when changing code
+
+**Testing Approach for UI:**
+
+- **Component Tests**: Test component rendering, props, user interactions
+- **Integration Tests**: Test feature workflows (e.g., form submission)
+- **E2E Tests**: Test critical user flows (login, dashboard navigation)
+- **Accessibility Tests**: Ensure ARIA labels, keyboard navigation work
+
+**Running Tests:**
+
+```bash
+# Run all tests
+npm test
+
+# Run tests in watch mode
+npm test -- --watch
+
+# Run with coverage
+npm test -- --coverage
+```
 
 ## ⚡ Core Conventions
 
