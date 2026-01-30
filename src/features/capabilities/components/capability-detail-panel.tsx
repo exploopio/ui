@@ -71,9 +71,9 @@ export const CapabilityDetailPanel = memo(function CapabilityDetailPanel({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-md flex flex-col overflow-hidden">
-        {/* Header - SheetContent already has close button */}
-        <SheetHeader className="space-y-3 pr-8 flex-shrink-0">
+      <SheetContent className="w-full sm:max-w-md p-0 flex flex-col h-full">
+        {/* Header with padding */}
+        <SheetHeader className="space-y-3 px-6 pt-6 pb-4 pr-14 flex-shrink-0 border-b">
           <div className="flex items-center gap-3">
             <div
               className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${colorClass}`}
@@ -112,9 +112,9 @@ export const CapabilityDetailPanel = memo(function CapabilityDetailPanel({
           {capability.description && <SheetDescription>{capability.description}</SheetDescription>}
         </SheetHeader>
 
-        {/* Scrollable content - uses negative margin to extend to edges, padding inside */}
-        <ScrollArea className="flex-1 -mx-4 mt-4">
-          <div className="px-4 space-y-6 pb-6">
+        {/* Scrollable content area - flex-1 with min-h-0 enables scroll */}
+        <ScrollArea className="flex-1 min-h-0">
+          <div className="px-6 py-6 space-y-6">
             {/* Usage Summary */}
             <section>
               <h4 className="mb-3 text-sm font-semibold text-foreground">Usage Summary</h4>
@@ -277,6 +277,9 @@ export const CapabilityDetailPanel = memo(function CapabilityDetailPanel({
             </section>
           </div>
         </ScrollArea>
+
+        {/* Safe area padding for mobile */}
+        <div className="flex-shrink-0 h-safe-area-inset-bottom" />
       </SheetContent>
     </Sheet>
   )
