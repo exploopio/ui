@@ -9,78 +9,100 @@
  * Capability entity
  */
 export interface Capability {
-  id: string;
-  tenant_id?: string; // null for platform capabilities, UUID for custom capabilities
-  name: string;
-  display_name: string;
-  description?: string;
-  icon: string;
-  color: string;
-  category?: string; // security, recon, analysis
-  is_builtin: boolean;
-  sort_order: number;
-  created_by?: string;
-  created_at: string;
-  updated_at: string;
+  id: string
+  tenant_id?: string // null for platform capabilities, UUID for custom capabilities
+  name: string
+  display_name: string
+  description?: string
+  icon: string
+  color: string
+  category?: string // security, recon, analysis
+  is_builtin: boolean
+  sort_order: number
+  created_by?: string
+  created_at: string
+  updated_at: string
 }
 
 /**
  * Create capability request (for tenant custom capabilities)
  */
 export interface CreateCapabilityRequest {
-  name: string;
-  display_name: string;
-  description?: string;
-  icon?: string;
-  color?: string;
-  category?: string;
+  name: string
+  display_name: string
+  description?: string
+  icon?: string
+  color?: string
+  category?: string
 }
 
 /**
  * Update capability request
  */
 export interface UpdateCapabilityRequest {
-  display_name: string;
-  description?: string;
-  icon?: string;
-  color?: string;
-  category?: string;
+  display_name: string
+  description?: string
+  icon?: string
+  color?: string
+  category?: string
 }
 
 /**
  * Capability list response
  */
 export interface CapabilityListResponse {
-  items: Capability[];
-  total: number;
-  page: number;
-  per_page: number;
+  items: Capability[]
+  total: number
+  page: number
+  per_page: number
 }
 
 /**
  * Capability list filters
  */
 export interface CapabilityListFilters {
-  is_builtin?: boolean;
-  category?: string;
-  search?: string;
-  page?: number;
-  per_page?: number;
+  is_builtin?: boolean
+  category?: string
+  search?: string
+  page?: number
+  per_page?: number
 }
 
 /**
  * Capability all list response (for dropdowns, no pagination)
  */
 export interface CapabilityAllResponse {
-  items: Capability[];
+  items: Capability[]
 }
 
 /**
  * Capability categories response
  */
 export interface CapabilityCategoriesResponse {
-  items: string[];
+  items: string[]
 }
+
+/**
+ * Capability usage statistics
+ */
+export interface CapabilityUsageStats {
+  tool_count: number
+  agent_count: number
+  tool_names?: string[]
+  agent_names?: string[]
+}
+
+/**
+ * Batch usage stats request
+ */
+export interface CapabilityUsageStatsBatchRequest {
+  ids: string[]
+}
+
+/**
+ * Batch usage stats response - map of capability ID to stats
+ */
+export type CapabilityUsageStatsBatchResponse = Record<string, CapabilityUsageStats>
 
 // =============================================================================
 // Capability Lookup Helpers
@@ -96,8 +118,8 @@ export function getCapabilityIcon(
   capabilities: Capability[] | undefined,
   capabilityName: string
 ): string {
-  const capability = capabilities?.find((c) => c.name === capabilityName);
-  return capability?.icon || FALLBACK_CAPABILITY_ICONS[capabilityName] || 'zap';
+  const capability = capabilities?.find((c) => c.name === capabilityName)
+  return capability?.icon || FALLBACK_CAPABILITY_ICONS[capabilityName] || 'zap'
 }
 
 /**
@@ -110,8 +132,8 @@ export function getCapabilityColor(
   capabilities: Capability[] | undefined,
   capabilityName: string
 ): string {
-  const capability = capabilities?.find((c) => c.name === capabilityName);
-  return capability?.color || FALLBACK_CAPABILITY_COLORS[capabilityName] || 'gray';
+  const capability = capabilities?.find((c) => c.name === capabilityName)
+  return capability?.color || FALLBACK_CAPABILITY_COLORS[capabilityName] || 'gray'
 }
 
 /**
@@ -124,8 +146,8 @@ export function getCapabilityDisplayName(
   capabilities: Capability[] | undefined,
   capabilityName: string
 ): string {
-  const capability = capabilities?.find((c) => c.name === capabilityName);
-  return capability?.display_name || capabilityName.toUpperCase();
+  const capability = capabilities?.find((c) => c.name === capabilityName)
+  return capability?.display_name || capabilityName.toUpperCase()
 }
 
 /**
@@ -138,8 +160,8 @@ export function getCapabilityDescription(
   capabilities: Capability[] | undefined,
   capabilityName: string
 ): string | undefined {
-  const capability = capabilities?.find((c) => c.name === capabilityName);
-  return capability?.description;
+  const capability = capabilities?.find((c) => c.name === capabilityName)
+  return capability?.description
 }
 
 // =============================================================================
@@ -158,11 +180,15 @@ export const FALLBACK_CAPABILITY_ICONS: Record<string, string> = {
   secrets: 'key',
   iac: 'server',
   container: 'box',
+  api: 'plug',
+  cloud: 'cloud',
+  mobile: 'smartphone',
   // Specialized Security
   web: 'globe-2',
   xss: 'alert-triangle',
   terraform: 'file-code',
   docker: 'container',
+  compliance: 'shield-check',
   // Reconnaissance
   recon: 'search',
   subdomain: 'layers',
@@ -171,7 +197,9 @@ export const FALLBACK_CAPABILITY_ICONS: Record<string, string> = {
   crawler: 'spider',
   // Analysis
   sbom: 'file-text',
-};
+  reporting: 'file-chart-line',
+  'ai-triage': 'brain',
+}
 
 /**
  * @deprecated Use getCapabilityColor() with API data instead.
@@ -185,11 +213,15 @@ export const FALLBACK_CAPABILITY_COLORS: Record<string, string> = {
   secrets: 'red',
   iac: 'orange',
   container: 'cyan',
+  api: 'blue',
+  cloud: 'sky',
+  mobile: 'purple',
   // Specialized Security
   web: 'green',
   xss: 'amber',
   terraform: 'violet',
   docker: 'sky',
+  compliance: 'emerald',
   // Reconnaissance
   recon: 'yellow',
   subdomain: 'lime',
@@ -198,17 +230,19 @@ export const FALLBACK_CAPABILITY_COLORS: Record<string, string> = {
   crawler: 'fuchsia',
   // Analysis
   sbom: 'slate',
-};
+  reporting: 'slate',
+  'ai-triage': 'violet',
+}
 
 /**
  * @deprecated Use getCapabilityIcon() instead
  */
-export const CAPABILITY_ICONS = FALLBACK_CAPABILITY_ICONS;
+export const CAPABILITY_ICONS = FALLBACK_CAPABILITY_ICONS
 
 /**
  * @deprecated Use getCapabilityColor() instead
  */
-export const CAPABILITY_COLORS = FALLBACK_CAPABILITY_COLORS;
+export const CAPABILITY_COLORS = FALLBACK_CAPABILITY_COLORS
 
 // =============================================================================
 // Capability Validation Helpers
@@ -237,16 +271,16 @@ export function validateCapabilityNames(
 ): { valid: boolean; invalidNames: string[] } {
   if (!capabilities || capabilities.length === 0) {
     // If no capabilities loaded, assume all are valid (will be validated by backend)
-    return { valid: true, invalidNames: [] };
+    return { valid: true, invalidNames: [] }
   }
 
-  const validNames = new Set(capabilities.map((c) => c.name));
-  const invalidNames = capabilityNames.filter((name) => !validNames.has(name));
+  const validNames = new Set(capabilities.map((c) => c.name))
+  const invalidNames = capabilityNames.filter((name) => !validNames.has(name))
 
   return {
     valid: invalidNames.length === 0,
     invalidNames,
-  };
+  }
 }
 
 /**
@@ -262,11 +296,11 @@ export function filterValidCapabilityNames(
   capabilityNames: string[]
 ): string[] {
   if (!capabilities || capabilities.length === 0) {
-    return capabilityNames; // Return as-is if no registry data
+    return capabilityNames // Return as-is if no registry data
   }
 
-  const validNames = new Set(capabilities.map((c) => c.name));
-  return capabilityNames.filter((name) => validNames.has(name));
+  const validNames = new Set(capabilities.map((c) => c.name))
+  return capabilityNames.filter((name) => validNames.has(name))
 }
 
 /**
@@ -281,7 +315,7 @@ export function isValidCapabilityName(
   name: string
 ): boolean {
   if (!capabilities || capabilities.length === 0) {
-    return true; // Assume valid if no registry data
+    return true // Assume valid if no registry data
   }
-  return capabilities.some((c) => c.name === name);
+  return capabilities.some((c) => c.name === name)
 }

@@ -541,6 +541,13 @@ export const sidebarData: SidebarData = {
               module: 'scans',
             },
             {
+              title: 'Capabilities',
+              url: '/capabilities',
+              icon: Zap,
+              permission: Permission.ToolsRead,
+              module: 'scans',
+            },
+            {
               title: 'Scanner Templates',
               url: '/scanner-templates',
               icon: FileCode2,

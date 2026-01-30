@@ -127,13 +127,7 @@ export const WORKFLOW_RUN_STATUS_LABELS: Record<WorkflowRunStatus, string> = {
 // NODE RUN STATUS TYPES
 // ============================================
 
-export const NODE_RUN_STATUSES = [
-  'pending',
-  'running',
-  'completed',
-  'failed',
-  'skipped',
-] as const
+export const NODE_RUN_STATUSES = ['pending', 'running', 'completed', 'failed', 'skipped'] as const
 export type NodeRunStatus = (typeof NODE_RUN_STATUSES)[number]
 
 // ============================================
@@ -146,13 +140,102 @@ export interface WorkflowUIPosition {
 }
 
 // ============================================
+// TRIGGER CONFIG TYPES
+// ============================================
+
+/**
+ * Configuration for finding_created trigger.
+ * Filters which findings should trigger this workflow.
+ */
+export interface FindingCreatedTriggerConfig {
+  /** Filter by severity levels (critical, high, medium, low) */
+  severity_filter?: Array<'critical' | 'high' | 'medium' | 'low'>
+  /** Filter by tool names (nuclei, semgrep, etc.) */
+  tool_filter?: string[]
+  /** Filter by finding source codes (sast, dast, pentest, bug_bounty, etc.) */
+  source_filter?: string[]
+}
+
+/**
+ * Configuration for finding_updated trigger.
+ * Filters which finding updates should trigger this workflow.
+ */
+export interface FindingUpdatedTriggerConfig {
+  /** Filter by status changes */
+  status_filter?: string[]
+  /** Filter by which fields changed */
+  field_filter?: string[]
+  /** Filter by finding source codes */
+  source_filter?: string[]
+}
+
+/**
+ * Configuration for finding_age trigger.
+ * Triggers when findings exceed a certain age.
+ */
+export interface FindingAgeTriggerConfig {
+  /** Age in days */
+  age_days: number
+  /** Filter by severity levels */
+  severity_filter?: Array<'critical' | 'high' | 'medium' | 'low'>
+  /** Filter by finding source codes */
+  source_filter?: string[]
+}
+
+/**
+ * Configuration for schedule trigger.
+ */
+export interface ScheduleTriggerConfig {
+  /** Cron expression */
+  cron_expression: string
+  /** Timezone (e.g., 'America/New_York') */
+  timezone?: string
+}
+
+/**
+ * Configuration for asset_discovered trigger.
+ */
+export interface AssetDiscoveredTriggerConfig {
+  /** Filter by asset types */
+  asset_type_filter?: string[]
+}
+
+/**
+ * Configuration for scan_completed trigger.
+ */
+export interface ScanCompletedTriggerConfig {
+  /** Filter by scan types */
+  scan_type_filter?: string[]
+  /** Filter by scan status */
+  status_filter?: string[]
+}
+
+/**
+ * Configuration for webhook trigger.
+ */
+export interface WebhookTriggerConfig {
+  /** Webhook secret for verification */
+  secret?: string
+  /** Custom webhook path */
+  path?: string
+}
+
+// ============================================
 // NODE CONFIG
 // ============================================
 
 export interface WorkflowNodeConfig {
   // Trigger config
   trigger_type?: WorkflowTriggerType
-  trigger_config?: Record<string, unknown>
+  trigger_config?:
+    | FindingCreatedTriggerConfig
+    | FindingUpdatedTriggerConfig
+    | FindingAgeTriggerConfig
+    | ScheduleTriggerConfig
+    | AssetDiscoveredTriggerConfig
+    | ScanCompletedTriggerConfig
+    | WebhookTriggerConfig
+    | Record<string, unknown>
 
   // Condition config
   condition_expr?: string

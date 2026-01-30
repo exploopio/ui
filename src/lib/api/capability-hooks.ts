@@ -19,6 +19,8 @@ import type {
   CapabilityCategoriesResponse,
   CreateCapabilityRequest,
   UpdateCapabilityRequest,
+  CapabilityUsageStats,
+  CapabilityUsageStatsBatchResponse,
 } from './capability-types'
 import {
   getCapabilityIcon,
@@ -67,6 +69,9 @@ export const capabilityKeys = {
   byCategory: (category: string) => [...capabilityKeys.all, 'by-category', category] as const,
   details: () => [...capabilityKeys.all, 'detail'] as const,
   detail: (id: string) => [...capabilityKeys.details(), id] as const,
+  usageStats: (id: string) => [...capabilityKeys.all, 'usage-stats', id] as const,
+  usageStatsBatch: (ids: string[]) =>
+    [...capabilityKeys.all, 'usage-stats-batch', ids.sort().join(',')] as const,
 }
 
 // ============================================
@@ -133,10 +138,45 @@ export function useCapabilityCategories(config?: SWRConfiguration) {
 /**
  * Fetch capabilities by category
  */
-export function useCapabilitiesByCategory(category: string | null | undefined, config?: SWRConfiguration) {
+export function useCapabilitiesByCategory(
+  category: string | null | undefined,
+  config?: SWRConfiguration
+) {
   return useSWR<CapabilityAllResponse>(
     category ? capabilityKeys.byCategory(category) : null,
     () => get<CapabilityAllResponse>(capabilityEndpoints.byCategory(category!)),
+    { ...defaultConfig, ...config }
+  )
+}
+
+/**
+ * Fetch usage stats for a single capability
+ */
+export function useCapabilityUsageStats(
+  capabilityId: string | null | undefined,
+  config?: SWRConfiguration
+) {
+  return useSWR<CapabilityUsageStats>(
+    capabilityId ? capabilityKeys.usageStats(capabilityId) : null,
+    () => get<CapabilityUsageStats>(capabilityEndpoints.usageStats(capabilityId!)),
+    { ...defaultConfig, ...config }
+  )
+}
+
+/**
+ * Fetch usage stats for multiple capabilities (batch)
+ */
+export function useCapabilitiesUsageStatsBatch(
+  capabilityIds: string[] | undefined,
+  config?: SWRConfiguration
+) {
+  const hasIds = capabilityIds && capabilityIds.length > 0
+  return useSWR<CapabilityUsageStatsBatchResponse>(
+    hasIds ? capabilityKeys.usageStatsBatch(capabilityIds) : null,
+    () =>
+      post<CapabilityUsageStatsBatchResponse>(capabilityEndpoints.usageStatsBatch(), {
+        ids: capabilityIds,
+      }),
     { ...defaultConfig, ...config }
   )
 }
@@ -175,12 +215,16 @@ export function useUpdateCapability(capabilityId: string) {
 
 /**
  * Delete a custom capability
+ * @param capabilityId - The capability ID to delete
  */
 export function useDeleteCapability(capabilityId: string) {
-  return useSWRMutation<void, Error, string>(`delete-capability-${capabilityId}`, async () => {
-    await del(customCapabilityEndpoints.delete(capabilityId))
-    await invalidateCapabilitiesCache()
-  })
+  return useSWRMutation<void, Error, string, { force?: boolean }>(
+    `delete-capability-${capabilityId}`,
+    async (_key, { arg }) => {
+      await del(customCapabilityEndpoints.delete(capabilityId, arg?.force))
+      await invalidateCapabilitiesCache()
+    }
+  )
 }
 
 // ============================================

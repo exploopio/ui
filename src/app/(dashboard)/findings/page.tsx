@@ -40,6 +40,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import {
   FindingStatusBadge,
   FindingDetailDrawer,
+  CreateFindingDialog,
   FINDING_STATUS_CONFIG,
   SEVERITY_CONFIG,
 } from '@/features/findings'
@@ -225,6 +226,7 @@ export default function FindingsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [findingToDelete, setFindingToDelete] = useState<Finding | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [createDialogOpen, setCreateDialogOpen] = useState(false)
 
   // Build API filters
   const apiFilters = useMemo((): FindingApiFilters => {
@@ -468,13 +470,16 @@ export default function FindingsPage() {
                 (row.original.dataFlow.sinks?.length ?? 0) > 0))
 
           return (
-            <div className="cursor-pointer max-w-md" onClick={() => handleRowClick(row.original)}>
+            <div
+              className="cursor-pointer max-w-[200px] sm:max-w-md"
+              onClick={() => handleRowClick(row.original)}
+            >
               <div className="flex items-center gap-1.5">
                 <p className="font-medium truncate">{row.getValue('title')}</p>
                 {hasDataFlow && (
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <span className="inline-flex items-center gap-0.5 rounded-full bg-blue-500/20 px-1.5 py-0.5 text-[10px] font-medium text-blue-400">
+                      <span className="inline-flex items-center gap-0.5 rounded-full bg-blue-500/20 px-1.5 py-0.5 text-[10px] font-medium text-blue-400 shrink-0">
                         <Route className="h-2.5 w-2.5" />
                       </span>
                     </TooltipTrigger>
@@ -485,7 +490,7 @@ export default function FindingsPage() {
                 )}
               </div>
               {row.original.scanner && (
-                <p className="text-muted-foreground text-xs">{row.original.scanner}</p>
+                <p className="text-muted-foreground text-xs truncate">{row.original.scanner}</p>
               )}
             </div>
           )
@@ -659,9 +664,9 @@ export default function FindingsPage() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button size="sm">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Finding
+            <Button size="sm" onClick={() => setCreateDialogOpen(true)}>
+              <Plus className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Add Finding</span>
             </Button>
           </div>
         </PageHeader>
@@ -743,11 +748,13 @@ export default function FindingsPage() {
         ) : (
           <>
             {/* Stats Cards - Always visible once loaded */}
-            <div className="mt-6 grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-5">
+            {/* Mobile: 2x2 grid showing Critical, High, Medium, Low */}
+            {/* Desktop: 5 columns showing all severities */}
+            <div className="mt-6 grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-4 lg:grid-cols-5">
               <Card>
                 <CardHeader className="pb-2">
                   <CardDescription>Critical</CardDescription>
-                  <CardTitle className="text-3xl text-red-500">
+                  <CardTitle className="text-2xl sm:text-3xl text-red-500">
                     {stats.bySeverity.critical}
                   </CardTitle>
                 </CardHeader>
@@ -755,7 +762,7 @@ export default function FindingsPage() {
               <Card>
                 <CardHeader className="pb-2">
                   <CardDescription>High</CardDescription>
-                  <CardTitle className="text-3xl text-orange-500">
+                  <CardTitle className="text-2xl sm:text-3xl text-orange-500">
                     {stats.bySeverity.high}
                   </CardTitle>
                 </CardHeader>
@@ -763,7 +770,7 @@ export default function FindingsPage() {
               <Card>
                 <CardHeader className="pb-2">
                   <CardDescription>Medium</CardDescription>
-                  <CardTitle className="text-3xl text-yellow-500">
+                  <CardTitle className="text-2xl sm:text-3xl text-yellow-500">
                     {stats.bySeverity.medium}
                   </CardTitle>
                 </CardHeader>
@@ -771,10 +778,13 @@ export default function FindingsPage() {
               <Card>
                 <CardHeader className="pb-2">
                   <CardDescription>Low</CardDescription>
-                  <CardTitle className="text-3xl text-blue-500">{stats.bySeverity.low}</CardTitle>
+                  <CardTitle className="text-2xl sm:text-3xl text-blue-500">
+                    {stats.bySeverity.low}
+                  </CardTitle>
                 </CardHeader>
               </Card>
-              <Card>
+              {/* Info card - hidden on mobile to maintain 2x2 grid */}
+              <Card className="hidden lg:block">
                 <CardHeader className="pb-2">
                   <CardDescription>Info</CardDescription>
                   <CardTitle className="text-3xl text-gray-500">{stats.bySeverity.info}</CardTitle>
@@ -784,28 +794,33 @@ export default function FindingsPage() {
 
             {/* Tabs with DataTable */}
             <Tabs value={severityTab} onValueChange={setSeverityTab} className="mt-6">
-              <div className="overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
-                <TabsList className="h-auto w-max">
-                  <TabsTrigger value="all" className="text-xs sm:text-sm shrink-0">
-                    All ({stats.total})
-                  </TabsTrigger>
-                  <TabsTrigger value="critical" className="text-xs sm:text-sm shrink-0">
-                    <span className="hidden sm:inline">Critical</span>
-                    <span className="sm:hidden">Crit</span>
-                    <span className="ml-1">({stats.bySeverity.critical})</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="high" className="text-xs sm:text-sm shrink-0">
-                    High ({stats.bySeverity.high})
-                  </TabsTrigger>
-                  <TabsTrigger value="medium" className="text-xs sm:text-sm shrink-0">
-                    <span className="hidden sm:inline">Medium</span>
-                    <span className="sm:hidden">Med</span>
-                    <span className="ml-1">({stats.bySeverity.medium})</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="low" className="text-xs sm:text-sm shrink-0">
-                    Low ({stats.bySeverity.low})
-                  </TabsTrigger>
-                </TabsList>
+              {/* Scroll container with fade indicator on mobile */}
+              <div className="relative sm:static">
+                <div className="overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
+                  <TabsList className="h-auto w-max">
+                    <TabsTrigger value="all" className="text-xs sm:text-sm shrink-0">
+                      All ({stats.total})
+                    </TabsTrigger>
+                    <TabsTrigger value="critical" className="text-xs sm:text-sm shrink-0">
+                      <span className="hidden sm:inline">Critical</span>
+                      <span className="sm:hidden">Crit</span>
+                      <span className="ml-1">({stats.bySeverity.critical})</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="high" className="text-xs sm:text-sm shrink-0">
+                      High ({stats.bySeverity.high})
+                    </TabsTrigger>
+                    <TabsTrigger value="medium" className="text-xs sm:text-sm shrink-0">
+                      <span className="hidden sm:inline">Medium</span>
+                      <span className="sm:hidden">Med</span>
+                      <span className="ml-1">({stats.bySeverity.medium})</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="low" className="text-xs sm:text-sm shrink-0">
+                      Low ({stats.bySeverity.low})
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
+                {/* Fade indicator for scrollable content on mobile */}
+                <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent pointer-events-none sm:hidden" />
               </div>
 
               <TabsContent value={severityTab}>
@@ -854,6 +869,16 @@ export default function FindingsPage() {
         onSeverityChange={handleSeverityChange}
         onAssigneeChange={handleAssigneeChange}
         onAddComment={handleAddComment}
+      />
+
+      {/* Create Finding Dialog */}
+      <CreateFindingDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        onSuccess={() => {
+          mutateFindings()
+          mutateStats()
+        }}
       />
 
       {/* Delete Confirmation Dialog */}

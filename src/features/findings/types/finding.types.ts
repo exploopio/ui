@@ -466,14 +466,29 @@ export interface RelatedFinding {
 // ============================================
 
 export type FindingSource =
-  | 'sast' // Static Application Security Testing (Semgrep, CodeQL, etc.)
+  // Automated scanning tools (AppSec)
+  | 'sast' // Static Application Security Testing (Semgrep, CodeQL, SonarQube)
   | 'dast' // Dynamic Application Security Testing (ZAP, Burp, Nuclei)
   | 'sca' // Software Composition Analysis (Trivy, Snyk, Grype)
   | 'secret' // Secret detection (Gitleaks, Trufflehog)
-  | 'iac' // Infrastructure as Code (Checkov, Tfsec)
-  | 'container' // Container scanning
-  | 'manual' // Manual findings
-  | 'external' // External sources
+  | 'iac' // Infrastructure as Code scanning (Checkov, Tfsec, Kics)
+  | 'container' // Container image scanning
+  // Cloud & Infrastructure security
+  | 'cspm' // Cloud Security Posture Management (Wiz, Prisma Cloud, AWS Security Hub)
+  | 'easm' // External Attack Surface Management (Censys, Shodan, ProjectDiscovery)
+  // Runtime & Production
+  | 'rasp' // Runtime Application Self-Protection
+  | 'waf' // Web Application Firewall findings
+  | 'siem' // SIEM/Log analysis findings
+  // Manual/human sources
+  | 'manual' // Manual code review or ad-hoc discovery
+  | 'pentest' // Penetration testing engagement
+  | 'bug_bounty' // Bug bounty program submission
+  | 'red_team' // Red team exercise
+  // External sources
+  | 'external' // Imported from external tools/systems
+  | 'threat_intel' // Threat intelligence feeds
+  | 'vendor' // Vendor security assessments/third-party audits
 
 export interface Finding {
   id: string

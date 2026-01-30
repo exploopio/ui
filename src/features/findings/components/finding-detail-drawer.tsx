@@ -447,44 +447,45 @@ export function FindingDetailDrawer({
         {!isLoading && finding && (
           <>
             {/* Header */}
-            <SheetHeader className="space-y-3 border-b px-4 sm:px-6 py-4 text-left">
-              {/* Title row with More Actions */}
-              <div className="flex items-start gap-2 pr-12">
-                <SheetTitle className="flex-1 text-lg leading-snug">{finding.title}</SheetTitle>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-10 w-10 p-0 shrink-0 min-h-[44px] min-w-[44px]"
-                    >
-                      <MoreHorizontal className="h-5 w-5" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem
-                      onClick={() => {
-                        navigator.clipboard.writeText(finding.id)
-                        toast.success('Finding ID copied to clipboard')
-                      }}
-                    >
-                      <Copy className="mr-2 h-4 w-4" />
-                      Copy Finding ID
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => {
-                        navigator.clipboard.writeText(
-                          window.location.origin + `/findings/${finding.id}`
-                        )
-                        toast.success('Finding URL copied to clipboard')
-                      }}
-                    >
-                      <Link2 className="mr-2 h-4 w-4" />
-                      Copy Link
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+            <SheetHeader className="relative space-y-3 border-b px-4 sm:px-6 py-4 text-left">
+              {/* More Actions - positioned at top right, next to close button */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-12 top-4 h-8 w-8 p-0"
+                    aria-label="More actions"
+                  >
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem
+                    onClick={() => {
+                      navigator.clipboard.writeText(finding.id)
+                      toast.success('Finding ID copied to clipboard')
+                    }}
+                  >
+                    <Copy className="mr-2 h-4 w-4" />
+                    Copy Finding ID
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      navigator.clipboard.writeText(
+                        window.location.origin + `/findings/${finding.id}`
+                      )
+                      toast.success('Finding URL copied to clipboard')
+                    }}
+                  >
+                    <Link2 className="mr-2 h-4 w-4" />
+                    Copy Link
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {/* Title */}
+              <SheetTitle className="text-lg leading-snug pr-16">{finding.title}</SheetTitle>
 
               {/* CVE/CWE badges */}
               {(finding.cve || finding.cwe) && (
@@ -507,8 +508,8 @@ export function FindingDetailDrawer({
               </SheetDescription>
             </SheetHeader>
 
-            {/* Quick Actions Bar */}
-            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 border-b px-3 sm:px-6 py-3 bg-muted/30">
+            {/* Quick Actions Bar - no longer needs ml-auto for "..." button */}
+            <div className="flex items-center gap-1.5 sm:gap-2 border-b px-3 sm:px-6 py-3 bg-muted/30">
               {/* Status Select */}
               <StatusSelect
                 value={currentStatus}

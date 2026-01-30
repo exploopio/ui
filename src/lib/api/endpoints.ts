@@ -1279,6 +1279,16 @@ export const capabilityEndpoints = {
    * List capabilities by category
    */
   byCategory: (category: string) => `${API_BASE.CAPABILITIES}/by-category/${category}`,
+
+  /**
+   * Get usage stats for a single capability
+   */
+  usageStats: (capabilityId: string) => `${API_BASE.CAPABILITIES}/${capabilityId}/usage-stats`,
+
+  /**
+   * Get usage stats for multiple capabilities (batch)
+   */
+  usageStatsBatch: () => `${API_BASE.CAPABILITIES}/usage-stats`,
 } as const
 
 /**
@@ -1297,8 +1307,10 @@ export const customCapabilityEndpoints = {
 
   /**
    * Delete a custom capability
+   * @param force - Force delete even if capability is in use
    */
-  delete: (capabilityId: string) => `${API_BASE.CUSTOM_CAPABILITIES}/${capabilityId}`,
+  delete: (capabilityId: string, force?: boolean) =>
+    `${API_BASE.CUSTOM_CAPABILITIES}/${capabilityId}${force ? '?force=true' : ''}`,
 } as const
 
 // ============================================

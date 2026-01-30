@@ -253,6 +253,14 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
     permission: Permission.ToolsRead,
     module: Module.Scans,
   },
+  '/capabilities': {
+    permission: Permission.ToolsRead,
+    module: Module.Scans,
+  },
+  '/capabilities/**': {
+    permission: Permission.ToolsRead,
+    module: Module.Scans,
+  },
 
   // ========================================
   // Settings - Organization (Core feature, no module required)

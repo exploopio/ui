@@ -33,14 +33,29 @@ import { SeveritySelect } from '../severity-select'
 
 // Human-readable source labels
 const SOURCE_LABELS: Record<FindingSource, string> = {
+  // AppSec scanning
   sast: 'SAST',
   dast: 'DAST',
   sca: 'SCA',
   secret: 'Secret Scan',
   iac: 'IaC Scan',
   container: 'Container Scan',
-  manual: 'Manual',
+  // Cloud & Infrastructure
+  cspm: 'CSPM',
+  easm: 'EASM',
+  // Runtime & Production
+  rasp: 'RASP',
+  waf: 'WAF',
+  siem: 'SIEM',
+  // Manual/human sources
+  manual: 'Manual Review',
+  pentest: 'Pentest',
+  bug_bounty: 'Bug Bounty',
+  red_team: 'Red Team',
+  // External sources
   external: 'External',
+  threat_intel: 'Threat Intel',
+  vendor: 'Vendor Assessment',
 }
 
 interface FindingHeaderProps {
@@ -279,6 +294,8 @@ export function FindingHeader({
             size="sm"
             onClick={() => setIsCollapsed(!isCollapsed)}
             className="shrink-0 h-8 w-8 p-0"
+            aria-label={isCollapsed ? 'Expand header details' : 'Collapse header details'}
+            aria-expanded={!isCollapsed}
           >
             {isCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
           </Button>

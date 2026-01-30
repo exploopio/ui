@@ -139,7 +139,7 @@ export function AssigneeSelect({
                 <Avatar className="h-4 w-4">
                   <AvatarFallback className="text-[8px]">{getInitials(value.name)}</AvatarFallback>
                 </Avatar>
-                <span className="max-w-[56px] truncate">
+                <span className="max-w-[80px] truncate">
                   {showFullName ? value.name : value.name.split(' ')[0]}
                 </span>
               </>
