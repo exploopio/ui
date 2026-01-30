@@ -222,50 +222,60 @@ export function CapabilitiesSection() {
   return (
     <>
       <div className="space-y-6">
-        {/* Stats Cards */}
+        {/* Stats Cards - 2 per row on mobile, 4 on lg+ */}
         {!isLoading && (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-4">
             <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Total</p>
-                    <p className="text-2xl font-bold">{capabilitiesData?.items?.length || 0}</p>
+              <CardContent className="p-3 sm:pt-6 sm:px-6">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">
+                      Total
+                    </p>
+                    <p className="text-xl sm:text-2xl font-bold">
+                      {capabilitiesData?.items?.length || 0}
+                    </p>
                   </div>
-                  <Zap className="h-8 w-8 text-muted-foreground/50" />
+                  <Zap className="h-6 w-6 sm:h-8 sm:w-8 text-muted-foreground/50 shrink-0" />
                 </div>
               </CardContent>
             </Card>
             <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Platform</p>
-                    <p className="text-2xl font-bold">{platformCount}</p>
+              <CardContent className="p-3 sm:pt-6 sm:px-6">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">
+                      Platform
+                    </p>
+                    <p className="text-xl sm:text-2xl font-bold">{platformCount}</p>
                   </div>
-                  <Globe className="h-8 w-8 text-muted-foreground/50" />
+                  <Globe className="h-6 w-6 sm:h-8 sm:w-8 text-muted-foreground/50 shrink-0" />
                 </div>
               </CardContent>
             </Card>
             <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Custom</p>
-                    <p className="text-2xl font-bold">{customCount}</p>
+              <CardContent className="p-3 sm:pt-6 sm:px-6">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">
+                      Custom
+                    </p>
+                    <p className="text-xl sm:text-2xl font-bold">{customCount}</p>
                   </div>
-                  <Sparkles className="h-8 w-8 text-muted-foreground/50" />
+                  <Sparkles className="h-6 w-6 sm:h-8 sm:w-8 text-muted-foreground/50 shrink-0" />
                 </div>
               </CardContent>
             </Card>
             <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Categories</p>
-                    <p className="text-2xl font-bold">{categories.length}</p>
+              <CardContent className="p-3 sm:pt-6 sm:px-6">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">
+                      Categories
+                    </p>
+                    <p className="text-xl sm:text-2xl font-bold">{categories.length}</p>
                   </div>
-                  <LayoutGrid className="h-8 w-8 text-muted-foreground/50" />
+                  <LayoutGrid className="h-6 w-6 sm:h-8 sm:w-8 text-muted-foreground/50 shrink-0" />
                 </div>
               </CardContent>
             </Card>
