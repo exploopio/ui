@@ -24,7 +24,19 @@ export function Providers({ children, dir }: { children: React.ReactNode; dir: '
       <SWRProvider>
         <DirectionProvider dir={dir}>
           {children}
-          <Toaster richColors />
+          <Toaster
+            richColors
+            position="bottom-right"
+            expand={true}
+            visibleToasts={3}
+            closeButton
+            toastOptions={{
+              style: {
+                // Ensure action buttons are always visible
+                minHeight: '48px',
+              },
+            }}
+          />
         </DirectionProvider>
       </SWRProvider>
     </ThemeProvider>

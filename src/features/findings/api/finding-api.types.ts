@@ -92,6 +92,28 @@ export interface ApiFinding {
   description?: string
   message: string
   recommendation?: string
+  fix_code?: string // Auto-fix code snippet
+  fix_regex?: {
+    // Regex-based fix pattern
+    regex: string
+    replacement: string
+    count?: number // 0 = replace all
+  }
+  remediation?: {
+    // Full remediation JSONB
+    recommendation?: string
+    fix_code?: string
+    fix_regex?: {
+      regex: string
+      replacement: string
+      count?: number
+    }
+    steps?: string[]
+    references?: string[]
+    effort?: string // trivial, low, medium, high
+    fix_available?: boolean
+    auto_fixable?: boolean
+  }
   severity: Severity
   cvss_score?: number
   cvss_vector?: string

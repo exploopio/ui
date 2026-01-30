@@ -11,6 +11,7 @@ import { useFindingApi, useAddFindingCommentApi } from '@/features/findings/api/
 import { useFindingActivitiesInfinite } from '@/features/findings/api/use-finding-activities-api'
 import type { ApiFinding } from '@/features/findings/api/finding-api.types'
 import { toast } from 'sonner'
+import { ArrowLeft } from 'lucide-react'
 import type {
   FindingDetail,
   FindingStatus,
@@ -114,6 +115,11 @@ function transformApiToFindingDetail(api: ApiFinding): FindingDetail {
     startColumn: api.start_column,
     endColumn: api.end_column,
 
+    // Repository Info (for linking to source code)
+    repositoryUrl: assetWebUrl,
+    branch: api.last_seen_branch || api.first_detected_branch,
+    commitSha: api.last_seen_commit || api.first_detected_commit,
+
     // Scanner/Tool Info
     ruleId: api.rule_id,
     ruleName: api.rule_name,
@@ -200,6 +206,13 @@ function transformApiToFindingDetail(api: ApiFinding): FindingDetail {
     estimatedFixTime: api.estimated_fix_time,
     fixComplexity: api.fix_complexity,
     remedyAvailable: api.remedy_available,
+
+    // Auto-fix fields (from scanner)
+    fixCode: api.fix_code,
+    fixRegex: api.fix_regex,
+
+    // Full remediation JSONB from API
+    apiRemediation: api.remediation,
 
     // Extended: Tracking
     workItemUris: api.work_item_uris,
@@ -406,6 +419,19 @@ export default function FindingDetailPage() {
 
   return (
     <Main fixed>
+      {/* Back Button - Outside card, hidden on mobile */}
+      <div className="mb-2 flex-shrink-0 hidden sm:block">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 gap-1.5 px-2 text-muted-foreground hover:text-foreground"
+          onClick={() => router.back()}
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back
+        </Button>
+      </div>
+
       {/* Two-panel resizable layout */}
       <ResizablePanelGroup
         direction="horizontal"
@@ -422,37 +448,42 @@ export default function FindingDetailPage() {
 
             {/* Tabs */}
             <Tabs defaultValue="overview" className="flex min-h-0 flex-1 flex-col">
-              <div className="flex-shrink-0 border-b px-6">
-                <TabsList className="h-auto gap-4 rounded-none bg-transparent p-0">
+              <div className="flex-shrink-0 border-b px-3 sm:px-6 overflow-x-auto no-scrollbar">
+                <TabsList className="h-auto gap-2 sm:gap-4 rounded-none bg-transparent p-0 w-max min-w-full">
                   <TabsTrigger
                     value="overview"
-                    className="rounded-none border-b-2 border-transparent bg-transparent px-0 pb-3 pt-3 shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                    className="rounded-none border-b-2 border-transparent bg-transparent px-1 sm:px-0 pb-3 pt-3 text-sm sm:text-base whitespace-nowrap shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
                   >
                     Overview
                   </TabsTrigger>
                   <TabsTrigger
                     value="evidence"
-                    className="rounded-none border-b-2 border-transparent bg-transparent px-0 pb-3 pt-3 shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                    className="rounded-none border-b-2 border-transparent bg-transparent px-1 sm:px-0 pb-3 pt-3 text-sm sm:text-base whitespace-nowrap shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
                   >
-                    Evidence (
-                    {finding.evidence.length +
-                      (finding.stacks?.length || 0) +
-                      (finding.relatedLocations?.length || 0)}
-                    )
+                    Evidence
+                    {(() => {
+                      const count =
+                        (finding.contextSnippet || finding.snippet ? 1 : 0) +
+                        (finding.stacks?.length || 0) +
+                        (finding.relatedLocations?.length || 0) +
+                        (finding.attachments?.length || 0)
+                      return count > 0 ? ` (${count})` : ''
+                    })()}
                   </TabsTrigger>
                   <TabsTrigger
                     value="remediation"
-                    className="rounded-none border-b-2 border-transparent bg-transparent px-0 pb-3 pt-3 shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                    className="rounded-none border-b-2 border-transparent bg-transparent px-1 sm:px-0 pb-3 pt-3 text-sm sm:text-base whitespace-nowrap shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
                   >
                     Remediation
                   </TabsTrigger>
                   <TabsTrigger
                     value="attack-path"
-                    className="rounded-none border-b-2 border-transparent bg-transparent px-0 pb-3 pt-3 shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                    className="rounded-none border-b-2 border-transparent bg-transparent px-1 sm:px-0 pb-3 pt-3 text-sm sm:text-base whitespace-nowrap shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
                   >
-                    Attack Path
+                    <span className="hidden sm:inline">Attack Path</span>
+                    <span className="sm:hidden">Path</span>
                     {finding.dataFlow && (
-                      <span className="ml-1.5 rounded-full bg-blue-500/20 px-1.5 py-0.5 text-[10px] text-blue-400">
+                      <span className="ml-1 sm:ml-1.5 rounded-full bg-blue-500/20 px-1 sm:px-1.5 py-0.5 text-[10px] text-blue-400">
                         {(finding.dataFlow.sources?.length || 0) +
                           (finding.dataFlow.intermediates?.length || 0) +
                           (finding.dataFlow.sinks?.length || 0)}
@@ -461,7 +492,7 @@ export default function FindingDetailPage() {
                   </TabsTrigger>
                   <TabsTrigger
                     value="related"
-                    className="rounded-none border-b-2 border-transparent bg-transparent px-0 pb-3 pt-3 shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                    className="rounded-none border-b-2 border-transparent bg-transparent px-1 sm:px-0 pb-3 pt-3 text-sm sm:text-base whitespace-nowrap shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
                   >
                     Related
                   </TabsTrigger>

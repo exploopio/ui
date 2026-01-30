@@ -500,6 +500,11 @@ export interface Finding {
   startColumn?: number
   endColumn?: number
 
+  // Repository Info (for linking to source code)
+  repositoryUrl?: string // Repository web URL (e.g., https://github.com/org/repo)
+  branch?: string // Branch name
+  commitSha?: string // Commit SHA for precise linking
+
   // Scanner/Tool Info
   ruleId?: string
   ruleName?: string
@@ -567,6 +572,31 @@ export interface Finding {
   estimatedFixTime?: number // minutes
   fixComplexity?: string // simple/moderate/complex
   remedyAvailable?: boolean
+
+  // Auto-fix fields (from scanner)
+  fixCode?: string // Actual code fix from scanner (e.g., Semgrep fix)
+  fixRegex?: {
+    // Regex-based fix pattern
+    regex: string
+    replacement: string
+    count?: number // 0 = replace all
+  }
+
+  // Full remediation JSONB from API
+  apiRemediation?: {
+    recommendation?: string
+    fix_code?: string
+    fix_regex?: {
+      regex: string
+      replacement: string
+      count?: number
+    }
+    steps?: string[]
+    references?: string[]
+    effort?: string // trivial, low, medium, high
+    fix_available?: boolean
+    auto_fixable?: boolean
+  }
 
   // Extended: Tracking
   workItemUris?: string[] // linked issues

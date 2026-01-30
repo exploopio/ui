@@ -25,10 +25,13 @@ import {
   FileCode,
   ExternalLink,
   Copy,
+  Github,
+  GitBranch,
 } from 'lucide-react'
 import type { Evidence, EvidenceType, FindingDetail } from '../../types'
 import { EVIDENCE_TYPE_CONFIG } from '../../types'
 import { CodeHighlighter } from './code-highlighter'
+import { buildRepositoryCodeUrl } from '../../lib/repository-url'
 
 interface EvidenceTabProps {
   evidence: Evidence[]
@@ -43,6 +46,60 @@ const EVIDENCE_ICONS: Record<EvidenceType, React.ReactNode> = {
   response: <ArrowDownLeft className="h-4 w-4" />,
   code: <Code className="h-4 w-4" />,
   file: <Paperclip className="h-4 w-4" />,
+}
+
+// Repository Link Component
+interface RepositoryLinkProps {
+  repositoryUrl: string
+  filePath: string
+  startLine?: number
+  endLine?: number
+  branch?: string
+  commitSha?: string
+}
+
+function RepositoryLink({
+  repositoryUrl,
+  filePath,
+  startLine,
+  endLine,
+  branch,
+  commitSha,
+}: RepositoryLinkProps) {
+  const link = buildRepositoryCodeUrl({
+    repositoryUrl,
+    filePath,
+    startLine,
+    endLine,
+    branch,
+    commitSha,
+  })
+
+  if (!link) return null
+
+  // Detect provider from URL for icon
+  const isGitHub = repositoryUrl.toLowerCase().includes('github')
+  const isGitLab = repositoryUrl.toLowerCase().includes('gitlab')
+
+  return (
+    <a
+      href={link}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors shrink-0"
+      title="View in repository"
+    >
+      {isGitHub ? (
+        <Github className="h-3 w-3" />
+      ) : isGitLab ? (
+        <GitBranch className="h-3 w-3" />
+      ) : (
+        <GitBranch className="h-3 w-3" />
+      )}
+      <span className="hidden sm:inline">View source</span>
+      <ExternalLink className="h-2.5 w-2.5" />
+    </a>
+  )
 }
 
 export function EvidenceTab({ evidence, finding }: EvidenceTabProps) {
@@ -204,16 +261,32 @@ export function EvidenceTab({ evidence, finding }: EvidenceTabProps) {
     }
   }
 
+  // Build repository code URL for "Affected Code" link
+  const repositoryCodeUrl = buildRepositoryCodeUrl({
+    repositoryUrl: finding?.repositoryUrl || finding?.assets?.[0]?.url,
+    filePath: finding?.filePath,
+    startLine: finding?.startLine,
+    endLine: finding?.endLine,
+    branch: finding?.branch,
+    commitSha: finding?.commitSha,
+  })
+
   // Check if there's any content to show
+  // Only show context snippet (not vulnerable code snippet to avoid duplication)
+  const hasAffectedCode = !!finding?.filePath
   const hasContextSnippet = !!finding?.contextSnippet
-  const hasSnippet = !!finding?.snippet
-  const hasCodeSnippets = hasContextSnippet || hasSnippet
+  const hasCodeSnippets = hasContextSnippet
   const hasEvidence = evidence.length > 0
   const hasStacks = stacks.length > 0
   const hasRelatedLocations = relatedLocations.length > 0
   const hasAttachments = attachments.length > 0
   const hasAnyContent =
-    hasCodeSnippets || hasEvidence || hasStacks || hasRelatedLocations || hasAttachments
+    hasAffectedCode ||
+    hasCodeSnippets ||
+    hasEvidence ||
+    hasStacks ||
+    hasRelatedLocations ||
+    hasAttachments
 
   if (!hasAnyContent) {
     return (
@@ -231,18 +304,67 @@ export function EvidenceTab({ evidence, finding }: EvidenceTabProps) {
     )
   }
 
-  // Calculate line numbers for snippets
+  // Calculate line numbers for context snippet
   const contextStartLine = finding?.contextStartLine || 1
-  const snippetStartLine = finding?.startLine || 1
 
   return (
     <div className="space-y-6">
+      {/* Affected Code - File location with repository link */}
+      {hasAffectedCode && finding?.filePath && (
+        <div>
+          <h3 className="mb-3 flex items-center gap-2 font-semibold">
+            <Code className="h-4 w-4" />
+            Affected Code
+          </h3>
+          <div className="rounded-lg border bg-muted/30 p-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                {repositoryCodeUrl ? (
+                  <a
+                    href={repositoryCodeUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm font-mono text-blue-400 hover:text-blue-300 hover:underline break-all inline-flex items-center gap-1"
+                  >
+                    {finding.filePath}
+                    {finding.startLine && (
+                      <span className="text-muted-foreground">
+                        :{finding.startLine}
+                        {finding.endLine &&
+                          finding.endLine !== finding.startLine &&
+                          `-${finding.endLine}`}
+                      </span>
+                    )}
+                    <ExternalLink className="h-3 w-3 shrink-0 ml-1" />
+                  </a>
+                ) : (
+                  <p className="text-sm font-mono text-slate-300 break-all">
+                    {finding.filePath}
+                    {finding.startLine && (
+                      <span className="text-muted-foreground">
+                        :{finding.startLine}
+                        {finding.endLine &&
+                          finding.endLine !== finding.startLine &&
+                          `-${finding.endLine}`}
+                      </span>
+                    )}
+                  </p>
+                )}
+                {finding.assets?.[0]?.name && (
+                  <p className="text-muted-foreground text-xs mt-1">in {finding.assets[0].name}</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Code Snippets Section - Show both context and snippet */}
       {hasCodeSnippets && (
         <div className="space-y-4">
           <h3 className="flex items-center gap-2 font-semibold">
             <Code className="h-4 w-4" />
-            Code Evidence
+            Code Context
           </h3>
 
           {/* Context Snippet - Surrounding code (±3 lines) */}
@@ -251,11 +373,24 @@ export function EvidenceTab({ evidence, finding }: EvidenceTabProps) {
               <p className="text-muted-foreground text-xs mb-2">Context (surrounding code)</p>
               <div className="bg-[#1e1e2e] rounded-lg overflow-hidden border border-slate-700/50">
                 <div className="flex items-center justify-between px-3 py-2 bg-slate-800/50 border-b border-slate-700/30">
-                  <span className="text-xs text-slate-400 font-mono truncate">
-                    {finding?.filePath || 'code'}
-                    {contextStartLine &&
-                      ` (lines ${contextStartLine}-${contextStartLine + (finding.contextSnippet.split('\n').length - 1)})`}
-                  </span>
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <span className="text-xs text-slate-400 font-mono truncate">
+                      {finding?.filePath || 'code'}
+                      {contextStartLine &&
+                        ` (lines ${contextStartLine}-${contextStartLine + (finding.contextSnippet.split('\n').length - 1)})`}
+                    </span>
+                    {/* Repository Link */}
+                    {finding?.repositoryUrl && finding?.filePath && (
+                      <RepositoryLink
+                        repositoryUrl={finding.repositoryUrl}
+                        filePath={finding.filePath}
+                        startLine={finding.startLine}
+                        endLine={finding.endLine}
+                        branch={finding.branch}
+                        commitSha={finding.commitSha}
+                      />
+                    )}
+                  </div>
                 </div>
                 <div className="p-3 overflow-x-auto">
                   <CodeHighlighter
@@ -265,33 +400,6 @@ export function EvidenceTab({ evidence, finding }: EvidenceTabProps) {
                     showLineNumbers={true}
                     startLine={contextStartLine}
                     highlightLine={finding?.startLine}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Snippet - Exact vulnerable code */}
-          {hasSnippet && finding?.snippet && (
-            <div>
-              <p className="text-muted-foreground text-xs mb-2">Vulnerable code (exact location)</p>
-              <div className="bg-[#1e1e2e] rounded-lg overflow-hidden border border-red-500/30">
-                <div className="flex items-center justify-between px-3 py-2 bg-red-900/20 border-b border-red-500/30">
-                  <span className="text-xs text-red-400 font-mono truncate">
-                    {finding?.filePath || 'code'}
-                    {finding?.startLine && `:${finding.startLine}`}
-                    {finding?.endLine &&
-                      finding.endLine !== finding.startLine &&
-                      `-${finding.endLine}`}
-                  </span>
-                </div>
-                <div className="p-3 overflow-x-auto">
-                  <CodeHighlighter
-                    code={finding.snippet}
-                    filePath={finding?.filePath}
-                    className="bg-transparent"
-                    showLineNumbers={true}
-                    startLine={snippetStartLine}
                   />
                 </div>
               </div>

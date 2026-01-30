@@ -120,8 +120,16 @@ function transformApiToUiFinding(api: ApiFinding): Finding {
       references: (api.metadata?.references as string[]) || [],
       progress: api.status === 'resolved' ? 100 : 0,
     },
+    // Assignee - only show name/email if enriched data is available
+    // If assigned_to_user is not present, name will be empty
+    // AssigneeSelect will detect this and fetch user info when needed
     assignee: api.assigned_to
-      ? { id: api.assigned_to, name: api.assigned_to, email: '', role: 'analyst' }
+      ? {
+          id: api.assigned_to,
+          name: api.assigned_to_user?.name || '',
+          email: api.assigned_to_user?.email || '',
+          role: 'analyst' as const,
+        }
       : undefined,
     team: undefined,
     source: api.source as Finding['source'],
@@ -776,13 +784,29 @@ export default function FindingsPage() {
 
             {/* Tabs with DataTable */}
             <Tabs value={severityTab} onValueChange={setSeverityTab} className="mt-6">
-              <TabsList>
-                <TabsTrigger value="all">All ({stats.total})</TabsTrigger>
-                <TabsTrigger value="critical">Critical ({stats.bySeverity.critical})</TabsTrigger>
-                <TabsTrigger value="high">High ({stats.bySeverity.high})</TabsTrigger>
-                <TabsTrigger value="medium">Medium ({stats.bySeverity.medium})</TabsTrigger>
-                <TabsTrigger value="low">Low ({stats.bySeverity.low})</TabsTrigger>
-              </TabsList>
+              <div className="overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
+                <TabsList className="h-auto w-max">
+                  <TabsTrigger value="all" className="text-xs sm:text-sm shrink-0">
+                    All ({stats.total})
+                  </TabsTrigger>
+                  <TabsTrigger value="critical" className="text-xs sm:text-sm shrink-0">
+                    <span className="hidden sm:inline">Critical</span>
+                    <span className="sm:hidden">Crit</span>
+                    <span className="ml-1">({stats.bySeverity.critical})</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="high" className="text-xs sm:text-sm shrink-0">
+                    High ({stats.bySeverity.high})
+                  </TabsTrigger>
+                  <TabsTrigger value="medium" className="text-xs sm:text-sm shrink-0">
+                    <span className="hidden sm:inline">Medium</span>
+                    <span className="sm:hidden">Med</span>
+                    <span className="ml-1">({stats.bySeverity.medium})</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="low" className="text-xs sm:text-sm shrink-0">
+                    Low ({stats.bySeverity.low})
+                  </TabsTrigger>
+                </TabsList>
+              </div>
 
               <TabsContent value={severityTab}>
                 <Card className="mt-4">
