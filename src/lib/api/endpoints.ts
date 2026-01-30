@@ -668,8 +668,6 @@ export const findingEndpoints = {
  * Dashboard endpoints for aggregated statistics
  */
 export const dashboardEndpoints = {
-
-
   /**
    * Get tenant-scoped dashboard stats
    */
@@ -756,7 +754,11 @@ export const auditLogEndpoints = {
 // AGENT ENDPOINTS
 // ============================================
 
-import type { AgentListFilters } from './agent-types'
+import type {
+  AgentListFilters,
+  AgentSessionListFilters,
+  AgentDailyStatsListFilters,
+} from './agent-types'
 
 /**
  * Agent endpoints for managing agents (runners, workers, collectors, sensors)
@@ -822,6 +824,47 @@ export const agentEndpoints = {
    */
   availableCapabilities: (includePlatform: boolean = true) =>
     `${API_BASE.AGENTS}/available-capabilities?include_platform=${includePlatform}`,
+
+  // ============================================
+  // AGENT ANALYTICS (Sessions & Daily Stats)
+  // ============================================
+
+  /**
+   * List agent sessions
+   */
+  listSessions: (agentId: string, filters?: AgentSessionListFilters) => {
+    const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
+    return `${API_BASE.AGENTS}/${agentId}/sessions${queryString}`
+  },
+
+  /**
+   * Get active session for an agent
+   */
+  getActiveSession: (agentId: string) => `${API_BASE.AGENTS}/${agentId}/sessions/active`,
+
+  /**
+   * Get session stats for an agent
+   */
+  getSessionStats: (agentId: string, filters?: { started_at?: string; ended_at?: string }) => {
+    const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
+    return `${API_BASE.AGENTS}/${agentId}/sessions/stats${queryString}`
+  },
+
+  /**
+   * List daily stats for an agent
+   */
+  listDailyStats: (agentId: string, filters?: AgentDailyStatsListFilters) => {
+    const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
+    return `${API_BASE.AGENTS}/${agentId}/stats/daily${queryString}`
+  },
+
+  /**
+   * Get time series data for an agent
+   */
+  getTimeSeries: (agentId: string, filters?: { from?: string; to?: string }) => {
+    const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
+    return `${API_BASE.AGENTS}/${agentId}/stats/timeseries${queryString}`
+  },
 } as const
 
 // ============================================
@@ -885,7 +928,8 @@ export const scanProfileEndpoints = {
   /**
    * Evaluate quality gate against finding counts
    */
-  evaluateQualityGate: (profileId: string) => `${API_BASE.SCAN_PROFILES}/${profileId}/evaluate-quality-gate`,
+  evaluateQualityGate: (profileId: string) =>
+    `${API_BASE.SCAN_PROFILES}/${profileId}/evaluate-quality-gate`,
 } as const
 
 // ============================================

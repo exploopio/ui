@@ -21,6 +21,7 @@ import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Table,
   TableBody,
@@ -183,7 +184,7 @@ export default function CloudPage() {
   // Fetch cloud assets from API (compute, storage, serverless types)
   const {
     assets: cloudAssets,
-    isLoading: _isLoading,
+    isLoading,
     isError: _isError,
     error: _fetchError,
     mutate,
@@ -690,7 +691,11 @@ export default function CloudPage() {
                 <Cloud className="h-4 w-4" />
                 Total Assets
               </CardDescription>
-              <CardTitle className="text-3xl">{statusCounts.all}</CardTitle>
+              {isLoading ? (
+                <Skeleton className="h-9 w-16 mt-1" />
+              ) : (
+                <CardTitle className="text-3xl">{statusCounts.all}</CardTitle>
+              )}
             </CardHeader>
           </Card>
           <Card
@@ -702,7 +707,11 @@ export default function CloudPage() {
                 <Cloud className="h-4 w-4 text-orange-500" />
                 AWS
               </CardDescription>
-              <CardTitle className="text-3xl text-orange-500">{providerCounts.aws}</CardTitle>
+              {isLoading ? (
+                <Skeleton className="h-9 w-16 mt-1" />
+              ) : (
+                <CardTitle className="text-3xl text-orange-500">{providerCounts.aws}</CardTitle>
+              )}
             </CardHeader>
           </Card>
           <Card
@@ -714,7 +723,11 @@ export default function CloudPage() {
                 <Cloud className="h-4 w-4 text-blue-500" />
                 GCP
               </CardDescription>
-              <CardTitle className="text-3xl text-blue-500">{providerCounts.gcp}</CardTitle>
+              {isLoading ? (
+                <Skeleton className="h-9 w-16 mt-1" />
+              ) : (
+                <CardTitle className="text-3xl text-blue-500">{providerCounts.gcp}</CardTitle>
+              )}
             </CardHeader>
           </Card>
           <Card
@@ -726,7 +739,11 @@ export default function CloudPage() {
                 <Cloud className="h-4 w-4 text-cyan-500" />
                 Azure
               </CardDescription>
-              <CardTitle className="text-3xl text-cyan-500">{providerCounts.azure}</CardTitle>
+              {isLoading ? (
+                <Skeleton className="h-9 w-16 mt-1" />
+              ) : (
+                <CardTitle className="text-3xl text-cyan-500">{providerCounts.azure}</CardTitle>
+              )}
             </CardHeader>
           </Card>
           <Card>
@@ -735,9 +752,13 @@ export default function CloudPage() {
                 <AlertTriangle className="h-4 w-4 text-orange-500" />
                 With Findings
               </CardDescription>
-              <CardTitle className="text-3xl text-orange-500">
-                {cloudAssets.filter((a) => a.findingCount > 0).length}
-              </CardTitle>
+              {isLoading ? (
+                <Skeleton className="h-9 w-16 mt-1" />
+              ) : (
+                <CardTitle className="text-3xl text-orange-500">
+                  {cloudAssets.filter((a) => a.findingCount > 0).length}
+                </CardTitle>
+              )}
             </CardHeader>
           </Card>
         </div>

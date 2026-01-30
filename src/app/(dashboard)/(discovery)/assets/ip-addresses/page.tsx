@@ -21,6 +21,7 @@ import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Table,
   TableBody,
@@ -157,7 +158,7 @@ export default function IpAddressesPage() {
   // Fetch IP addresses from API
   const {
     assets: ipAddresses,
-    isLoading: _isLoading,
+    isLoading,
     isError: _isError,
     error: _fetchError,
     mutate,
@@ -685,7 +686,11 @@ export default function IpAddressesPage() {
                 <Network className="h-4 w-4" />
                 Total IPs
               </CardDescription>
-              <CardTitle className="text-3xl">{statusCounts.all}</CardTitle>
+              {isLoading ? (
+                <Skeleton className="h-9 w-16 mt-1" />
+              ) : (
+                <CardTitle className="text-3xl">{statusCounts.all}</CardTitle>
+              )}
             </CardHeader>
           </Card>
           <Card
@@ -700,7 +705,11 @@ export default function IpAddressesPage() {
                 <Globe className="h-4 w-4 text-purple-600" />
                 Public
               </CardDescription>
-              <CardTitle className="text-3xl text-purple-600">{ipTypeCounts.public}</CardTitle>
+              {isLoading ? (
+                <Skeleton className="h-9 w-16 mt-1" />
+              ) : (
+                <CardTitle className="text-3xl text-purple-600">{ipTypeCounts.public}</CardTitle>
+              )}
             </CardHeader>
           </Card>
           <Card
@@ -715,7 +724,11 @@ export default function IpAddressesPage() {
                 <Lock className="h-4 w-4 text-blue-600" />
                 Private
               </CardDescription>
-              <CardTitle className="text-3xl text-blue-600">{ipTypeCounts.private}</CardTitle>
+              {isLoading ? (
+                <Skeleton className="h-9 w-16 mt-1" />
+              ) : (
+                <CardTitle className="text-3xl text-blue-600">{ipTypeCounts.private}</CardTitle>
+              )}
             </CardHeader>
           </Card>
           <Card>
@@ -724,7 +737,11 @@ export default function IpAddressesPage() {
                 <Server className="h-4 w-4 text-cyan-600" />
                 IPv6
               </CardDescription>
-              <CardTitle className="text-3xl text-cyan-600">{ipTypeCounts.ipv6}</CardTitle>
+              {isLoading ? (
+                <Skeleton className="h-9 w-16 mt-1" />
+              ) : (
+                <CardTitle className="text-3xl text-cyan-600">{ipTypeCounts.ipv6}</CardTitle>
+              )}
             </CardHeader>
           </Card>
         </div>

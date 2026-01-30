@@ -53,42 +53,87 @@ const MOCK_FINDING_TRENDS = [
   { date: 'Dec', critical: 3, high: 12, medium: 19, low: 22 },
 ]
 
-function DashboardSkeleton() {
+// Inline skeleton for stats cards section
+function StatsCardsSkeleton() {
   return (
-    <>
-      {/* Stats Cards Skeleton */}
-      <section className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {[1, 2, 3, 4].map((i) => (
-          <Card key={i}>
-            <CardHeader className="pb-2">
-              <Skeleton className="h-4 w-24" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="mb-2 h-8 w-16" />
-              <Skeleton className="h-3 w-20" />
-            </CardContent>
-          </Card>
-        ))}
-      </section>
-
-      {/* Charts Skeleton */}
-      <section className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-7">
-        <Card className="col-span-1 lg:col-span-4">
-          <CardHeader>
-            <Skeleton className="h-5 w-32" />
-            <Skeleton className="h-4 w-48" />
+    <section className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      {[1, 2, 3, 4].map((i) => (
+        <Card key={i}>
+          <CardHeader className="pb-2">
+            <Skeleton className="h-4 w-24" />
           </CardHeader>
           <CardContent>
-            <Skeleton className="h-[300px] w-full" />
+            <Skeleton className="mb-2 h-8 w-16" />
+            <Skeleton className="h-3 w-20" />
           </CardContent>
         </Card>
-        <Card className="col-span-1 lg:col-span-3">
+      ))}
+    </section>
+  )
+}
+
+// Inline skeleton for charts section
+function ChartsSkeleton() {
+  return (
+    <section className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-7">
+      <Card className="col-span-1 lg:col-span-4">
+        <CardHeader>
+          <Skeleton className="h-5 w-32" />
+          <Skeleton className="h-4 w-48" />
+        </CardHeader>
+        <CardContent>
+          <Skeleton className="h-[300px] w-full" />
+        </CardContent>
+      </Card>
+      <Card className="col-span-1 lg:col-span-3">
+        <CardHeader>
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="h-4 w-36" />
+        </CardHeader>
+        <CardContent>
+          <Skeleton className="h-[300px] w-full" />
+        </CardContent>
+      </Card>
+    </section>
+  )
+}
+
+// Inline skeleton for bottom sections
+function BottomSectionsSkeleton() {
+  return (
+    <>
+      <section className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card>
           <CardHeader>
-            <Skeleton className="h-5 w-40" />
-            <Skeleton className="h-4 w-36" />
+            <Skeleton className="h-5 w-36" />
+            <Skeleton className="h-4 w-28" />
           </CardHeader>
           <CardContent>
-            <Skeleton className="h-[300px] w-full" />
+            <Skeleton className="h-[200px] w-full" />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-5 w-32" />
+            <Skeleton className="h-4 w-40" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-[200px] w-full" />
+          </CardContent>
+        </Card>
+      </section>
+      <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <Card className="lg:col-span-3">
+          <CardHeader>
+            <Skeleton className="h-5 w-24" />
+            <Skeleton className="h-4 w-32" />
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+              {[1, 2, 3, 4].map((i) => (
+                <Skeleton key={i} className="h-16 w-full" />
+              ))}
+            </div>
           </CardContent>
         </Card>
       </section>
@@ -204,32 +249,26 @@ export default function Dashboard() {
           </Card>
         </section>
 
-        {/* Loading State */}
-        {isLoading && <DashboardSkeleton />}
-
-        {/* Error State */}
+        {/* Error State - show inline error banner instead of blocking */}
         {error && (
-          <Card className="mb-6">
-            <CardContent className="flex items-center justify-center py-8">
-              <div className="text-center">
-                <AlertTriangle className="mx-auto mb-2 h-8 w-8 text-yellow-500" />
-                <p className="text-muted-foreground">Failed to load dashboard data</p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mt-2"
-                  onClick={() => window.location.reload()}
-                >
-                  Retry
-                </Button>
+          <Card className="mb-6 border-yellow-500/50">
+            <CardContent className="flex items-center justify-between py-4">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                <p className="text-sm text-muted-foreground">Failed to load dashboard data</p>
               </div>
+              <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+                Retry
+              </Button>
             </CardContent>
           </Card>
         )}
 
-        {/* Stats Cards */}
-        {!isLoading && !error && (
-          <>
+        {/* Stats Cards - Show inline skeletons while loading */}
+        {isLoading ? (
+          <StatsCardsSkeleton />
+        ) : (
+          !error && (
             <section className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
               <StatsCard
                 title="Total Assets"
@@ -272,8 +311,14 @@ export default function Dashboard() {
                 icon={ListChecks}
               />
             </section>
+          )
+        )}
 
-            {/* Charts Row */}
+        {/* Charts Row - Show inline skeletons while loading */}
+        {isLoading ? (
+          <ChartsSkeleton />
+        ) : (
+          !error && (
             <section className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-7">
               {/* Findings Trend Chart - TODO: Replace MOCK_FINDING_TRENDS with real API data */}
               <Card className="col-span-1 lg:col-span-4">
@@ -369,102 +414,110 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
             </section>
+          )
+        )}
 
-            {/* Asset Distribution & Recent Activity */}
-            <section className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-              {/* Asset Distribution */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Asset Distribution</CardTitle>
-                  <CardDescription>{stats.assets.total} total assets by type</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {assetDistribution.length > 0 ? (
-                    <ResponsiveContainer width="100%" height={assetDistribution.length * 40}>
-                      <BarChart data={assetDistribution} layout="vertical" barCategoryGap="20%">
-                        <XAxis type="number" hide />
-                        <YAxis
-                          dataKey="name"
-                          type="category"
-                          tick={{ fontSize: 12 }}
-                          tickLine={false}
-                          axisLine={false}
-                          width={100}
-                        />
-                        <Tooltip />
-                        <Bar dataKey="count" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={20} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <div className="flex h-[250px] items-center justify-center">
-                      <p className="text-muted-foreground">No asset data</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+        {/* Asset Distribution & Recent Activity - Show inline skeletons while loading */}
+        {isLoading ? (
+          <BottomSectionsSkeleton />
+        ) : (
+          !error && (
+            <>
+              <section className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+                {/* Asset Distribution */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Asset Distribution</CardTitle>
+                    <CardDescription>{stats.assets.total} total assets by type</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {assetDistribution.length > 0 ? (
+                      <ResponsiveContainer width="100%" height={assetDistribution.length * 40}>
+                        <BarChart data={assetDistribution} layout="vertical" barCategoryGap="20%">
+                          <XAxis type="number" hide />
+                          <YAxis
+                            dataKey="name"
+                            type="category"
+                            tick={{ fontSize: 12 }}
+                            tickLine={false}
+                            axisLine={false}
+                            width={100}
+                          />
+                          <Tooltip />
+                          <Bar dataKey="count" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={20} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="flex h-[250px] items-center justify-center">
+                        <p className="text-muted-foreground">No asset data</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
 
-              {/* Recent Activity */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Recent Activity</CardTitle>
-                  <CardDescription>Latest security events and updates</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {stats.recentActivity.length > 0 ? (
-                    <div className="space-y-4">
-                      {stats.recentActivity.slice(0, 5).map((activity, index) => (
-                        <ActivityItem
-                          key={index}
-                          icon={<AlertTriangle className="h-4 w-4 text-yellow-500" />}
-                          title={activity.title}
-                          description={activity.description}
-                          time={new Date(activity.timestamp).toLocaleDateString()}
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex h-[200px] items-center justify-center">
-                      <p className="text-muted-foreground">No recent activity</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </section>
+                {/* Recent Activity */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Recent Activity</CardTitle>
+                    <CardDescription>Latest security events and updates</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {stats.recentActivity.length > 0 ? (
+                      <div className="space-y-4">
+                        {stats.recentActivity.slice(0, 5).map((activity, index) => (
+                          <ActivityItem
+                            key={index}
+                            icon={<AlertTriangle className="h-4 w-4 text-yellow-500" />}
+                            title={activity.title}
+                            description={activity.description}
+                            time={new Date(activity.timestamp).toLocaleDateString()}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex h-[200px] items-center justify-center">
+                        <p className="text-muted-foreground">No recent activity</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </section>
 
-            {/* Quick Stats */}
-            <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-              <Card className="lg:col-span-3">
-                <CardHeader>
-                  <CardTitle>Quick Stats</CardTitle>
-                  <CardDescription>Key metrics overview</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-                    <QuickStat
-                      label="Total Findings"
-                      value={stats.findings.total}
-                      subtext={`Avg CVSS: ${stats.findings.averageCvss.toFixed(1)}`}
-                    />
-                    <QuickStat
-                      label="Critical Findings"
-                      value={stats.findings.bySeverity.critical || 0}
-                      subtext={`${stats.findings.bySeverity.high || 0} high severity`}
-                    />
-                    <QuickStat
-                      label="Overdue"
-                      value={stats.findings.overdue}
-                      subtext="Require immediate attention"
-                    />
-                    <QuickStat
-                      label="Repositories with Issues"
-                      value={stats.repositories.withFindings}
-                      subtext={`${stats.repositories.total} total repositories`}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            </section>
-          </>
+              {/* Quick Stats */}
+              <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                <Card className="lg:col-span-3">
+                  <CardHeader>
+                    <CardTitle>Quick Stats</CardTitle>
+                    <CardDescription>Key metrics overview</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+                      <QuickStat
+                        label="Total Findings"
+                        value={stats.findings.total}
+                        subtext={`Avg CVSS: ${stats.findings.averageCvss.toFixed(1)}`}
+                      />
+                      <QuickStat
+                        label="Critical Findings"
+                        value={stats.findings.bySeverity.critical || 0}
+                        subtext={`${stats.findings.bySeverity.high || 0} high severity`}
+                      />
+                      <QuickStat
+                        label="Overdue"
+                        value={stats.findings.overdue}
+                        subtext="Require immediate attention"
+                      />
+                      <QuickStat
+                        label="Repositories with Issues"
+                        value={stats.repositories.withFindings}
+                        subtext={`${stats.repositories.total} total repositories`}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              </section>
+            </>
+          )
         )}
       </Main>
     </>

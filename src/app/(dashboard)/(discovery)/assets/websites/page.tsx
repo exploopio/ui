@@ -21,6 +21,7 @@ import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Table,
   TableBody,
@@ -173,7 +174,7 @@ export default function WebsitesPage() {
   // Fetch websites from API
   const {
     assets: websites,
-    isLoading: _isLoading,
+    isLoading,
     isError: _isError,
     error: _fetchError,
     mutate,
@@ -683,7 +684,11 @@ export default function WebsitesPage() {
                 <MonitorSmartphone className="h-4 w-4" />
                 Total Websites
               </CardDescription>
-              <CardTitle className="text-3xl">{statusCounts.all}</CardTitle>
+              {isLoading ? (
+                <Skeleton className="h-9 w-16 mt-1" />
+              ) : (
+                <CardTitle className="text-3xl">{statusCounts.all}</CardTitle>
+              )}
             </CardHeader>
           </Card>
           <Card
@@ -695,7 +700,11 @@ export default function WebsitesPage() {
                 <ShieldCheck className="h-4 w-4 text-green-500" />
                 SSL Secure
               </CardDescription>
-              <CardTitle className="text-3xl text-green-500">{sslCounts.secure}</CardTitle>
+              {isLoading ? (
+                <Skeleton className="h-9 w-16 mt-1" />
+              ) : (
+                <CardTitle className="text-3xl text-green-500">{sslCounts.secure}</CardTitle>
+              )}
             </CardHeader>
           </Card>
           <Card
@@ -707,7 +716,11 @@ export default function WebsitesPage() {
                 <ShieldX className="h-4 w-4 text-red-500" />
                 SSL Insecure
               </CardDescription>
-              <CardTitle className="text-3xl text-red-500">{sslCounts.insecure}</CardTitle>
+              {isLoading ? (
+                <Skeleton className="h-9 w-16 mt-1" />
+              ) : (
+                <CardTitle className="text-3xl text-red-500">{sslCounts.insecure}</CardTitle>
+              )}
             </CardHeader>
           </Card>
           <Card>
@@ -716,9 +729,13 @@ export default function WebsitesPage() {
                 <AlertTriangle className="h-4 w-4 text-orange-500" />
                 With Findings
               </CardDescription>
-              <CardTitle className="text-3xl text-orange-500">
-                {websites.filter((w) => w.findingCount > 0).length}
-              </CardTitle>
+              {isLoading ? (
+                <Skeleton className="h-9 w-16 mt-1" />
+              ) : (
+                <CardTitle className="text-3xl text-orange-500">
+                  {websites.filter((w) => w.findingCount > 0).length}
+                </CardTitle>
+              )}
             </CardHeader>
           </Card>
         </div>

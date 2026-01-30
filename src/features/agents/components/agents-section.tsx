@@ -1,7 +1,7 @@
-'use client';
+'use client'
 
-import { useState, useMemo, useCallback } from 'react';
-import { SortingState } from '@tanstack/react-table';
+import { useState, useMemo, useCallback } from 'react'
+import { SortingState } from '@tanstack/react-table'
 import {
   Plus,
   Bot,
@@ -19,34 +19,28 @@ import {
   Database,
   Filter,
   Ban,
-} from 'lucide-react';
-import { toast } from 'sonner';
+} from 'lucide-react'
+import { toast } from 'sonner'
 
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/select'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+} from '@/components/ui/dropdown-menu'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -55,15 +49,15 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Can, Permission } from '@/lib/permissions';
+} from '@/components/ui/alert-dialog'
+import { Can, Permission } from '@/lib/permissions'
 
-import { AddAgentDialog } from './add-agent-dialog';
-import { EditAgentDialog } from './edit-agent-dialog';
-import { RegenerateKeyDialog } from './regenerate-key-dialog';
-import { AgentConfigDialog } from './agent-config-dialog';
-import { AgentDetailSheet } from './agent-detail-sheet';
-import { AgentTable } from './agent-table';
+import { AddAgentDialog } from './add-agent-dialog'
+import { EditAgentDialog } from './edit-agent-dialog'
+import { RegenerateKeyDialog } from './regenerate-key-dialog'
+import { AgentConfigDialog } from './agent-config-dialog'
+import { AgentDetailSheet } from './agent-detail-sheet'
+import { AgentTable } from './agent-table'
 import {
   useAgents,
   useDeleteAgent,
@@ -72,66 +66,68 @@ import {
   useDeactivateAgent,
   useRevokeAgent,
   invalidateAgentsCache,
-} from '@/lib/api/agent-hooks';
-import type { AgentListFilters, Agent } from '@/lib/api/agent-types';
+} from '@/lib/api/agent-hooks'
+import type { AgentListFilters, Agent } from '@/lib/api/agent-types'
 
-type TabFilter = 'all' | 'daemon' | 'standalone' | 'collector';
-type AgentTypeFilter = 'runner' | 'worker' | 'collector' | 'sensor';
+type TabFilter = 'all' | 'daemon' | 'standalone' | 'collector'
+type AgentTypeFilter = 'runner' | 'worker' | 'collector' | 'sensor'
 
 interface AgentsSectionProps {
-  typeFilter?: AgentTypeFilter;
+  typeFilter?: AgentTypeFilter
 }
 
 interface AgentStats {
-  total: number;
-  online: number;
-  offline: number;
-  error: number;
-  activeJobs: number;
+  total: number
+  online: number
+  offline: number
+  error: number
+  activeJobs: number
   byMode: {
-    daemon: number;
-    standalone: number;
-  };
+    daemon: number
+    standalone: number
+  }
   byType: {
-    collector: number;
-  };
+    collector: number
+  }
 }
 
 // Check if agent is online using the health field from backend
 function isAgentOnline(agent: Agent): boolean {
   // Only active agents can be online
-  if (agent.status !== 'active') return false;
+  if (agent.status !== 'active') return false
   // Use the health field from backend (heartbeat-based)
-  return agent.health === 'online';
+  return agent.health === 'online'
 }
 
 // Get metrics for an agent - uses real data from backend
 function getAgentMetrics(agent: Agent) {
   if (agent.status !== 'active' || agent.health !== 'online') {
-    return { cpu: 0, memory: 0, activeJobs: 0 };
+    return { cpu: 0, memory: 0, activeJobs: 0 }
   }
   // Use real metrics from backend
   return {
     cpu: agent.cpu_percent || 0,
     memory: agent.memory_percent || 0,
     activeJobs: agent.active_jobs || 0,
-  };
+  }
 }
 
 function calculateStats(agents: Agent[]): AgentStats {
-  const daemonAgents = agents.filter((w) => w.execution_mode === 'daemon');
-  const onlineAgents = agents.filter(isAgentOnline);
+  const daemonAgents = agents.filter((w) => w.execution_mode === 'daemon')
+  const onlineAgents = agents.filter(isAgentOnline)
 
   // Calculate total active jobs from online daemon agents
   const totalActiveJobs = daemonAgents
     .filter(isAgentOnline)
-    .reduce((sum, a) => sum + getAgentMetrics(a).activeJobs, 0);
+    .reduce((sum, a) => sum + getAgentMetrics(a).activeJobs, 0)
 
   return {
     total: agents.length,
     online: onlineAgents.length,
     // Offline includes: health='offline' or health='unknown', or disabled agents
-    offline: agents.filter((a) => a.health === 'offline' || a.health === 'unknown' || a.status === 'disabled').length,
+    offline: agents.filter(
+      (a) => a.health === 'offline' || a.health === 'unknown' || a.status === 'disabled'
+    ).length,
     // Error count from health field
     error: agents.filter((w) => w.health === 'error').length,
     activeJobs: totalActiveJobs,
@@ -142,237 +138,245 @@ function calculateStats(agents: Agent[]): AgentStats {
     byType: {
       collector: agents.filter((w) => w.type === 'collector').length,
     },
-  };
+  }
 }
 
 export function AgentsSection({ typeFilter }: AgentsSectionProps) {
   // Dialog states
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [regenerateKeyDialogOpen, setRegenerateKeyDialogOpen] = useState(false);
-  const [configDialogOpen, setConfigDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
-  const [revokeDialogOpen, setRevokeDialogOpen] = useState(false);
-  const [detailSheetOpen, setDetailSheetOpen] = useState(false);
+  const [addDialogOpen, setAddDialogOpen] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [regenerateKeyDialogOpen, setRegenerateKeyDialogOpen] = useState(false)
+  const [configDialogOpen, setConfigDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false)
+  const [revokeDialogOpen, setRevokeDialogOpen] = useState(false)
+  const [detailSheetOpen, setDetailSheetOpen] = useState(false)
 
   // Selected agent for dialogs
-  const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
+  const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null)
 
   // View and filter states
-  const [activeTab, setActiveTab] = useState<TabFilter>('all');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [_filters] = useState<AgentListFilters>({});
-  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<TabFilter>('all')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [_filters] = useState<AgentListFilters>({})
+  const [searchQuery, setSearchQuery] = useState('')
 
   // Table states
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
+  const [sorting, setSorting] = useState<SortingState>([])
+  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({})
 
   // API data
-  const { data: agentsData, error, isLoading, mutate } = useAgents(_filters);
-  const agents: Agent[] = useMemo(() => agentsData?.items ?? [], [agentsData?.items]);
+  const { data: agentsData, error, isLoading, mutate } = useAgents(_filters)
+  const agents: Agent[] = useMemo(() => agentsData?.items ?? [], [agentsData?.items])
 
   // Mutations
   const { trigger: deleteAgentTrigger, isMutating: isDeleting } = useDeleteAgent(
     selectedAgent?.id || ''
-  );
-  const { trigger: bulkDeleteAgentsTrigger, isMutating: isBulkDeleting } = useBulkDeleteAgents();
-  const { trigger: activateAgentTrigger } = useActivateAgent(selectedAgent?.id || '');
-  const { trigger: deactivateAgentTrigger } = useDeactivateAgent(selectedAgent?.id || '');
-  const { trigger: revokeAgentTrigger } = useRevokeAgent(selectedAgent?.id || '');
+  )
+  const { trigger: bulkDeleteAgentsTrigger, isMutating: isBulkDeleting } = useBulkDeleteAgents()
+  const { trigger: activateAgentTrigger } = useActivateAgent(selectedAgent?.id || '')
+  const { trigger: deactivateAgentTrigger } = useDeactivateAgent(selectedAgent?.id || '')
+  const { trigger: revokeAgentTrigger } = useRevokeAgent(selectedAgent?.id || '')
 
   // Apply type filter first if provided
   const typeFilteredAgents = useMemo(() => {
-    if (!typeFilter) return agents;
-    return agents.filter((a) => a.type === typeFilter);
-  }, [agents, typeFilter]);
+    if (!typeFilter) return agents
+    return agents.filter((a) => a.type === typeFilter)
+  }, [agents, typeFilter])
 
   // Calculate stats
-  const stats = useMemo(() => calculateStats(typeFilteredAgents), [typeFilteredAgents]);
+  const stats = useMemo(() => calculateStats(typeFilteredAgents), [typeFilteredAgents])
 
   // Filter agents based on tab, status, and search
   const filteredAgents = useMemo(() => {
-    let result = [...typeFilteredAgents];
+    let result = [...typeFilteredAgents]
 
     // Filter by tab (execution mode / type)
     if (activeTab === 'daemon') {
-      result = result.filter((a) => a.execution_mode === 'daemon');
+      result = result.filter((a) => a.execution_mode === 'daemon')
     } else if (activeTab === 'standalone') {
-      result = result.filter((a) => a.execution_mode === 'standalone');
+      result = result.filter((a) => a.execution_mode === 'standalone')
     } else if (activeTab === 'collector') {
-      result = result.filter((a) => a.type === 'collector');
+      result = result.filter((a) => a.type === 'collector')
     }
 
     // Filter by status/health
     if (statusFilter !== 'all') {
       switch (statusFilter) {
         case 'online':
-          result = result.filter((a) => a.status === 'active' && a.health === 'online');
-          break;
+          result = result.filter((a) => a.status === 'active' && a.health === 'online')
+          break
         case 'offline':
-          result = result.filter((a) => a.status === 'active' && (a.health === 'offline' || a.health === 'unknown'));
-          break;
+          result = result.filter(
+            (a) => a.status === 'active' && (a.health === 'offline' || a.health === 'unknown')
+          )
+          break
         case 'error':
-          result = result.filter((a) => a.health === 'error');
-          break;
+          result = result.filter((a) => a.health === 'error')
+          break
         case 'disabled':
-          result = result.filter((a) => a.status === 'disabled');
-          break;
+          result = result.filter((a) => a.status === 'disabled')
+          break
         case 'revoked':
-          result = result.filter((a) => a.status === 'revoked');
-          break;
+          result = result.filter((a) => a.status === 'revoked')
+          break
       }
     }
 
     // Filter by search
     if (searchQuery) {
-      const query = searchQuery.toLowerCase();
+      const query = searchQuery.toLowerCase()
       result = result.filter(
         (a) =>
           a.name.toLowerCase().includes(query) ||
           a.description?.toLowerCase().includes(query) ||
           a.hostname?.toLowerCase().includes(query) ||
           a.ip_address?.toLowerCase().includes(query)
-      );
+      )
     }
 
-    return result;
-  }, [typeFilteredAgents, activeTab, statusFilter, searchQuery]);
+    return result
+  }, [typeFilteredAgents, activeTab, statusFilter, searchQuery])
 
   // Handlers
   const handleRefresh = useCallback(async () => {
-    await invalidateAgentsCache();
-    await mutate();
-    toast.success('Agents refreshed');
-  }, [mutate]);
+    await invalidateAgentsCache()
+    await mutate()
+    toast.success('Agents refreshed')
+  }, [mutate])
 
   const handleViewAgent = useCallback((agent: Agent) => {
-    setSelectedAgent(agent);
-    setDetailSheetOpen(true);
-  }, []);
+    setSelectedAgent(agent)
+    setDetailSheetOpen(true)
+  }, [])
 
   const handleEditAgent = useCallback((agent: Agent) => {
-    setSelectedAgent(agent);
-    setDetailSheetOpen(false);
-    setEditDialogOpen(true);
-  }, []);
+    setSelectedAgent(agent)
+    setDetailSheetOpen(false)
+    setEditDialogOpen(true)
+  }, [])
 
   const handleRegenerateKey = useCallback((agent: Agent) => {
-    setSelectedAgent(agent);
-    setDetailSheetOpen(false);
-    setRegenerateKeyDialogOpen(true);
-  }, []);
+    setSelectedAgent(agent)
+    setDetailSheetOpen(false)
+    setRegenerateKeyDialogOpen(true)
+  }, [])
 
   const handleViewConfig = useCallback((agent: Agent) => {
-    setSelectedAgent(agent);
-    setDetailSheetOpen(false);
-    setConfigDialogOpen(true);
-  }, []);
+    setSelectedAgent(agent)
+    setDetailSheetOpen(false)
+    setConfigDialogOpen(true)
+  }, [])
 
   const handleDeleteClick = useCallback((agent: Agent) => {
-    setSelectedAgent(agent);
-    setDetailSheetOpen(false);
-    setDeleteDialogOpen(true);
-  }, []);
+    setSelectedAgent(agent)
+    setDetailSheetOpen(false)
+    setDeleteDialogOpen(true)
+  }, [])
 
   const handleDeleteConfirm = useCallback(async () => {
-    if (!selectedAgent) return;
+    if (!selectedAgent) return
     try {
-      await deleteAgentTrigger();
-      toast.success(`Agent "${selectedAgent.name}" deleted`);
-      await invalidateAgentsCache();
-      setDeleteDialogOpen(false);
-      setSelectedAgent(null);
+      await deleteAgentTrigger()
+      toast.success(`Agent "${selectedAgent.name}" deleted`)
+      await invalidateAgentsCache()
+      setDeleteDialogOpen(false)
+      setSelectedAgent(null)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete agent');
+      toast.error(err instanceof Error ? err.message : 'Failed to delete agent')
     }
-  }, [selectedAgent, deleteAgentTrigger]);
+  }, [selectedAgent, deleteAgentTrigger])
 
   const handleBulkDeleteConfirm = useCallback(async () => {
-    const selectedIds = Object.keys(rowSelection).filter((key) => rowSelection[key]);
-    if (selectedIds.length === 0) return;
+    const selectedIds = Object.keys(rowSelection).filter((key) => rowSelection[key])
+    if (selectedIds.length === 0) return
 
     try {
-      const results = await bulkDeleteAgentsTrigger(selectedIds);
-      const successCount = results?.filter((r) => r.success).length || 0;
-      const failCount = results?.filter((r) => !r.success).length || 0;
+      const results = await bulkDeleteAgentsTrigger(selectedIds)
+      const successCount = results?.filter((r) => r.success).length || 0
+      const failCount = results?.filter((r) => !r.success).length || 0
 
       if (failCount === 0) {
-        toast.success(`${successCount} agent(s) deleted successfully`);
+        toast.success(`${successCount} agent(s) deleted successfully`)
       } else if (successCount > 0) {
-        toast.warning(`${successCount} deleted, ${failCount} failed`);
+        toast.warning(`${successCount} deleted, ${failCount} failed`)
       } else {
-        toast.error('Failed to delete agents');
+        toast.error('Failed to delete agents')
       }
 
-      await invalidateAgentsCache();
-      setBulkDeleteDialogOpen(false);
-      setRowSelection({});
+      await invalidateAgentsCache()
+      setBulkDeleteDialogOpen(false)
+      setRowSelection({})
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete agents');
+      toast.error(err instanceof Error ? err.message : 'Failed to delete agents')
     }
-  }, [rowSelection, bulkDeleteAgentsTrigger]);
+  }, [rowSelection, bulkDeleteAgentsTrigger])
 
-  const handleActivateAgent = useCallback(async (agent: Agent) => {
-    setSelectedAgent(agent);
-    try {
-      const updatedAgent = await activateAgentTrigger();
-      toast.success(`Agent "${agent.name}" activated`);
-      await invalidateAgentsCache();
-      await mutate();
-      // Update selectedAgent with the response from API
-      if (updatedAgent) {
-        setSelectedAgent(updatedAgent);
+  const handleActivateAgent = useCallback(
+    async (agent: Agent) => {
+      setSelectedAgent(agent)
+      try {
+        const updatedAgent = await activateAgentTrigger()
+        toast.success(`Agent "${agent.name}" activated`)
+        await invalidateAgentsCache()
+        await mutate()
+        // Update selectedAgent with the response from API
+        if (updatedAgent) {
+          setSelectedAgent(updatedAgent)
+        }
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Failed to activate agent')
       }
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to activate agent');
-    }
-  }, [activateAgentTrigger, mutate]);
+    },
+    [activateAgentTrigger, mutate]
+  )
 
-  const handleDeactivateAgent = useCallback(async (agent: Agent) => {
-    setSelectedAgent(agent);
-    try {
-      const updatedAgent = await deactivateAgentTrigger();
-      toast.success(`Agent "${agent.name}" deactivated`);
-      await invalidateAgentsCache();
-      await mutate();
-      // Update selectedAgent with the response from API
-      if (updatedAgent) {
-        setSelectedAgent(updatedAgent);
+  const handleDeactivateAgent = useCallback(
+    async (agent: Agent) => {
+      setSelectedAgent(agent)
+      try {
+        const updatedAgent = await deactivateAgentTrigger()
+        toast.success(`Agent "${agent.name}" deactivated`)
+        await invalidateAgentsCache()
+        await mutate()
+        // Update selectedAgent with the response from API
+        if (updatedAgent) {
+          setSelectedAgent(updatedAgent)
+        }
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Failed to deactivate agent')
       }
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to deactivate agent');
-    }
-  }, [deactivateAgentTrigger, mutate]);
+    },
+    [deactivateAgentTrigger, mutate]
+  )
 
   const handleRevokeAgent = useCallback((agent: Agent) => {
-    setSelectedAgent(agent);
-    setDetailSheetOpen(false);
-    setRevokeDialogOpen(true);
-  }, []);
+    setSelectedAgent(agent)
+    setDetailSheetOpen(false)
+    setRevokeDialogOpen(true)
+  }, [])
 
-  const [isRevoking, setIsRevoking] = useState(false);
+  const [isRevoking, setIsRevoking] = useState(false)
 
   const handleRevokeConfirm = useCallback(async () => {
-    if (!selectedAgent) return;
-    setIsRevoking(true);
+    if (!selectedAgent) return
+    setIsRevoking(true)
     try {
-      const updatedAgent = await revokeAgentTrigger();
-      toast.success(`Agent "${selectedAgent.name}" access revoked`);
-      await invalidateAgentsCache();
-      await mutate();
-      setRevokeDialogOpen(false);
+      const updatedAgent = await revokeAgentTrigger()
+      toast.success(`Agent "${selectedAgent.name}" access revoked`)
+      await invalidateAgentsCache()
+      await mutate()
+      setRevokeDialogOpen(false)
       // Update selectedAgent with the response from API
       if (updatedAgent) {
-        setSelectedAgent(updatedAgent);
+        setSelectedAgent(updatedAgent)
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to revoke agent');
+      toast.error(err instanceof Error ? err.message : 'Failed to revoke agent')
     } finally {
-      setIsRevoking(false);
+      setIsRevoking(false)
     }
-  }, [selectedAgent, revokeAgentTrigger, mutate]);
+  }, [selectedAgent, revokeAgentTrigger, mutate])
 
   const handleExport = useCallback(() => {
     const csv = [
@@ -388,16 +392,16 @@ export function AgentsSection({ typeFilter }: AgentsSectionProps) {
           w.last_seen_at || 'Never',
         ].join(',')
       ),
-    ].join('\n');
+    ].join('\n')
 
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'agents.csv';
-    link.click();
-    toast.success('Agents exported');
-  }, [agents]);
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'agents.csv'
+    link.click()
+    toast.success('Agents exported')
+  }, [agents])
 
   if (error) {
     return (
@@ -414,7 +418,7 @@ export function AgentsSection({ typeFilter }: AgentsSectionProps) {
           Retry
         </Button>
       </div>
-    );
+    )
   }
 
   return (
@@ -502,12 +506,7 @@ export function AgentsSection({ typeFilter }: AgentsSectionProps) {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleRefresh}
-                  disabled={isLoading}
-                >
+                <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={isLoading}>
                   {isLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
@@ -546,7 +545,10 @@ export function AgentsSection({ typeFilter }: AgentsSectionProps) {
                   <Server className="h-3.5 w-3.5" />
                   Daemon
                   {stats.byMode.daemon > 0 && (
-                    <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs bg-blue-500/10 text-blue-500">
+                    <Badge
+                      variant="secondary"
+                      className="ml-1 h-5 px-1.5 text-xs bg-blue-500/10 text-blue-500"
+                    >
                       {stats.byMode.daemon}
                     </Badge>
                   )}
@@ -555,7 +557,10 @@ export function AgentsSection({ typeFilter }: AgentsSectionProps) {
                   <Play className="h-3.5 w-3.5" />
                   CI/CD
                   {stats.byMode.standalone > 0 && (
-                    <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs bg-purple-500/10 text-purple-500">
+                    <Badge
+                      variant="secondary"
+                      className="ml-1 h-5 px-1.5 text-xs bg-purple-500/10 text-purple-500"
+                    >
                       {stats.byMode.standalone}
                     </Badge>
                   )}
@@ -564,7 +569,10 @@ export function AgentsSection({ typeFilter }: AgentsSectionProps) {
                   <Database className="h-3.5 w-3.5" />
                   Collectors
                   {stats.byType.collector > 0 && (
-                    <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs bg-orange-500/10 text-orange-500">
+                    <Badge
+                      variant="secondary"
+                      className="ml-1 h-5 px-1.5 text-xs bg-orange-500/10 text-orange-500"
+                    >
                       {stats.byType.collector}
                     </Badge>
                   )}
@@ -703,12 +711,14 @@ export function AgentsSection({ typeFilter }: AgentsSectionProps) {
         </Card>
       </div>
 
-      {/* Dialogs */}
-      <AddAgentDialog
-        open={addDialogOpen}
-        onOpenChange={setAddDialogOpen}
-        onSuccess={handleRefresh}
-      />
+      {/* Dialogs - Only render AddAgentDialog when open to avoid loading tools/capabilities on page load */}
+      {addDialogOpen && (
+        <AddAgentDialog
+          open={addDialogOpen}
+          onOpenChange={setAddDialogOpen}
+          onSuccess={handleRefresh}
+        />
+      )}
 
       {selectedAgent && (
         <>
@@ -751,17 +761,13 @@ export function AgentsSection({ typeFilter }: AgentsSectionProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Agent</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete <strong>{selectedAgent?.name}</strong>?
-              This action cannot be undone and will invalidate the agent&apos;s API key.
+              Are you sure you want to delete <strong>{selectedAgent?.name}</strong>? This action
+              cannot be undone and will invalidate the agent&apos;s API key.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <Button
-              variant="destructive"
-              onClick={handleDeleteConfirm}
-              disabled={isDeleting}
-            >
+            <Button variant="destructive" onClick={handleDeleteConfirm} disabled={isDeleting}>
               {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Delete
             </Button>
@@ -808,7 +814,9 @@ export function AgentsSection({ typeFilter }: AgentsSectionProps) {
                   Permanently revoke access for <strong>{selectedAgent?.name}</strong>?
                 </p>
                 <div className="rounded-md bg-amber-500/10 border border-amber-500/20 p-2.5 text-sm text-amber-600 dark:text-amber-400">
-                  <p className="font-medium text-xs uppercase tracking-wide">Warning: Permanent Action</p>
+                  <p className="font-medium text-xs uppercase tracking-wide">
+                    Warning: Permanent Action
+                  </p>
                   <ul className="mt-1.5 text-xs space-y-0.5 text-amber-600/80 dark:text-amber-400/80">
                     <li>- Agent loses access immediately</li>
                     <li>- Cannot be undone</li>
@@ -827,9 +835,9 @@ export function AgentsSection({ typeFilter }: AgentsSectionProps) {
               variant="outline"
               size="sm"
               onClick={() => {
-                setRevokeDialogOpen(false);
+                setRevokeDialogOpen(false)
                 if (selectedAgent) {
-                  handleDeactivateAgent(selectedAgent);
+                  handleDeactivateAgent(selectedAgent)
                 }
               }}
               disabled={isRevoking}
@@ -849,5 +857,5 @@ export function AgentsSection({ typeFilter }: AgentsSectionProps) {
         </AlertDialogContent>
       </AlertDialog>
     </>
-  );
+  )
 }

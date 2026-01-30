@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Select,
   SelectContent,
@@ -49,7 +50,7 @@ export default function AllComponentsPage() {
   const perPage = 20
 
   // API Hooks
-  const { data: apiData, isLoading: _isLoading } = useComponentsApi({
+  const { data: apiData, isLoading } = useComponentsApi({
     page,
     per_page: perPage,
     name: searchQuery || undefined,
@@ -146,7 +147,11 @@ export default function AllComponentsPage() {
                 <Package className="h-4 w-4" />
                 Total Components
               </CardDescription>
-              <CardTitle className="text-3xl">{stats.totalComponents}</CardTitle>
+              {isLoading ? (
+                <Skeleton className="h-9 w-16 mt-1" />
+              ) : (
+                <CardTitle className="text-3xl">{stats.totalComponents}</CardTitle>
+              )}
             </CardHeader>
             <CardContent>
               <p className="text-xs text-muted-foreground">
@@ -166,7 +171,13 @@ export default function AllComponentsPage() {
                 <CheckCircle className="h-4 w-4 text-green-500" />
                 Direct Dependencies
               </CardDescription>
-              <CardTitle className="text-3xl text-green-500">{stats.directDependencies}</CardTitle>
+              {isLoading ? (
+                <Skeleton className="h-9 w-16 mt-1" />
+              ) : (
+                <CardTitle className="text-3xl text-green-500">
+                  {stats.directDependencies}
+                </CardTitle>
+              )}
             </CardHeader>
             <CardContent>
               <p className="text-xs text-muted-foreground">Explicitly declared</p>
@@ -184,7 +195,13 @@ export default function AllComponentsPage() {
                 <Clock className="h-4 w-4 text-yellow-500" />
                 Outdated
               </CardDescription>
-              <CardTitle className="text-3xl text-yellow-500">{stats.outdatedComponents}</CardTitle>
+              {isLoading ? (
+                <Skeleton className="h-9 w-16 mt-1" />
+              ) : (
+                <CardTitle className="text-3xl text-yellow-500">
+                  {stats.outdatedComponents}
+                </CardTitle>
+              )}
             </CardHeader>
             <CardContent>
               <p className="text-xs text-muted-foreground">Updates available</p>
@@ -202,9 +219,13 @@ export default function AllComponentsPage() {
                 <AlertTriangle className="h-4 w-4 text-red-500" />
                 Vulnerable
               </CardDescription>
-              <CardTitle className="text-3xl text-red-500">
-                {stats.componentsWithVulnerabilities}
-              </CardTitle>
+              {isLoading ? (
+                <Skeleton className="h-9 w-16 mt-1" />
+              ) : (
+                <CardTitle className="text-3xl text-red-500">
+                  {stats.componentsWithVulnerabilities}
+                </CardTitle>
+              )}
             </CardHeader>
             <CardContent>
               <p className="text-xs text-muted-foreground">Require attention</p>

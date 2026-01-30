@@ -21,6 +21,7 @@ import {
   flattenDomainTreeForTable,
   type DomainTableRow,
 } from '@/features/assets'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -154,7 +155,7 @@ export default function DomainsPage() {
   // Fetch domains from API
   const {
     assets: domains,
-    isLoading: _isLoading,
+    isLoading,
     isError: _isError,
     error: _fetchError,
     mutate,
@@ -704,7 +705,7 @@ export default function DomainsPage() {
           </div>
         </PageHeader>
 
-        {/* Stats Cards */}
+        {/* Stats Cards - with inline skeleton loading */}
         <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
           <Card
             className="cursor-pointer hover:border-primary transition-colors"
@@ -715,7 +716,11 @@ export default function DomainsPage() {
                 <Globe className="h-4 w-4" />
                 Total Domains
               </CardDescription>
-              <CardTitle className="text-3xl">{statusCounts.all}</CardTitle>
+              {isLoading ? (
+                <Skeleton className="h-9 w-16 mt-1" />
+              ) : (
+                <CardTitle className="text-3xl">{statusCounts.all}</CardTitle>
+              )}
             </CardHeader>
           </Card>
           <Card
@@ -727,7 +732,11 @@ export default function DomainsPage() {
                 <CheckCircle className="h-4 w-4 text-green-500" />
                 Active
               </CardDescription>
-              <CardTitle className="text-3xl text-green-500">{statusCounts.active}</CardTitle>
+              {isLoading ? (
+                <Skeleton className="h-9 w-16 mt-1" />
+              ) : (
+                <CardTitle className="text-3xl text-green-500">{statusCounts.active}</CardTitle>
+              )}
             </CardHeader>
           </Card>
           <Card
@@ -739,7 +748,11 @@ export default function DomainsPage() {
                 <Clock className="h-4 w-4 text-gray-500" />
                 Inactive
               </CardDescription>
-              <CardTitle className="text-3xl text-gray-500">{statusCounts.inactive}</CardTitle>
+              {isLoading ? (
+                <Skeleton className="h-9 w-16 mt-1" />
+              ) : (
+                <CardTitle className="text-3xl text-gray-500">{statusCounts.inactive}</CardTitle>
+              )}
             </CardHeader>
           </Card>
           <Card>
@@ -748,9 +761,13 @@ export default function DomainsPage() {
                 <AlertTriangle className="h-4 w-4 text-orange-500" />
                 With Findings
               </CardDescription>
-              <CardTitle className="text-3xl text-orange-500">
-                {domains.filter((d) => d.findingCount > 0).length}
-              </CardTitle>
+              {isLoading ? (
+                <Skeleton className="h-9 w-16 mt-1" />
+              ) : (
+                <CardTitle className="text-3xl text-orange-500">
+                  {domains.filter((d) => d.findingCount > 0).length}
+                </CardTitle>
+              )}
             </CardHeader>
           </Card>
         </div>

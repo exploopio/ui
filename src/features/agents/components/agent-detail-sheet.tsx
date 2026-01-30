@@ -1,10 +1,10 @@
-'use client';
+'use client'
 
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import {
   Settings,
   KeyRound,
@@ -21,29 +21,34 @@ import {
   Power,
   PowerOff,
   History,
-} from 'lucide-react';
+  BarChart3,
+} from 'lucide-react'
 
-import type { Agent } from '@/lib/api/agent-types';
-import { CapabilityBadge } from '@/components/capability-badge';
-import { AgentTypeIcon, AGENT_TYPE_LABELS, AGENT_TYPE_COLORS } from './agent-type-icon';
-import { AgentAuditLog } from './agent-audit-log';
-import { Can, Permission } from '@/lib/permissions';
+import type { Agent } from '@/lib/api/agent-types'
+import { CapabilityBadge } from '@/components/capability-badge'
+import { AgentTypeIcon, AGENT_TYPE_LABELS, AGENT_TYPE_COLORS } from './agent-type-icon'
+import { AgentAuditLog } from './agent-audit-log'
+import { AgentAnalytics } from './agent-analytics'
+import { Can, Permission } from '@/lib/permissions'
 
 interface AgentDetailSheetProps {
-  agent: Agent | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onEdit: (agent: Agent) => void;
-  onRegenerateKey: (agent: Agent) => void;
-  onViewConfig: (agent: Agent) => void;
-  onDelete: (agent: Agent) => void;
-  onActivate?: (agent: Agent) => void;
-  onDeactivate?: (agent: Agent) => void;
-  onRevoke?: (agent: Agent) => void;
+  agent: Agent | null
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onEdit: (agent: Agent) => void
+  onRegenerateKey: (agent: Agent) => void
+  onViewConfig: (agent: Agent) => void
+  onDelete: (agent: Agent) => void
+  onActivate?: (agent: Agent) => void
+  onDeactivate?: (agent: Agent) => void
+  onRevoke?: (agent: Agent) => void
 }
 
 // Status config for admin-controlled status (active, disabled, revoked)
-const statusConfig: Record<string, { icon: React.ReactNode; color: string; bgColor: string; label: string }> = {
+const statusConfig: Record<
+  string,
+  { icon: React.ReactNode; color: string; bgColor: string; label: string }
+> = {
   active: {
     icon: <CheckCircle className="h-3.5 w-3.5" />,
     color: 'text-green-500',
@@ -62,10 +67,13 @@ const statusConfig: Record<string, { icon: React.ReactNode; color: string; bgCol
     bgColor: 'bg-gray-500',
     label: 'Revoked',
   },
-};
+}
 
 // Health config for heartbeat-based health (online, offline, error, unknown)
-const healthConfig: Record<string, { icon: React.ReactNode; color: string; bgColor: string; label: string }> = {
+const healthConfig: Record<
+  string,
+  { icon: React.ReactNode; color: string; bgColor: string; label: string }
+> = {
   online: {
     icon: <CheckCircle className="h-3.5 w-3.5" />,
     color: 'text-green-500',
@@ -90,7 +98,7 @@ const healthConfig: Record<string, { icon: React.ReactNode; color: string; bgCol
     bgColor: 'bg-yellow-500',
     label: 'Unknown',
   },
-};
+}
 
 export function AgentDetailSheet({
   agent,
@@ -104,13 +112,14 @@ export function AgentDetailSheet({
   onDeactivate,
   onRevoke,
 }: AgentDetailSheetProps) {
-  if (!agent) return null;
+  if (!agent) return null
 
   // Use health for display when agent is active, otherwise show admin status
-  const displayHealth = agent.status === 'active'
-    ? healthConfig[agent.health] || healthConfig.unknown
-    : statusConfig[agent.status] || statusConfig.disabled;
-  const isDaemon = agent.execution_mode === 'daemon';
+  const displayHealth =
+    agent.status === 'active'
+      ? healthConfig[agent.health] || healthConfig.unknown
+      : statusConfig[agent.status] || statusConfig.disabled
+  const isDaemon = agent.execution_mode === 'daemon'
 
   // Gradient based on health (for active agents) or status
   const gradientClass =
@@ -120,7 +129,7 @@ export function AgentDetailSheet({
         ? 'from-green-500/20 via-green-500/10'
         : agent.health === 'error'
           ? 'from-red-500/20 via-red-500/10'
-          : 'from-gray-500/20 via-gray-500/10';
+          : 'from-gray-500/20 via-gray-500/10'
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -130,9 +139,7 @@ export function AgentDetailSheet({
         </VisuallyHidden>
 
         {/* Header */}
-        <div
-          className={`bg-gradient-to-br px-6 pb-4 pt-6 ${gradientClass} to-transparent`}
-        >
+        <div className={`bg-gradient-to-br px-6 pb-4 pt-6 ${gradientClass} to-transparent`}>
           <div className="mb-3 flex items-center gap-3">
             <div
               className={`flex h-12 w-12 items-center justify-center rounded-xl ${AGENT_TYPE_COLORS[agent.type]}`}
@@ -212,8 +219,12 @@ export function AgentDetailSheet({
 
         {/* Content */}
         <Tabs defaultValue="overview" className="px-6 pb-6">
-          <TabsList className="mb-4 grid w-full grid-cols-4">
+          <TabsList className="mb-4 grid w-full grid-cols-5">
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="analytics">
+              <BarChart3 className="mr-1 h-3 w-3" />
+              Analytics
+            </TabsTrigger>
             <TabsTrigger value="capabilities">Capabilities</TabsTrigger>
             <TabsTrigger value="activity">
               <History className="mr-1 h-3 w-3" />
@@ -236,9 +247,7 @@ export function AgentDetailSheet({
                     agent.total_findings > 0 ? 'text-amber-500' : 'text-muted-foreground'
                   }`}
                 />
-                <p className="text-2xl font-bold">
-                  {agent.total_findings.toLocaleString()}
-                </p>
+                <p className="text-2xl font-bold">{agent.total_findings.toLocaleString()}</p>
                 <p className="text-xs text-muted-foreground">Findings</p>
               </div>
               <div className="rounded-xl border bg-card p-4 text-center">
@@ -289,6 +298,16 @@ export function AgentDetailSheet({
             )}
           </TabsContent>
 
+          <TabsContent value="analytics" className="mt-0">
+            <div className="rounded-xl border bg-card p-4">
+              <h4 className="mb-3 flex items-center gap-2 text-sm font-medium">
+                <BarChart3 className="h-4 w-4" />
+                Session Analytics (Last 30 Days)
+              </h4>
+              <AgentAnalytics agentId={agent.id} />
+            </div>
+          </TabsContent>
+
           <TabsContent value="capabilities" className="mt-0 space-y-4">
             {/* Capabilities */}
             <div className="rounded-xl border bg-card p-4">
@@ -296,10 +315,7 @@ export function AgentDetailSheet({
               {agent.capabilities.length > 0 ? (
                 <div className="grid grid-cols-2 gap-2">
                   {agent.capabilities.map((cap) => (
-                    <div
-                      key={cap}
-                      className="flex items-center gap-2 rounded-lg bg-muted/50 p-2"
-                    >
+                    <div key={cap} className="flex items-center gap-2 rounded-lg bg-muted/50 p-2">
                       <CheckCircle className="h-4 w-4 text-green-500" />
                       <CapabilityBadge name={cap} showIcon />
                     </div>
@@ -318,11 +334,7 @@ export function AgentDetailSheet({
                   {agent.api_key_prefix}...
                 </code>
                 <Can permission={Permission.AgentsWrite}>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => onRegenerateKey(agent)}
-                  >
+                  <Button size="sm" variant="outline" onClick={() => onRegenerateKey(agent)}>
                     <KeyRound className="mr-2 h-3 w-3" />
                     Regenerate
                   </Button>
@@ -358,9 +370,7 @@ export function AgentDetailSheet({
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Version</span>
-                  <span className="font-mono text-sm">
-                    {agent.version || 'Unknown'}
-                  </span>
+                  <span className="font-mono text-sm">{agent.version || 'Unknown'}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Hostname</span>
@@ -375,16 +385,12 @@ export function AgentDetailSheet({
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Last Seen</span>
                   <span className="text-sm">
-                    {agent.last_seen_at
-                      ? new Date(agent.last_seen_at).toLocaleString()
-                      : 'Never'}
+                    {agent.last_seen_at ? new Date(agent.last_seen_at).toLocaleString() : 'Never'}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Created</span>
-                  <span className="text-sm">
-                    {new Date(agent.created_at).toLocaleDateString()}
-                  </span>
+                  <span className="text-sm">{new Date(agent.created_at).toLocaleDateString()}</span>
                 </div>
               </div>
             </div>
@@ -398,7 +404,8 @@ export function AgentDetailSheet({
                   {agent.status !== 'revoked' && onRevoke && (
                     <div>
                       <p className="mb-2 text-xs text-muted-foreground">
-                        Permanently revoke this agent&apos;s access. The agent will not be able to authenticate.
+                        Permanently revoke this agent&apos;s access. The agent will not be able to
+                        authenticate.
                       </p>
                       <Button
                         variant="outline"
@@ -422,8 +429,8 @@ export function AgentDetailSheet({
                       size="sm"
                       className="w-full"
                       onClick={() => {
-                        onDelete(agent);
-                        onOpenChange(false);
+                        onDelete(agent)
+                        onOpenChange(false)
                       }}
                     >
                       <Trash2 className="mr-2 h-4 w-4" />
@@ -437,5 +444,5 @@ export function AgentDetailSheet({
         </Tabs>
       </SheetContent>
     </Sheet>
-  );
+  )
 }

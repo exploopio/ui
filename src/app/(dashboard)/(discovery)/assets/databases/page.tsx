@@ -30,6 +30,7 @@ import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Table,
   TableBody,
@@ -173,7 +174,7 @@ export default function DatabasesPage() {
   // Fetch databases from API
   const {
     assets: databases,
-    isLoading: _isLoading,
+    isLoading,
     isError: _isError,
     error: _fetchError,
     mutate,
@@ -699,7 +700,11 @@ export default function DatabasesPage() {
                 <Database className="h-4 w-4" />
                 Total Databases
               </CardDescription>
-              <CardTitle className="text-3xl">{statusCounts.all}</CardTitle>
+              {isLoading ? (
+                <Skeleton className="h-9 w-16 mt-1" />
+              ) : (
+                <CardTitle className="text-3xl">{statusCounts.all}</CardTitle>
+              )}
             </CardHeader>
           </Card>
           <Card
@@ -711,7 +716,11 @@ export default function DatabasesPage() {
                 <CheckCircle className="h-4 w-4 text-green-500" />
                 Active
               </CardDescription>
-              <CardTitle className="text-3xl text-green-500">{statusCounts.active}</CardTitle>
+              {isLoading ? (
+                <Skeleton className="h-9 w-16 mt-1" />
+              ) : (
+                <CardTitle className="text-3xl text-green-500">{statusCounts.active}</CardTitle>
+              )}
             </CardHeader>
           </Card>
           <Card>
@@ -720,7 +729,11 @@ export default function DatabasesPage() {
                 <Lock className="h-4 w-4 text-blue-500" />
                 Encrypted
               </CardDescription>
-              <CardTitle className="text-3xl text-blue-500">{stats.encrypted}</CardTitle>
+              {isLoading ? (
+                <Skeleton className="h-9 w-16 mt-1" />
+              ) : (
+                <CardTitle className="text-3xl text-blue-500">{stats.encrypted}</CardTitle>
+              )}
             </CardHeader>
           </Card>
           <Card>
@@ -729,7 +742,11 @@ export default function DatabasesPage() {
                 <Save className="h-4 w-4 text-purple-500" />
                 With Backup
               </CardDescription>
-              <CardTitle className="text-3xl text-purple-500">{stats.withBackup}</CardTitle>
+              {isLoading ? (
+                <Skeleton className="h-9 w-16 mt-1" />
+              ) : (
+                <CardTitle className="text-3xl text-purple-500">{stats.withBackup}</CardTitle>
+              )}
             </CardHeader>
           </Card>
         </div>

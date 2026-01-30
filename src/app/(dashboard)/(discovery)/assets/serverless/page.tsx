@@ -34,6 +34,7 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Table,
   TableBody,
@@ -156,7 +157,7 @@ export default function ServerlessPage() {
   // Fetch serverless functions from API
   const {
     assets: functions,
-    isLoading: _isLoading,
+    isLoading,
     isError: _isError,
     error: _fetchError,
     mutate,
@@ -569,7 +570,11 @@ export default function ServerlessPage() {
                 <Cpu className="h-4 w-4" />
                 Total Functions
               </CardDescription>
-              <CardTitle className="text-3xl">{statusCounts.all}</CardTitle>
+              {isLoading ? (
+                <Skeleton className="h-9 w-16 mt-1" />
+              ) : (
+                <CardTitle className="text-3xl">{statusCounts.all}</CardTitle>
+              )}
             </CardHeader>
           </Card>
           <Card
@@ -581,7 +586,11 @@ export default function ServerlessPage() {
                 <CheckCircle className="h-4 w-4 text-green-500" />
                 Active
               </CardDescription>
-              <CardTitle className="text-3xl text-green-500">{statusCounts.active}</CardTitle>
+              {isLoading ? (
+                <Skeleton className="h-9 w-16 mt-1" />
+              ) : (
+                <CardTitle className="text-3xl text-green-500">{statusCounts.active}</CardTitle>
+              )}
             </CardHeader>
           </Card>
           <Card>
@@ -590,7 +599,11 @@ export default function ServerlessPage() {
                 <Network className="h-4 w-4 text-blue-500" />
                 VPC Enabled
               </CardDescription>
-              <CardTitle className="text-3xl text-blue-500">{stats.vpcEnabled}</CardTitle>
+              {isLoading ? (
+                <Skeleton className="h-9 w-16 mt-1" />
+              ) : (
+                <CardTitle className="text-3xl text-blue-500">{stats.vpcEnabled}</CardTitle>
+              )}
             </CardHeader>
           </Card>
           <Card>
@@ -599,7 +612,11 @@ export default function ServerlessPage() {
                 <AlertTriangle className="h-4 w-4 text-orange-500" />
                 With Findings
               </CardDescription>
-              <CardTitle className="text-3xl text-orange-500">{stats.withFindings}</CardTitle>
+              {isLoading ? (
+                <Skeleton className="h-9 w-16 mt-1" />
+              ) : (
+                <CardTitle className="text-3xl text-orange-500">{stats.withFindings}</CardTitle>
+              )}
             </CardHeader>
           </Card>
         </div>

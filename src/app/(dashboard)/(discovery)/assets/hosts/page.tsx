@@ -14,6 +14,7 @@ import {
 import { Main } from '@/components/layout'
 import { PageHeader, StatusBadge, RiskScoreBadge } from '@/features/shared'
 import { AssetDetailSheet, StatCard, StatsGrid, SectionTitle } from '@/features/assets'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -154,7 +155,7 @@ export default function HostsPage() {
   // Fetch hosts from API
   const {
     assets: hosts,
-    isLoading: _isLoading,
+    isLoading,
     isError: _isError,
     error: _fetchError,
     mutate,
@@ -678,7 +679,7 @@ export default function HostsPage() {
           </div>
         </PageHeader>
 
-        {/* Stats Cards */}
+        {/* Stats Cards - with inline skeleton loading */}
         <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
           <Card
             className="cursor-pointer hover:border-primary transition-colors"
@@ -689,7 +690,11 @@ export default function HostsPage() {
                 <Server className="h-4 w-4" />
                 Total Hosts
               </CardDescription>
-              <CardTitle className="text-3xl">{statusCounts.all}</CardTitle>
+              {isLoading ? (
+                <Skeleton className="h-9 w-16 mt-1" />
+              ) : (
+                <CardTitle className="text-3xl">{statusCounts.all}</CardTitle>
+              )}
             </CardHeader>
           </Card>
           <Card
@@ -701,7 +706,11 @@ export default function HostsPage() {
                 <CheckCircle className="h-4 w-4 text-green-500" />
                 Active
               </CardDescription>
-              <CardTitle className="text-3xl text-green-500">{statusCounts.active}</CardTitle>
+              {isLoading ? (
+                <Skeleton className="h-9 w-16 mt-1" />
+              ) : (
+                <CardTitle className="text-3xl text-green-500">{statusCounts.active}</CardTitle>
+              )}
             </CardHeader>
           </Card>
           <Card>
@@ -710,7 +719,11 @@ export default function HostsPage() {
                 <Network className="h-4 w-4 text-blue-500" />
                 Virtual
               </CardDescription>
-              <CardTitle className="text-3xl text-blue-500">{stats.virtual}</CardTitle>
+              {isLoading ? (
+                <Skeleton className="h-9 w-16 mt-1" />
+              ) : (
+                <CardTitle className="text-3xl text-blue-500">{stats.virtual}</CardTitle>
+              )}
             </CardHeader>
           </Card>
           <Card>
@@ -719,7 +732,11 @@ export default function HostsPage() {
                 <AlertTriangle className="h-4 w-4 text-orange-500" />
                 With Findings
               </CardDescription>
-              <CardTitle className="text-3xl text-orange-500">{stats.withFindings}</CardTitle>
+              {isLoading ? (
+                <Skeleton className="h-9 w-16 mt-1" />
+              ) : (
+                <CardTitle className="text-3xl text-orange-500">{stats.withFindings}</CardTitle>
+              )}
             </CardHeader>
           </Card>
         </div>
@@ -831,7 +848,40 @@ export default function HostsPage() {
                   ))}
                 </TableHeader>
                 <TableBody>
-                  {table.getRowModel().rows?.length ? (
+                  {isLoading ? (
+                    // Skeleton loading rows
+                    Array.from({ length: 5 }).map((_, i) => (
+                      <TableRow key={`skeleton-${i}`}>
+                        <TableCell>
+                          <Skeleton className="h-4 w-4" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-4 w-32" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-4 w-24" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-4 w-28" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-4 w-20" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-4 w-16" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-4 w-12" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-4 w-16" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-4 w-8" />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : table.getRowModel().rows?.length ? (
                     table.getRowModel().rows.map((row) => (
                       <TableRow
                         key={row.id}

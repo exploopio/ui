@@ -20,6 +20,7 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Table,
   TableBody,
@@ -169,7 +170,7 @@ export default function MobileAppsPage() {
   // Fetch mobile apps from API
   const {
     assets: mobileApps,
-    isLoading: _isLoading,
+    isLoading,
     isError: _isError,
     error: _fetchError,
     mutate,
@@ -644,7 +645,11 @@ export default function MobileAppsPage() {
                 <Smartphone className="h-4 w-4" />
                 Total Apps
               </CardDescription>
-              <CardTitle className="text-3xl">{statusCounts.all}</CardTitle>
+              {isLoading ? (
+                <Skeleton className="h-9 w-16 mt-1" />
+              ) : (
+                <CardTitle className="text-3xl">{statusCounts.all}</CardTitle>
+              )}
             </CardHeader>
           </Card>
           <Card
@@ -656,7 +661,11 @@ export default function MobileAppsPage() {
                 <Apple className="h-4 w-4 text-gray-500" />
                 iOS Apps
               </CardDescription>
-              <CardTitle className="text-3xl text-gray-500">{stats.ios}</CardTitle>
+              {isLoading ? (
+                <Skeleton className="h-9 w-16 mt-1" />
+              ) : (
+                <CardTitle className="text-3xl text-gray-500">{stats.ios}</CardTitle>
+              )}
             </CardHeader>
           </Card>
           <Card
@@ -668,7 +677,11 @@ export default function MobileAppsPage() {
                 <Smartphone className="h-4 w-4 text-green-500" />
                 Android Apps
               </CardDescription>
-              <CardTitle className="text-3xl text-green-500">{stats.android}</CardTitle>
+              {isLoading ? (
+                <Skeleton className="h-9 w-16 mt-1" />
+              ) : (
+                <CardTitle className="text-3xl text-green-500">{stats.android}</CardTitle>
+              )}
             </CardHeader>
           </Card>
           <Card>
@@ -677,7 +690,11 @@ export default function MobileAppsPage() {
                 <AlertTriangle className="h-4 w-4 text-orange-500" />
                 With Findings
               </CardDescription>
-              <CardTitle className="text-3xl text-orange-500">{stats.withFindings}</CardTitle>
+              {isLoading ? (
+                <Skeleton className="h-9 w-16 mt-1" />
+              ) : (
+                <CardTitle className="text-3xl text-orange-500">{stats.withFindings}</CardTitle>
+              )}
             </CardHeader>
           </Card>
         </div>

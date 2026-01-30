@@ -21,6 +21,13 @@ import type {
   UpdateAgentRequest,
   RegenerateAPIKeyResponse,
   AvailableCapabilitiesResponse,
+  AgentSession,
+  AgentSessionListResponse,
+  AgentSessionStats,
+  AgentDailyStats,
+  AgentDailyStatsListResponse,
+  AgentSessionListFilters,
+  AgentDailyStatsListFilters,
 } from './agent-types'
 
 // ============================================
@@ -62,6 +69,17 @@ export const agentKeys = {
   detail: (id: string) => [...agentKeys.details(), id] as const,
   availableCapabilities: (includePlatform: boolean = true) =>
     [...agentKeys.all, 'available-capabilities', includePlatform] as const,
+  // Analytics keys
+  sessions: (id: string) => [...agentKeys.detail(id), 'sessions'] as const,
+  sessionsList: (id: string, filters?: AgentSessionListFilters) =>
+    [...agentKeys.sessions(id), 'list', filters] as const,
+  activeSession: (id: string) => [...agentKeys.sessions(id), 'active'] as const,
+  sessionStats: (id: string, filters?: { started_at?: string; ended_at?: string }) =>
+    [...agentKeys.sessions(id), 'stats', filters] as const,
+  dailyStats: (id: string, filters?: AgentDailyStatsListFilters) =>
+    [...agentKeys.detail(id), 'daily-stats', filters] as const,
+  timeSeries: (id: string, filters?: { from?: string; to?: string }) =>
+    [...agentKeys.detail(id), 'timeseries', filters] as const,
 }
 
 // ============================================
@@ -78,6 +96,26 @@ async function fetchAgent(url: string): Promise<Agent> {
 
 async function fetchAvailableCapabilities(url: string): Promise<AvailableCapabilitiesResponse> {
   return get<AvailableCapabilitiesResponse>(url)
+}
+
+async function fetchAgentSessions(url: string): Promise<AgentSessionListResponse> {
+  return get<AgentSessionListResponse>(url)
+}
+
+async function fetchActiveSession(url: string): Promise<AgentSession> {
+  return get<AgentSession>(url)
+}
+
+async function fetchSessionStats(url: string): Promise<AgentSessionStats> {
+  return get<AgentSessionStats>(url)
+}
+
+async function fetchDailyStats(url: string): Promise<AgentDailyStatsListResponse> {
+  return get<AgentDailyStatsListResponse>(url)
+}
+
+async function fetchTimeSeries(url: string): Promise<AgentDailyStats[]> {
+  return get<AgentDailyStats[]>(url)
 }
 
 // ============================================
@@ -134,6 +172,102 @@ export function useAvailableCapabilities(
   const key = currentTenant ? agentEndpoints.availableCapabilities(includePlatform) : null
 
   return useSWR<AvailableCapabilitiesResponse>(key, fetchAvailableCapabilities, {
+    ...defaultConfig,
+    ...config,
+  })
+}
+
+// ============================================
+// ANALYTICS HOOKS
+// ============================================
+
+/**
+ * Fetch agent sessions list
+ */
+export function useAgentSessions(
+  agentId: string | null,
+  filters?: AgentSessionListFilters,
+  config?: SWRConfiguration
+) {
+  const { currentTenant } = useTenant()
+
+  const key = currentTenant && agentId ? agentEndpoints.listSessions(agentId, filters) : null
+
+  return useSWR<AgentSessionListResponse>(key, fetchAgentSessions, {
+    ...defaultConfig,
+    ...config,
+  })
+}
+
+/**
+ * Fetch active session for an agent
+ */
+export function useActiveAgentSession(agentId: string | null, config?: SWRConfiguration) {
+  const { currentTenant } = useTenant()
+
+  const key = currentTenant && agentId ? agentEndpoints.getActiveSession(agentId) : null
+
+  return useSWR<AgentSession | null>(key, fetchActiveSession, {
+    ...defaultConfig,
+    // Don't show error toast for 404 (no active session)
+    onError: (error) => {
+      if (error?.statusCode !== 404) {
+        handleApiError(error, { showToast: true, logError: true })
+      }
+    },
+    ...config,
+  })
+}
+
+/**
+ * Fetch session stats for an agent
+ */
+export function useAgentSessionStats(
+  agentId: string | null,
+  filters?: { started_at?: string; ended_at?: string },
+  config?: SWRConfiguration
+) {
+  const { currentTenant } = useTenant()
+
+  const key = currentTenant && agentId ? agentEndpoints.getSessionStats(agentId, filters) : null
+
+  return useSWR<AgentSessionStats>(key, fetchSessionStats, {
+    ...defaultConfig,
+    ...config,
+  })
+}
+
+/**
+ * Fetch daily stats for an agent
+ */
+export function useAgentDailyStats(
+  agentId: string | null,
+  filters?: AgentDailyStatsListFilters,
+  config?: SWRConfiguration
+) {
+  const { currentTenant } = useTenant()
+
+  const key = currentTenant && agentId ? agentEndpoints.listDailyStats(agentId, filters) : null
+
+  return useSWR<AgentDailyStatsListResponse>(key, fetchDailyStats, {
+    ...defaultConfig,
+    ...config,
+  })
+}
+
+/**
+ * Fetch time series data for an agent
+ */
+export function useAgentTimeSeries(
+  agentId: string | null,
+  filters?: { from?: string; to?: string },
+  config?: SWRConfiguration
+) {
+  const { currentTenant } = useTenant()
+
+  const key = currentTenant && agentId ? agentEndpoints.getTimeSeries(agentId, filters) : null
+
+  return useSWR<AgentDailyStats[]>(key, fetchTimeSeries, {
     ...defaultConfig,
     ...config,
   })
