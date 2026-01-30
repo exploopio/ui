@@ -508,6 +508,8 @@ export interface Finding {
 
   // Code snippet
   snippet?: string
+  contextSnippet?: string
+  contextStartLine?: number
 
   // Affected Assets
   assets: AffectedAsset[]

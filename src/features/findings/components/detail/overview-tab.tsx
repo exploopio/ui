@@ -23,6 +23,9 @@ import {
 } from 'lucide-react'
 import type { FindingDetail } from '../../types'
 import { SEVERITY_CONFIG } from '../../types'
+import { CodeHighlighter } from './code-highlighter'
+import { Copy, Check } from 'lucide-react'
+import { useState, useCallback } from 'react'
 
 interface OverviewTabProps {
   finding: FindingDetail
@@ -456,21 +459,8 @@ export function OverviewTab({ finding }: OverviewTabProps) {
         </>
       )}
 
-      {/* Code Snippet - Only show if snippet exists */}
-      {finding.snippet && (
-        <>
-          <div>
-            <h3 className="mb-3 flex items-center gap-2 font-semibold">
-              <FileText className="h-4 w-4" />
-              Code Snippet
-            </h3>
-            <pre className="bg-muted/50 rounded-lg p-4 overflow-x-auto text-sm font-mono whitespace-pre-wrap break-all">
-              {finding.snippet}
-            </pre>
-          </div>
-          <Separator />
-        </>
-      )}
+      {/* Code Snippet - Show context snippet if available, otherwise regular snippet */}
+      {(finding.contextSnippet || finding.snippet) && <CodeSnippetSection finding={finding} />}
 
       {/* Scanner Info - Always show for context */}
       <div>
@@ -621,5 +611,82 @@ export function OverviewTab({ finding }: OverviewTabProps) {
         </div>
       </div>
     </div>
+  )
+}
+
+/**
+ * Code Snippet Section - displays code with syntax highlighting
+ * Shows context snippet (±3 lines around vulnerability) when available
+ */
+function CodeSnippetSection({ finding }: { finding: FindingDetail }) {
+  const [copied, setCopied] = useState(false)
+
+  // Determine which snippet to display and the starting line
+  const displaySnippet = finding.contextSnippet || finding.snippet
+  const startLine = finding.contextSnippet ? finding.contextStartLine || 1 : finding.startLine || 1
+
+  // Calculate the line to highlight (the vulnerability line)
+  const highlightLine = finding.startLine
+
+  const handleCopy = useCallback(async () => {
+    if (!displaySnippet) return
+    try {
+      await navigator.clipboard.writeText(displaySnippet)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // Ignore clipboard errors
+    }
+  }, [displaySnippet])
+
+  if (!displaySnippet) return null
+
+  return (
+    <>
+      <div>
+        <h3 className="mb-3 flex items-center gap-2 font-semibold">
+          <FileText className="h-4 w-4" />
+          Code Snippet
+          {finding.contextSnippet && (
+            <span className="text-muted-foreground text-xs font-normal">(with context)</span>
+          )}
+        </h3>
+        <div className="relative group">
+          <div className="bg-[#1e1e2e] rounded-lg overflow-hidden border border-slate-700/50">
+            {/* Header with file path and copy button */}
+            <div className="flex items-center justify-between px-3 py-2 bg-slate-800/50 border-b border-slate-700/30">
+              <span className="text-xs text-slate-400 font-mono truncate">
+                {finding.filePath || 'code'}
+                {finding.startLine && `:${finding.startLine}`}
+                {finding.endLine && finding.endLine !== finding.startLine && `-${finding.endLine}`}
+              </span>
+              <button
+                onClick={handleCopy}
+                className="text-slate-400 hover:text-slate-200 transition-colors p-1 rounded"
+                title="Copy code"
+              >
+                {copied ? (
+                  <Check className="h-4 w-4 text-green-400" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
+              </button>
+            </div>
+            {/* Code content with syntax highlighting */}
+            <div className="p-3 overflow-x-auto">
+              <CodeHighlighter
+                code={displaySnippet}
+                filePath={finding.filePath}
+                className="bg-transparent"
+                showLineNumbers={true}
+                startLine={startLine}
+                highlightLine={highlightLine}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+      <Separator />
+    </>
   )
 }

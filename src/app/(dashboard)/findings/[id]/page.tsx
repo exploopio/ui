@@ -122,6 +122,8 @@ function transformApiToFindingDetail(api: ApiFinding): FindingDetail {
 
     // Code snippet
     snippet: api.snippet,
+    contextSnippet: api.context_snippet,
+    contextStartLine: api.context_start_line,
 
     // Asset - use resolved asset name and webUrl
     assets: [
@@ -133,25 +135,9 @@ function transformApiToFindingDetail(api: ApiFinding): FindingDetail {
       },
     ],
 
-    // Evidence - include snippet if available
-    evidence: api.snippet
-      ? [
-          {
-            id: `ev-snippet-${api.id}`,
-            type: 'code',
-            title: locationDisplay || 'Code Snippet',
-            content: api.snippet,
-            mimeType: 'text/plain',
-            createdAt: api.created_at,
-            createdBy: {
-              id: 'system',
-              name: api.tool_name,
-              email: 'scanner@rediver.io',
-              role: 'admin',
-            },
-          },
-        ]
-      : [],
+    // Evidence - snippets are shown in dedicated "Code Evidence" section
+    // This array is for other evidence items (screenshots, logs, etc.)
+    evidence: [],
 
     // Remediation - use recommendation from scanner, then resolution, then fallback
     remediation: {

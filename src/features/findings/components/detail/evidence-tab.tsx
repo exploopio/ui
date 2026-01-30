@@ -24,9 +24,11 @@ import {
   FileImage,
   FileCode,
   ExternalLink,
+  Copy,
 } from 'lucide-react'
 import type { Evidence, EvidenceType, FindingDetail } from '../../types'
 import { EVIDENCE_TYPE_CONFIG } from '../../types'
+import { CodeHighlighter } from './code-highlighter'
 
 interface EvidenceTabProps {
   evidence: Evidence[]
@@ -124,21 +126,43 @@ export function EvidenceTab({ evidence, finding }: EvidenceTabProps) {
       case 'log':
       case 'code':
         const lines = item.content.split('\n')
-        const previewLines = isExpanded ? lines : lines.slice(0, 8)
+        const displayContent = isExpanded ? item.content : lines.slice(0, 8).join('\n')
         const hasMore = lines.length > 8
 
         return (
           <div className="space-y-2">
-            <ScrollArea className="rounded-lg border bg-neutral-900/50 p-4">
-              <pre className="font-mono text-xs text-neutral-300">
-                {previewLines.join('\n')}
+            <div className="bg-[#1e1e2e] rounded-lg overflow-hidden border border-slate-700/50">
+              {/* Header with copy button */}
+              <div className="flex items-center justify-between px-3 py-2 bg-slate-800/50 border-b border-slate-700/30">
+                <span className="text-xs text-slate-400 font-mono">{item.title}</span>
+                <button
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(item.content)
+                    } catch {
+                      // Ignore
+                    }
+                  }}
+                  className="text-slate-400 hover:text-slate-200 transition-colors p-1 rounded"
+                  title="Copy code"
+                >
+                  <Copy className="h-3 w-3" />
+                </button>
+              </div>
+              {/* Code content */}
+              <ScrollArea className="p-3 max-h-[300px]">
+                <CodeHighlighter
+                  code={displayContent}
+                  className="bg-transparent"
+                  showLineNumbers={true}
+                />
                 {!isExpanded && hasMore && (
-                  <span className="text-muted-foreground">
-                    {'\n'}... ({lines.length - 8} more lines)
-                  </span>
+                  <p className="text-muted-foreground text-xs mt-2">
+                    ... ({lines.length - 8} more lines)
+                  </p>
                 )}
-              </pre>
-            </ScrollArea>
+              </ScrollArea>
+            </div>
             {hasMore && (
               <Button
                 variant="ghost"
@@ -181,11 +205,15 @@ export function EvidenceTab({ evidence, finding }: EvidenceTabProps) {
   }
 
   // Check if there's any content to show
+  const hasContextSnippet = !!finding?.contextSnippet
+  const hasSnippet = !!finding?.snippet
+  const hasCodeSnippets = hasContextSnippet || hasSnippet
   const hasEvidence = evidence.length > 0
   const hasStacks = stacks.length > 0
   const hasRelatedLocations = relatedLocations.length > 0
   const hasAttachments = attachments.length > 0
-  const hasAnyContent = hasEvidence || hasStacks || hasRelatedLocations || hasAttachments
+  const hasAnyContent =
+    hasCodeSnippets || hasEvidence || hasStacks || hasRelatedLocations || hasAttachments
 
   if (!hasAnyContent) {
     return (
@@ -203,67 +231,137 @@ export function EvidenceTab({ evidence, finding }: EvidenceTabProps) {
     )
   }
 
+  // Calculate line numbers for snippets
+  const contextStartLine = finding?.contextStartLine || 1
+  const snippetStartLine = finding?.startLine || 1
+
   return (
     <div className="space-y-6">
+      {/* Code Snippets Section - Show both context and snippet */}
+      {hasCodeSnippets && (
+        <div className="space-y-4">
+          <h3 className="flex items-center gap-2 font-semibold">
+            <Code className="h-4 w-4" />
+            Code Evidence
+          </h3>
+
+          {/* Context Snippet - Surrounding code (±3 lines) */}
+          {hasContextSnippet && finding?.contextSnippet && (
+            <div>
+              <p className="text-muted-foreground text-xs mb-2">Context (surrounding code)</p>
+              <div className="bg-[#1e1e2e] rounded-lg overflow-hidden border border-slate-700/50">
+                <div className="flex items-center justify-between px-3 py-2 bg-slate-800/50 border-b border-slate-700/30">
+                  <span className="text-xs text-slate-400 font-mono truncate">
+                    {finding?.filePath || 'code'}
+                    {contextStartLine &&
+                      ` (lines ${contextStartLine}-${contextStartLine + (finding.contextSnippet.split('\n').length - 1)})`}
+                  </span>
+                </div>
+                <div className="p-3 overflow-x-auto">
+                  <CodeHighlighter
+                    code={finding.contextSnippet}
+                    filePath={finding?.filePath}
+                    className="bg-transparent"
+                    showLineNumbers={true}
+                    startLine={contextStartLine}
+                    highlightLine={finding?.startLine}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Snippet - Exact vulnerable code */}
+          {hasSnippet && finding?.snippet && (
+            <div>
+              <p className="text-muted-foreground text-xs mb-2">Vulnerable code (exact location)</p>
+              <div className="bg-[#1e1e2e] rounded-lg overflow-hidden border border-red-500/30">
+                <div className="flex items-center justify-between px-3 py-2 bg-red-900/20 border-b border-red-500/30">
+                  <span className="text-xs text-red-400 font-mono truncate">
+                    {finding?.filePath || 'code'}
+                    {finding?.startLine && `:${finding.startLine}`}
+                    {finding?.endLine &&
+                      finding.endLine !== finding.startLine &&
+                      `-${finding.endLine}`}
+                  </span>
+                </div>
+                <div className="p-3 overflow-x-auto">
+                  <CodeHighlighter
+                    code={finding.snippet}
+                    filePath={finding?.filePath}
+                    className="bg-transparent"
+                    showLineNumbers={true}
+                    startLine={snippetStartLine}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Evidence Items */}
       {hasEvidence && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="flex items-center gap-2 font-semibold">
-              <Paperclip className="h-4 w-4" />
-              Evidence ({evidence.length})
-            </h3>
-            <Button size="sm" variant="outline">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Evidence
-            </Button>
-          </div>
-
+        <>
+          {hasCodeSnippets && <Separator />}
           <div className="space-y-4">
-            {evidence.map((item) => {
-              const typeConfig = EVIDENCE_TYPE_CONFIG[item.type]
+            <div className="flex items-center justify-between">
+              <h3 className="flex items-center gap-2 font-semibold">
+                <Paperclip className="h-4 w-4" />
+                Evidence ({evidence.length})
+              </h3>
+              <Button size="sm" variant="outline">
+                <Plus className="mr-2 h-4 w-4" />
+                Add Evidence
+              </Button>
+            </div>
 
-              return (
-                <div key={item.id} className="rounded-lg border p-4">
-                  <div className="mb-3 flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="bg-muted flex h-8 w-8 items-center justify-center rounded">
-                        {EVIDENCE_ICONS[item.type]}
-                      </div>
-                      <div>
-                        <h4 className="font-medium">{item.title}</h4>
-                        <div className="text-muted-foreground mt-1 flex items-center gap-2 text-xs">
-                          <Badge variant="outline" className="text-xs">
-                            {typeConfig.label}
-                          </Badge>
-                          <span className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {formatDate(item.createdAt)}
-                          </span>
+            <div className="space-y-4">
+              {evidence.map((item) => {
+                const typeConfig = EVIDENCE_TYPE_CONFIG[item.type]
+
+                return (
+                  <div key={item.id} className="rounded-lg border p-4">
+                    <div className="mb-3 flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-muted flex h-8 w-8 items-center justify-center rounded">
+                          {EVIDENCE_ICONS[item.type]}
+                        </div>
+                        <div>
+                          <h4 className="font-medium">{item.title}</h4>
+                          <div className="text-muted-foreground mt-1 flex items-center gap-2 text-xs">
+                            <Badge variant="outline" className="text-xs">
+                              {typeConfig.label}
+                            </Badge>
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              {formatDate(item.createdAt)}
+                            </span>
+                          </div>
                         </div>
                       </div>
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-6 w-6">
+                          <AvatarFallback className="text-[10px]">
+                            {getInitials(item.createdBy.name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-muted-foreground text-xs">{item.createdBy.name}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-6 w-6">
-                        <AvatarFallback className="text-[10px]">
-                          {getInitials(item.createdBy.name)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="text-muted-foreground text-xs">{item.createdBy.name}</span>
-                    </div>
+                    {renderEvidenceContent(item)}
                   </div>
-                  {renderEvidenceContent(item)}
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
           </div>
-        </div>
+        </>
       )}
 
       {/* Stack Traces */}
       {hasStacks && (
         <>
-          {hasEvidence && <Separator />}
+          {(hasCodeSnippets || hasEvidence) && <Separator />}
           <div className="space-y-4">
             <h3 className="flex items-center gap-2 font-semibold">
               <Layers className="h-4 w-4" />
@@ -345,43 +443,57 @@ export function EvidenceTab({ evidence, finding }: EvidenceTabProps) {
       {/* Related Locations */}
       {hasRelatedLocations && (
         <>
-          {(hasEvidence || hasStacks) && <Separator />}
+          {(hasCodeSnippets || hasEvidence || hasStacks) && <Separator />}
           <div className="space-y-4">
             <h3 className="flex items-center gap-2 font-semibold">
               <MapPin className="h-4 w-4" />
               Related Locations ({relatedLocations.length})
             </h3>
 
-            <div className="space-y-2">
-              {relatedLocations.map((loc, index) => (
-                <div key={loc.id || index} className="rounded-lg border bg-muted/30 p-3">
-                  <div className="flex items-start gap-3">
-                    <div className="bg-muted flex h-6 w-6 items-center justify-center rounded text-xs font-mono">
-                      {loc.id || index + 1}
+            <div className="space-y-3">
+              {relatedLocations.map((loc, index) => {
+                const locSnippet = loc.context_snippet || loc.snippet
+                return (
+                  <div key={loc.id || index} className="rounded-lg border overflow-hidden">
+                    <div className="flex items-start gap-3 p-3 bg-muted/30">
+                      <div className="bg-muted flex h-6 w-6 items-center justify-center rounded text-xs font-mono">
+                        {loc.id || index + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        {loc.path ? (
+                          <p className="text-sm font-mono text-blue-400 break-all">
+                            {loc.path}
+                            {loc.start_line && (
+                              <span className="text-muted-foreground">
+                                :{loc.start_line}
+                                {loc.start_column && `:${loc.start_column}`}
+                              </span>
+                            )}
+                          </p>
+                        ) : (
+                          <p className="text-sm font-mono text-muted-foreground">
+                            Location {index + 1}
+                          </p>
+                        )}
+                        {loc.message && (
+                          <p className="text-muted-foreground text-sm mt-1">{loc.message}</p>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      {loc.path ? (
-                        <p className="text-sm font-mono text-blue-400 break-all">
-                          {loc.path}
-                          {loc.start_line && (
-                            <span className="text-muted-foreground">
-                              :{loc.start_line}
-                              {loc.start_column && `:${loc.start_column}`}
-                            </span>
-                          )}
-                        </p>
-                      ) : (
-                        <p className="text-sm font-mono text-muted-foreground">
-                          Location {index + 1}
-                        </p>
-                      )}
-                      {loc.message && (
-                        <p className="text-muted-foreground text-sm mt-1">{loc.message}</p>
-                      )}
-                    </div>
+                    {locSnippet && (
+                      <div className="bg-[#1e1e2e] p-3 border-t border-slate-700/30">
+                        <CodeHighlighter
+                          code={locSnippet}
+                          filePath={loc.path}
+                          className="bg-transparent"
+                          showLineNumbers={true}
+                          startLine={loc.start_line || 1}
+                        />
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
         </>
@@ -390,7 +502,7 @@ export function EvidenceTab({ evidence, finding }: EvidenceTabProps) {
       {/* Attachments */}
       {hasAttachments && (
         <>
-          {(hasEvidence || hasStacks || hasRelatedLocations) && <Separator />}
+          {(hasCodeSnippets || hasEvidence || hasStacks || hasRelatedLocations) && <Separator />}
           <div className="space-y-4">
             <h3 className="flex items-center gap-2 font-semibold">
               <Link2 className="h-4 w-4" />

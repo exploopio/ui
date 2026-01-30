@@ -86,6 +86,8 @@ export interface ApiFinding {
   start_column?: number
   end_column?: number
   snippet?: string
+  context_snippet?: string
+  context_start_line?: number
   title?: string
   description?: string
   message: string
