@@ -1,20 +1,12 @@
-"use client";
+'use client'
 
-import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  GitBranch,
-  Plus,
-  Upload,
-  Loader2,
-  X,
-  Link2,
-  AlertCircle,
-} from "lucide-react";
-import { toast } from "sonner";
+import { useState, useEffect } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { GitBranch, Plus, Upload, Loader2, X, Link2, AlertCircle } from 'lucide-react'
+import { toast } from 'sonner'
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -22,7 +14,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog'
 import {
   Form,
   FormControl,
@@ -31,24 +23,24 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+} from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/select'
+import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Separator } from '@/components/ui/separator'
+import { cn } from '@/lib/utils'
 
-import { ProviderIcon } from "@/features/scm-connections/components/provider-icon";
+import { ProviderIcon } from '@/features/scm-connections/components/provider-icon'
 import {
   createRepositorySchema,
   type CreateRepositoryFormData,
@@ -56,91 +48,87 @@ import {
   SCOPE_OPTIONS,
   extractRepoNameFromUrl,
   detectProviderFromUrl,
-} from "../schemas/repository.schema";
+} from '../schemas/repository.schema'
 import {
   useCreateRepository,
   useSCMConnections,
   invalidateRepositoriesCache,
   type SCMRepository,
-} from "../hooks/use-repositories";
-import { AddConnectionDialog } from "@/features/scm-connections/components/add-connection-dialog";
-import { SCMRepositorySelector } from "./scm-repository-selector";
-import type { SCMConnection } from "../types/repository.types";
+} from '../hooks/use-repositories'
+import { AddConnectionDialog } from '@/features/scm-connections/components/add-connection-dialog'
+import { SCMRepositorySelector } from './scm-repository-selector'
+import type { SCMConnection } from '../types/repository.types'
 
 interface AddRepositoryDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSuccess?: () => void;
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onSuccess?: () => void
 }
 
-export function AddRepositoryDialog({
-  open,
-  onOpenChange,
-  onSuccess,
-}: AddRepositoryDialogProps) {
-  const [activeTab, setActiveTab] = useState<"manual" | "import">("manual");
-  const [tagInput, setTagInput] = useState("");
-  const [addConnectionOpen, setAddConnectionOpen] = useState(false);
-  const [selectedConnection, setSelectedConnection] = useState<SCMConnection | null>(null);
-  const [isImporting, setIsImporting] = useState(false);
+export function AddRepositoryDialog({ open, onOpenChange, onSuccess }: AddRepositoryDialogProps) {
+  const [activeTab, setActiveTab] = useState<'manual' | 'import'>('manual')
+  const [tagInput, setTagInput] = useState('')
+  const [addConnectionOpen, setAddConnectionOpen] = useState(false)
+  const [selectedConnection, setSelectedConnection] = useState<SCMConnection | null>(null)
+  const [isImporting, setIsImporting] = useState(false)
 
-  const { data: connections } = useSCMConnections();
-  const { trigger: createRepository, isMutating } = useCreateRepository();
+  const { data: connections } = useSCMConnections()
+  const { trigger: createRepository, isMutating } = useCreateRepository()
 
   const form = useForm<CreateRepositoryFormData>({
     resolver: zodResolver(createRepositorySchema),
     defaultValues: {
-      url: "",
-      name: "",
-      criticality: "medium",
-      scope: "internal",
-      description: "",
+      url: '',
+      name: '',
+      criticality: 'medium',
+      scope: 'internal',
+      description: '',
       tags: [],
       scanEnabled: true,
       syncMetadata: true,
     },
-  });
+  })
 
-  const watchUrl = form.watch("url");
-  const watchTags = form.watch("tags") || [];
-  const detectedProvider = watchUrl ? detectProviderFromUrl(watchUrl) : null;
+  const watchUrl = form.watch('url')
+  const watchTags = form.watch('tags') || []
+  const detectedProvider = watchUrl ? detectProviderFromUrl(watchUrl) : null
 
   // Auto-fill name when URL changes
   useEffect(() => {
     if (watchUrl) {
-      const name = extractRepoNameFromUrl(watchUrl);
-      if (name && !form.getValues("name")) {
-        form.setValue("name", name);
+      const name = extractRepoNameFromUrl(watchUrl)
+      if (name && !form.getValues('name')) {
+        form.setValue('name', name)
       }
     }
-  }, [watchUrl, form]);
+  }, [watchUrl, form])
 
   const handleAddTag = () => {
-    const trimmedTag = tagInput.trim().toLowerCase();
+    const trimmedTag = tagInput.trim().toLowerCase()
     if (trimmedTag && !watchTags.includes(trimmedTag) && watchTags.length < 20) {
-      form.setValue("tags", [...watchTags, trimmedTag]);
-      setTagInput("");
+      form.setValue('tags', [...watchTags, trimmedTag])
+      setTagInput('')
     }
-  };
+  }
 
   const handleRemoveTag = (tagToRemove: string) => {
     form.setValue(
-      "tags",
+      'tags',
       watchTags.filter((tag) => tag !== tagToRemove)
-    );
-  };
+    )
+  }
 
   const handleTagKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      handleAddTag();
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      handleAddTag()
     }
-  };
+  }
 
   const onSubmit = async (data: CreateRepositoryFormData) => {
     try {
       // Detect provider from URL
-      const provider = detectProviderFromUrl(data.url);
+      const provider = detectProviderFromUrl(data.url)
 
       await createRepository({
         name: data.name,
@@ -152,52 +140,50 @@ export function AddRepositoryDialog({
         // Repository-specific fields
         fullName: data.name,
         webUrl: data.url,
-        cloneUrl: data.url.endsWith(".git") ? data.url : `${data.url}.git`,
-        provider: provider !== "local" ? provider : undefined,
+        cloneUrl: data.url.endsWith('.git') ? data.url : `${data.url}.git`,
+        provider: provider !== 'local' ? provider : undefined,
         scanEnabled: data.scanEnabled,
-      });
+      })
 
-      toast.success(`Repository "${data.name}" added successfully`);
-      await invalidateRepositoriesCache();
-      form.reset();
-      onOpenChange(false);
-      onSuccess?.();
+      toast.success(`Repository "${data.name}" added successfully`)
+      await invalidateRepositoriesCache()
+      form.reset()
+      onOpenChange(false)
+      onSuccess?.()
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to add repository"
-      );
+      toast.error(error instanceof Error ? error.message : 'Failed to add repository')
     }
-  };
+  }
 
   const handleClose = () => {
-    form.reset();
-    setTagInput("");
-    setActiveTab("manual");
-    setSelectedConnection(null);
-    onOpenChange(false);
-  };
+    form.reset()
+    setTagInput('')
+    setActiveTab('manual')
+    setSelectedConnection(null)
+    onOpenChange(false)
+  }
 
   const handleImportRepositories = async (
     repositories: SCMRepository[],
     options: { criticality: string; scope: string; scanEnabled: boolean }
   ) => {
-    if (!selectedConnection) return;
+    if (!selectedConnection) return
 
-    setIsImporting(true);
+    setIsImporting(true)
     try {
       // Map provider name to correct type
       const mapProviderToSCMProvider = (provider: string) => {
-        if (provider === "azure") return "azure_devops";
-        return provider as "github" | "gitlab" | "bitbucket" | "azure_devops";
-      };
+        if (provider === 'azure') return 'azure_devops'
+        return provider as 'github' | 'gitlab' | 'bitbucket' | 'azure_devops'
+      }
 
       // Import repositories one by one
       // In a production app, you'd want a batch endpoint
       for (const repo of repositories) {
         await createRepository({
           name: repo.name,
-          criticality: options.criticality as "critical" | "high" | "medium" | "low",
-          scope: options.scope as "internal" | "external" | "partner",
+          criticality: options.criticality as 'critical' | 'high' | 'medium' | 'low',
+          scope: options.scope as 'internal' | 'external' | 'partner',
           description: repo.description,
           fullName: repo.full_name,
           webUrl: repo.html_url,
@@ -205,7 +191,7 @@ export function AddRepositoryDialog({
           sshUrl: repo.ssh_url,
           provider: mapProviderToSCMProvider(selectedConnection.provider),
           defaultBranch: repo.default_branch,
-          visibility: repo.is_private ? "private" : "public",
+          visibility: repo.is_private ? 'private' : 'public',
           language: repo.language,
           topics: repo.topics,
           stars: repo.stars,
@@ -214,27 +200,25 @@ export function AddRepositoryDialog({
           externalId: repo.id,
           scmOrganization: selectedConnection.scmOrganization,
           scanEnabled: options.scanEnabled,
-        });
+        })
       }
 
       toast.success(
         `Successfully imported ${repositories.length} ${
-          repositories.length === 1 ? "repository" : "repositories"
+          repositories.length === 1 ? 'repository' : 'repositories'
         }`
-      );
-      await invalidateRepositoriesCache();
-      handleClose();
-      onSuccess?.();
+      )
+      await invalidateRepositoriesCache()
+      handleClose()
+      onSuccess?.()
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to import repositories"
-      );
+      toast.error(error instanceof Error ? error.message : 'Failed to import repositories')
     } finally {
-      setIsImporting(false);
+      setIsImporting(false)
     }
-  };
+  }
 
-  const connectedConnections = connections?.filter((c) => c.status === "connected") || [];
+  const connectedConnections = connections?.filter((c) => c.status === 'connected') || []
 
   return (
     <>
@@ -250,10 +234,7 @@ export function AddRepositoryDialog({
             </DialogDescription>
           </DialogHeader>
 
-          <Tabs
-            value={activeTab}
-            onValueChange={(v) => setActiveTab(v as "manual" | "import")}
-          >
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'manual' | 'import')}>
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="manual" className="gap-2">
                 <Plus className="h-4 w-4" />
@@ -278,10 +259,7 @@ export function AddRepositoryDialog({
                         <FormLabel>Repository URL *</FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <Input
-                              placeholder="https://github.com/owner/repo"
-                              {...field}
-                            />
+                            <Input placeholder="https://github.com/owner/repo" {...field} />
                             {detectedProvider && (
                               <div className="absolute right-3 top-1/2 -translate-y-1/2">
                                 <ProviderIcon
@@ -292,9 +270,7 @@ export function AddRepositoryDialog({
                             )}
                           </div>
                         </FormControl>
-                        <FormDescription>
-                          Enter the full URL of the repository
-                        </FormDescription>
+                        <FormDescription>Enter the full URL of the repository</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -326,10 +302,7 @@ export function AddRepositoryDialog({
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Criticality *</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                          >
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue placeholder="Select criticality" />
@@ -354,10 +327,7 @@ export function AddRepositoryDialog({
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Scope</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                          >
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue placeholder="Select scope" />
@@ -420,16 +390,13 @@ export function AddRepositoryDialog({
                     {watchTags.length > 0 && (
                       <div className="flex flex-wrap gap-1.5 mt-2">
                         {watchTags.map((tag) => (
-                          <Badge
-                            key={tag}
-                            variant="secondary"
-                            className="gap-1 pr-1"
-                          >
+                          <Badge key={tag} variant="secondary" className="gap-1 pr-1">
                             {tag}
                             <button
                               type="button"
                               onClick={() => handleRemoveTag(tag)}
                               className="ml-1 rounded-full hover:bg-muted p-0.5"
+                              aria-label={`Remove tag ${tag}`}
                             >
                               <X className="h-3 w-3" />
                             </button>
@@ -451,10 +418,7 @@ export function AddRepositoryDialog({
                         render={({ field }) => (
                           <FormItem className="flex items-center gap-2 space-y-0">
                             <FormControl>
-                              <Checkbox
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
+                              <Checkbox checked={field.value} onCheckedChange={field.onChange} />
                             </FormControl>
                             <FormLabel className="text-sm font-normal cursor-pointer">
                               Enable automatic scanning
@@ -468,10 +432,7 @@ export function AddRepositoryDialog({
                         render={({ field }) => (
                           <FormItem className="flex items-center gap-2 space-y-0">
                             <FormControl>
-                              <Checkbox
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
+                              <Checkbox checked={field.value} onCheckedChange={field.onChange} />
                             </FormControl>
                             <FormLabel className="text-sm font-normal cursor-pointer">
                               Sync metadata from SCM
@@ -483,17 +444,11 @@ export function AddRepositoryDialog({
                   </div>
 
                   <DialogFooter className="pt-4">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleClose}
-                    >
+                    <Button type="button" variant="outline" onClick={handleClose}>
                       Cancel
                     </Button>
                     <Button type="submit" disabled={isMutating}>
-                      {isMutating && (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      )}
+                      {isMutating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                       Add Repository
                     </Button>
                   </DialogFooter>
@@ -531,8 +486,8 @@ export function AddRepositoryDialog({
                         <div>
                           <p className="text-sm font-medium">Import from SCM</p>
                           <p className="text-sm text-muted-foreground mt-1">
-                            Select a connection below to browse and import repositories.
-                            You can select multiple repositories to import at once.
+                            Select a connection below to browse and import repositories. You can
+                            select multiple repositories to import at once.
                           </p>
                         </div>
                       </div>
@@ -546,21 +501,17 @@ export function AddRepositoryDialog({
                             key={connection.id}
                             type="button"
                             className={cn(
-                              "flex items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-muted/50",
-                              "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                              'flex items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-muted/50',
+                              'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2'
                             )}
                             onClick={() => setSelectedConnection(connection)}
                           >
-                            <ProviderIcon
-                              provider={connection.provider}
-                              className="h-5 w-5"
-                            />
+                            <ProviderIcon provider={connection.provider} className="h-5 w-5" />
                             <div className="flex-1 min-w-0">
                               <p className="font-medium truncate">{connection.name}</p>
                               <p className="text-xs text-muted-foreground truncate">
                                 {connection.baseUrl}
-                                {connection.scmOrganization &&
-                                  ` / ${connection.scmOrganization}`}
+                                {connection.scmOrganization && ` / ${connection.scmOrganization}`}
                               </p>
                             </div>
                             <Badge variant="outline" className="shrink-0">
@@ -572,10 +523,7 @@ export function AddRepositoryDialog({
                     </div>
 
                     <div className="flex justify-center pt-2">
-                      <Button
-                        variant="outline"
-                        onClick={() => setAddConnectionOpen(true)}
-                      >
+                      <Button variant="outline" onClick={() => setAddConnectionOpen(true)}>
                         <Plus className="mr-2 h-4 w-4" />
                         Add Another Connection
                       </Button>
@@ -588,10 +536,7 @@ export function AddRepositoryDialog({
         </DialogContent>
       </Dialog>
 
-      <AddConnectionDialog
-        open={addConnectionOpen}
-        onOpenChange={setAddConnectionOpen}
-      />
+      <AddConnectionDialog open={addConnectionOpen} onOpenChange={setAddConnectionOpen} />
     </>
-  );
+  )
 }

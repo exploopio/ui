@@ -330,9 +330,7 @@ async function fetchScanSessionStats(url: string): Promise<ScanSessionStats> {
 export function useScanSessionStats(since?: string, config?: SWRConfiguration) {
   const { currentTenant } = useTenant()
 
-  const key = currentTenant
-    ? `/api/v1/scan-sessions/stats${since ? `?since=${since}` : ''}`
-    : null
+  const key = currentTenant ? `/api/v1/scan-sessions/stats${since ? `?since=${since}` : ''}` : null
 
   return useSWR<ScanSessionStats>(key, fetchScanSessionStats, {
     ...defaultConfig,
@@ -343,6 +341,52 @@ export function useScanSessionStats(since?: string, config?: SWRConfiguration) {
 // Legacy aliases for backward compatibility
 export const useScanRuns = useScanSessions
 export const useAllScanRuns = useScanSessions
+
+// ============================================
+// SCAN SESSION ACTIONS
+// ============================================
+
+/**
+ * Stop a running scan session
+ */
+export function useStopScanSession(sessionId: string) {
+  const { currentTenant } = useTenant()
+
+  return useSWRMutation(
+    currentTenant && sessionId ? `/api/v1/scan-sessions/${sessionId}/stop` : null,
+    async (url: string) => {
+      return post<ScanSession>(url, {})
+    }
+  )
+}
+
+/**
+ * Retry a failed scan session
+ */
+export function useRetryScanSession(sessionId: string) {
+  const { currentTenant } = useTenant()
+
+  return useSWRMutation(
+    currentTenant && sessionId ? `/api/v1/scan-sessions/${sessionId}/retry` : null,
+    async (url: string) => {
+      return post<ScanSession>(url, {})
+    }
+  )
+}
+
+/**
+ * Invalidate scan sessions cache
+ */
+export async function invalidateScanSessionsCache() {
+  const { mutate } = await import('swr')
+  await mutate(
+    (key) => typeof key === 'string' && key.includes('/api/v1/scan-sessions'),
+    undefined,
+    {
+      revalidate: true,
+    }
+  )
+}
 
 // ============================================
 // CACHE UTILITIES

@@ -2,13 +2,7 @@
 
 import { memo, useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react'
-import {
-  Radar,
-  Play,
-  Flag,
-  Clock,
-  Link2,
-} from 'lucide-react'
+import { Radar, Play, Flag, Clock, Link2, AlertTriangle } from 'lucide-react'
 import { cn, slugify } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -57,6 +51,9 @@ export type ScannerNodeData = {
   // Category info from tool
   categoryIcon?: string
   categoryColor?: string
+  // Validation state - steps without tool AND without capabilities are invalid
+  isValid?: boolean
+  validationMessage?: string
   // Available tools for selection (with capabilities for auto-setting)
   availableTools?: Array<{ name: string; displayName: string; capabilities?: string[] }>
   // Available steps for dependencies (other steps in the pipeline)
@@ -73,19 +70,71 @@ export type ScannerNode = Node<ScannerNodeData, 'scanner'>
 
 // Map category colors to Tailwind classes
 const COLOR_MAP: Record<string, { bg: string; border: string; iconBg: string }> = {
-  blue: { bg: 'bg-white dark:bg-slate-900', border: 'border-slate-200 dark:border-slate-700', iconBg: 'bg-blue-100 dark:bg-blue-900/30' },
-  purple: { bg: 'bg-white dark:bg-slate-900', border: 'border-slate-200 dark:border-slate-700', iconBg: 'bg-purple-100 dark:bg-purple-900/30' },
-  green: { bg: 'bg-white dark:bg-slate-900', border: 'border-slate-200 dark:border-slate-700', iconBg: 'bg-green-100 dark:bg-green-900/30' },
-  red: { bg: 'bg-white dark:bg-slate-900', border: 'border-slate-200 dark:border-slate-700', iconBg: 'bg-red-100 dark:bg-red-900/30' },
-  orange: { bg: 'bg-white dark:bg-slate-900', border: 'border-slate-200 dark:border-slate-700', iconBg: 'bg-orange-100 dark:bg-orange-900/30' },
-  cyan: { bg: 'bg-white dark:bg-slate-900', border: 'border-slate-200 dark:border-slate-700', iconBg: 'bg-cyan-100 dark:bg-cyan-900/30' },
-  yellow: { bg: 'bg-white dark:bg-slate-900', border: 'border-slate-200 dark:border-slate-700', iconBg: 'bg-yellow-100 dark:bg-yellow-900/30' },
-  pink: { bg: 'bg-white dark:bg-slate-900', border: 'border-slate-200 dark:border-slate-700', iconBg: 'bg-pink-100 dark:bg-pink-900/30' },
-  indigo: { bg: 'bg-white dark:bg-slate-900', border: 'border-slate-200 dark:border-slate-700', iconBg: 'bg-indigo-100 dark:bg-indigo-900/30' },
-  violet: { bg: 'bg-white dark:bg-slate-900', border: 'border-slate-200 dark:border-slate-700', iconBg: 'bg-violet-100 dark:bg-violet-900/30' },
-  emerald: { bg: 'bg-white dark:bg-slate-900', border: 'border-slate-200 dark:border-slate-700', iconBg: 'bg-emerald-100 dark:bg-emerald-900/30' },
-  amber: { bg: 'bg-white dark:bg-slate-900', border: 'border-slate-200 dark:border-slate-700', iconBg: 'bg-amber-100 dark:bg-amber-900/30' },
-  slate: { bg: 'bg-white dark:bg-slate-900', border: 'border-slate-200 dark:border-slate-700', iconBg: 'bg-slate-100 dark:bg-slate-800' },
+  blue: {
+    bg: 'bg-white dark:bg-slate-900',
+    border: 'border-slate-200 dark:border-slate-700',
+    iconBg: 'bg-blue-100 dark:bg-blue-900/30',
+  },
+  purple: {
+    bg: 'bg-white dark:bg-slate-900',
+    border: 'border-slate-200 dark:border-slate-700',
+    iconBg: 'bg-purple-100 dark:bg-purple-900/30',
+  },
+  green: {
+    bg: 'bg-white dark:bg-slate-900',
+    border: 'border-slate-200 dark:border-slate-700',
+    iconBg: 'bg-green-100 dark:bg-green-900/30',
+  },
+  red: {
+    bg: 'bg-white dark:bg-slate-900',
+    border: 'border-slate-200 dark:border-slate-700',
+    iconBg: 'bg-red-100 dark:bg-red-900/30',
+  },
+  orange: {
+    bg: 'bg-white dark:bg-slate-900',
+    border: 'border-slate-200 dark:border-slate-700',
+    iconBg: 'bg-orange-100 dark:bg-orange-900/30',
+  },
+  cyan: {
+    bg: 'bg-white dark:bg-slate-900',
+    border: 'border-slate-200 dark:border-slate-700',
+    iconBg: 'bg-cyan-100 dark:bg-cyan-900/30',
+  },
+  yellow: {
+    bg: 'bg-white dark:bg-slate-900',
+    border: 'border-slate-200 dark:border-slate-700',
+    iconBg: 'bg-yellow-100 dark:bg-yellow-900/30',
+  },
+  pink: {
+    bg: 'bg-white dark:bg-slate-900',
+    border: 'border-slate-200 dark:border-slate-700',
+    iconBg: 'bg-pink-100 dark:bg-pink-900/30',
+  },
+  indigo: {
+    bg: 'bg-white dark:bg-slate-900',
+    border: 'border-slate-200 dark:border-slate-700',
+    iconBg: 'bg-indigo-100 dark:bg-indigo-900/30',
+  },
+  violet: {
+    bg: 'bg-white dark:bg-slate-900',
+    border: 'border-slate-200 dark:border-slate-700',
+    iconBg: 'bg-violet-100 dark:bg-violet-900/30',
+  },
+  emerald: {
+    bg: 'bg-white dark:bg-slate-900',
+    border: 'border-slate-200 dark:border-slate-700',
+    iconBg: 'bg-emerald-100 dark:bg-emerald-900/30',
+  },
+  amber: {
+    bg: 'bg-white dark:bg-slate-900',
+    border: 'border-slate-200 dark:border-slate-700',
+    iconBg: 'bg-amber-100 dark:bg-amber-900/30',
+  },
+  slate: {
+    bg: 'bg-white dark:bg-slate-900',
+    border: 'border-slate-200 dark:border-slate-700',
+    iconBg: 'bg-slate-100 dark:bg-slate-800',
+  },
 }
 
 const DEFAULT_COLORS = COLOR_MAP.slate
@@ -99,6 +148,14 @@ function getColorsForCategory(categoryColor?: string) {
 
 function ScannerNodeComponent({ data, selected }: NodeProps<ScannerNode>) {
   const colors = getColorsForCategory(data.categoryColor)
+
+  // Validation: step must have either a tool or capabilities
+  // If isValid is explicitly set, use it; otherwise calculate based on tool/capabilities
+  const hasToolOrCapabilities = !!(data.tool || (data.capabilities && data.capabilities.length > 0))
+  const isValid = data.isValid !== undefined ? data.isValid : hasToolOrCapabilities
+  const validationMessage =
+    data.validationMessage ||
+    (!hasToolOrCapabilities ? 'Step requires a scanner or capabilities' : '')
 
   // Local state for controlled inputs
   const [localLabel, setLocalLabel] = useState(data.label)
@@ -137,47 +194,62 @@ function ScannerNodeComponent({ data, selected }: NodeProps<ScannerNode>) {
   }, [capabilitiesJson, data.capabilities])
 
   // Handle label change with auto step key generation
-  const handleLabelChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const newLabel = e.target.value
-    setLocalLabel(newLabel)
-    data.onLabelChange?.(newLabel)
+  const handleLabelChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const newLabel = e.target.value
+      setLocalLabel(newLabel)
+      data.onLabelChange?.(newLabel)
 
-    // Auto-generate step key if not manually edited
-    if (!stepKeyManualRef.current) {
-      const newKey = slugify(newLabel)
+      // Auto-generate step key if not manually edited
+      if (!stepKeyManualRef.current) {
+        const newKey = slugify(newLabel)
+        setLocalStepKey(newKey)
+        data.onStepKeyChange?.(newKey)
+      }
+    },
+    [data]
+  )
+
+  const handleStepKeyChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      stepKeyManualRef.current = true
+      const newKey = e.target.value
       setLocalStepKey(newKey)
       data.onStepKeyChange?.(newKey)
-    }
-  }, [data])
+    },
+    [data]
+  )
 
-  const handleStepKeyChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    stepKeyManualRef.current = true
-    const newKey = e.target.value
-    setLocalStepKey(newKey)
-    data.onStepKeyChange?.(newKey)
-  }, [data])
+  const handleToolChange = useCallback(
+    (value: string) => {
+      const toolName = value === '__none__' ? '' : value
+      data.onToolChange?.(toolName)
+    },
+    [data]
+  )
 
-  const handleToolChange = useCallback((value: string) => {
-    const toolName = value === '__none__' ? '' : value
-    data.onToolChange?.(toolName)
-  }, [data])
+  const handleDescriptionChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      const newDesc = e.target.value
+      setLocalDescription(newDesc)
+      data.onDescriptionChange?.(newDesc)
+    },
+    [data]
+  )
 
-  const handleDescriptionChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newDesc = e.target.value
-    setLocalDescription(newDesc)
-    data.onDescriptionChange?.(newDesc)
-  }, [data])
-
-  const handleTimeoutChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const newTimeout = parseInt(e.target.value) || 3600
-    setLocalTimeout(newTimeout)
-    data.onTimeoutChange?.(newTimeout)
-  }, [data])
+  const handleTimeoutChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const newTimeout = parseInt(e.target.value) || 3600
+      setLocalTimeout(newTimeout)
+      data.onTimeoutChange?.(newTimeout)
+    },
+    [data]
+  )
 
   // Get display names for dependencies (read-only, managed via drag-drop arrows)
   const dependencyLabels = useMemo(() => {
-    return (data.dependsOn || []).map(key => {
-      const step = data.availableSteps?.find(s => s.stepKey === key)
+    return (data.dependsOn || []).map((key) => {
+      const step = data.availableSteps?.find((s) => s.stepKey === key)
       return step?.name || key
     })
   }, [data.dependsOn, data.availableSteps])
@@ -187,7 +259,8 @@ function ScannerNodeComponent({ data, selected }: NodeProps<ScannerNode>) {
       className={cn(
         'rounded-xl shadow-sm border w-[280px] overflow-hidden transition-all',
         colors.bg,
-        colors.border,
+        // Show red border when invalid
+        !isValid ? 'border-red-500 dark:border-red-400' : colors.border,
         selected ? 'shadow-lg ring-2 ring-primary ring-offset-2' : 'hover:shadow-md'
       )}
     >
@@ -199,15 +272,26 @@ function ScannerNodeComponent({ data, selected }: NodeProps<ScannerNode>) {
       />
 
       {/* Header with icon and name */}
-      <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800">
+      <div
+        className={cn(
+          'px-3 py-2 border-b',
+          !isValid
+            ? 'border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20'
+            : 'border-slate-100 dark:border-slate-800'
+        )}
+      >
         <div className="flex items-center gap-2">
           <div
             className={cn(
               'h-7 w-7 rounded-lg flex items-center justify-center flex-shrink-0',
-              colors.iconBg
+              !isValid ? 'bg-red-100 dark:bg-red-900/30' : colors.iconBg
             )}
           >
-            <Radar className="h-3.5 w-3.5 text-slate-600 dark:text-slate-400" />
+            {!isValid ? (
+              <AlertTriangle className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
+            ) : (
+              <Radar className="h-3.5 w-3.5 text-slate-600 dark:text-slate-400" />
+            )}
           </div>
           <Input
             value={localLabel}
@@ -232,11 +316,15 @@ function ScannerNodeComponent({ data, selected }: NodeProps<ScannerNode>) {
         </div>
 
         {/* Tool Selector */}
-        <Select
-          value={data.tool || '__none__'}
-          onValueChange={handleToolChange}
-        >
-          <SelectTrigger className="h-7 text-xs bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700">
+        <Select value={data.tool || '__none__'} onValueChange={handleToolChange}>
+          <SelectTrigger
+            className={cn(
+              'h-7 text-xs bg-slate-50 dark:bg-slate-800',
+              !isValid
+                ? 'border-red-500 dark:border-red-400'
+                : 'border-slate-200 dark:border-slate-700'
+            )}
+          >
             <SelectValue placeholder="Select scanner">
               {data.toolDisplayName || data.tool || 'No scanner'}
             </SelectValue>
@@ -252,6 +340,14 @@ function ScannerNodeComponent({ data, selected }: NodeProps<ScannerNode>) {
             ))}
           </SelectContent>
         </Select>
+
+        {/* Validation Warning */}
+        {!isValid && validationMessage && (
+          <div className="flex items-center gap-1.5 text-[10px] text-red-600 dark:text-red-400">
+            <AlertTriangle className="h-3 w-3 shrink-0" />
+            <span>{validationMessage}</span>
+          </div>
+        )}
 
         {/* Timeout */}
         <div className="flex items-center gap-1.5">

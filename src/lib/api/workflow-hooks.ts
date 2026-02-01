@@ -23,6 +23,7 @@ import type {
   WorkflowEdge,
   CreateWorkflowRequest,
   UpdateWorkflowRequest,
+  UpdateWorkflowGraphRequest,
   CreateNodeRequest,
   UpdateNodeRequest,
   CreateEdgeRequest,
@@ -167,6 +168,20 @@ export function useDeleteWorkflow(workflowId: string) {
   )
 }
 
+/**
+ * Update a workflow's graph (atomic replacement of all nodes and edges)
+ */
+export function useUpdateWorkflowGraph(workflowId: string) {
+  const { currentTenant } = useTenant()
+
+  return useSWRMutation(
+    currentTenant && workflowId ? workflowEndpoints.updateGraph(workflowId) : null,
+    async (url: string, { arg }: { arg: UpdateWorkflowGraphRequest }) => {
+      return put<Workflow>(url, arg)
+    }
+  )
+}
+
 // ============================================
 // WORKFLOW NODE HOOKS
 // ============================================
@@ -192,9 +207,7 @@ export function useUpdateNode(workflowId: string, nodeId: string) {
   const { currentTenant } = useTenant()
 
   return useSWRMutation(
-    currentTenant && workflowId && nodeId
-      ? workflowEndpoints.updateNode(workflowId, nodeId)
-      : null,
+    currentTenant && workflowId && nodeId ? workflowEndpoints.updateNode(workflowId, nodeId) : null,
     async (url: string, { arg }: { arg: UpdateNodeRequest }) => {
       return put<WorkflowNode>(url, arg)
     }
@@ -208,9 +221,7 @@ export function useDeleteNode(workflowId: string, nodeId: string) {
   const { currentTenant } = useTenant()
 
   return useSWRMutation(
-    currentTenant && workflowId && nodeId
-      ? workflowEndpoints.deleteNode(workflowId, nodeId)
-      : null,
+    currentTenant && workflowId && nodeId ? workflowEndpoints.deleteNode(workflowId, nodeId) : null,
     async (url: string) => {
       return del<void>(url)
     }
@@ -242,9 +253,7 @@ export function useDeleteEdge(workflowId: string, edgeId: string) {
   const { currentTenant } = useTenant()
 
   return useSWRMutation(
-    currentTenant && workflowId && edgeId
-      ? workflowEndpoints.deleteEdge(workflowId, edgeId)
-      : null,
+    currentTenant && workflowId && edgeId ? workflowEndpoints.deleteEdge(workflowId, edgeId) : null,
     async (url: string) => {
       return del<void>(url)
     }

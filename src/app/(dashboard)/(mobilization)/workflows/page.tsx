@@ -73,6 +73,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { toast } from 'sonner'
 import { Can, Permission } from '@/lib/permissions'
+import { put } from '@/lib/api/client'
+import { workflowEndpoints } from '@/lib/api/endpoints'
 import {
   useWorkflows,
   useWorkflowRuns,
@@ -88,6 +90,10 @@ import type {
   WorkflowNode as APIWorkflowNode,
   WorkflowEdge as APIWorkflowEdge,
   CreateWorkflowRequest,
+  UpdateWorkflowGraphRequest,
+  CreateNodeRequest,
+  CreateEdgeRequest,
+  WorkflowNodeType,
 } from '@/lib/api/workflow-types'
 
 // Status configuration
@@ -326,7 +332,12 @@ function convertToReactFlowFormat(
     id: n.id,
     type: n.node_type,
     position: { x: n.ui_position.x, y: n.ui_position.y },
-    data: { label: n.name, description: n.description || '' },
+    data: {
+      label: n.name,
+      description: n.description || '',
+      nodeKey: n.node_key,
+      config: n.config,
+    },
   }))
 
   const rfEdges: Edge[] = (edges || []).map((e) => ({
@@ -339,6 +350,46 @@ function convertToReactFlowFormat(
   }))
 
   return { nodes: rfNodes, edges: rfEdges }
+}
+
+// Convert ReactFlow nodes/edges to API format for saving
+function convertToAPIFormat(
+  rfNodes: Node[],
+  rfEdges: Edge[]
+): { nodes: CreateNodeRequest[]; edges: CreateEdgeRequest[] } {
+  // Create a mapping from ReactFlow id to node_key
+  const idToKeyMap = new Map<string, string>()
+
+  const nodes: CreateNodeRequest[] = rfNodes.map((n, index) => {
+    // Use existing nodeKey from data if available, otherwise generate one
+    const nodeKey = (n.data?.nodeKey as string) || `${n.type}_${index + 1}`
+    idToKeyMap.set(n.id, nodeKey)
+
+    // Build config based on node type
+    const existingConfig = (n.data?.config as Record<string, unknown>) || {}
+    const config: Record<string, unknown> = { ...existingConfig }
+    if (n.type === 'trigger' && !config.trigger_type) {
+      config.trigger_type = 'manual'
+    }
+
+    return {
+      node_key: nodeKey,
+      node_type: n.type as WorkflowNodeType,
+      name: (n.data?.label as string) || `${n.type} node`,
+      description: (n.data?.description as string) || undefined,
+      ui_position: { x: n.position.x, y: n.position.y },
+      config,
+    }
+  })
+
+  const edges: CreateEdgeRequest[] = rfEdges.map((e) => ({
+    source_node_key: idToKeyMap.get(e.source) || e.source,
+    target_node_key: idToKeyMap.get(e.target) || e.target,
+    source_handle: e.sourceHandle || undefined,
+    label: (e.label as string) || undefined,
+  }))
+
+  return { nodes, edges }
 }
 
 // Workflow card component for the trigger mutation
@@ -377,6 +428,13 @@ export default function WorkflowsPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [newWorkflowName, setNewWorkflowName] = useState('')
   const [newWorkflowDescription, setNewWorkflowDescription] = useState('')
+
+  // Visual Builder state
+  const [editingWorkflow, setEditingWorkflow] = useState<Workflow | null>(null)
+  const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false)
+  const [saveWorkflowName, setSaveWorkflowName] = useState('')
+  const [saveWorkflowDescription, setSaveWorkflowDescription] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
 
   // Fetch workflows from API
   const {
@@ -449,7 +507,89 @@ export default function WorkflowsPage() {
   }, [])
 
   const handleSaveWorkflow = () => {
-    toast.success('Workflow saved successfully')
+    // Check if we have at least one trigger node
+    const hasTrigger = nodes.some((n) => n.type === 'trigger')
+    if (!hasTrigger) {
+      toast.error('Workflow must have at least one trigger node')
+      return
+    }
+
+    if (editingWorkflow) {
+      // Editing existing workflow - save directly
+      handleSaveExistingWorkflow()
+    } else {
+      // New workflow - open save dialog to get name
+      setSaveWorkflowName('')
+      setSaveWorkflowDescription('')
+      setIsSaveDialogOpen(true)
+    }
+  }
+
+  const handleSaveExistingWorkflow = async () => {
+    if (!editingWorkflow) return
+
+    setIsSaving(true)
+    try {
+      const { nodes: apiNodes, edges: apiEdges } = convertToAPIFormat(nodes, edges)
+
+      // Use the atomic graph update API to replace all nodes and edges
+      const request: UpdateWorkflowGraphRequest = {
+        name: editingWorkflow.name,
+        description: editingWorkflow.description,
+        tags: editingWorkflow.tags,
+        nodes: apiNodes,
+        edges: apiEdges,
+      }
+
+      // Atomic update - replaces entire graph in a single transaction
+      await put<Workflow>(workflowEndpoints.updateGraph(editingWorkflow.id), request)
+
+      toast.success(`Workflow "${editingWorkflow.name}" saved successfully`)
+      await invalidateWorkflowsCache()
+      setEditingWorkflow(null)
+    } catch (error) {
+      console.error('Failed to save workflow:', error)
+      toast.error('Failed to save workflow')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleSaveNewWorkflow = async () => {
+    if (!saveWorkflowName.trim()) {
+      toast.error('Please enter a workflow name')
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      const { nodes: apiNodes, edges: apiEdges } = convertToAPIFormat(nodes, edges)
+
+      const request: CreateWorkflowRequest = {
+        name: saveWorkflowName.trim(),
+        description: saveWorkflowDescription.trim() || undefined,
+        nodes: apiNodes,
+        edges: apiEdges,
+      }
+
+      const newWorkflow = await createWorkflow(request)
+      toast.success(`Workflow "${saveWorkflowName}" created successfully`)
+      await invalidateWorkflowsCache()
+
+      // Set as editing workflow so future saves update this workflow
+      if (newWorkflow) {
+        setEditingWorkflow(newWorkflow)
+      }
+
+      setIsSaveDialogOpen(false)
+      setSaveWorkflowName('')
+      setSaveWorkflowDescription('')
+    } catch (error) {
+      console.error('Failed to create workflow:', error)
+      toast.error('Failed to create workflow')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const handleDeleteWorkflow = async (workflow: Workflow) => {
@@ -465,27 +605,28 @@ export default function WorkflowsPage() {
     }
   }
 
-  const handleToggleWorkflow = useCallback(
-    async (workflow: Workflow, enabled: boolean) => {
-      try {
-        const response = await fetch(`/api/v1/workflows/${workflow.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ is_active: enabled }),
-        })
-        if (!response.ok) throw new Error('Failed to update workflow')
-        toast.success(`Workflow ${enabled ? 'activated' : 'deactivated'}: ${workflow.name}`)
-        await invalidateWorkflowsCache()
-      } catch {
-        toast.error(`Failed to ${enabled ? 'activate' : 'deactivate'} workflow: ${workflow.name}`)
-      }
-    },
-    []
-  )
+  const handleToggleWorkflow = useCallback(async (workflow: Workflow, enabled: boolean) => {
+    try {
+      const response = await fetch(`/api/v1/workflows/${workflow.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_active: enabled }),
+      })
+      if (!response.ok) throw new Error('Failed to update workflow')
+      toast.success(`Workflow ${enabled ? 'activated' : 'deactivated'}: ${workflow.name}`)
+      await invalidateWorkflowsCache()
+    } catch {
+      toast.error(`Failed to ${enabled ? 'activate' : 'deactivate'} workflow: ${workflow.name}`)
+    }
+  }, [])
 
   const handleViewWorkflow = (workflow: Workflow) => {
     setSelectedWorkflow(workflow)
-    // Also load the workflow into the visual builder
+  }
+
+  const handleEditInBuilder = (workflow: Workflow) => {
+    // Load the workflow into the visual builder for editing
+    setEditingWorkflow(workflow)
     if (workflow.nodes && workflow.nodes.length > 0) {
       const { nodes: rfNodes, edges: rfEdges } = convertToReactFlowFormat(
         workflow.nodes,
@@ -493,7 +634,34 @@ export default function WorkflowsPage() {
       )
       setNodes(rfNodes)
       setEdges(rfEdges)
+    } else {
+      // Empty workflow - start with a single trigger
+      setNodes([
+        {
+          id: 'trigger-1',
+          type: 'trigger',
+          position: { x: 250, y: 50 },
+          data: {
+            label: 'Manual Trigger',
+            description: 'Start here',
+            nodeKey: 'trigger_1',
+            config: { trigger_type: 'manual' },
+          },
+        },
+      ])
+      setEdges([])
     }
+    setSelectedWorkflow(null)
+    // Switch to builder tab (user needs to click manually for now)
+    toast.info(`Loaded "${workflow.name}" into builder. Switch to Visual Builder tab to edit.`)
+  }
+
+  const _handleNewInBuilder = () => {
+    // Clear current editing state and reset to default
+    setEditingWorkflow(null)
+    setNodes(initialNodes)
+    setEdges(initialEdges)
+    toast.info('Ready to create new workflow in Visual Builder')
   }
 
   const handleCreateWorkflow = async () => {
@@ -719,7 +887,7 @@ export default function WorkflowsPage() {
                                   <Eye className="mr-2 h-4 w-4" />
                                   View Details
                                 </DropdownMenuItem>
-                                <DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleEditInBuilder(workflow)}>
                                   <Pencil className="mr-2 h-4 w-4" />
                                   Edit in Builder
                                 </DropdownMenuItem>
@@ -775,9 +943,7 @@ export default function WorkflowsPage() {
                   <div className="flex flex-col items-center justify-center py-12 text-center">
                     <Clock className="h-12 w-12 text-muted-foreground mb-4" />
                     <p className="text-lg font-medium">No executions yet</p>
-                    <p className="text-muted-foreground">
-                      Run a workflow to see execution history
-                    </p>
+                    <p className="text-muted-foreground">Run a workflow to see execution history</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -833,10 +999,35 @@ export default function WorkflowsPage() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle>Visual Workflow Builder</CardTitle>
-                    <CardDescription>Drag and drop to create workflows</CardDescription>
+                    <CardTitle className="flex items-center gap-2">
+                      Visual Workflow Builder
+                      {editingWorkflow && (
+                        <Badge variant="secondary" className="font-normal">
+                          Editing: {editingWorkflow.name}
+                        </Badge>
+                      )}
+                    </CardTitle>
+                    <CardDescription>
+                      {editingWorkflow
+                        ? 'Make changes and click Save to update the workflow'
+                        : 'Drag and drop to create workflows'}
+                    </CardDescription>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
+                    {editingWorkflow && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setEditingWorkflow(null)
+                          setNodes(initialNodes)
+                          setEdges(initialEdges)
+                        }}
+                      >
+                        <XCircle className="mr-2 h-4 w-4" />
+                        Clear
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       size="sm"
@@ -848,9 +1039,9 @@ export default function WorkflowsPage() {
                       <RefreshCw className="mr-2 h-4 w-4" />
                       Reset
                     </Button>
-                    <Button size="sm" onClick={handleSaveWorkflow}>
+                    <Button size="sm" onClick={handleSaveWorkflow} disabled={isSaving}>
                       <Save className="mr-2 h-4 w-4" />
-                      Save Workflow
+                      {isSaving ? 'Saving...' : editingWorkflow ? 'Save Changes' : 'Save Workflow'}
                     </Button>
                   </div>
                 </div>
@@ -950,9 +1141,7 @@ export default function WorkflowsPage() {
               <WorkflowIcon className="h-5 w-5" />
               {selectedWorkflow?.name}
             </SheetTitle>
-            <SheetDescription>
-              {selectedWorkflow?.description || 'No description'}
-            </SheetDescription>
+            <SheetDescription>{selectedWorkflow?.description || 'No description'}</SheetDescription>
           </SheetHeader>
           {selectedWorkflow && (
             <div className="mt-6 space-y-6">
@@ -1085,18 +1274,63 @@ export default function WorkflowsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Save Workflow Dialog (from Visual Builder) */}
+      <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Save Workflow</DialogTitle>
+            <DialogDescription>
+              Save your workflow design. The workflow will include {nodes.length} node(s) and{' '}
+              {edges.length} connection(s).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="save-workflow-name">Name</Label>
+              <Input
+                id="save-workflow-name"
+                placeholder="e.g., Critical Finding Response"
+                value={saveWorkflowName}
+                onChange={(e) => setSaveWorkflowName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="save-workflow-description">Description (optional)</Label>
+              <Textarea
+                id="save-workflow-description"
+                placeholder="Describe what this workflow does..."
+                value={saveWorkflowDescription}
+                onChange={(e) => setSaveWorkflowDescription(e.target.value)}
+                rows={3}
+              />
+            </div>
+            <div className="rounded-lg border p-3 bg-muted/50">
+              <p className="text-sm font-medium mb-2">Workflow Summary</p>
+              <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
+                <div>Triggers: {nodes.filter((n) => n.type === 'trigger').length}</div>
+                <div>Conditions: {nodes.filter((n) => n.type === 'condition').length}</div>
+                <div>Actions: {nodes.filter((n) => n.type === 'action').length}</div>
+                <div>Notifications: {nodes.filter((n) => n.type === 'notification').length}</div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsSaveDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveNewWorkflow} disabled={isSaving || !saveWorkflowName.trim()}>
+              {isSaving ? 'Saving...' : 'Save Workflow'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }
 
 // Separate component for the run button in the sheet
-function WorkflowRunButton({
-  workflow,
-  className,
-}: {
-  workflow: Workflow
-  className?: string
-}) {
+function WorkflowRunButton({ workflow, className }: { workflow: Workflow; className?: string }) {
   const { trigger, isMutating } = useTriggerWorkflow(workflow.id)
 
   const handleRun = async () => {

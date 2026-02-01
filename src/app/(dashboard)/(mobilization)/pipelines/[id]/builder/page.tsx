@@ -17,17 +17,15 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Save,
-  ArrowLeft,
-  Cloud,
-  Server,
-  Loader2,
-  AlertTriangle,
-} from 'lucide-react'
+import { Save, ArrowLeft, Cloud, Server, Loader2, AlertTriangle } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { WorkflowBuilder, NodePalette, type AddNodeData, type AvailableTool } from '@/features/pipelines'
+import {
+  WorkflowBuilder,
+  NodePalette,
+  type AddNodeData,
+  type AvailableTool,
+} from '@/features/pipelines'
 import {
   get,
   put,
@@ -138,36 +136,39 @@ export default function PipelineBuilderPage({ params }: PageProps) {
 
   // Handle inline step updates (from node editing)
   // Auto-set capabilities when tool changes
-  const handleStepUpdate = useCallback((stepId: string, updates: Partial<PipelineStep>) => {
-    setLocalSteps((prev) =>
-      prev.map((step) => {
-        if (step.id !== stepId) return step
+  const handleStepUpdate = useCallback(
+    (stepId: string, updates: Partial<PipelineStep>) => {
+      setLocalSteps((prev) =>
+        prev.map((step) => {
+          if (step.id !== stepId) return step
 
-        // If tool is being changed, auto-update capabilities from the selected tool
-        if (updates.tool !== undefined && updates.tool !== step.tool) {
-          // No tool selected - clear capabilities
-          if (!updates.tool) {
+          // If tool is being changed, auto-update capabilities from the selected tool
+          if (updates.tool !== undefined && updates.tool !== step.tool) {
+            // No tool selected - clear capabilities
+            if (!updates.tool) {
+              return {
+                ...step,
+                ...updates,
+                capabilities: [],
+              }
+            }
+            // Tool selected - get capabilities directly from availableTools array
+            const selectedTool = availableTools.find((t) => t.name === updates.tool)
+            const toolCapabilities = selectedTool?.capabilities || []
             return {
               ...step,
               ...updates,
-              capabilities: [],
+              capabilities: toolCapabilities,
             }
           }
-          // Tool selected - get capabilities directly from availableTools array
-          const selectedTool = availableTools.find(t => t.name === updates.tool)
-          const toolCapabilities = selectedTool?.capabilities || []
-          return {
-            ...step,
-            ...updates,
-            capabilities: toolCapabilities,
-          }
-        }
 
-        return { ...step, ...updates }
-      })
-    )
-    setHasChanges(true)
-  }, [availableTools])
+          return { ...step, ...updates }
+        })
+      )
+      setHasChanges(true)
+    },
+    [availableTools]
+  )
 
   // Handle node position change
   const handleNodePositionChange = useCallback((stepId: string, position: UIPosition) => {
@@ -200,7 +201,7 @@ export default function PipelineBuilderPage({ params }: PageProps) {
       // Get capabilities from availableTools based on toolName
       let stepCapabilities: string[] = []
       if (toolName) {
-        const selectedTool = availableTools.find(t => t.name === toolName)
+        const selectedTool = availableTools.find((t) => t.name === toolName)
         stepCapabilities = selectedTool?.capabilities || []
       }
 
@@ -255,10 +256,9 @@ export default function PipelineBuilderPage({ params }: PageProps) {
   const handleSave = async () => {
     if (!pipeline) return
 
-    // Validate: all steps must have a tool selected
-    const stepsWithoutTool = localSteps.filter((s) => !s.tool)
-    if (stepsWithoutTool.length > 0) {
-      const stepNames = stepsWithoutTool.map((s) => s.name).join(', ')
+    // Validate: all steps must have a tool or capabilities
+    if (invalidSteps.length > 0) {
+      const stepNames = invalidSteps.map((s) => s.name).join(', ')
       toast.error(`Please select a scanner for: ${stepNames}`)
       return
     }
@@ -288,9 +288,10 @@ export default function PipelineBuilderPage({ params }: PageProps) {
     } catch (err) {
       console.error('Failed to save pipeline:', err)
       // Extract error message from API response
-      const errorMessage = err instanceof Error
-        ? err.message
-        : (err as { message?: string })?.message || 'Failed to save pipeline'
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : (err as { message?: string })?.message || 'Failed to save pipeline'
       toast.error(errorMessage)
     } finally {
       setIsSaving(false)
@@ -298,6 +299,13 @@ export default function PipelineBuilderPage({ params }: PageProps) {
   }
 
   const isReadOnly = pipeline?.is_system_template || false
+
+  // Validation: count steps without tool or capabilities
+  const invalidSteps = useMemo(() => {
+    return localSteps.filter((s) => !s.tool && (!s.capabilities || s.capabilities.length === 0))
+  }, [localSteps])
+
+  const hasValidationErrors = invalidSteps.length > 0
 
   // Loading state
   if (isLoading) {
@@ -374,13 +382,23 @@ export default function PipelineBuilderPage({ params }: PageProps) {
                   System Template
                 </Badge>
               )}
+              {hasValidationErrors && !isReadOnly && (
+                <Badge variant="outline" className="text-red-600 border-red-600 text-xs gap-1">
+                  <AlertTriangle className="h-3 w-3" />
+                  {invalidSteps.length} step{invalidSteps.length > 1 ? 's' : ''} need scanner
+                </Badge>
+              )}
               {hasChanges && !isReadOnly && (
                 <Badge variant="outline" className="text-yellow-600 border-yellow-600 text-xs">
                   Unsaved
                 </Badge>
               )}
               {!isReadOnly && (
-                <Button size="sm" onClick={handleSave} disabled={!hasChanges || isSaving}>
+                <Button
+                  size="sm"
+                  onClick={handleSave}
+                  disabled={!hasChanges || isSaving || hasValidationErrors}
+                >
                   {isSaving ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (

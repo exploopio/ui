@@ -356,10 +356,7 @@ export type {
   ScanRunStatus,
 } from './scan-types'
 
-export {
-  SCAN_RUN_STATUSES,
-  SCAN_RUN_STATUS_LABELS,
-} from './scan-types'
+export { SCAN_RUN_STATUSES, SCAN_RUN_STATUS_LABELS } from './scan-types'
 
 // ============================================
 // FINDING HOOKS (with typed responses)
@@ -945,3 +942,47 @@ export {
   isCredentialExpiringSoon,
   formatLastUsed,
 } from './secret-store-types'
+
+// ============================================
+// PLATFORM AGENT HOOKS & TYPES
+// ============================================
+
+export {
+  // Platform hooks
+  usePlatformStats,
+  usePlatformAgents,
+  usePlatformUsage,
+
+  // Cache utilities
+  platformKeys,
+  invalidatePlatformCache,
+  invalidatePlatformStatsCache,
+} from './platform-hooks'
+
+export type {
+  PlatformAgentTier,
+  TierStats,
+  PlatformStatsResponse,
+  PlatformAgent,
+  PlatformAgentListFilters,
+  PlatformAgentListResponse,
+} from './platform-types'
+
+export {
+  PLATFORM_AGENT_TIERS,
+  PLATFORM_TIER_LABELS,
+  PLATFORM_TIER_DESCRIPTIONS,
+  PLATFORM_TIER_COLORS,
+  PLATFORM_TIER_BG_COLORS,
+  PLATFORM_TIER_BORDER_COLORS,
+  PLATFORM_TIER_ICONS,
+  getTierPriority,
+  isTierAccessible,
+  getAccessibleTiers,
+} from './platform-types'
+
+// ============================================
+// PLATFORM ENDPOINTS
+// ============================================
+
+export { platformEndpoints } from './endpoints'

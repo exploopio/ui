@@ -129,11 +129,14 @@ export function LoginForm({
         // Store user data in localStorage for sidebar display
         if (result.user) {
           try {
-            localStorage.setItem('app_user', JSON.stringify({
-              id: result.user.id,
-              name: result.user.name,
-              email: result.user.email,
-            }))
+            localStorage.setItem(
+              'app_user',
+              JSON.stringify({
+                id: result.user.id,
+                name: result.user.name,
+                email: result.user.email,
+              })
+            )
           } catch {
             // Ignore localStorage errors
           }
@@ -216,15 +219,15 @@ export function LoginForm({
             {/* Email Field */}
             <FormField
               control={form.control}
-              name='email'
+              name="email"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder='name@example.com'
-                      type='email'
-                      autoComplete='email'
+                      placeholder="name@example.com"
+                      type="email"
+                      autoComplete="email"
                       disabled={isLoading}
                       {...field}
                     />
@@ -237,14 +240,14 @@ export function LoginForm({
             {/* Password Field */}
             <FormField
               control={form.control}
-              name='password'
+              name="password"
               render={({ field }) => (
-                <FormItem className='relative'>
+                <FormItem className="relative">
                   <FormLabel>Password</FormLabel>
                   <FormControl>
                     <PasswordInput
-                      placeholder='Enter your password'
-                      autoComplete='current-password'
+                      placeholder="Enter your password"
+                      autoComplete="current-password"
                       disabled={isLoading}
                       {...field}
                     />
@@ -253,9 +256,8 @@ export function LoginForm({
 
                   {/* Forgot Password Link */}
                   <Link
-                    href='/forgot-password'
-                    className='text-muted-foreground absolute end-0 -top-0.5 text-sm font-medium hover:opacity-75'
-                    tabIndex={-1}
+                    href="/forgot-password"
+                    className="text-muted-foreground absolute end-0 -top-0.5 text-sm font-medium hover:opacity-75 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded"
                   >
                     Forgot password?
                   </Link>
@@ -264,11 +266,11 @@ export function LoginForm({
             />
 
             {/* Submit Button */}
-            <Button className='mt-2' disabled={isLoading} type='submit'>
+            <Button className="mt-2" disabled={isLoading} type="submit">
               {isPending ? (
-                <Loader2 className='h-4 w-4 animate-spin' />
+                <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <LogIn className='h-4 w-4' />
+                <LogIn className="h-4 w-4" />
               )}
               Sign in
             </Button>
@@ -279,34 +281,32 @@ export function LoginForm({
         {showSocialLogin && (
           <>
             {localAuthEnabled && (
-              <div className='relative my-2'>
-                <div className='absolute inset-0 flex items-center'>
-                  <span className='w-full border-t' />
+              <div className="relative my-2">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
                 </div>
-                <div className='relative flex justify-center text-xs uppercase'>
-                  <span className='bg-background text-muted-foreground px-2'>
-                    Or continue with
-                  </span>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background text-muted-foreground px-2">Or continue with</span>
                 </div>
               </div>
             )}
 
-            <div className='grid grid-cols-3 gap-2'>
+            <div className="grid grid-cols-3 gap-2">
               {socialProviders.map((provider) => (
                 <Button
                   key={provider.id}
-                  variant='outline'
-                  type='button'
+                  variant="outline"
+                  type="button"
                   disabled={isLoading}
                   onClick={() => handleSocialLogin(provider.id)}
-                  className='relative'
+                  className="relative"
                 >
                   {loadingProvider === provider.id ? (
-                    <Loader2 className='h-4 w-4 animate-spin' />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <provider.icon className='h-4 w-4' />
+                    <provider.icon className="h-4 w-4" />
                   )}
-                  <span className='sr-only'>{provider.name}</span>
+                  <span className="sr-only">{provider.name}</span>
                 </Button>
               ))}
             </div>
@@ -316,27 +316,20 @@ export function LoginForm({
         {/* OIDC Login Section (for enterprise SSO) */}
         {oidcAuthEnabled && showOidcLogin && !localAuthOnly && (
           <>
-            <div className='relative my-2'>
-              <div className='absolute inset-0 flex items-center'>
-                <span className='w-full border-t' />
+            <div className="relative my-2">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
               </div>
-              <div className='relative flex justify-center text-xs uppercase'>
-                <span className='bg-background text-muted-foreground px-2'>
-                  Enterprise
-                </span>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background text-muted-foreground px-2">Enterprise</span>
               </div>
             </div>
 
-            <Button
-              variant='outline'
-              type='button'
-              disabled={isLoading}
-              onClick={handleOidcLogin}
-            >
+            <Button variant="outline" type="button" disabled={isLoading} onClick={handleOidcLogin}>
               {isOidcLoading ? (
-                <Loader2 className='h-4 w-4 animate-spin' />
+                <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <LogIn className='h-4 w-4' />
+                <LogIn className="h-4 w-4" />
               )}
               Sign in with SSO
             </Button>
@@ -345,16 +338,11 @@ export function LoginForm({
 
         {/* OIDC Only Mode (no local auth, no social) */}
         {!localAuthEnabled && !showSocialLogin && oidcAuthEnabled && (
-          <Button
-            className='mt-2'
-            disabled={isLoading}
-            type='button'
-            onClick={handleOidcLogin}
-          >
+          <Button className="mt-2" disabled={isLoading} type="button" onClick={handleOidcLogin}>
             {isOidcLoading ? (
-              <Loader2 className='h-4 w-4 animate-spin' />
+              <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <LogIn className='h-4 w-4' />
+              <LogIn className="h-4 w-4" />
             )}
             Sign in with SSO
           </Button>

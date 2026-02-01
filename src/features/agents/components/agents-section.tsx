@@ -68,6 +68,7 @@ import {
   invalidateAgentsCache,
 } from '@/lib/api/agent-hooks'
 import type { AgentListFilters, Agent } from '@/lib/api/agent-types'
+import { PlatformStatsCard } from '@/features/platform'
 
 type TabFilter = 'all' | 'daemon' | 'standalone' | 'collector'
 type AgentTypeFilter = 'runner' | 'worker' | 'collector' | 'sensor'
@@ -489,6 +490,9 @@ export function AgentsSection({ typeFilter }: AgentsSectionProps) {
             </Card>
           </div>
         )}
+
+        {/* Platform Agents Section */}
+        <PlatformStatsCard />
 
         {/* Main Content Card */}
         <Card>

@@ -379,6 +379,19 @@ export interface UpdateWorkflowRequest {
   is_active?: boolean
 }
 
+/**
+ * Request to atomically replace a workflow's graph (all nodes and edges).
+ * This is a complete replacement operation - all existing nodes/edges are deleted
+ * and replaced with the new ones in a single atomic operation.
+ */
+export interface UpdateWorkflowGraphRequest {
+  name?: string
+  description?: string
+  tags?: string[]
+  nodes: CreateNodeRequest[]
+  edges?: CreateEdgeRequest[]
+}
+
 export interface UpdateNodeRequest {
   name?: string
   description?: string

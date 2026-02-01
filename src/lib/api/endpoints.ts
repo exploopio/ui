@@ -41,6 +41,7 @@ export const API_BASE = {
   EXPOSURES: '/api/v1/exposures',
   AGENT_INGEST: '/api/v1/agent/ingest',
   THREAT_INTEL: '/api/v1/threat-intel',
+  PLATFORM: '/api/v1/platform',
 } as const
 
 // ============================================
@@ -1478,6 +1479,11 @@ export const workflowEndpoints = {
   delete: (workflowId: string) => `/api/v1/workflows/${workflowId}`,
 
   /**
+   * Update workflow graph (atomic replacement of all nodes and edges)
+   */
+  updateGraph: (workflowId: string) => `/api/v1/workflows/${workflowId}/graph`,
+
+  /**
    * Add node to workflow
    */
   addNode: (workflowId: string) => `/api/v1/workflows/${workflowId}/nodes`,
@@ -1802,6 +1808,31 @@ export const ingestEndpoints = {
 } as const
 
 // ============================================
+// PLATFORM AGENT ENDPOINTS
+// ============================================
+
+import type { PlatformAgentListFilters } from './platform-types'
+
+/**
+ * Platform agent endpoints for tiered platform agents
+ * Supports three tiers: shared, dedicated, premium
+ */
+export const platformEndpoints = {
+  /**
+   * Get platform stats (usage, limits, tier stats)
+   */
+  stats: () => `${API_BASE.PLATFORM}/stats`,
+
+  /**
+   * List platform agents with optional filters
+   */
+  agents: (filters?: PlatformAgentListFilters) => {
+    const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
+    return `${API_BASE.PLATFORM}/agents${queryString}`
+  },
+} as const
+
+// ============================================
 // ENDPOINT COLLECTIONS
 // ============================================
 
@@ -1837,6 +1868,7 @@ export const endpoints = {
   ingest: ingestEndpoints,
   workflows: workflowEndpoints,
   workflowRuns: workflowRunEndpoints,
+  platform: platformEndpoints,
 } as const
 
 /**
@@ -1871,4 +1903,5 @@ export {
   ingestEndpoints as ingest,
   workflowEndpoints as workflows,
   workflowRunEndpoints as workflowRuns,
+  platformEndpoints as platform,
 }

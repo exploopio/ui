@@ -55,13 +55,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 import {
@@ -100,7 +93,7 @@ import {
   type Asset,
 } from '@/features/assets'
 import { Can, Permission, usePermissions } from '@/lib/permissions'
-import { mockAssetGroups } from '@/features/asset-groups'
+import { AssetGroupSelect } from '@/features/asset-groups'
 import type { Status } from '@/features/shared/types'
 import {
   ScopeBadge,
@@ -1131,21 +1124,10 @@ export default function WebsitesPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="groupId">Asset Group *</Label>
-              <Select
+              <AssetGroupSelect
                 value={formData.groupId}
                 onValueChange={(value) => setFormData({ ...formData, groupId: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select group" />
-                </SelectTrigger>
-                <SelectContent>
-                  {mockAssetGroups.map((group) => (
-                    <SelectItem key={group.id} value={group.id}>
-                      {group.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="description">Description</Label>
@@ -1276,21 +1258,10 @@ export default function WebsitesPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-groupId">Asset Group *</Label>
-              <Select
+              <AssetGroupSelect
                 value={formData.groupId}
                 onValueChange={(value) => setFormData({ ...formData, groupId: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select group" />
-                </SelectTrigger>
-                <SelectContent>
-                  {mockAssetGroups.map((group) => (
-                    <SelectItem key={group.id} value={group.id}>
-                      {group.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-description">Description</Label>

@@ -4,33 +4,38 @@
  * Reusable UI sections for asset detail sheets
  */
 
-import * as React from "react";
-import { CheckCircle, Clock, Trash2, Eye, EyeOff, Copy, Check, Key, AlertTriangle } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import * as React from 'react'
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
-import { toast } from "sonner";
-import type { AssetType } from "../types/asset.types";
-import { ASSET_TYPE_LABELS } from "../types/asset.types";
+  CheckCircle,
+  Clock,
+  Trash2,
+  Eye,
+  EyeOff,
+  Copy,
+  Check,
+  Key,
+  AlertTriangle,
+} from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
+import type { AssetType } from '../types/asset.types'
+import { ASSET_TYPE_LABELS } from '../types/asset.types'
 
 // ============================================
 // Stat Card
 // ============================================
 
 interface StatCardProps {
-  icon: React.ElementType;
-  iconBg: string;
-  iconColor: string;
-  value: string | number;
-  label: string;
-  className?: string;
+  icon: React.ElementType
+  iconBg: string
+  iconColor: string
+  value: string | number
+  label: string
+  className?: string
 }
 
 export function StatCard({
@@ -42,10 +47,10 @@ export function StatCard({
   className,
 }: StatCardProps) {
   return (
-    <div className={cn("rounded-xl border p-4 bg-card", className)}>
+    <div className={cn('rounded-xl border p-4 bg-card', className)}>
       <div className="flex items-center gap-3">
-        <div className={cn("h-10 w-10 rounded-lg flex items-center justify-center", iconBg)}>
-          <Icon className={cn("h-5 w-5", iconColor)} />
+        <div className={cn('h-10 w-10 rounded-lg flex items-center justify-center', iconBg)}>
+          <Icon className={cn('h-5 w-5', iconColor)} />
         </div>
         <div>
           <p className="text-2xl font-bold">{value}</p>
@@ -53,7 +58,7 @@ export function StatCard({
         </div>
       </div>
     </div>
-  );
+  )
 }
 
 // Centered variant for website-style stats
@@ -66,16 +71,16 @@ export function StatCardCentered({
   className,
 }: StatCardProps) {
   return (
-    <div className={cn("rounded-xl border p-4 bg-card", className)}>
+    <div className={cn('rounded-xl border p-4 bg-card', className)}>
       <div className="flex flex-col items-center text-center">
-        <div className={cn("h-10 w-10 rounded-lg flex items-center justify-center mb-2", iconBg)}>
-          <Icon className={cn("h-5 w-5", iconColor)} />
+        <div className={cn('h-10 w-10 rounded-lg flex items-center justify-center mb-2', iconBg)}>
+          <Icon className={cn('h-5 w-5', iconColor)} />
         </div>
         <p className="text-xl font-bold">{value}</p>
         <p className="text-xs text-muted-foreground">{label}</p>
       </div>
     </div>
-  );
+  )
 }
 
 // ============================================
@@ -83,23 +88,23 @@ export function StatCardCentered({
 // ============================================
 
 interface StatsGridProps {
-  children: React.ReactNode;
-  columns?: 2 | 3;
-  className?: string;
+  children: React.ReactNode
+  columns?: 2 | 3
+  className?: string
 }
 
 export function StatsGrid({ children, columns = 2, className }: StatsGridProps) {
   return (
     <div
       className={cn(
-        "grid gap-3",
-        columns === 2 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-3",
+        'grid gap-3',
+        columns === 2 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-3',
         className
       )}
     >
       {children}
     </div>
-  );
+  )
 }
 
 // ============================================
@@ -107,8 +112,8 @@ export function StatsGrid({ children, columns = 2, className }: StatsGridProps) 
 // ============================================
 
 interface TimelineSectionProps {
-  firstSeen: string;
-  lastSeen: string;
+  firstSeen: string
+  lastSeen: string
 }
 
 export function TimelineSection({ firstSeen, lastSeen }: TimelineSectionProps) {
@@ -122,9 +127,7 @@ export function TimelineSection({ firstSeen, lastSeen }: TimelineSectionProps) {
           </div>
           <div>
             <p className="text-sm font-medium">First Seen</p>
-            <p className="text-xs text-muted-foreground">
-              {new Date(firstSeen).toLocaleString()}
-            </p>
+            <p className="text-xs text-muted-foreground">{new Date(firstSeen).toLocaleString()}</p>
           </div>
         </div>
         <div className="flex items-start gap-3">
@@ -133,14 +136,12 @@ export function TimelineSection({ firstSeen, lastSeen }: TimelineSectionProps) {
           </div>
           <div>
             <p className="text-sm font-medium">Last Seen</p>
-            <p className="text-xs text-muted-foreground">
-              {new Date(lastSeen).toLocaleString()}
-            </p>
+            <p className="text-xs text-muted-foreground">{new Date(lastSeen).toLocaleString()}</p>
           </div>
         </div>
       </div>
     </div>
-  );
+  )
 }
 
 // ============================================
@@ -148,9 +149,9 @@ export function TimelineSection({ firstSeen, lastSeen }: TimelineSectionProps) {
 // ============================================
 
 interface TechnicalDetailsSectionProps {
-  id: string;
-  type: AssetType;
-  groupId?: string; // Optional - asset can be ungrouped
+  id: string
+  type: AssetType
+  groupId?: string // Optional - asset can be ungrouped
 }
 
 export function TechnicalDetailsSection({ id, type, groupId }: TechnicalDetailsSectionProps) {
@@ -178,7 +179,7 @@ export function TechnicalDetailsSection({ id, type, groupId }: TechnicalDetailsS
         </div>
       </div>
     </div>
-  );
+  )
 }
 
 // ============================================
@@ -186,8 +187,8 @@ export function TechnicalDetailsSection({ id, type, groupId }: TechnicalDetailsS
 // ============================================
 
 interface DangerZoneSectionProps {
-  onDelete: () => void;
-  assetTypeName: string;
+  onDelete: () => void
+  assetTypeName: string
 }
 
 export function DangerZoneSection({ onDelete, assetTypeName }: DangerZoneSectionProps) {
@@ -197,17 +198,12 @@ export function DangerZoneSection({ onDelete, assetTypeName }: DangerZoneSection
       <p className="text-xs text-muted-foreground mb-3">
         Permanently delete this {assetTypeName.toLowerCase()} from your inventory.
       </p>
-      <Button
-        variant="destructive"
-        size="sm"
-        className="w-full"
-        onClick={onDelete}
-      >
+      <Button variant="destructive" size="sm" className="w-full" onClick={onDelete}>
         <Trash2 className="mr-2 h-4 w-4" />
         Delete {assetTypeName}
       </Button>
     </div>
-  );
+  )
 }
 
 // ============================================
@@ -215,24 +211,24 @@ export function DangerZoneSection({ onDelete, assetTypeName }: DangerZoneSection
 // ============================================
 
 interface MetadataGridProps {
-  children: React.ReactNode;
-  columns?: 1 | 2;
-  className?: string;
+  children: React.ReactNode
+  columns?: 1 | 2
+  className?: string
 }
 
 export function MetadataGrid({ children, columns = 2, className }: MetadataGridProps) {
   return (
-    <div className={cn("rounded-xl border p-4 bg-card", className)}>
+    <div className={cn('rounded-xl border p-4 bg-card', className)}>
       <div
         className={cn(
-          "grid gap-4 text-sm",
-          columns === 1 ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2"
+          'grid gap-4 text-sm',
+          columns === 1 ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'
         )}
       >
         {children}
       </div>
     </div>
-  );
+  )
 }
 
 // ============================================
@@ -240,21 +236,21 @@ export function MetadataGrid({ children, columns = 2, className }: MetadataGridP
 // ============================================
 
 interface MetadataRowProps {
-  label: string;
-  value?: string | number | null;
-  children?: React.ReactNode;
-  colSpan?: 1 | 2;
+  label: string
+  value?: string | number | null
+  children?: React.ReactNode
+  colSpan?: 1 | 2
 }
 
 export function MetadataRow({ label, value, children, colSpan }: MetadataRowProps) {
-  if (!value && !children) return null;
+  if (!value && !children) return null
 
   return (
-    <div className={colSpan === 2 ? "sm:col-span-2" : undefined}>
+    <div className={colSpan === 2 ? 'sm:col-span-2' : undefined}>
       <p className="text-muted-foreground">{label}</p>
       {children || <p className="font-medium">{value}</p>}
     </div>
-  );
+  )
 }
 
 // ============================================
@@ -262,15 +258,15 @@ export function MetadataRow({ label, value, children, colSpan }: MetadataRowProp
 // ============================================
 
 interface TagsSectionProps {
-  tags?: string[];
-  className?: string;
+  tags?: string[]
+  className?: string
 }
 
 export function TagsSection({ tags, className }: TagsSectionProps) {
-  if (!tags || tags.length === 0) return null;
+  if (!tags || tags.length === 0) return null
 
   return (
-    <div className={cn("rounded-xl border p-4 bg-card", className)}>
+    <div className={cn('rounded-xl border p-4 bg-card', className)}>
       <h4 className="text-sm font-medium mb-2">Tags</h4>
       <div className="flex flex-wrap gap-1">
         {tags.map((tag) => (
@@ -280,7 +276,7 @@ export function TagsSection({ tags, className }: TagsSectionProps) {
         ))}
       </div>
     </div>
-  );
+  )
 }
 
 // ============================================
@@ -288,14 +284,12 @@ export function TagsSection({ tags, className }: TagsSectionProps) {
 // ============================================
 
 interface SectionTitleProps {
-  children: React.ReactNode;
-  className?: string;
+  children: React.ReactNode
+  className?: string
 }
 
 export function SectionTitle({ children, className }: SectionTitleProps) {
-  return (
-    <h4 className={cn("text-sm font-medium mb-2", className)}>{children}</h4>
-  );
+  return <h4 className={cn('text-sm font-medium mb-2', className)}>{children}</h4>
 }
 
 // ============================================
@@ -304,13 +298,13 @@ export function SectionTitle({ children, className }: SectionTitleProps) {
 
 interface SecretValueFieldProps {
   /** The secret value to display */
-  value?: string | null;
+  value?: string | null
   /** Label for the field */
-  label?: string;
+  label?: string
   /** Whether to show a warning about the sensitivity */
-  showWarning?: boolean;
+  showWarning?: boolean
   /** Custom class name */
-  className?: string;
+  className?: string
 }
 
 /**
@@ -319,53 +313,51 @@ interface SecretValueFieldProps {
  */
 export function SecretValueField({
   value,
-  label = "Secret Value",
+  label = 'Secret Value',
   showWarning = true,
   className,
 }: SecretValueFieldProps) {
-  const [isRevealed, setIsRevealed] = React.useState(false);
-  const [isCopied, setIsCopied] = React.useState(false);
+  const [isRevealed, setIsRevealed] = React.useState(false)
+  const [isCopied, setIsCopied] = React.useState(false)
 
   if (!value) {
     return (
-      <div className={cn("rounded-xl border p-4 bg-card", className)}>
+      <div className={cn('rounded-xl border p-4 bg-card', className)}>
         <div className="flex items-center gap-2 mb-3">
           <Key className="h-4 w-4 text-muted-foreground" />
           <h4 className="text-sm font-medium">{label}</h4>
         </div>
-        <p className="text-sm text-muted-foreground italic">
-          No secret value available
-        </p>
+        <p className="text-sm text-muted-foreground italic">No secret value available</p>
       </div>
-    );
+    )
   }
 
   // Mask the value (show first 2 and last 2 chars if long enough)
   const getMaskedValue = (val: string): string => {
     if (val.length <= 4) {
-      return "••••••••";
+      return '••••••••'
     }
     if (val.length <= 8) {
-      return val[0] + "••••••" + val[val.length - 1];
+      return val[0] + '••••••' + val[val.length - 1]
     }
-    return val.slice(0, 2) + "••••••••" + val.slice(-2);
-  };
+    return val.slice(0, 2) + '••••••••' + val.slice(-2)
+  }
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(value);
-      setIsCopied(true);
-      toast.success("Secret copied to clipboard");
-      setTimeout(() => setIsCopied(false), 2000);
+      await navigator.clipboard.writeText(value)
+      setIsCopied(true)
+      toast.success('Secret copied to clipboard')
+      setTimeout(() => setIsCopied(false), 2000)
     } catch {
-      toast.error("Failed to copy to clipboard");
+      toast.error('Failed to copy to clipboard')
     }
-  };
+  }
 
-  const displayValue = isRevealed ? value : getMaskedValue(value);
+  const displayValue = isRevealed ? value : getMaskedValue(value)
 
   return (
-    <div className={cn("rounded-xl border p-4 bg-card", className)}>
+    <div className={cn('rounded-xl border p-4 bg-card', className)}>
       <div className="flex items-center gap-2 mb-3">
         <Key className="h-4 w-4 text-amber-500" />
         <h4 className="text-sm font-medium">{label}</h4>
@@ -388,10 +380,7 @@ export function SecretValueField({
             type="text"
             value={displayValue}
             readOnly
-            className={cn(
-              "font-mono text-sm pr-20",
-              !isRevealed && "tracking-wider"
-            )}
+            className={cn('font-mono text-sm pr-20', !isRevealed && 'tracking-wider')}
           />
           <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1">
             <TooltipProvider>
@@ -401,8 +390,9 @@ export function SecretValueField({
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="h-7 w-7 p-0"
+                    className="h-7 w-7 p-0 min-h-[44px] min-w-[44px]"
                     onClick={() => setIsRevealed(!isRevealed)}
+                    aria-label={isRevealed ? 'Hide secret' : 'Reveal secret'}
                   >
                     {isRevealed ? (
                       <EyeOff className="h-4 w-4 text-muted-foreground" />
@@ -411,9 +401,7 @@ export function SecretValueField({
                     )}
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>
-                  {isRevealed ? "Hide secret" : "Reveal secret"}
-                </TooltipContent>
+                <TooltipContent>{isRevealed ? 'Hide secret' : 'Reveal secret'}</TooltipContent>
               </Tooltip>
             </TooltipProvider>
 
@@ -424,8 +412,9 @@ export function SecretValueField({
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="h-7 w-7 p-0"
+                    className="h-7 w-7 p-0 min-h-[44px] min-w-[44px]"
                     onClick={handleCopy}
+                    aria-label={isCopied ? 'Copied to clipboard' : 'Copy to clipboard'}
                   >
                     {isCopied ? (
                       <Check className="h-4 w-4 text-green-500" />
@@ -434,9 +423,7 @@ export function SecretValueField({
                     )}
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>
-                  {isCopied ? "Copied!" : "Copy to clipboard"}
-                </TooltipContent>
+                <TooltipContent>{isCopied ? 'Copied!' : 'Copy to clipboard'}</TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>
@@ -444,9 +431,7 @@ export function SecretValueField({
       </div>
 
       {/* Character count hint */}
-      <p className="text-xs text-muted-foreground mt-2">
-        {value.length} characters
-      </p>
+      <p className="text-xs text-muted-foreground mt-2">{value.length} characters</p>
     </div>
-  );
+  )
 }

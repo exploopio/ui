@@ -32,6 +32,7 @@ import {
   Pie,
 } from '@/components/charts'
 import { Skeleton } from '@/components/ui/skeleton'
+import { PlatformStatsCard } from '@/features/platform'
 
 // Severity colors for charts
 const SEVERITY_COLORS: Record<string, string> = {
@@ -56,8 +57,8 @@ const MOCK_FINDING_TRENDS = [
 // Inline skeleton for stats cards section
 function StatsCardsSkeleton() {
   return (
-    <section className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-      {[1, 2, 3, 4].map((i) => (
+    <section className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-5">
+      {[1, 2, 3, 4, 5].map((i) => (
         <Card key={i}>
           <CardHeader className="pb-2">
             <Skeleton className="h-4 w-24" />
@@ -269,7 +270,7 @@ export default function Dashboard() {
           <StatsCardsSkeleton />
         ) : (
           !error && (
-            <section className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <section className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-5">
               <StatsCard
                 title="Total Assets"
                 value={stats.assets.total}
@@ -310,6 +311,8 @@ export default function Dashboard() {
                 changeType={stats.repositories.withFindings > 0 ? 'negative' : 'neutral'}
                 icon={ListChecks}
               />
+              {/* Platform Agents - shows cloud scan capacity */}
+              <PlatformStatsCard />
             </section>
           )
         )}
