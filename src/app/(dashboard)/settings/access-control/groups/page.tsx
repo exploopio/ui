@@ -70,6 +70,7 @@ import {
   generateSlug,
 } from '@/features/access-control'
 import { GroupDetailSheet } from '@/features/access-control/components/group-detail-sheet'
+import { getErrorMessage } from '@/lib/api/error-handler'
 import { Can, Permission } from '@/lib/permissions'
 
 const formatDate = (dateString: string) => {
@@ -273,9 +274,7 @@ export default function GroupsPage() {
       setCreateForm({ name: '', description: '' })
       refreshData()
     } catch (error) {
-      toast.error(
-        `Failed to create team: ${error instanceof Error ? error.message : 'Unknown error'}`
-      )
+      toast.error(getErrorMessage(error, 'Failed to create team'))
     }
   }
 
@@ -295,9 +294,7 @@ export default function GroupsPage() {
       )
       refreshData()
     } catch (error) {
-      toast.error(
-        `Failed to delete team: ${error instanceof Error ? error.message : 'Unknown error'}`
-      )
+      toast.error(getErrorMessage(error, 'Failed to delete team'))
     }
   }
 

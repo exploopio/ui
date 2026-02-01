@@ -97,6 +97,7 @@ import {
   type ApiScanSchedule,
 } from '@/features/scope'
 import { post } from '@/lib/api/client'
+import { getErrorMessage } from '@/lib/api/error-handler'
 
 // Use shared validation from scope feature types
 const validatePattern = (
@@ -372,8 +373,8 @@ export default function ScopeConfigPage() {
       await invalidateScopeTargetsCache()
       await invalidateScopeStatsCache()
       toast.success(`Target ${action}d successfully`)
-    } catch {
-      toast.error('Failed to update target status')
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to update target status'))
     }
   }
 
@@ -385,8 +386,8 @@ export default function ScopeConfigPage() {
       await invalidateScopeExclusionsCache()
       await invalidateScopeStatsCache()
       toast.success(`Exclusion ${action}d successfully`)
-    } catch {
-      toast.error('Failed to update exclusion status')
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to update exclusion status'))
     }
   }
 
@@ -398,8 +399,8 @@ export default function ScopeConfigPage() {
       await invalidateScanSchedulesCache()
       await invalidateScopeStatsCache()
       toast.success(`Schedule ${action}d successfully`)
-    } catch {
-      toast.error('Failed to update schedule status')
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to update schedule status'))
     }
   }
 
@@ -443,8 +444,8 @@ export default function ScopeConfigPage() {
       toast.success('Target added successfully')
       setIsAddTargetOpen(false)
       resetTargetForm()
-    } catch {
-      toast.error('Failed to add target')
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to add target'))
     }
   }
 
@@ -472,8 +473,8 @@ export default function ScopeConfigPage() {
       toast.success('Target updated successfully')
       setEditTarget(null)
       resetTargetForm()
-    } catch {
-      toast.error('Failed to update target')
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to update target'))
     }
   }
 
@@ -484,8 +485,8 @@ export default function ScopeConfigPage() {
       await invalidateScopeCache()
       toast.success('Target removed successfully')
       setDeleteTarget(null)
-    } catch {
-      toast.error('Failed to remove target')
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to remove target'))
     }
   }
 
@@ -528,8 +529,8 @@ export default function ScopeConfigPage() {
       toast.success('Exclusion added successfully')
       setIsAddExclusionOpen(false)
       resetExclusionForm()
-    } catch {
-      toast.error('Failed to add exclusion')
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to add exclusion'))
     }
   }
 
@@ -557,8 +558,8 @@ export default function ScopeConfigPage() {
       toast.success('Exclusion updated successfully')
       setEditExclusion(null)
       resetExclusionForm()
-    } catch {
-      toast.error('Failed to update exclusion')
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to update exclusion'))
     }
   }
 
@@ -569,8 +570,8 @@ export default function ScopeConfigPage() {
       await invalidateScopeCache()
       toast.success('Exclusion removed successfully')
       setDeleteExclusion(null)
-    } catch {
-      toast.error('Failed to remove exclusion')
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to remove exclusion'))
     }
   }
 
@@ -631,8 +632,8 @@ export default function ScopeConfigPage() {
       toast.success('Schedule created successfully')
       setIsAddScheduleOpen(false)
       resetScheduleForm()
-    } catch {
-      toast.error('Failed to create schedule')
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to create schedule'))
     }
   }
 
@@ -654,8 +655,8 @@ export default function ScopeConfigPage() {
       toast.success('Schedule updated successfully')
       setEditSchedule(null)
       resetScheduleForm()
-    } catch {
-      toast.error('Failed to update schedule')
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to update schedule'))
     }
   }
 
@@ -666,8 +667,8 @@ export default function ScopeConfigPage() {
       await invalidateScopeCache()
       toast.success('Schedule deleted successfully')
       setDeleteSchedule(null)
-    } catch {
-      toast.error('Failed to delete schedule')
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to delete schedule'))
     }
   }
 

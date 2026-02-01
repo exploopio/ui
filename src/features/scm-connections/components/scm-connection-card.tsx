@@ -1,25 +1,31 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import { MoreHorizontal, Trash2, RefreshCw, ExternalLink, Loader2, CheckCircle, XCircle, Clock, AlertCircle, Download, Settings } from "lucide-react";
-import { toast } from "sonner";
-
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { useState } from 'react'
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  MoreHorizontal,
+  Trash2,
+  RefreshCw,
+  ExternalLink,
+  Loader2,
+  CheckCircle,
+  XCircle,
+  Clock,
+  AlertCircle,
+  Download,
+  Settings,
+} from 'lucide-react'
+import { toast } from 'sonner'
+
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu'
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -28,31 +34,27 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/alert-dialog'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { cn } from '@/lib/utils'
+import { getErrorMessage } from '@/lib/api/error-handler'
 
-import { ProviderIcon, SCM_PROVIDER_COLORS } from "./provider-icon";
-import { SyncRepositoriesDialog } from "./sync-repositories-dialog";
-import { EditConnectionDialog } from "./edit-connection-dialog";
-import type { Integration } from "@/features/integrations";
-import { SCM_PROVIDER_LABELS } from "@/features/assets/types/asset.types";
+import { ProviderIcon, SCM_PROVIDER_COLORS } from './provider-icon'
+import { SyncRepositoriesDialog } from './sync-repositories-dialog'
+import { EditConnectionDialog } from './edit-connection-dialog'
+import type { Integration } from '@/features/integrations'
+import { SCM_PROVIDER_LABELS } from '@/features/assets/types/asset.types'
 import {
   useDeleteIntegrationApi,
   useTestIntegrationApi,
   invalidateSCMIntegrationsCache,
-} from "@/features/integrations";
+} from '@/features/integrations'
 
 interface SCMConnectionCardProps {
-  connection: Integration;
-  repositoryCount?: number;
-  onSelect?: () => void;
-  selected?: boolean;
+  connection: Integration
+  repositoryCount?: number
+  onSelect?: () => void
+  selected?: boolean
 }
 
 export function SCMConnectionCard({
@@ -61,74 +63,78 @@ export function SCMConnectionCard({
   onSelect,
   selected = false,
 }: SCMConnectionCardProps) {
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [syncDialogOpen, setSyncDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [syncDialogOpen, setSyncDialogOpen] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
 
-  const { trigger: deleteConnection, isMutating: isDeleting } = useDeleteIntegrationApi(connection.id);
-  const { trigger: validateConnection, isMutating: isValidating } = useTestIntegrationApi(connection.id);
+  const { trigger: deleteConnection, isMutating: isDeleting } = useDeleteIntegrationApi(
+    connection.id
+  )
+  const { trigger: validateConnection, isMutating: isValidating } = useTestIntegrationApi(
+    connection.id
+  )
 
   const handleDelete = async () => {
     try {
-      await deleteConnection();
-      toast.success(`Connection "${connection.name}" deleted`);
-      await invalidateSCMIntegrationsCache();
-      setDeleteDialogOpen(false);
+      await deleteConnection()
+      toast.success(`Connection "${connection.name}" deleted`)
+      await invalidateSCMIntegrationsCache()
+      setDeleteDialogOpen(false)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to delete connection");
+      toast.error(getErrorMessage(error, 'Failed to delete connection'))
     }
-  };
+  }
 
   const handleValidate = async () => {
     try {
-      const result = await validateConnection();
-      await invalidateSCMIntegrationsCache();
+      const result = await validateConnection()
+      await invalidateSCMIntegrationsCache()
 
       // Check if the test actually succeeded by looking at the returned status
-      if (result && result.status === "connected") {
-        toast.success(`Connection "${connection.name}" validated successfully`);
-      } else if (result && result.status === "error") {
-        toast.error(result.status_message || `Connection "${connection.name}" test failed`);
+      if (result && result.status === 'connected') {
+        toast.success(`Connection "${connection.name}" validated successfully`)
+      } else if (result && result.status === 'error') {
+        toast.error(result.status_message || `Connection "${connection.name}" test failed`)
       } else {
-        toast.warning(`Connection "${connection.name}" status: ${result?.status || "unknown"}`);
+        toast.warning(`Connection "${connection.name}" status: ${result?.status || 'unknown'}`)
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Validation failed");
+      toast.error(getErrorMessage(error, 'Validation failed'))
     }
-  };
+  }
 
   const statusConfig: Record<string, { icon: React.ReactNode; color: string; label: string }> = {
     connected: {
       icon: <CheckCircle className="h-3.5 w-3.5" />,
-      color: "text-green-500",
-      label: "Connected",
+      color: 'text-green-500',
+      label: 'Connected',
     },
     pending: {
       icon: <AlertCircle className="h-3.5 w-3.5" />,
-      color: "text-yellow-500",
-      label: "Pending",
+      color: 'text-yellow-500',
+      label: 'Pending',
     },
     disconnected: {
       icon: <XCircle className="h-3.5 w-3.5" />,
-      color: "text-gray-400",
-      label: "Disconnected",
+      color: 'text-gray-400',
+      label: 'Disconnected',
     },
     error: {
       icon: <XCircle className="h-3.5 w-3.5" />,
-      color: "text-red-500",
-      label: "Error",
+      color: 'text-red-500',
+      label: 'Error',
     },
-  };
+  }
 
-  const status = statusConfig[connection.status] || statusConfig.disconnected;
+  const status = statusConfig[connection.status] || statusConfig.disconnected
 
   return (
     <>
       <Card
         className={cn(
-          "transition-all cursor-pointer hover:border-primary/50",
-          selected && "border-primary ring-1 ring-primary",
-          connection.status === "error" && "border-red-500/30"
+          'transition-all cursor-pointer hover:border-primary/50',
+          selected && 'border-primary ring-1 ring-primary',
+          connection.status === 'error' && 'border-red-500/30'
         )}
         onClick={onSelect}
       >
@@ -137,7 +143,7 @@ export function SCMConnectionCard({
             <div className="flex items-center gap-3">
               <div
                 className={cn(
-                  "flex h-10 w-10 items-center justify-center rounded-lg",
+                  'flex h-10 w-10 items-center justify-center rounded-lg',
                   SCM_PROVIDER_COLORS[connection.provider]
                 )}
               >
@@ -146,8 +152,10 @@ export function SCMConnectionCard({
               <div>
                 <CardTitle className="text-base">{connection.name}</CardTitle>
                 <CardDescription className="text-xs">
-                  {SCM_PROVIDER_LABELS[connection.provider as keyof typeof SCM_PROVIDER_LABELS] || connection.provider}
-                  {connection.scm_extension?.scm_organization && ` / ${connection.scm_extension.scm_organization}`}
+                  {SCM_PROVIDER_LABELS[connection.provider as keyof typeof SCM_PROVIDER_LABELS] ||
+                    connection.provider}
+                  {connection.scm_extension?.scm_organization &&
+                    ` / ${connection.scm_extension.scm_organization}`}
                 </CardDescription>
               </div>
             </div>
@@ -178,21 +186,21 @@ export function SCMConnectionCard({
                   <DropdownMenuItem
                     onClick={() => {
                       // Build the URL to open - include organization if available
-                      let url = connection.base_url;
-                      const org = connection.scm_extension?.scm_organization;
+                      let url = connection.base_url
+                      const org = connection.scm_extension?.scm_organization
                       if (org) {
                         // Handle different provider URL structures
-                        if (connection.provider === "github") {
-                          url = `${connection.base_url}/${org}`;
-                        } else if (connection.provider === "gitlab") {
-                          url = `${connection.base_url}/${org}`;
-                        } else if (connection.provider === "bitbucket") {
-                          url = `${connection.base_url}/${org}`;
-                        } else if (connection.provider === "azure_devops") {
-                          url = `${connection.base_url}/${org}`;
+                        if (connection.provider === 'github') {
+                          url = `${connection.base_url}/${org}`
+                        } else if (connection.provider === 'gitlab') {
+                          url = `${connection.base_url}/${org}`
+                        } else if (connection.provider === 'bitbucket') {
+                          url = `${connection.base_url}/${org}`
+                        } else if (connection.provider === 'azure_devops') {
+                          url = `${connection.base_url}/${org}`
                         }
                       }
-                      window.open(url, "_blank");
+                      window.open(url, '_blank')
                     }}
                   >
                     <ExternalLink className="mr-2 h-4 w-4" />
@@ -217,12 +225,12 @@ export function SCMConnectionCard({
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <span className={cn("flex items-center gap-1", status.color)}>
+                    <span className={cn('flex items-center gap-1', status.color)}>
                       {status.icon}
                       {status.label}
                     </span>
                   </TooltipTrigger>
-                  {connection.status_message && connection.status === "error" && (
+                  {connection.status_message && connection.status === 'error' && (
                     <TooltipContent className="max-w-xs">
                       <p className="text-red-400">{connection.status_message}</p>
                     </TooltipContent>
@@ -259,19 +267,13 @@ export function SCMConnectionCard({
             <AlertDialogDescription>
               Are you sure you want to delete <strong>{connection.name}</strong>?
               {repositoryCount > 0 && (
-                <>
-                  {" "}This will affect {repositoryCount} repositories that use this connection.
-                </>
+                <> This will affect {repositoryCount} repositories that use this connection.</>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={isDeleting}
-            >
+            <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
               {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Delete
             </Button>
@@ -291,5 +293,5 @@ export function SCMConnectionCard({
         connection={connection}
       />
     </>
-  );
+  )
 }

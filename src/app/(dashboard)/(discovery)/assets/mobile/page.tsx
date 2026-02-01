@@ -97,6 +97,7 @@ import {
   type Asset,
 } from '@/features/assets'
 import { Can, Permission, usePermissions } from '@/lib/permissions'
+import { getErrorMessage } from '@/lib/api/error-handler'
 import { AssetGroupSelect } from '@/features/asset-groups'
 import type { Status } from '@/features/shared/types'
 import {
@@ -515,7 +516,7 @@ export default function MobileAppsPage() {
       setAddDialogOpen(false)
       toast.success('Mobile app added successfully')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to add mobile app')
+      toast.error(getErrorMessage(err, 'Failed to add mobile app'))
     } finally {
       setIsSubmitting(false)
     }
@@ -545,7 +546,7 @@ export default function MobileAppsPage() {
       setSelectedMobileApp(null)
       toast.success('Mobile app updated successfully')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to update mobile app')
+      toast.error(getErrorMessage(err, 'Failed to update mobile app'))
     } finally {
       setIsSubmitting(false)
     }
@@ -561,7 +562,7 @@ export default function MobileAppsPage() {
       setMobileAppToDelete(null)
       toast.success('Mobile app deleted successfully')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete mobile app')
+      toast.error(getErrorMessage(err, 'Failed to delete mobile app'))
     } finally {
       setIsSubmitting(false)
     }
@@ -577,7 +578,7 @@ export default function MobileAppsPage() {
       setRowSelection({})
       toast.success(`Deleted ${selectedMobileAppIds.length} mobile apps`)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete mobile apps')
+      toast.error(getErrorMessage(err, 'Failed to delete mobile apps'))
     } finally {
       setIsSubmitting(false)
     }

@@ -38,6 +38,7 @@ import {
   Check,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/api/error-handler'
 import { useProfile } from '@/features/account'
 import {
   useChangePassword,
@@ -109,8 +110,8 @@ export default function SecurityPage() {
       mutateSessions()
       setSessionToRevoke(null)
       toast.success('Session revoked')
-    } catch {
-      toast.error('Failed to revoke session')
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to revoke session'))
     }
   }
 
@@ -121,8 +122,8 @@ export default function SecurityPage() {
       mutateSessions()
       setShowRevokeAllDialog(false)
       toast.success('All other sessions revoked')
-    } catch {
-      toast.error('Failed to revoke sessions')
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to revoke sessions'))
     }
   }
 

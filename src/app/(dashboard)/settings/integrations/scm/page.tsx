@@ -66,6 +66,7 @@ import {
 } from '@/features/repositories/hooks/use-repositories'
 import type { SCMConnection } from '@/features/repositories/types/repository.types'
 import { useSubModuleAccess } from '@/features/licensing'
+import { getErrorMessage } from '@/lib/api/error-handler'
 import { cn } from '@/lib/utils'
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
@@ -141,8 +142,8 @@ export default function SCMConnectionsPage() {
       await invalidateSCMConnectionsCache()
       await mutate()
       toast.success('Connections refreshed')
-    } catch {
-      toast.error('Failed to refresh connections')
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to refresh connections'))
     } finally {
       setActionInProgress(null)
     }
@@ -163,8 +164,8 @@ export default function SCMConnectionsPage() {
           toast.error(result.status_message || 'Connection test failed')
         }
         await mutate()
-      } catch {
-        toast.error('Failed to test connection')
+      } catch (err) {
+        toast.error(getErrorMessage(err, 'Failed to test connection'))
       } finally {
         setActionInProgress(null)
       }
@@ -183,8 +184,8 @@ export default function SCMConnectionsPage() {
       toast.success(`Connection "${selectedConnection.name}" deleted`)
       await invalidateSCMConnectionsCache()
       await mutate()
-    } catch {
-      toast.error('Failed to delete connection')
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to delete connection'))
     } finally {
       setDeleteDialogOpen(false)
       setSelectedConnection(null)

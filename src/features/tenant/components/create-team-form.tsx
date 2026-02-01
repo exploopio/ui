@@ -34,12 +34,9 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/api/error-handler'
 import { useCreateTenant } from '../api'
-import {
-  createTenantSchema,
-  generateSlug,
-  type CreateTenantInput,
-} from '../schemas'
+import { createTenantSchema, generateSlug, type CreateTenantInput } from '../schemas'
 import { createFirstTeamAction } from '@/features/auth/actions/local-auth-actions'
 
 interface CreateTeamFormProps {
@@ -52,32 +49,32 @@ interface CreateTeamFormProps {
 }
 
 // Wrapper component that handles both first team and additional team flows
-export function CreateTeamForm({ showCancel = true, isFirstTeam = false, suggestedName = '' }: CreateTeamFormProps) {
+export function CreateTeamForm({
+  showCancel = true,
+  isFirstTeam = false,
+  suggestedName = '',
+}: CreateTeamFormProps) {
   // For first team creation, we don't need TenantProvider context
   // Use the simpler form that only uses server action
   if (isFirstTeam) {
-    return (
-      <CreateFirstTeamFormInner
-        showCancel={showCancel}
-        suggestedName={suggestedName}
-      />
-    )
+    return <CreateFirstTeamFormInner showCancel={showCancel} suggestedName={suggestedName} />
   }
 
   // For additional teams, we need TenantProvider context
-  return (
-    <CreateAdditionalTeamFormInner
-      showCancel={showCancel}
-      suggestedName={suggestedName}
-    />
-  )
+  return <CreateAdditionalTeamFormInner showCancel={showCancel} suggestedName={suggestedName} />
 }
 
 // ============================================
 // FIRST TEAM FORM (no TenantProvider needed)
 // ============================================
 
-function CreateFirstTeamFormInner({ showCancel, suggestedName }: { showCancel: boolean; suggestedName: string }) {
+function CreateFirstTeamFormInner({
+  showCancel,
+  suggestedName,
+}: {
+  showCancel: boolean
+  suggestedName: string
+}) {
   const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -101,11 +98,14 @@ function CreateFirstTeamFormInner({ showCancel, suggestedName }: { showCancel: b
     }
   }, [watchName, isSlugManuallyEdited, form])
 
-  const handleSlugChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setIsSlugManuallyEdited(true)
-    const value = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')
-    form.setValue('slug', value, { shouldValidate: true })
-  }, [form])
+  const handleSlugChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setIsSlugManuallyEdited(true)
+      const value = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')
+      form.setValue('slug', value, { shouldValidate: true })
+    },
+    [form]
+  )
 
   const onSubmit = async (data: CreateTenantInput) => {
     setIsSubmitting(true)
@@ -156,7 +156,13 @@ function CreateFirstTeamFormInner({ showCancel, suggestedName }: { showCancel: b
 // ADDITIONAL TEAM FORM (requires TenantProvider)
 // ============================================
 
-function CreateAdditionalTeamFormInner({ showCancel, suggestedName }: { showCancel: boolean; suggestedName: string }) {
+function CreateAdditionalTeamFormInner({
+  showCancel,
+  suggestedName,
+}: {
+  showCancel: boolean
+  suggestedName: string
+}) {
   const router = useRouter()
   const { trigger, isMutating } = useCreateTenant()
   const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false)
@@ -182,11 +188,14 @@ function CreateAdditionalTeamFormInner({ showCancel, suggestedName }: { showCanc
     }
   }, [watchName, isSlugManuallyEdited, form])
 
-  const handleSlugChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setIsSlugManuallyEdited(true)
-    const value = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')
-    form.setValue('slug', value, { shouldValidate: true })
-  }, [form])
+  const handleSlugChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setIsSlugManuallyEdited(true)
+      const value = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')
+      form.setValue('slug', value, { shouldValidate: true })
+    },
+    [form]
+  )
 
   const onSubmit = async (data: CreateTenantInput) => {
     setIsSubmitting(true)
@@ -313,9 +322,7 @@ function CreateTeamFormUI({
                       {...field}
                     />
                   </FormControl>
-                  <FormDescription>
-                    The display name for your team
-                  </FormDescription>
+                  <FormDescription>The display name for your team</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -357,9 +364,7 @@ function CreateTeamFormUI({
             {slugValue && (
               <div className="rounded-md bg-muted/50 p-3 text-sm">
                 <p className="text-muted-foreground mb-1">Your team URL will be:</p>
-                <p className="font-mono text-primary">
-                  https://app.rediver.io/{slugValue}
-                </p>
+                <p className="font-mono text-primary">https://app.rediver.io/{slugValue}</p>
               </div>
             )}
 
@@ -391,7 +396,9 @@ function CreateTeamFormUI({
             />
           </CardContent>
 
-          <CardFooter className={`flex border-t pt-6 ${showCancel && onCancel ? 'justify-between' : 'justify-end'}`}>
+          <CardFooter
+            className={`flex border-t pt-6 ${showCancel && onCancel ? 'justify-between' : 'justify-end'}`}
+          >
             {showCancel && onCancel && (
               <Button
                 type="button"
@@ -403,7 +410,7 @@ function CreateTeamFormUI({
               </Button>
             )}
             <Button type="submit" disabled={isMutating || isSubmitting || !isFormValid}>
-              {(isMutating || isSubmitting) ? (
+              {isMutating || isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Creating...
@@ -427,20 +434,18 @@ function CreateTeamFormUI({
 // ============================================
 
 function handleFormError(error: unknown, form: UseFormReturn<CreateTenantInput>) {
-  if (error instanceof Error) {
-    if (error.message.includes('slug') || error.message.includes('already exists') || error.message.includes('already taken')) {
-      form.setError('slug', {
-        type: 'manual',
-        message: 'This URL is already taken. Please choose another one.',
-      })
-    } else {
-      toast.error('Failed to create team', {
-        description: error.message,
-      })
-    }
-  } else {
-    toast.error('Failed to create team', {
-      description: 'An unexpected error occurred. Please try again.',
+  const errorMessage = getErrorMessage(error, 'An unexpected error occurred. Please try again.')
+
+  if (
+    errorMessage.includes('slug') ||
+    errorMessage.includes('already exists') ||
+    errorMessage.includes('already taken')
+  ) {
+    form.setError('slug', {
+      type: 'manual',
+      message: 'This URL is already taken. Please choose another one.',
     })
+  } else {
+    toast.error(getErrorMessage(error, 'Failed to create team'))
   }
 }

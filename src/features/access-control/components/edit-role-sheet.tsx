@@ -35,6 +35,7 @@ import {
   Save,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { getErrorMessage } from '@/lib/api/error-handler'
 import {
   useUpdateRole,
   useTenantPermissionModules,
@@ -256,9 +257,7 @@ export function EditRoleSheet({ role, open, onOpenChange, onSuccess }: EditRoleS
       handleOpenChange(false)
       onSuccess?.()
     } catch (error) {
-      toast.error(
-        `Failed to update role: ${error instanceof Error ? error.message : 'Unknown error'}`
-      )
+      toast.error(getErrorMessage(error, 'Failed to update role'))
     }
   }
 

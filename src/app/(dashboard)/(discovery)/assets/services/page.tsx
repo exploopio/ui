@@ -64,6 +64,7 @@ import {
 } from '@/components/ui/select'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/api/error-handler'
 import {
   Plus,
   Server,
@@ -465,7 +466,7 @@ export default function ServicesPage() {
       setAddDialogOpen(false)
       toast.success('Service added successfully')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to add service')
+      toast.error(getErrorMessage(err, 'Failed to add service'))
     } finally {
       setIsSubmitting(false)
     }
@@ -493,7 +494,7 @@ export default function ServicesPage() {
       setSelectedService(null)
       toast.success('Service updated successfully')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to update service')
+      toast.error(getErrorMessage(err, 'Failed to update service'))
     } finally {
       setIsSubmitting(false)
     }
@@ -509,7 +510,7 @@ export default function ServicesPage() {
       setServiceToDelete(null)
       toast.success('Service deleted successfully')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete service')
+      toast.error(getErrorMessage(err, 'Failed to delete service'))
     } finally {
       setIsSubmitting(false)
     }
@@ -526,7 +527,7 @@ export default function ServicesPage() {
       setRowSelection({})
       toast.success(`Deleted ${selectedServiceIds.length} services`)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete services')
+      toast.error(getErrorMessage(err, 'Failed to delete services'))
     } finally {
       setIsSubmitting(false)
     }

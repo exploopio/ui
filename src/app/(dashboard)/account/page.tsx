@@ -13,6 +13,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { User, Mail, Phone, Upload, Save, Loader2, AlertCircle, Check, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useProfile, useUpdateProfile, useUpdateAvatar } from '@/features/account'
+import { getErrorMessage } from '@/lib/api/error-handler'
 
 export default function ProfilePage() {
   const { profile, isLoading, isError, error, mutate } = useProfile()
@@ -59,8 +60,8 @@ export default function ProfilePage() {
         setHasChanges(false)
         toast.success('Profile updated successfully')
       }
-    } catch {
-      toast.error('Failed to update profile')
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to update profile'))
     }
   }
 
@@ -125,8 +126,8 @@ export default function ProfilePage() {
         setPendingAvatar(null)
         toast.success('Avatar updated successfully')
       }
-    } catch {
-      toast.error('Failed to update avatar')
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to update avatar'))
     }
   }
 
@@ -137,8 +138,8 @@ export default function ProfilePage() {
       mutate()
       setPendingAvatar(null)
       toast.success('Avatar removed')
-    } catch {
-      toast.error('Failed to remove avatar')
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to remove avatar'))
     }
   }
 

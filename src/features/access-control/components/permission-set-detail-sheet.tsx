@@ -1,17 +1,13 @@
-"use client";
+'use client'
 
-import { useState, useCallback } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Sheet,
-  SheetContent,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { useState, useCallback } from 'react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Textarea } from '@/components/ui/textarea'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import {
   Dialog,
   DialogContent,
@@ -19,10 +15,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
-import { toast } from "sonner";
+} from '@/components/ui/dialog'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
+import { toast } from 'sonner'
 import {
   Shield,
   Pencil,
@@ -36,7 +32,7 @@ import {
   Save,
   Users,
   Check,
-} from "lucide-react";
+} from 'lucide-react'
 import {
   usePermissionSet,
   useUpdatePermissionSet,
@@ -44,22 +40,23 @@ import {
   useRemovePermissionFromSet,
   PermissionCategories,
   getPermissionInfo,
-} from "@/features/access-control";
+} from '@/features/access-control'
+import { getErrorMessage } from '@/lib/api/error-handler'
 
 interface PermissionSetDetailSheetProps {
-  permissionSetId: string | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onUpdate?: () => void;
+  permissionSetId: string | null
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onUpdate?: () => void
 }
 
 const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-};
+  return new Date(dateString).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
+}
 
 export function PermissionSetDetailSheet({
   permissionSetId,
@@ -68,149 +65,149 @@ export function PermissionSetDetailSheet({
   onUpdate,
 }: PermissionSetDetailSheetProps) {
   // API Hooks
-  const { permissionSet, isLoading, mutate: mutatePermissionSet } = usePermissionSet(permissionSetId);
-  const { updatePermissionSet, isUpdating } = useUpdatePermissionSet(permissionSetId);
-  const { addPermission, isAdding } = useAddPermissionToSet(permissionSetId);
+  const {
+    permissionSet,
+    isLoading,
+    mutate: mutatePermissionSet,
+  } = usePermissionSet(permissionSetId)
+  const { updatePermissionSet, isUpdating } = useUpdatePermissionSet(permissionSetId)
+  const { addPermission, isAdding } = useAddPermissionToSet(permissionSetId)
 
   // UI State
-  const [activeTab, setActiveTab] = useState("overview");
-  const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState({ name: "", description: "" });
-  const [addPermissionDialogOpen, setAddPermissionDialogOpen] = useState(false);
-  const [permissionToRemove, setPermissionToRemove] = useState<{ id: string; key: string } | null>(null);
-  const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState('overview')
+  const [isEditing, setIsEditing] = useState(false)
+  const [editForm, setEditForm] = useState({ name: '', description: '' })
+  const [addPermissionDialogOpen, setAddPermissionDialogOpen] = useState(false)
+  const [permissionToRemove, setPermissionToRemove] = useState<{ id: string; key: string } | null>(
+    null
+  )
+  const [selectedPermissions, setSelectedPermissions] = useState<string[]>([])
 
   // Remove permission hook
   const { removePermission, isRemoving } = useRemovePermissionFromSet(
     permissionSetId,
     permissionToRemove?.id || null
-  );
+  )
 
   // Start editing
   const handleStartEdit = useCallback(() => {
     if (permissionSet) {
       setEditForm({
         name: permissionSet.name,
-        description: permissionSet.description || "",
-      });
-      setIsEditing(true);
+        description: permissionSet.description || '',
+      })
+      setIsEditing(true)
     }
-  }, [permissionSet]);
+  }, [permissionSet])
 
   // Save changes
   const handleSaveChanges = async () => {
     if (!editForm.name) {
-      toast.error("Name is required");
-      return;
+      toast.error('Name is required')
+      return
     }
 
     try {
       await updatePermissionSet({
         name: editForm.name,
         description: editForm.description || undefined,
-      });
-      toast.success("Permission set updated successfully");
-      setIsEditing(false);
-      mutatePermissionSet();
-      onUpdate?.();
+      })
+      toast.success('Permission set updated successfully')
+      setIsEditing(false)
+      mutatePermissionSet()
+      onUpdate?.()
     } catch (error) {
-      toast.error(`Failed to update permission set: ${error instanceof Error ? error.message : "Unknown error"}`);
+      toast.error(getErrorMessage(error, 'Failed to update permission set'))
     }
-  };
+  }
 
   // Toggle permission selection
   const togglePermissionSelection = (permission: string) => {
     setSelectedPermissions((prev) =>
-      prev.includes(permission)
-        ? prev.filter((p) => p !== permission)
-        : [...prev, permission]
-    );
-  };
+      prev.includes(permission) ? prev.filter((p) => p !== permission) : [...prev, permission]
+    )
+  }
 
   // Add permissions
   const handleAddPermissions = async () => {
     if (selectedPermissions.length === 0) {
-      toast.error("Please select at least one permission");
-      return;
+      toast.error('Please select at least one permission')
+      return
     }
 
     const results = {
       success: [] as string[],
       failed: [] as { permission: string; error: string }[],
-    };
+    }
 
     try {
       // Add permissions one by one with individual error handling
       for (const permission of selectedPermissions) {
         try {
-          await addPermission({ permission });
-          results.success.push(permission);
+          await addPermission({ permission })
+          results.success.push(permission)
         } catch (error) {
           results.failed.push({
             permission,
-            error: error instanceof Error ? error.message : "Unknown error",
-          });
+            error: error instanceof Error ? error.message : 'Unknown error',
+          })
         }
       }
 
       // Show detailed results
       if (results.success.length > 0 && results.failed.length === 0) {
-        toast.success(`Added ${results.success.length} permission(s) successfully`);
+        toast.success(`Added ${results.success.length} permission(s) successfully`)
       } else if (results.success.length > 0 && results.failed.length > 0) {
         toast.warning(
           `Added ${results.success.length} permission(s). Failed to add ${results.failed.length} permission(s).`,
           {
-            description: results.failed.map((f) => `• ${f.permission}: ${f.error}`).join("\n"),
+            description: results.failed.map((f) => `• ${f.permission}: ${f.error}`).join('\n'),
           }
-        );
+        )
       } else {
-        toast.error(
-          `Failed to add all ${results.failed.length} permission(s)`,
-          {
-            description: results.failed.map((f) => `• ${f.permission}: ${f.error}`).join("\n"),
-          }
-        );
+        toast.error(`Failed to add all ${results.failed.length} permission(s)`, {
+          description: results.failed.map((f) => `• ${f.permission}: ${f.error}`).join('\n'),
+        })
       }
 
       // Close dialog and refresh if any succeeded
       if (results.success.length > 0) {
-        setAddPermissionDialogOpen(false);
-        setSelectedPermissions([]);
-        mutatePermissionSet();
-        onUpdate?.();
+        setAddPermissionDialogOpen(false)
+        setSelectedPermissions([])
+        mutatePermissionSet()
+        onUpdate?.()
       }
     } catch (error) {
-      toast.error(`Failed to add permissions: ${error instanceof Error ? error.message : "Unknown error"}`);
+      toast.error(getErrorMessage(error, 'Failed to add permissions'))
     }
-  };
+  }
 
   // Remove permission
   const handleRemovePermission = async () => {
-    if (!permissionToRemove) return;
+    if (!permissionToRemove) return
 
     try {
-      await removePermission();
-      toast.success("Permission removed successfully");
-      setPermissionToRemove(null);
-      mutatePermissionSet();
-      onUpdate?.();
+      await removePermission()
+      toast.success('Permission removed successfully')
+      setPermissionToRemove(null)
+      mutatePermissionSet()
+      onUpdate?.()
     } catch (error) {
-      toast.error(`Failed to remove permission: ${error instanceof Error ? error.message : "Unknown error"}`);
+      toast.error(getErrorMessage(error, 'Failed to remove permission'))
     }
-  };
+  }
 
   // Get current permission keys
-  const currentPermissionKeys = permissionSet?.items?.map((p: { permission: string }) => p.permission) || [];
+  const currentPermissionKeys =
+    permissionSet?.items?.map((p: { permission: string }) => p.permission) || []
 
   // Get available permissions (not already in set)
   const availablePermissions = PermissionCategories.map((category) => ({
     ...category,
-    permissions: category.permissions.filter(
-      (p) => !currentPermissionKeys.includes(p.key)
-    ),
-  })).filter((c) => c.permissions.length > 0);
+    permissions: category.permissions.filter((p) => !currentPermissionKeys.includes(p.key)),
+  })).filter((c) => c.permissions.length > 0)
 
-  const isSystem = permissionSet?.is_system;
+  const isSystem = permissionSet?.is_system
 
   return (
     <>
@@ -240,18 +237,10 @@ export function PermissionSetDetailSheet({
                   <div className="absolute top-4 right-4">
                     {isEditing ? (
                       <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setIsEditing(false)}
-                        >
+                        <Button size="sm" variant="ghost" onClick={() => setIsEditing(false)}>
                           <X className="h-4 w-4" />
                         </Button>
-                        <Button
-                          size="sm"
-                          onClick={handleSaveChanges}
-                          disabled={isUpdating}
-                        >
+                        <Button size="sm" onClick={handleSaveChanges} disabled={isUpdating}>
                           {isUpdating ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
                           ) : (
@@ -269,7 +258,9 @@ export function PermissionSetDetailSheet({
 
                 {/* Icon & Info */}
                 <div className="flex flex-col items-center text-center">
-                  <div className={`p-4 rounded-xl ${isSystem ? "bg-purple-500/20" : "bg-blue-500/20"}`}>
+                  <div
+                    className={`p-4 rounded-xl ${isSystem ? 'bg-purple-500/20' : 'bg-blue-500/20'}`}
+                  >
                     {isSystem ? (
                       <Lock className={`h-8 w-8 text-purple-500`} />
                     ) : (
@@ -296,12 +287,16 @@ export function PermissionSetDetailSheet({
                       rows={2}
                     />
                   ) : permissionSet.description ? (
-                    <p className="mt-1 text-sm text-muted-foreground">{permissionSet.description}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {permissionSet.description}
+                    </p>
                   ) : null}
 
                   <div className="flex items-center gap-2 mt-3">
-                    <Badge className={`${isSystem ? "bg-purple-500/20 text-purple-500" : "bg-blue-500/20 text-blue-500"} border-0`}>
-                      {isSystem ? "System" : "Custom"}
+                    <Badge
+                      className={`${isSystem ? 'bg-purple-500/20 text-purple-500' : 'bg-blue-500/20 text-blue-500'} border-0`}
+                    >
+                      {isSystem ? 'System' : 'Custom'}
                     </Badge>
                     {isSystem && (
                       <Badge variant="outline" className="text-xs">
@@ -341,8 +336,12 @@ export function PermissionSetDetailSheet({
               <div className="flex-1 px-6 py-4">
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
                   <TabsList className="w-full">
-                    <TabsTrigger value="overview" className="flex-1">Overview</TabsTrigger>
-                    <TabsTrigger value="permissions" className="flex-1">Permissions</TabsTrigger>
+                    <TabsTrigger value="overview" className="flex-1">
+                      Overview
+                    </TabsTrigger>
+                    <TabsTrigger value="permissions" className="flex-1">
+                      Permissions
+                    </TabsTrigger>
                   </TabsList>
 
                   {/* Overview Tab */}
@@ -352,7 +351,7 @@ export function PermissionSetDetailSheet({
                       <dl className="space-y-3 text-sm">
                         <div className="flex justify-between">
                           <dt className="text-muted-foreground">Type</dt>
-                          <dd>{isSystem ? "System" : "Custom"}</dd>
+                          <dd>{isSystem ? 'System' : 'Custom'}</dd>
                         </div>
                         <div className="flex justify-between">
                           <dt className="text-muted-foreground">Created</dt>
@@ -364,7 +363,9 @@ export function PermissionSetDetailSheet({
                         </div>
                         <div className="flex justify-between">
                           <dt className="text-muted-foreground">ID</dt>
-                          <dd className="font-mono text-xs">{permissionSet.id.substring(0, 8)}...</dd>
+                          <dd className="font-mono text-xs">
+                            {permissionSet.id.substring(0, 8)}...
+                          </dd>
                         </div>
                       </dl>
                     </div>
@@ -372,7 +373,7 @@ export function PermissionSetDetailSheet({
                     <div className="rounded-lg border p-4">
                       <h4 className="text-sm font-medium mb-2">Description</h4>
                       <p className="text-sm text-muted-foreground">
-                        {permissionSet.description || "No description provided."}
+                        {permissionSet.description || 'No description provided.'}
                       </p>
                     </div>
                   </TabsContent>
@@ -399,7 +400,7 @@ export function PermissionSetDetailSheet({
                     ) : (
                       <div className="space-y-2">
                         {permissionSet.permissions.map((permission: string, index: number) => {
-                          const info = getPermissionInfo(permission);
+                          const info = getPermissionInfo(permission)
                           return (
                             <div
                               key={`${permission}-${index}`}
@@ -423,13 +424,15 @@ export function PermissionSetDetailSheet({
                                   variant="ghost"
                                   size="sm"
                                   className="h-8 w-8 p-0 text-red-400 hover:text-red-500"
-                                  onClick={() => setPermissionToRemove({ id: permission, key: permission })}
+                                  onClick={() =>
+                                    setPermissionToRemove({ id: permission, key: permission })
+                                  }
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
                               )}
                             </div>
-                          );
+                          )
                         })}
                       </div>
                     )}
@@ -450,9 +453,7 @@ export function PermissionSetDetailSheet({
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add Permissions</DialogTitle>
-            <DialogDescription>
-              Select permissions to add to this permission set.
-            </DialogDescription>
+            <DialogDescription>Select permissions to add to this permission set.</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
@@ -469,21 +470,20 @@ export function PermissionSetDetailSheet({
               <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
                 {availablePermissions.map((category) => (
                   <div key={category.name} className="space-y-2">
-                    <h4 className="text-sm font-medium text-muted-foreground">
-                      {category.name}
-                    </h4>
+                    <h4 className="text-sm font-medium text-muted-foreground">{category.name}</h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {category.permissions.map((permission) => {
-                        const isSelected = selectedPermissions.includes(permission.key);
+                        const isSelected = selectedPermissions.includes(permission.key)
                         return (
                           <div
                             key={permission.key}
                             onClick={() => togglePermissionSelection(permission.key)}
                             className={`
                               flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all
-                              ${isSelected
-                                ? "border-primary bg-primary/5"
-                                : "border-border hover:border-muted-foreground/30"
+                              ${
+                                isSelected
+                                  ? 'border-primary bg-primary/5'
+                                  : 'border-border hover:border-muted-foreground/30'
                               }
                             `}
                           >
@@ -499,7 +499,7 @@ export function PermissionSetDetailSheet({
                               </p>
                             </div>
                           </div>
-                        );
+                        )
                       })}
                     </div>
                   </div>
@@ -521,20 +521,25 @@ export function PermissionSetDetailSheet({
               ) : (
                 <Plus className="mr-2 h-4 w-4" />
               )}
-              Add {selectedPermissions.length} Permission{selectedPermissions.length !== 1 ? "s" : ""}
+              Add {selectedPermissions.length} Permission
+              {selectedPermissions.length !== 1 ? 's' : ''}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Remove Permission Confirmation */}
-      <Dialog open={!!permissionToRemove} onOpenChange={(open) => !open && setPermissionToRemove(null)}>
+      <Dialog
+        open={!!permissionToRemove}
+        onOpenChange={(open) => !open && setPermissionToRemove(null)}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-red-500">Remove Permission</DialogTitle>
             <DialogDescription>
-              Are you sure you want to remove the &quot;{getPermissionInfo(permissionToRemove?.key || "")?.label || permissionToRemove?.key}&quot; permission?
-              Groups using this permission set will lose this permission.
+              Are you sure you want to remove the &quot;
+              {getPermissionInfo(permissionToRemove?.key || '')?.label || permissionToRemove?.key}
+              &quot; permission? Groups using this permission set will lose this permission.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -553,5 +558,5 @@ export function PermissionSetDetailSheet({
         </DialogContent>
       </Dialog>
     </>
-  );
+  )
 }

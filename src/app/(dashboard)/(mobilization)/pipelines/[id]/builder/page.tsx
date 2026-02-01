@@ -37,6 +37,7 @@ import {
   type UpdatePipelineRequest,
 } from '@/lib/api'
 import { useToolsWithConfig } from '@/lib/api/tool-hooks'
+import { getErrorMessage } from '@/lib/api/error-handler'
 import { generateTempStepId, generateStepKey } from '@/lib/utils'
 
 interface PageProps {
@@ -287,12 +288,7 @@ export default function PipelineBuilderPage({ params }: PageProps) {
       toast.success('Pipeline saved successfully')
     } catch (err) {
       console.error('Failed to save pipeline:', err)
-      // Extract error message from API response
-      const errorMessage =
-        err instanceof Error
-          ? err.message
-          : (err as { message?: string })?.message || 'Failed to save pipeline'
-      toast.error(errorMessage)
+      toast.error(getErrorMessage(err, 'Failed to save pipeline'))
     } finally {
       setIsSaving(false)
     }

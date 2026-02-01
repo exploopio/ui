@@ -5,17 +5,16 @@ import { useRouter } from 'next/navigation'
 import { Building2, Check, Loader2, LogOut } from 'lucide-react'
 import { toast } from 'sonner'
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { getCookie } from '@/lib/cookies'
 import { env } from '@/lib/env'
-import { selectTenantAction, localLogoutAction, type LoginTenant } from '@/features/auth/actions/local-auth-actions'
+import {
+  selectTenantAction,
+  localLogoutAction,
+  type LoginTenant,
+} from '@/features/auth/actions/local-auth-actions'
+import { getErrorMessage } from '@/lib/api/error-handler'
 
 // Parse tenants from cookie - done outside component to avoid re-parsing
 function parsePendingTenants(): { tenants: LoginTenant[]; error: boolean } {
@@ -72,7 +71,7 @@ export default function SelectTenantPage() {
         window.location.href = '/'
       } else {
         setSelectedId(null)
-        toast.error(result.error || 'Failed to select team')
+        toast.error(getErrorMessage(result.error, 'Failed to select team'))
       }
     })
   }
@@ -92,25 +91,25 @@ export default function SelectTenantPage() {
   // Show loading if parsing or redirecting due to error
   if (parseError || tenants.length === 0) {
     return (
-      <Card className='w-full max-w-md'>
-        <CardContent className='flex items-center justify-center py-12'>
-          <Loader2 className='h-8 w-8 animate-spin text-muted-foreground' />
+      <Card className="w-full max-w-md">
+        <CardContent className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </CardContent>
       </Card>
     )
   }
 
   return (
-    <Card className='w-full max-w-md'>
-      <CardHeader className='text-center'>
-        <CardTitle className='text-xl'>Select a Team</CardTitle>
+    <Card className="w-full max-w-md">
+      <CardHeader className="text-center">
+        <CardTitle className="text-xl">Select a Team</CardTitle>
         <CardDescription>
           You have access to multiple teams. Please select one to continue.
         </CardDescription>
       </CardHeader>
-      <CardContent className='space-y-4'>
+      <CardContent className="space-y-4">
         {/* Tenant List */}
-        <div className='space-y-2'>
+        <div className="space-y-2">
           {tenants.map((tenant) => {
             const isSelected = selectedId === tenant.id
             const isDisabled = isPending
@@ -122,54 +121,55 @@ export default function SelectTenantPage() {
                 disabled={isDisabled}
                 className={`
                   w-full flex items-center gap-3 p-4 rounded-lg border transition-colors
-                  ${isSelected
-                    ? 'border-primary bg-primary/5'
-                    : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                  ${
+                    isSelected
+                      ? 'border-primary bg-primary/5'
+                      : 'border-border hover:border-primary/50 hover:bg-muted/50'
                   }
                   ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
                 `}
               >
                 {/* Icon */}
-                <div className={`
+                <div
+                  className={`
                   flex items-center justify-center w-10 h-10 rounded-lg
                   ${isSelected ? 'bg-primary text-primary-foreground' : 'bg-muted'}
-                `}>
+                `}
+                >
                   {isSelected && isPending ? (
-                    <Loader2 className='h-5 w-5 animate-spin' />
+                    <Loader2 className="h-5 w-5 animate-spin" />
                   ) : (
-                    <Building2 className='h-5 w-5' />
+                    <Building2 className="h-5 w-5" />
                   )}
                 </div>
 
                 {/* Info */}
-                <div className='flex-1 text-left'>
-                  <p className='font-medium'>{tenant.name}</p>
-                  <p className='text-sm text-muted-foreground'>
+                <div className="flex-1 text-left">
+                  <p className="font-medium">{tenant.name}</p>
+                  <p className="text-sm text-muted-foreground">
                     {tenant.slug} · {tenant.role}
                   </p>
                 </div>
 
                 {/* Check indicator */}
-                {isSelected && !isPending && (
-                  <Check className='h-5 w-5 text-primary' />
-                )}
+                {isSelected && !isPending && <Check className="h-5 w-5 text-primary" />}
               </button>
             )
           })}
         </div>
 
         {/* Cancel Button */}
-        <div className='pt-4 border-t'>
+        <div className="pt-4 border-t">
           <Button
-            variant='ghost'
-            className='w-full'
+            variant="ghost"
+            className="w-full"
             onClick={handleCancel}
             disabled={isPending || isLoggingOut}
           >
             {isLoggingOut ? (
-              <Loader2 className='h-4 w-4 mr-2 animate-spin' />
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
-              <LogOut className='h-4 w-4 mr-2' />
+              <LogOut className="h-4 w-4 mr-2" />
             )}
             {isLoggingOut ? 'Signing out...' : 'Sign out and use a different account'}
           </Button>

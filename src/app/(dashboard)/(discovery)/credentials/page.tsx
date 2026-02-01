@@ -112,6 +112,7 @@ import {
   extractCredentialStats,
   invalidateCredentialsCache,
 } from '@/features/credentials'
+import { getErrorMessage } from '@/lib/api/error-handler'
 import type {
   ApiIdentityExposure,
   ApiCredential,
@@ -549,7 +550,7 @@ export default function CredentialsPage() {
       void invalidateCredentialsCache() // Invalidate all credential caches
     } catch (error) {
       console.error('Error resolving credential:', error)
-      toast.error('Failed to resolve credential')
+      toast.error(getErrorMessage(error, 'Failed to resolve credential'))
     }
   }
 

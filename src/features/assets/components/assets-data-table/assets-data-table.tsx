@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/api/error-handler'
 import {
   Plus,
   Search,
@@ -117,11 +118,11 @@ export function AssetsDataTable({
   onPageSizeChange: _onPageSizeChange,
 }: AssetsDataTableProps) {
   // Note: Server-side pagination props are available but not yet implemented
-  void _totalItems;
-  void _currentPage;
-  void _pageSize;
-  void _onPageChange;
-  void _onPageSizeChange;
+  void _totalItems
+  void _currentPage
+  void _pageSize
+  void _onPageChange
+  void _onPageSizeChange
   // Table state
   const [sorting, setSorting] = useState<SortingState>([])
   const [globalFilter, setGlobalFilter] = useState('')
@@ -199,7 +200,10 @@ export function AssetsDataTable({
   // Selected rows
   const selectedRows = table.getSelectedRowModel().rows
   const selectedCount = selectedRows.length
-  const selectedFindingsCount = selectedRows.reduce((sum, row) => sum + (row.original.findingCount || 0), 0)
+  const selectedFindingsCount = selectedRows.reduce(
+    (sum, row) => sum + (row.original.findingCount || 0),
+    0
+  )
 
   // Handlers
   const handleCreate = useCallback(
@@ -217,7 +221,7 @@ export function AssetsDataTable({
         setShowAddDialog(false)
         onRefresh?.()
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : `Failed to create ${assetTypeName.toLowerCase()}`)
+        toast.error(getErrorMessage(err, `Failed to create ${assetTypeName.toLowerCase()}`))
       } finally {
         setIsCreating(false)
       }
@@ -236,7 +240,7 @@ export function AssetsDataTable({
         setAssetToEdit(null)
         onRefresh?.()
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : `Failed to update ${assetTypeName.toLowerCase()}`)
+        toast.error(getErrorMessage(err, `Failed to update ${assetTypeName.toLowerCase()}`))
       } finally {
         setIsUpdating(false)
       }
@@ -254,7 +258,7 @@ export function AssetsDataTable({
       setAssetToDelete(null)
       onRefresh?.()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : `Failed to delete ${assetTypeName.toLowerCase()}`)
+      toast.error(getErrorMessage(err, `Failed to delete ${assetTypeName.toLowerCase()}`))
     } finally {
       setIsDeleting(false)
     }
@@ -271,7 +275,7 @@ export function AssetsDataTable({
       setRowSelection({})
       onRefresh?.()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : `Failed to delete ${assetTypeName.toLowerCase()}s`)
+      toast.error(getErrorMessage(err, `Failed to delete ${assetTypeName.toLowerCase()}s`))
     } finally {
       setIsDeleting(false)
     }
@@ -352,11 +356,7 @@ export function AssetsDataTable({
         <div className="flex items-center gap-2">
           {/* Bulk actions */}
           {showBulkActions && selectedCount > 0 && (
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => setShowBulkDeleteDialog(true)}
-            >
+            <Button variant="destructive" size="sm" onClick={() => setShowBulkDeleteDialog(true)}>
               <Trash2 className="mr-2 h-4 w-4" />
               Delete ({selectedCount})
             </Button>
@@ -426,11 +426,7 @@ export function AssetsDataTable({
                     })}
                     <p className="text-muted-foreground">No {assetTypeName.toLowerCase()}s found</p>
                     {showAddButton && onCreate && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowAddDialog(true)}
-                      >
+                      <Button variant="outline" size="sm" onClick={() => setShowAddDialog(true)}>
                         <Plus className="mr-2 h-4 w-4" />
                         Add your first {assetTypeName.toLowerCase()}
                       </Button>

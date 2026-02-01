@@ -676,6 +676,7 @@ function transformToRepositoryView(asset: ApiAssetResponse): RepositoryView {
 
 import { cn } from '@/lib/utils'
 import { Can, Permission } from '@/lib/permissions'
+import { getErrorMessage } from '@/lib/api/error-handler'
 
 // ============================================
 // Helper Components
@@ -1974,7 +1975,7 @@ export default function RepositoryDetailPage() {
       toast.success('Repository sync initiated')
       mutateRepo()
     } catch (error) {
-      toast.error('Failed to sync repository')
+      toast.error(getErrorMessage(error, 'Failed to sync repository'))
       console.error('Sync error:', error)
     } finally {
       setIsSyncing(false)
@@ -1996,7 +1997,7 @@ export default function RepositoryDetailPage() {
       toast.success('Scan initiated successfully')
       mutateRepo()
     } catch (error) {
-      toast.error('Failed to trigger scan')
+      toast.error(getErrorMessage(error, 'Failed to trigger scan'))
       console.error('Scan error:', error)
     } finally {
       setIsScanning(false)
@@ -2023,7 +2024,7 @@ export default function RepositoryDetailPage() {
       toast.success('Repository deleted successfully')
       router.push('/assets/repositories')
     } catch (error) {
-      toast.error('Failed to delete repository')
+      toast.error(getErrorMessage(error, 'Failed to delete repository'))
       console.error('Delete error:', error)
       setIsDeleting(false)
     }

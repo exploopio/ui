@@ -67,6 +67,7 @@ import type {
 import type { Finding, FindingStatus, FindingUser } from '@/features/findings'
 import type { Severity } from '@/features/shared/types'
 import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/api/error-handler'
 
 // ============================================
 // Transform API Finding to UI Finding
@@ -397,9 +398,7 @@ export default function FindingsPage() {
       mutateFindings()
       mutateStats()
     } catch (error) {
-      toast.error('Failed to delete finding', {
-        description: error instanceof Error ? error.message : 'Unknown error',
-      })
+      toast.error(getErrorMessage(error, 'Failed to delete finding'))
     } finally {
       setIsDeleting(false)
     }

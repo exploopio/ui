@@ -100,6 +100,7 @@ import {
   ClassificationBadges,
   type Asset,
 } from '@/features/assets'
+import { getErrorMessage } from '@/lib/api/error-handler'
 import { Can, Permission, usePermissions } from '@/lib/permissions'
 import { AssetGroupSelect } from '@/features/asset-groups'
 import type { Status } from '@/features/shared/types'
@@ -552,7 +553,7 @@ export default function CloudPage() {
       setAddDialogOpen(false)
       toast.success('Cloud asset added successfully')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to add cloud asset')
+      toast.error(getErrorMessage(err, 'Failed to add cloud asset'))
     } finally {
       setIsSubmitting(false)
     }
@@ -580,7 +581,7 @@ export default function CloudPage() {
       setSelectedAsset(null)
       toast.success('Cloud asset updated successfully')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to update cloud asset')
+      toast.error(getErrorMessage(err, 'Failed to update cloud asset'))
     } finally {
       setIsSubmitting(false)
     }
@@ -596,7 +597,7 @@ export default function CloudPage() {
       setAssetToDelete(null)
       toast.success('Cloud asset deleted successfully')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete cloud asset')
+      toast.error(getErrorMessage(err, 'Failed to delete cloud asset'))
     } finally {
       setIsSubmitting(false)
     }
@@ -613,7 +614,7 @@ export default function CloudPage() {
       setRowSelection({})
       toast.success(`Deleted ${selectedAssetIds.length} cloud assets`)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete cloud assets')
+      toast.error(getErrorMessage(err, 'Failed to delete cloud assets'))
     } finally {
       setIsSubmitting(false)
     }

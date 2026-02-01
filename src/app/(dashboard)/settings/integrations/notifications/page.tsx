@@ -59,6 +59,7 @@ import {
   invalidateNotificationIntegrationsCache,
 } from '@/features/integrations'
 import type { Integration } from '@/features/integrations'
+import { getErrorMessage } from '@/lib/api/error-handler'
 import {
   ALL_NOTIFICATION_EVENT_TYPES,
   ALL_NOTIFICATION_SEVERITIES,
@@ -156,8 +157,8 @@ export default function NotificationIntegrationsPage() {
       await invalidateNotificationIntegrationsCache()
       await mutate()
       toast.success('Integrations refreshed')
-    } catch {
-      toast.error('Failed to refresh integrations')
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to refresh integrations'))
     } finally {
       setActionInProgress(null)
     }
@@ -185,8 +186,8 @@ export default function NotificationIntegrationsPage() {
       } else {
         toast.error(result.error || 'Test notification failed')
       }
-    } catch {
-      toast.error('Failed to send test notification')
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to send test notification'))
     } finally {
       setActionInProgress(null)
     }
@@ -203,8 +204,8 @@ export default function NotificationIntegrationsPage() {
       toast.success(`Integration "${selectedIntegration.name}" deleted`)
       await invalidateNotificationIntegrationsCache()
       await mutate()
-    } catch {
-      toast.error('Failed to delete integration')
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to delete integration'))
     } finally {
       setDeleteDialogOpen(false)
       setSelectedIntegration(null)

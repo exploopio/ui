@@ -37,6 +37,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/api/error-handler'
 import { useTenant } from '@/context/tenant-provider'
 import {
   useTenantSettings,
@@ -204,8 +205,7 @@ export default function TenantPage() {
         setHasOrgInfoChanges(false)
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to update organization info'
-      toast.error(message)
+      toast.error(getErrorMessage(error, 'Failed to update organization info'))
     }
   }
 
@@ -257,8 +257,7 @@ export default function TenantPage() {
         toast.info('No changes to save')
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to save settings'
-      toast.error(message)
+      toast.error(getErrorMessage(error, 'Failed to save settings'))
     }
   }
 
@@ -289,8 +288,7 @@ export default function TenantPage() {
         toast.success('Security settings saved successfully')
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to save security settings'
-      toast.error(message)
+      toast.error(getErrorMessage(error, 'Failed to save security settings'))
     }
   }
 
@@ -306,8 +304,7 @@ export default function TenantPage() {
         toast.success('API settings saved successfully')
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to save API settings'
-      toast.error(message)
+      toast.error(getErrorMessage(error, 'Failed to save API settings'))
     }
   }
 

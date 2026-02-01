@@ -35,6 +35,7 @@ import {
   Eraser,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { getErrorMessage } from '@/lib/api/error-handler'
 import {
   useCreateRole,
   useTenantPermissionModules,
@@ -224,9 +225,7 @@ export function CreateRoleSheet({ open, onOpenChange, onSuccess }: CreateRoleShe
       handleOpenChange(false)
       onSuccess?.()
     } catch (error) {
-      toast.error(
-        `Failed to create role: ${error instanceof Error ? error.message : 'Unknown error'}`
-      )
+      toast.error(getErrorMessage(error, 'Failed to create role'))
     }
   }
 

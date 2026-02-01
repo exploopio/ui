@@ -40,6 +40,7 @@ import { useTenant } from '@/context/tenant-provider'
 import { useBootstrapSubscription } from '@/context/bootstrap-provider'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/api/error-handler'
 
 // Team icons based on index or name
 const teamIcons = [Command, AudioWaveform, Building2]
@@ -98,7 +99,7 @@ export function TeamSwitcher() {
         setIsOpen(false)
         toast.success('Team switched successfully')
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Failed to switch team')
+        toast.error(getErrorMessage(error, 'Failed to switch team'))
       }
     },
     [switchTeam, isSwitching]

@@ -74,6 +74,7 @@ import {
 import { toast } from 'sonner'
 import { Can, Permission } from '@/lib/permissions'
 import { put } from '@/lib/api/client'
+import { getErrorMessage } from '@/lib/api/error-handler'
 import { workflowEndpoints } from '@/lib/api/endpoints'
 import {
   useWorkflows,
@@ -407,8 +408,8 @@ function WorkflowTriggerButton({
       await trigger({ trigger_type: 'manual' })
       toast.success(`Workflow "${workflowName}" triggered successfully`)
       await invalidateWorkflowRunsCache()
-    } catch {
-      toast.error(`Failed to trigger workflow "${workflowName}"`)
+    } catch (err) {
+      toast.error(getErrorMessage(err, `Failed to trigger workflow "${workflowName}"`))
     }
   }
 
@@ -547,9 +548,9 @@ export default function WorkflowsPage() {
       toast.success(`Workflow "${editingWorkflow.name}" saved successfully`)
       await invalidateWorkflowsCache()
       setEditingWorkflow(null)
-    } catch (error) {
-      console.error('Failed to save workflow:', error)
-      toast.error('Failed to save workflow')
+    } catch (err) {
+      console.error('Failed to save workflow:', err)
+      toast.error(getErrorMessage(err, 'Failed to save workflow'))
     } finally {
       setIsSaving(false)
     }
@@ -584,9 +585,9 @@ export default function WorkflowsPage() {
       setIsSaveDialogOpen(false)
       setSaveWorkflowName('')
       setSaveWorkflowDescription('')
-    } catch (error) {
-      console.error('Failed to create workflow:', error)
-      toast.error('Failed to create workflow')
+    } catch (err) {
+      console.error('Failed to create workflow:', err)
+      toast.error(getErrorMessage(err, 'Failed to create workflow'))
     } finally {
       setIsSaving(false)
     }
@@ -598,8 +599,8 @@ export default function WorkflowsPage() {
       await deleteWorkflow()
       toast.success(`Deleted workflow: ${workflow.name}`)
       await invalidateWorkflowsCache()
-    } catch {
-      toast.error(`Failed to delete workflow: ${workflow.name}`)
+    } catch (err) {
+      toast.error(getErrorMessage(err, `Failed to delete workflow: ${workflow.name}`))
     } finally {
       setDeleteWorkflowId(null)
     }
@@ -615,8 +616,13 @@ export default function WorkflowsPage() {
       if (!response.ok) throw new Error('Failed to update workflow')
       toast.success(`Workflow ${enabled ? 'activated' : 'deactivated'}: ${workflow.name}`)
       await invalidateWorkflowsCache()
-    } catch {
-      toast.error(`Failed to ${enabled ? 'activate' : 'deactivate'} workflow: ${workflow.name}`)
+    } catch (err) {
+      toast.error(
+        getErrorMessage(
+          err,
+          `Failed to ${enabled ? 'activate' : 'deactivate'} workflow: ${workflow.name}`
+        )
+      )
     }
   }, [])
 
@@ -696,8 +702,8 @@ export default function WorkflowsPage() {
       setIsCreateDialogOpen(false)
       setNewWorkflowName('')
       setNewWorkflowDescription('')
-    } catch {
-      toast.error('Failed to create workflow')
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to create workflow'))
     }
   }
 
@@ -1338,8 +1344,8 @@ function WorkflowRunButton({ workflow, className }: { workflow: Workflow; classN
       await trigger({ trigger_type: 'manual' })
       toast.success(`Workflow "${workflow.name}" triggered successfully`)
       await invalidateWorkflowRunsCache()
-    } catch {
-      toast.error(`Failed to trigger workflow "${workflow.name}"`)
+    } catch (err) {
+      toast.error(getErrorMessage(err, `Failed to trigger workflow "${workflow.name}"`))
     }
   }
 

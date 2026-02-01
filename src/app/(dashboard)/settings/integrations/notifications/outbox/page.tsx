@@ -59,6 +59,7 @@ import {
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { getErrorMessage } from '@/lib/api/error-handler'
 import { Can, Permission } from '@/lib/permissions'
 import { cn } from '@/lib/utils'
 
@@ -251,7 +252,7 @@ export default function NotificationOutboxPage() {
       await Promise.all([mutateStats(), mutateEntries()])
       toast.success('Entry scheduled for retry')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to retry entry')
+      toast.error(getErrorMessage(error, 'Failed to retry entry'))
     } finally {
       setActionInProgress(null)
       setSelectedEntry(null)
@@ -274,7 +275,7 @@ export default function NotificationOutboxPage() {
       await Promise.all([mutateStats(), mutateEntries()])
       toast.success('Entry deleted')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to delete entry')
+      toast.error(getErrorMessage(error, 'Failed to delete entry'))
     } finally {
       setActionInProgress(null)
       setSelectedEntry(null)

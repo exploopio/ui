@@ -57,6 +57,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/api/error-handler'
 import {
   Plus,
   Network,
@@ -539,7 +540,7 @@ export default function IpAddressesPage() {
       setAddDialogOpen(false)
       toast.success('IP address added successfully')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to add IP address')
+      toast.error(getErrorMessage(err, 'Failed to add IP address'))
     } finally {
       setIsSubmitting(false)
     }
@@ -572,7 +573,7 @@ export default function IpAddressesPage() {
       setSelectedIp(null)
       toast.success('IP address updated successfully')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to update IP address')
+      toast.error(getErrorMessage(err, 'Failed to update IP address'))
     } finally {
       setIsSubmitting(false)
     }
@@ -588,7 +589,7 @@ export default function IpAddressesPage() {
       setIpToDelete(null)
       toast.success('IP address deleted successfully')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete IP address')
+      toast.error(getErrorMessage(err, 'Failed to delete IP address'))
     } finally {
       setIsSubmitting(false)
     }
@@ -605,7 +606,7 @@ export default function IpAddressesPage() {
       setRowSelection({})
       toast.success(`Deleted ${selectedIpIds.length} IP addresses`)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete IP addresses')
+      toast.error(getErrorMessage(err, 'Failed to delete IP addresses'))
     } finally {
       setIsSubmitting(false)
     }

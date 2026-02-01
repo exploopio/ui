@@ -16,6 +16,7 @@ import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Palette, Globe, Bell, Clock, Calendar, Save, Loader2, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/api/error-handler'
 import { useTheme } from 'next-themes'
 import {
   usePreferences,
@@ -116,8 +117,8 @@ export default function PreferencesPage() {
         setHasChanges(false)
         toast.success('Preferences saved successfully')
       }
-    } catch {
-      toast.error('Failed to save preferences')
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to save preferences'))
     }
   }
 

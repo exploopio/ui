@@ -74,6 +74,7 @@ import {
   formatDate,
 } from '@/features/access-control'
 import { PermissionSetDetailSheet } from '@/features/access-control/components/permission-set-detail-sheet'
+import { getErrorMessage } from '@/lib/api/error-handler'
 import { Can, Permission } from '@/lib/permissions'
 
 type FilterType = 'all' | 'system' | 'custom'
@@ -329,9 +330,7 @@ export default function PermissionSetsPage() {
       setCreateForm({ name: '', description: '', permissions: [] })
       refreshData()
     } catch (error) {
-      toast.error(
-        `Failed to create permission set: ${error instanceof Error ? error.message : 'Unknown error'}`
-      )
+      toast.error(getErrorMessage(error, 'Failed to create permission set'))
     }
   }
 
@@ -345,9 +344,7 @@ export default function PermissionSetsPage() {
       setPermissionSetToDelete(null)
       refreshData()
     } catch (error) {
-      toast.error(
-        `Failed to delete permission set: ${error instanceof Error ? error.message : 'Unknown error'}`
-      )
+      toast.error(getErrorMessage(error, 'Failed to delete permission set'))
     }
   }
 

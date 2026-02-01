@@ -103,6 +103,7 @@ import {
   type Asset,
 } from '@/features/assets'
 import { Can, Permission, usePermissions } from '@/lib/permissions'
+import { getErrorMessage } from '@/lib/api/error-handler'
 import { AssetGroupSelect } from '@/features/asset-groups'
 import type { Status } from '@/features/shared/types'
 import {
@@ -581,7 +582,7 @@ export default function DomainsPage() {
       setAddDialogOpen(false)
       toast.success('Domain added successfully')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to add domain')
+      toast.error(getErrorMessage(err, 'Failed to add domain'))
     } finally {
       setIsSubmitting(false)
     }
@@ -609,7 +610,7 @@ export default function DomainsPage() {
       setSelectedDomain(null)
       toast.success('Domain updated successfully')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to update domain')
+      toast.error(getErrorMessage(err, 'Failed to update domain'))
     } finally {
       setIsSubmitting(false)
     }
@@ -625,7 +626,7 @@ export default function DomainsPage() {
       setDomainToDelete(null)
       toast.success('Domain deleted successfully')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete domain')
+      toast.error(getErrorMessage(err, 'Failed to delete domain'))
     } finally {
       setIsSubmitting(false)
     }
@@ -642,7 +643,7 @@ export default function DomainsPage() {
       setRowSelection({})
       toast.success(`Deleted ${selectedDomainIds.length} domains`)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete domains')
+      toast.error(getErrorMessage(err, 'Failed to delete domains'))
     } finally {
       setIsSubmitting(false)
     }

@@ -94,6 +94,7 @@ type MemberRolesMap = Map<string, MemberRBACRole[]>
 const MemberRolesContext = createContext<MemberRolesMap>(new Map())
 import { fetcherWithOptions } from '@/lib/api/client'
 import { tenantEndpoints } from '@/lib/api/endpoints'
+import { getErrorMessage } from '@/lib/api/error-handler'
 import { Can, Permission } from '@/lib/permissions'
 
 type StatusFilter = 'all' | 'active' | 'pending' | 'inactive'
@@ -335,9 +336,7 @@ function EditUserRolesDialog({
       onSuccess?.()
       onOpenChange(false)
     } catch (error) {
-      toast.error(
-        `Failed to update roles: ${error instanceof Error ? error.message : 'Unknown error'}`
-      )
+      toast.error(getErrorMessage(error, 'Failed to update roles'))
     }
   }
 
@@ -843,9 +842,7 @@ export default function UsersPage() {
       toast.success(`Removed ${member.name} from the team`)
       refreshData()
     } catch (error) {
-      toast.error(
-        `Failed to remove member: ${error instanceof Error ? error.message : 'Unknown error'}`
-      )
+      toast.error(getErrorMessage(error, 'Failed to remove member'))
     }
   }
 
@@ -877,9 +874,7 @@ export default function UsersPage() {
       setInviteForm({ email: '', roleIds: [] })
       refreshData()
     } catch (error) {
-      toast.error(
-        `Failed to send invitation: ${error instanceof Error ? error.message : 'Unknown error'}`
-      )
+      toast.error(getErrorMessage(error, 'Failed to send invitation'))
     }
   }
 

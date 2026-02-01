@@ -69,6 +69,7 @@ import {
 } from '@/components/ui/select'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/api/error-handler'
 import {
   Cpu,
   Search as SearchIcon,
@@ -487,7 +488,7 @@ export default function ServerlessPage() {
       setFunctionToDelete(null)
       toast.success('Function removed from inventory')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete function')
+      toast.error(getErrorMessage(err, 'Failed to delete function'))
     } finally {
       setIsSubmitting(false)
     }
@@ -503,7 +504,7 @@ export default function ServerlessPage() {
       setRowSelection({})
       toast.success(`Removed ${selectedFunctionIds.length} functions from inventory`)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete functions')
+      toast.error(getErrorMessage(err, 'Failed to delete functions'))
     } finally {
       setIsSubmitting(false)
     }

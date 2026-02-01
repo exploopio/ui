@@ -73,6 +73,7 @@ import {
 } from '@/components/ui/select'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/api/error-handler'
 import {
   Plus,
   Database,
@@ -557,7 +558,7 @@ export default function DatabasesPage() {
       setAddDialogOpen(false)
       toast.success('Database added successfully')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to add database')
+      toast.error(getErrorMessage(err, 'Failed to add database'))
     } finally {
       setIsSubmitting(false)
     }
@@ -585,7 +586,7 @@ export default function DatabasesPage() {
       setSelectedDatabase(null)
       toast.success('Database updated successfully')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to update database')
+      toast.error(getErrorMessage(err, 'Failed to update database'))
     } finally {
       setIsSubmitting(false)
     }
@@ -601,7 +602,7 @@ export default function DatabasesPage() {
       setDatabaseToDelete(null)
       toast.success('Database deleted successfully')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete database')
+      toast.error(getErrorMessage(err, 'Failed to delete database'))
     } finally {
       setIsSubmitting(false)
     }
@@ -618,7 +619,7 @@ export default function DatabasesPage() {
       setRowSelection({})
       toast.success(`Deleted ${selectedDatabaseIds.length} databases`)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete databases')
+      toast.error(getErrorMessage(err, 'Failed to delete databases'))
     } finally {
       setIsSubmitting(false)
     }

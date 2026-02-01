@@ -92,6 +92,7 @@ import {
 } from '@/lib/api/scan-hooks'
 import type { ScanSession, ScanRunStatus } from '@/lib/api/scan-types'
 import { post, del } from '@/lib/api/client'
+import { getErrorMessage } from '@/lib/api/error-handler'
 import { scanEndpoints } from '@/lib/api/endpoints'
 // Note: useAssetGroups can be imported when CreateConfigDialog is implemented
 // import { useAssetGroups } from "@/lib/api/security-hooks";
@@ -380,7 +381,7 @@ function ConfigurationsTab() {
         await invalidateScanConfigsCache()
       } catch (error) {
         console.error(`Failed to ${action} scan:`, error)
-        toast.error(`Failed to ${action} scan "${config.name}"`)
+        toast.error(getErrorMessage(error, `Failed to ${action} scan "${config.name}"`))
       }
     },
     []
@@ -397,7 +398,7 @@ function ConfigurationsTab() {
       await invalidateScanConfigsCache()
     } catch (error) {
       console.error('Failed to delete scan:', error)
-      toast.error(`Failed to delete scan "${configToDelete.name}"`)
+      toast.error(getErrorMessage(error, `Failed to delete scan "${configToDelete.name}"`))
     } finally {
       setIsDeleting(false)
       setDeleteConfirmOpen(false)
@@ -977,7 +978,7 @@ function ConfigDetailSheet({ config, onClose: _onClose, onDelete }: ConfigDetail
       await invalidateScanConfigsCache()
     } catch (error) {
       console.error('Failed to trigger scan:', error)
-      toast.error(`Failed to trigger scan "${config.name}"`)
+      toast.error(getErrorMessage(error, `Failed to trigger scan "${config.name}"`))
     } finally {
       setIsTriggering(false)
     }
@@ -991,7 +992,7 @@ function ConfigDetailSheet({ config, onClose: _onClose, onDelete }: ConfigDetail
       await invalidateScanConfigsCache()
     } catch (error) {
       console.error('Failed to pause scan:', error)
-      toast.error(`Failed to pause scan "${config.name}"`)
+      toast.error(getErrorMessage(error, `Failed to pause scan "${config.name}"`))
     } finally {
       setIsPausing(false)
     }
@@ -1005,7 +1006,7 @@ function ConfigDetailSheet({ config, onClose: _onClose, onDelete }: ConfigDetail
       await invalidateScanConfigsCache()
     } catch (error) {
       console.error('Failed to activate scan:', error)
-      toast.error(`Failed to activate scan "${config.name}"`)
+      toast.error(getErrorMessage(error, `Failed to activate scan "${config.name}"`))
     } finally {
       setIsActivating(false)
     }
@@ -1536,7 +1537,7 @@ function RunsTab() {
       toast.success('Scan session stopped')
       await invalidateScanSessionsCache()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to stop session')
+      toast.error(getErrorMessage(err, 'Failed to stop session'))
     } finally {
       setActioningSessionId(null)
     }
@@ -1549,7 +1550,7 @@ function RunsTab() {
       toast.success('Scan session retry started')
       await invalidateScanSessionsCache()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to retry session')
+      toast.error(getErrorMessage(err, 'Failed to retry session'))
     } finally {
       setActioningSessionId(null)
     }

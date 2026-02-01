@@ -1,13 +1,9 @@
-"use client";
+'use client'
 
-import { useState, useCallback, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Sheet,
-  SheetContent,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { useState, useCallback, useEffect } from 'react'
+import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import {
   Dialog,
   DialogContent,
@@ -15,17 +11,11 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
-import { toast } from "sonner";
-import {
-  Users,
-  Calendar,
-  Loader2,
-  Trash2,
-  Box,
-} from "lucide-react";
+} from '@/components/ui/dialog'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
+import { toast } from 'sonner'
+import { Users, Calendar, Loader2, Trash2, Box } from 'lucide-react'
 import {
   useGroup,
   useGroupMembers,
@@ -37,9 +27,10 @@ import {
   useUnassignAssetFromGroup,
   type GroupMemberRole,
   formatDate,
-} from "@/features/access-control";
-import { useMembers } from "@/features/organization";
-import { useTenant } from "@/context/tenant-provider";
+} from '@/features/access-control'
+import { getErrorMessage } from '@/lib/api/error-handler'
+import { useMembers } from '@/features/organization'
+import { useTenant } from '@/context/tenant-provider'
 
 import {
   GroupHeader,
@@ -49,60 +40,73 @@ import {
   ErrorDisplay,
   AddMemberDialog,
   AddAssetDialog,
-} from "./group-detail-sheet/index";
+} from './group-detail-sheet/index'
 
 interface GroupDetailSheetProps {
-  groupId: string | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onUpdate?: () => void;
+  groupId: string | null
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onUpdate?: () => void
 }
 
-export function GroupDetailSheet({
-  groupId,
-  open,
-  onOpenChange,
-  onUpdate,
-}: GroupDetailSheetProps) {
-  const { currentTenant } = useTenant();
-  const tenantSlug = currentTenant?.slug;
+export function GroupDetailSheet({ groupId, open, onOpenChange, onUpdate }: GroupDetailSheetProps) {
+  const { currentTenant } = useTenant()
+  const tenantSlug = currentTenant?.slug
 
   // API Hooks - Only fetch when sheet is open (avoid unnecessary API calls)
-  const { group, isLoading: groupLoading, isError: groupError, error: groupErrorDetails, mutate: mutateGroup } = useGroup(groupId, { skip: !open });
-  const { members, isLoading: membersLoading, mutate: mutateMembers } = useGroupMembers(groupId, { skip: !open });
-  const { updateGroup, isUpdating } = useUpdateGroup(open ? groupId : null);
-  const { addMember, isAdding: isAddingMember } = useAddGroupMember(open ? groupId : null);
-  const { members: tenantMembers } = useMembers(open ? tenantSlug : undefined);
-  const { assets, isLoading: assetsLoading, mutate: mutateAssets } = useGroupAssets(groupId, { skip: !open });
-  const { assignAsset, isAssigning: isAssigningAsset } = useAssignAssetToGroup(open ? groupId : null);
+  const {
+    group,
+    isLoading: groupLoading,
+    isError: groupError,
+    error: groupErrorDetails,
+    mutate: mutateGroup,
+  } = useGroup(groupId, { skip: !open })
+  const {
+    members,
+    isLoading: membersLoading,
+    mutate: mutateMembers,
+  } = useGroupMembers(groupId, { skip: !open })
+  const { updateGroup, isUpdating } = useUpdateGroup(open ? groupId : null)
+  const { addMember, isAdding: isAddingMember } = useAddGroupMember(open ? groupId : null)
+  const { members: tenantMembers } = useMembers(open ? tenantSlug : undefined)
+  const {
+    assets,
+    isLoading: assetsLoading,
+    mutate: mutateAssets,
+  } = useGroupAssets(groupId, { skip: !open })
+  const { assignAsset, isAssigning: isAssigningAsset } = useAssignAssetToGroup(
+    open ? groupId : null
+  )
 
   // UI State
-  const [activeTab, setActiveTab] = useState("overview");
-  const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState({ name: "", description: "" });
-  const [addMemberDialogOpen, setAddMemberDialogOpen] = useState(false);
-  const [addAssetDialogOpen, setAddAssetDialogOpen] = useState(false);
-  const [memberToRemove, setMemberToRemove] = useState<{ userId: string; name: string } | null>(null);
-  const [assetToRemove, setAssetToRemove] = useState<{ id: string; name: string } | null>(null);
-  const [newMember, setNewMember] = useState({ userId: "", role: "member" as GroupMemberRole });
+  const [activeTab, setActiveTab] = useState('overview')
+  const [isEditing, setIsEditing] = useState(false)
+  const [editForm, setEditForm] = useState({ name: '', description: '' })
+  const [addMemberDialogOpen, setAddMemberDialogOpen] = useState(false)
+  const [addAssetDialogOpen, setAddAssetDialogOpen] = useState(false)
+  const [memberToRemove, setMemberToRemove] = useState<{ userId: string; name: string } | null>(
+    null
+  )
+  const [assetToRemove, setAssetToRemove] = useState<{ id: string; name: string } | null>(null)
+  const [newMember, setNewMember] = useState({ userId: '', role: 'member' as GroupMemberRole })
 
   // Remove hooks
   const { removeMember, isRemoving: isRemovingMember } = useRemoveGroupMember(
     groupId,
     memberToRemove?.userId || null
-  );
+  )
   const { unassignAsset, isUnassigning: isUnassigningAsset } = useUnassignAssetFromGroup(
     groupId,
     assetToRemove?.id || null
-  );
+  )
 
   // Force revalidate when sheet opens to avoid stale cache
   useEffect(() => {
     if (open && groupId) {
-      mutateGroup();
-      mutateAssets();
+      mutateGroup()
+      mutateAssets()
     }
-  }, [open, groupId, mutateGroup, mutateAssets]);
+  }, [open, groupId, mutateGroup, mutateAssets])
 
   // Log errors for debugging
   useEffect(() => {
@@ -111,121 +115,125 @@ export function GroupDetailSheet({
         groupId,
         error: groupErrorDetails,
         timestamp: new Date().toISOString(),
-      });
+      })
     }
-  }, [groupError, groupErrorDetails, groupId]);
+  }, [groupError, groupErrorDetails, groupId])
 
   // Start editing
   const handleStartEdit = useCallback(() => {
     if (group) {
       setEditForm({
         name: group.name,
-        description: group.description || "",
-      });
-      setIsEditing(true);
+        description: group.description || '',
+      })
+      setIsEditing(true)
     }
-  }, [group]);
+  }, [group])
 
   // Save changes
   const handleSaveChanges = async () => {
     if (!editForm.name) {
-      toast.error("Team name is required");
-      return;
+      toast.error('Team name is required')
+      return
     }
 
     try {
       await updateGroup({
         name: editForm.name,
         description: editForm.description || undefined,
-      });
-      toast.success("Team updated successfully");
-      setIsEditing(false);
-      mutateGroup();
-      onUpdate?.();
+      })
+      toast.success('Team updated successfully')
+      setIsEditing(false)
+      mutateGroup()
+      onUpdate?.()
     } catch (error) {
-      toast.error(`Failed to update team: ${error instanceof Error ? error.message : "Unknown error"}`);
+      toast.error(getErrorMessage(error, 'Failed to update team'))
     }
-  };
+  }
 
   // Add member
   const handleAddMember = async () => {
     if (!newMember.userId) {
-      toast.error("Please select a member");
-      return;
+      toast.error('Please select a member')
+      return
     }
 
     try {
       await addMember({
         user_id: newMember.userId,
         role: newMember.role,
-      });
-      toast.success("Member added successfully");
-      setAddMemberDialogOpen(false);
-      setNewMember({ userId: "", role: "member" });
-      mutateMembers();
-      mutateGroup();
-      onUpdate?.();
+      })
+      toast.success('Member added successfully')
+      setAddMemberDialogOpen(false)
+      setNewMember({ userId: '', role: 'member' })
+      mutateMembers()
+      mutateGroup()
+      onUpdate?.()
     } catch (error) {
-      toast.error(`Failed to add member: ${error instanceof Error ? error.message : "Unknown error"}`);
+      toast.error(getErrorMessage(error, 'Failed to add member'))
     }
-  };
+  }
 
   // Remove member
   const handleRemoveMember = async () => {
-    if (!memberToRemove) return;
+    if (!memberToRemove) return
 
     try {
-      await removeMember();
-      toast.success(`Member removed successfully`);
-      setMemberToRemove(null);
-      mutateMembers();
-      mutateGroup();
-      onUpdate?.();
+      await removeMember()
+      toast.success(`Member removed successfully`)
+      setMemberToRemove(null)
+      mutateMembers()
+      mutateGroup()
+      onUpdate?.()
     } catch (error) {
-      toast.error(`Failed to remove member: ${error instanceof Error ? error.message : "Unknown error"}`);
+      toast.error(getErrorMessage(error, 'Failed to remove member'))
     }
-  };
+  }
 
   // Assign Asset
-  const handleAssignAsset = async (assetId: string, ownershipType: "primary" | "secondary" | "stakeholder" | "informed") => {
+  const handleAssignAsset = async (
+    assetId: string,
+    ownershipType: 'primary' | 'secondary' | 'stakeholder' | 'informed'
+  ) => {
     try {
       await assignAsset({
         asset_id: assetId,
         ownership_type: ownershipType,
-      });
-      toast.success("Asset assigned successfully");
-      setAddAssetDialogOpen(false);
-      mutateAssets();
-      mutateGroup();
-      onUpdate?.();
+      })
+      toast.success('Asset assigned successfully')
+      setAddAssetDialogOpen(false)
+      mutateAssets()
+      mutateGroup()
+      onUpdate?.()
     } catch (error) {
-      toast.error(`Failed to assign asset: ${error instanceof Error ? error.message : "Unknown error"}`);
+      toast.error(getErrorMessage(error, 'Failed to assign asset'))
     }
-  };
+  }
 
   // Unassign Asset
   const handleUnassignAsset = async () => {
-    if (!assetToRemove) return;
+    if (!assetToRemove) return
 
     try {
-      await unassignAsset();
-      toast.success("Asset removed successfully");
-      setAssetToRemove(null);
-      mutateAssets();
-      mutateGroup();
-      onUpdate?.();
+      await unassignAsset()
+      toast.success('Asset removed successfully')
+      setAssetToRemove(null)
+      mutateAssets()
+      mutateGroup()
+      onUpdate?.()
     } catch (error) {
-      toast.error(`Failed to remove asset: ${error instanceof Error ? error.message : "Unknown error"}`);
+      toast.error(getErrorMessage(error, 'Failed to remove asset'))
     }
-  };
+  }
 
   // Get available members (not already in group)
   const availableMembers = (tenantMembers || []).filter(
-    (m: { user_id: string }) => !members.some((gm: { user_id?: string; id?: string }) => {
-      const gmId = gm.user_id || gm.id; // defensive
-      return gmId === m.user_id;
-    })
-  );
+    (m: { user_id: string }) =>
+      !members.some((gm: { user_id?: string; id?: string }) => {
+        const gmId = gm.user_id || gm.id // defensive
+        return gmId === m.user_id
+      })
+  )
 
   return (
     <>
@@ -272,7 +280,9 @@ export function GroupDetailSheet({
                     <Users className="h-4 w-4" />
                     <span className="text-xs">Members</span>
                   </div>
-                  <p className="text-lg font-semibold">{group.member_count ?? members?.length ?? 0}</p>
+                  <p className="text-lg font-semibold">
+                    {group.member_count ?? members?.length ?? 0}
+                  </p>
                 </div>
                 <div className="text-center">
                   <div className="flex items-center justify-center gap-1 text-muted-foreground">
@@ -294,9 +304,15 @@ export function GroupDetailSheet({
               <div className="flex-1 px-6 py-4">
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
                   <TabsList className="w-full">
-                    <TabsTrigger value="overview" className="flex-1">Overview</TabsTrigger>
-                    <TabsTrigger value="members" className="flex-1">Members</TabsTrigger>
-                    <TabsTrigger value="assets" className="flex-1">Assets</TabsTrigger>
+                    <TabsTrigger value="overview" className="flex-1">
+                      Overview
+                    </TabsTrigger>
+                    <TabsTrigger value="members" className="flex-1">
+                      Members
+                    </TabsTrigger>
+                    <TabsTrigger value="assets" className="flex-1">
+                      Assets
+                    </TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="overview">
@@ -383,15 +399,19 @@ export function GroupDetailSheet({
           <DialogHeader>
             <DialogTitle className="text-red-500">Remove Asset</DialogTitle>
             <DialogDescription>
-              Are you sure you want to remove the asset &quot;{assetToRemove?.name}&quot; from this team?
-              The team will lose access to this asset.
+              Are you sure you want to remove the asset &quot;{assetToRemove?.name}&quot; from this
+              team? The team will lose access to this asset.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setAssetToRemove(null)}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleUnassignAsset} disabled={isUnassigningAsset}>
+            <Button
+              variant="destructive"
+              onClick={handleUnassignAsset}
+              disabled={isUnassigningAsset}
+            >
               {isUnassigningAsset ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
@@ -403,5 +423,5 @@ export function GroupDetailSheet({
         </DialogContent>
       </Dialog>
     </>
-  );
+  )
 }

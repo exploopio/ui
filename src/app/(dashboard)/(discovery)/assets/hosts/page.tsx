@@ -98,6 +98,7 @@ import {
   type Asset,
 } from '@/features/assets'
 import { Can, Permission, usePermissions } from '@/lib/permissions'
+import { getErrorMessage } from '@/lib/api/error-handler'
 import { AssetGroupSelect } from '@/features/asset-groups'
 import type { Status } from '@/features/shared/types'
 import {
@@ -547,7 +548,7 @@ export default function HostsPage() {
       setAddDialogOpen(false)
       toast.success('Host added successfully')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to add host')
+      toast.error(getErrorMessage(err, 'Failed to add host'))
     } finally {
       setIsSubmitting(false)
     }
@@ -575,7 +576,7 @@ export default function HostsPage() {
       setSelectedHost(null)
       toast.success('Host updated successfully')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to update host')
+      toast.error(getErrorMessage(err, 'Failed to update host'))
     } finally {
       setIsSubmitting(false)
     }
@@ -591,7 +592,7 @@ export default function HostsPage() {
       setHostToDelete(null)
       toast.success('Host deleted successfully')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete host')
+      toast.error(getErrorMessage(err, 'Failed to delete host'))
     } finally {
       setIsSubmitting(false)
     }
@@ -608,7 +609,7 @@ export default function HostsPage() {
       setRowSelection({})
       toast.success(`Deleted ${selectedHostIds.length} hosts`)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete hosts')
+      toast.error(getErrorMessage(err, 'Failed to delete hosts'))
     } finally {
       setIsSubmitting(false)
     }

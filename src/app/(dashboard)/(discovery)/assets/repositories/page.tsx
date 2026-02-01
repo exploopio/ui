@@ -121,6 +121,7 @@ import type { Status } from '@/features/shared/types'
 type Repository = RepositoryView
 type RepositoryStatus = Status
 import { cn } from '@/lib/utils'
+import { getErrorMessage } from '@/lib/api/error-handler'
 
 // ============================================
 // API Response Types (snake_case from backend)
@@ -1074,9 +1075,7 @@ export default function RepositoriesPage() {
       const result = await response.json()
       toast.success(result.message || `Scan triggered for "${repo.name}"`)
     } catch (error) {
-      toast.error(
-        `Failed to trigger scan: ${error instanceof Error ? error.message : 'Unknown error'}`
-      )
+      toast.error(getErrorMessage(error, 'Failed to trigger scan'))
     } finally {
       setActionInProgress(null)
     }
@@ -1109,7 +1108,7 @@ export default function RepositoriesPage() {
         await mutateRepos()
         await invalidateRepositoriesCache()
       } catch (error) {
-        toast.error(`Failed to sync: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        toast.error(getErrorMessage(error, 'Failed to sync'))
       } finally {
         setActionInProgress(null)
       }
@@ -1129,7 +1128,7 @@ export default function RepositoriesPage() {
       await mutateRepos()
       await invalidateRepositoriesCache()
     } catch (error) {
-      toast.error(`Failed to delete: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      toast.error(getErrorMessage(error, 'Failed to delete'))
     } finally {
       setDeleteDialogOpen(false)
       setRepositoryToDelete(null)
@@ -1163,9 +1162,7 @@ export default function RepositoriesPage() {
         toast.success(`Triggered scan for ${successCount} repositories`)
       }
     } catch (error) {
-      toast.error(
-        `Failed to trigger scans: ${error instanceof Error ? error.message : 'Unknown error'}`
-      )
+      toast.error(getErrorMessage(error, 'Failed to trigger scans'))
     } finally {
       setRowSelection({})
       setActionInProgress(null)
@@ -1218,9 +1215,7 @@ export default function RepositoriesPage() {
       await mutateRepos()
       await invalidateRepositoriesCache()
     } catch (error) {
-      toast.error(
-        `Failed to sync repositories: ${error instanceof Error ? error.message : 'Unknown error'}`
-      )
+      toast.error(getErrorMessage(error, 'Failed to sync repositories'))
     } finally {
       setRowSelection({})
       setActionInProgress(null)
@@ -1248,9 +1243,7 @@ export default function RepositoriesPage() {
       await mutateRepos()
       await invalidateRepositoriesCache()
     } catch (error) {
-      toast.error(
-        `Failed to delete repositories: ${error instanceof Error ? error.message : 'Unknown error'}`
-      )
+      toast.error(getErrorMessage(error, 'Failed to delete repositories'))
     } finally {
       setRowSelection({})
       setActionInProgress(null)

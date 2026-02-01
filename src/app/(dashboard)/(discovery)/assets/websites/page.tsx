@@ -93,6 +93,7 @@ import {
   type Asset,
 } from '@/features/assets'
 import { Can, Permission, usePermissions } from '@/lib/permissions'
+import { getErrorMessage } from '@/lib/api/error-handler'
 import { AssetGroupSelect } from '@/features/asset-groups'
 import type { Status } from '@/features/shared/types'
 import {
@@ -548,7 +549,7 @@ export default function WebsitesPage() {
       setAddDialogOpen(false)
       toast.success('Website added successfully')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to add website')
+      toast.error(getErrorMessage(err, 'Failed to add website'))
     } finally {
       setIsSubmitting(false)
     }
@@ -576,7 +577,7 @@ export default function WebsitesPage() {
       setSelectedWebsite(null)
       toast.success('Website updated successfully')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to update website')
+      toast.error(getErrorMessage(err, 'Failed to update website'))
     } finally {
       setIsSubmitting(false)
     }
@@ -592,7 +593,7 @@ export default function WebsitesPage() {
       setWebsiteToDelete(null)
       toast.success('Website deleted successfully')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete website')
+      toast.error(getErrorMessage(err, 'Failed to delete website'))
     } finally {
       setIsSubmitting(false)
     }
@@ -609,7 +610,7 @@ export default function WebsitesPage() {
       setRowSelection({})
       toast.success(`Deleted ${selectedWebsiteIds.length} websites`)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete websites')
+      toast.error(getErrorMessage(err, 'Failed to delete websites'))
     } finally {
       setIsSubmitting(false)
     }

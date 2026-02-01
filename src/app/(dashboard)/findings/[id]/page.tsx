@@ -11,6 +11,7 @@ import { useFindingApi, useAddFindingCommentApi } from '@/features/findings/api/
 import { useFindingActivitiesInfinite } from '@/features/findings/api/use-finding-activities-api'
 import type { ApiFinding } from '@/features/findings/api/finding-api.types'
 import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/api/error-handler'
 import { ArrowLeft } from 'lucide-react'
 import type {
   FindingDetail,
@@ -386,7 +387,7 @@ export default function FindingDetailPage() {
       await mutateActivities()
       toast.success('Comment added')
     } catch (error) {
-      toast.error('Failed to add comment')
+      toast.error(getErrorMessage(error, 'Failed to add comment'))
       console.error('Add comment error:', error)
     }
   }

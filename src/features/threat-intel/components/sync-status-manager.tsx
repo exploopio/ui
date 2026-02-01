@@ -1,11 +1,11 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { useState } from 'react'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Switch } from '@/components/ui/switch'
+import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
 import {
   RefreshCw,
   Check,
@@ -15,55 +15,53 @@ import {
   TrendingUp,
   AlertOctagon,
   Loader2,
-} from "lucide-react";
-import { toast } from "sonner";
-import { formatDistanceToNow } from "date-fns";
-import type { SyncStatus, ThreatIntelSource } from "@/lib/api/threatintel-types";
-import { triggerSync, setSyncEnabled } from "../hooks/use-threat-intel";
+} from 'lucide-react'
+import { toast } from 'sonner'
+import { formatDistanceToNow } from 'date-fns'
+import type { SyncStatus, ThreatIntelSource } from '@/lib/api/threatintel-types'
+import { triggerSync, setSyncEnabled } from '../hooks/use-threat-intel'
+import { getErrorMessage } from '@/lib/api/error-handler'
 
 interface SyncStatusManagerProps {
-  statuses: SyncStatus[];
-  onRefresh?: () => void;
-  className?: string;
+  statuses: SyncStatus[]
+  onRefresh?: () => void
+  className?: string
 }
 
-const sourceConfig: Record<ThreatIntelSource, {
-  name: string;
-  description: string;
-  icon: typeof TrendingUp;
-  color: string;
-}> = {
+const sourceConfig: Record<
+  ThreatIntelSource,
+  {
+    name: string
+    description: string
+    icon: typeof TrendingUp
+    color: string
+  }
+> = {
   epss: {
-    name: "EPSS",
-    description: "Exploit Prediction Scoring System - Daily exploitation probability scores",
+    name: 'EPSS',
+    description: 'Exploit Prediction Scoring System - Daily exploitation probability scores',
     icon: TrendingUp,
-    color: "text-orange-500",
+    color: 'text-orange-500',
   },
   kev: {
-    name: "CISA KEV",
+    name: 'CISA KEV',
     description: "Known Exploited Vulnerabilities - CISA's actively exploited CVE catalog",
     icon: AlertOctagon,
-    color: "text-red-500",
+    color: 'text-red-500',
   },
-};
+}
 
 /**
  * Sync Status Manager - Control panel for threat intel data sync
  */
-export function SyncStatusManager({
-  statuses,
-  onRefresh,
-  className,
-}: SyncStatusManagerProps) {
+export function SyncStatusManager({ statuses, onRefresh, className }: SyncStatusManagerProps) {
   return (
     <Card className={className}>
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-lg">Data Sync Status</CardTitle>
-            <CardDescription>
-              Manage threat intelligence data synchronization
-            </CardDescription>
+            <CardDescription>Manage threat intelligence data synchronization</CardDescription>
           </div>
           {onRefresh && (
             <Button variant="outline" size="sm" onClick={onRefresh}>
@@ -75,66 +73,65 @@ export function SyncStatusManager({
       </CardHeader>
       <CardContent className="space-y-4">
         {statuses.map((status) => (
-          <SyncStatusCard
-            key={status.source}
-            status={status}
-            onUpdate={onRefresh}
-          />
+          <SyncStatusCard key={status.source} status={status} onUpdate={onRefresh} />
         ))}
         {statuses.length === 0 && (
-          <div className="text-center py-6 text-muted-foreground">
-            No sync sources configured
-          </div>
+          <div className="text-center py-6 text-muted-foreground">No sync sources configured</div>
         )}
       </CardContent>
     </Card>
-  );
+  )
 }
 
 interface SyncStatusCardProps {
-  status: SyncStatus;
-  onUpdate?: () => void;
+  status: SyncStatus
+  onUpdate?: () => void
 }
 
 function SyncStatusCard({ status, onUpdate }: SyncStatusCardProps) {
-  const [isToggling, setIsToggling] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
+  const [isToggling, setIsToggling] = useState(false)
+  const [isSyncing, setIsSyncing] = useState(false)
 
-  const config = sourceConfig[status.source];
-  const Icon = config.icon;
+  const config = sourceConfig[status.source]
+  const Icon = config.icon
 
   const handleToggleEnabled = async () => {
-    setIsToggling(true);
+    setIsToggling(true)
     try {
-      await setSyncEnabled(status.source, !status.enabled);
-      toast.success(`${config.name} sync ${!status.enabled ? "enabled" : "disabled"}`);
-      onUpdate?.();
+      await setSyncEnabled(status.source, !status.enabled)
+      toast.success(`${config.name} sync ${!status.enabled ? 'enabled' : 'disabled'}`)
+      onUpdate?.()
     } catch (error) {
-      toast.error(`Failed to ${!status.enabled ? "enable" : "disable"} ${config.name} sync`);
-      console.error(error);
+      toast.error(
+        getErrorMessage(
+          error,
+          `Failed to ${!status.enabled ? 'enable' : 'disable'} ${config.name} sync`
+        )
+      )
+      console.error(error)
     } finally {
-      setIsToggling(false);
+      setIsToggling(false)
     }
-  };
+  }
 
   const handleTriggerSync = async () => {
-    setIsSyncing(true);
+    setIsSyncing(true)
     try {
-      await triggerSync(status.source);
-      toast.success(`${config.name} sync triggered`);
-      onUpdate?.();
+      await triggerSync(status.source)
+      toast.success(`${config.name} sync triggered`)
+      onUpdate?.()
     } catch (error) {
-      toast.error(`Failed to trigger ${config.name} sync`);
-      console.error(error);
+      toast.error(getErrorMessage(error, `Failed to trigger ${config.name} sync`))
+      console.error(error)
     } finally {
-      setIsSyncing(false);
+      setIsSyncing(false)
     }
-  };
+  }
 
   return (
     <div className="flex items-start gap-4 p-4 rounded-lg border bg-card">
       {/* Icon */}
-      <div className={cn("p-2 rounded-lg bg-muted", config.color)}>
+      <div className={cn('p-2 rounded-lg bg-muted', config.color)}>
         <Icon className="h-5 w-5" />
       </div>
 
@@ -193,7 +190,7 @@ function SyncStatusCard({ status, onUpdate }: SyncStatusCardProps) {
 
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">
-            {status.enabled ? "Enabled" : "Disabled"}
+            {status.enabled ? 'Enabled' : 'Disabled'}
           </span>
           <Switch
             checked={status.enabled}
@@ -203,46 +200,46 @@ function SyncStatusCard({ status, onUpdate }: SyncStatusCardProps) {
         </div>
       </div>
     </div>
-  );
+  )
 }
 
-function SyncStatusBadge({ status }: { status: SyncStatus["last_sync_status"] }) {
+function SyncStatusBadge({ status }: { status: SyncStatus['last_sync_status'] }) {
   const config = {
     success: {
-      label: "Success",
+      label: 'Success',
       icon: Check,
-      className: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+      className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
     },
     failed: {
-      label: "Failed",
+      label: 'Failed',
       icon: X,
-      className: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+      className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
     },
     pending: {
-      label: "Pending",
+      label: 'Pending',
       icon: Clock,
-      className: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
+      className: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
     },
     never: {
-      label: "Never synced",
+      label: 'Never synced',
       icon: Clock,
-      className: "bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400",
+      className: 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400',
     },
-  };
+  }
 
-  const { label, icon: BadgeIcon, className } = config[status];
+  const { label, icon: BadgeIcon, className } = config[status]
 
   return (
-    <Badge variant="outline" className={cn("gap-1", className)}>
+    <Badge variant="outline" className={cn('gap-1', className)}>
       <BadgeIcon className="h-3 w-3" />
       {label}
     </Badge>
-  );
+  )
 }
 
 interface CompactSyncStatusProps {
-  statuses: SyncStatus[];
-  className?: string;
+  statuses: SyncStatus[]
+  className?: string
 }
 
 /**
@@ -252,35 +249,35 @@ export function CompactSyncStatus({ statuses, className }: CompactSyncStatusProp
   // Handle empty statuses
   if (!statuses || statuses.length === 0) {
     return (
-      <div className={cn("flex items-center gap-2 text-sm", className)}>
+      <div className={cn('flex items-center gap-2 text-sm', className)}>
         <Clock className="h-4 w-4 text-muted-foreground" />
         <span className="text-muted-foreground">No sync data</span>
       </div>
-    );
+    )
   }
 
-  const anyFailed = statuses.some((s) => s.last_sync_status === "failed");
-  const anyPending = statuses.some((s) => s.last_sync_status === "pending");
+  const anyFailed = statuses.some((s) => s.last_sync_status === 'failed')
+  const anyPending = statuses.some((s) => s.last_sync_status === 'pending')
 
-  let statusIcon = Check;
-  let statusColor = "text-green-500";
-  let statusLabel = "All syncs healthy";
+  let statusIcon = Check
+  let statusColor = 'text-green-500'
+  let statusLabel = 'All syncs healthy'
 
   if (anyFailed) {
-    statusIcon = X;
-    statusColor = "text-red-500";
-    statusLabel = "Sync failed";
+    statusIcon = X
+    statusColor = 'text-red-500'
+    statusLabel = 'Sync failed'
   } else if (anyPending) {
-    statusIcon = Clock;
-    statusColor = "text-yellow-500";
-    statusLabel = "Sync pending";
+    statusIcon = Clock
+    statusColor = 'text-yellow-500'
+    statusLabel = 'Sync pending'
   }
 
-  const StatusIcon = statusIcon;
+  const StatusIcon = statusIcon
 
   return (
-    <div className={cn("flex items-center gap-2 text-sm", className)}>
-      <StatusIcon className={cn("h-4 w-4", statusColor)} />
+    <div className={cn('flex items-center gap-2 text-sm', className)}>
+      <StatusIcon className={cn('h-4 w-4', statusColor)} />
       <span className="text-muted-foreground">{statusLabel}</span>
       {statuses[0].last_sync_at && (
         <span className="text-xs text-muted-foreground">
@@ -288,5 +285,5 @@ export function CompactSyncStatus({ statuses, className }: CompactSyncStatusProp
         </span>
       )}
     </div>
-  );
+  )
 }
