@@ -1,13 +1,14 @@
-'use client';
+'use client'
 
-import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Loader2, KeyRound } from 'lucide-react';
-import { toast } from 'sonner';
+import { useEffect } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { Loader2, KeyRound } from 'lucide-react'
+import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/api/error-handler'
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -15,7 +16,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from '@/components/ui/dialog'
 import {
   Form,
   FormControl,
@@ -24,29 +25,27 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+} from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
+} from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
+import { Separator } from '@/components/ui/separator'
+import { Badge } from '@/components/ui/badge'
 
 import {
   useUpdateTemplateSource,
   invalidateTemplateSourcesCache,
-} from '@/lib/api/template-source-hooks';
-import { useSecretStoreCredentials } from '@/lib/api/secret-store-hooks';
-import {
-  SOURCE_TYPE_DISPLAY_NAMES,
-} from '@/lib/api/template-source-types';
-import type { TemplateSource, UpdateTemplateSourceRequest } from '@/lib/api/template-source-types';
+} from '@/lib/api/template-source-hooks'
+import { useSecretStoreCredentials } from '@/lib/api/secret-store-hooks'
+import { SOURCE_TYPE_DISPLAY_NAMES } from '@/lib/api/template-source-types'
+import type { TemplateSource, UpdateTemplateSourceRequest } from '@/lib/api/template-source-types'
 
 // Form schema
 const formSchema = z.object({
@@ -71,15 +70,15 @@ const formSchema = z.object({
   http_url: z.string().optional(),
   http_auth_type: z.enum(['none', 'bearer', 'basic', 'api_key']).optional(),
   http_timeout: z.number().optional(),
-});
+})
 
-type FormData = z.infer<typeof formSchema>;
+type FormData = z.infer<typeof formSchema>
 
 interface EditTemplateSourceDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  source: TemplateSource;
-  onSuccess?: () => void;
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  source: TemplateSource
+  onSuccess?: () => void
 }
 
 export function EditTemplateSourceDialog({
@@ -96,11 +95,11 @@ export function EditTemplateSourceDialog({
       auto_sync_on_scan: true,
       cache_ttl_minutes: 60,
     },
-  });
+  })
 
-  const { trigger: updateSource, isMutating } = useUpdateTemplateSource(source.id);
-  const { data: credentialsData } = useSecretStoreCredentials();
-  const credentials = credentialsData?.items ?? [];
+  const { trigger: updateSource, isMutating } = useUpdateTemplateSource(source.id)
+  const { data: credentialsData } = useSecretStoreCredentials()
+  const credentials = credentialsData?.items ?? []
 
   // Reset form when source changes
   useEffect(() => {
@@ -127,9 +126,9 @@ export function EditTemplateSourceDialog({
         http_url: source.http_config?.url || '',
         http_auth_type: source.http_config?.auth_type || 'none',
         http_timeout: source.http_config?.timeout || 30,
-      });
+      })
     }
-  }, [source, open, form]);
+  }, [source, open, form])
 
   const onSubmit = async (data: FormData) => {
     const request: UpdateTemplateSourceRequest = {
@@ -138,7 +137,7 @@ export function EditTemplateSourceDialog({
       auto_sync_on_scan: data.auto_sync_on_scan,
       cache_ttl_minutes: data.cache_ttl_minutes,
       credential_id: data.credential_id || undefined,
-    };
+    }
 
     // Add source-specific config based on source type
     if (source.source_type === 'git' && data.git_url) {
@@ -147,7 +146,7 @@ export function EditTemplateSourceDialog({
         branch: data.git_branch || 'main',
         path: data.git_path || '',
         auth_type: data.git_auth_type || 'none',
-      };
+      }
     } else if (source.source_type === 's3' && data.s3_bucket) {
       request.s3_config = {
         bucket: data.s3_bucket,
@@ -156,48 +155,42 @@ export function EditTemplateSourceDialog({
         auth_type: data.s3_auth_type || 'keys',
         role_arn: data.s3_role_arn,
         external_id: data.s3_external_id,
-      };
+      }
     } else if (source.source_type === 'http' && data.http_url) {
       request.http_config = {
         url: data.http_url,
         auth_type: data.http_auth_type || 'none',
         timeout: data.http_timeout,
-      };
+      }
     }
 
     try {
-      await updateSource(request);
-      toast.success(`Source "${data.name}" updated`);
-      await invalidateTemplateSourcesCache();
-      onOpenChange(false);
-      onSuccess?.();
+      await updateSource(request)
+      toast.success(`Source "${data.name}" updated`)
+      await invalidateTemplateSourcesCache()
+      onOpenChange(false)
+      onSuccess?.()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to update source');
+      toast.error(getErrorMessage(err, 'Failed to update source'))
     }
-  };
+  }
 
   const needsCredentials =
     (source.source_type === 'git' && form.watch('git_auth_type') !== 'none') ||
     source.source_type === 's3' ||
-    (source.source_type === 'http' && form.watch('http_auth_type') !== 'none');
+    (source.source_type === 'http' && form.watch('http_auth_type') !== 'none')
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Template Source</DialogTitle>
-          <DialogDescription>
-            Update the configuration for this template source.
-          </DialogDescription>
+          <DialogDescription>Update the configuration for this template source.</DialogDescription>
         </DialogHeader>
 
         <div className="flex items-center gap-2 mb-4">
-          <Badge variant="outline">
-            {SOURCE_TYPE_DISPLAY_NAMES[source.source_type]}
-          </Badge>
-          <Badge variant="secondary">
-            {source.template_type}
-          </Badge>
+          <Badge variant="outline">{SOURCE_TYPE_DISPLAY_NAMES[source.source_type]}</Badge>
+          <Badge variant="secondary">{source.template_type}</Badge>
         </div>
 
         <Form {...form}>
@@ -251,9 +244,7 @@ export function EditTemplateSourceDialog({
                         onChange={(e) => field.onChange(parseInt(e.target.value, 10))}
                       />
                     </FormControl>
-                    <FormDescription>
-                      How long to cache before checking for updates
-                    </FormDescription>
+                    <FormDescription>How long to cache before checking for updates</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -584,5 +575,5 @@ export function EditTemplateSourceDialog({
         </Form>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

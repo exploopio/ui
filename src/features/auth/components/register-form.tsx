@@ -17,6 +17,7 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2, UserPlus } from 'lucide-react'
 import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/api/error-handler'
 
 import { cn } from '@/lib/utils'
 import { isLocalAuthEnabled, isOidcAuthEnabled, isLocalAuthOnly } from '@/lib/env'
@@ -138,7 +139,8 @@ export function RegisterForm({
 
       if (result.success) {
         toast.success(
-          result.message || 'Registration successful! Please check your email to verify your account.'
+          result.message ||
+            'Registration successful! Please check your email to verify your account.'
         )
         router.push(redirectTo)
       } else {
@@ -174,7 +176,7 @@ export function RegisterForm({
     } catch (error) {
       setIsOidcLoading(false)
       console.error('OIDC registration redirect error:', error)
-      toast.error('Failed to initiate registration. Please try again.')
+      toast.error(getErrorMessage(error, 'Failed to initiate registration. Please try again.'))
     }
   }
 
@@ -190,33 +192,33 @@ export function RegisterForm({
         {/* Social Login Section - Show First for Better UX */}
         {showSocialLogin && (
           <>
-            <div className='grid grid-cols-3 gap-2'>
+            <div className="grid grid-cols-3 gap-2">
               {socialProviders.map((provider) => (
                 <Button
                   key={provider.id}
-                  variant='outline'
-                  type='button'
+                  variant="outline"
+                  type="button"
                   disabled={isLoading}
                   onClick={() => handleSocialLogin(provider.id)}
-                  className='relative'
+                  className="relative"
                 >
                   {loadingProvider === provider.id ? (
-                    <Loader2 className='h-4 w-4 animate-spin' />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <provider.icon className='h-4 w-4' />
+                    <provider.icon className="h-4 w-4" />
                   )}
-                  <span className='sr-only'>{provider.name}</span>
+                  <span className="sr-only">{provider.name}</span>
                 </Button>
               ))}
             </div>
 
             {localAuthEnabled && (
-              <div className='relative my-2'>
-                <div className='absolute inset-0 flex items-center'>
-                  <span className='w-full border-t' />
+              <div className="relative my-2">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
                 </div>
-                <div className='relative flex justify-center text-xs uppercase'>
-                  <span className='bg-background text-muted-foreground px-2'>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background text-muted-foreground px-2">
                     Or register with email
                   </span>
                 </div>
@@ -229,17 +231,17 @@ export function RegisterForm({
         {localAuthEnabled && (
           <>
             {/* Name Fields */}
-            <div className='grid grid-cols-2 gap-3'>
+            <div className="grid grid-cols-2 gap-3">
               <FormField
                 control={form.control}
-                name='firstName'
+                name="firstName"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>First Name</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder='John'
-                        autoComplete='given-name'
+                        placeholder="John"
+                        autoComplete="given-name"
                         disabled={isLoading}
                         {...field}
                       />
@@ -251,14 +253,14 @@ export function RegisterForm({
 
               <FormField
                 control={form.control}
-                name='lastName'
+                name="lastName"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Last Name</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder='Doe'
-                        autoComplete='family-name'
+                        placeholder="Doe"
+                        autoComplete="family-name"
                         disabled={isLoading}
                         {...field}
                       />
@@ -272,15 +274,15 @@ export function RegisterForm({
             {/* Email Field */}
             <FormField
               control={form.control}
-              name='email'
+              name="email"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder='name@example.com'
-                      type='email'
-                      autoComplete='email'
+                      placeholder="name@example.com"
+                      type="email"
+                      autoComplete="email"
                       disabled={isLoading}
                       {...field}
                     />
@@ -293,14 +295,14 @@ export function RegisterForm({
             {/* Password Field */}
             <FormField
               control={form.control}
-              name='password'
+              name="password"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Password</FormLabel>
                   <FormControl>
                     <PasswordInput
-                      placeholder='Create a password'
-                      autoComplete='new-password'
+                      placeholder="Create a password"
+                      autoComplete="new-password"
                       disabled={isLoading}
                       {...field}
                     />
@@ -313,14 +315,14 @@ export function RegisterForm({
             {/* Confirm Password Field */}
             <FormField
               control={form.control}
-              name='confirmPassword'
+              name="confirmPassword"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Confirm Password</FormLabel>
                   <FormControl>
                     <PasswordInput
-                      placeholder='Confirm your password'
-                      autoComplete='new-password'
+                      placeholder="Confirm your password"
+                      autoComplete="new-password"
                       disabled={isLoading}
                       {...field}
                     />
@@ -331,24 +333,24 @@ export function RegisterForm({
             />
 
             {/* Terms and Privacy Notice */}
-            <p className='text-muted-foreground text-xs'>
+            <p className="text-muted-foreground text-xs">
               By creating an account, you agree to our{' '}
-              <Link href='/terms' className='text-primary hover:underline'>
+              <Link href="/terms" className="text-primary hover:underline">
                 Terms of Service
               </Link>{' '}
               and{' '}
-              <Link href='/privacy' className='text-primary hover:underline'>
+              <Link href="/privacy" className="text-primary hover:underline">
                 Privacy Policy
               </Link>
               .
             </p>
 
             {/* Submit Button */}
-            <Button className='mt-2' disabled={isLoading} type='submit'>
+            <Button className="mt-2" disabled={isLoading} type="submit">
               {isPending ? (
-                <Loader2 className='h-4 w-4 animate-spin' />
+                <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <UserPlus className='h-4 w-4' />
+                <UserPlus className="h-4 w-4" />
               )}
               Create Account
             </Button>
@@ -358,27 +360,25 @@ export function RegisterForm({
         {/* OIDC Registration Section (for enterprise SSO) */}
         {oidcAuthEnabled && showOidcRegister && !localAuthOnly && (
           <>
-            <div className='relative my-2'>
-              <div className='absolute inset-0 flex items-center'>
-                <span className='w-full border-t' />
+            <div className="relative my-2">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
               </div>
-              <div className='relative flex justify-center text-xs uppercase'>
-                <span className='bg-background text-muted-foreground px-2'>
-                  Enterprise
-                </span>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background text-muted-foreground px-2">Enterprise</span>
               </div>
             </div>
 
             <Button
-              variant='outline'
-              type='button'
+              variant="outline"
+              type="button"
               disabled={isLoading}
               onClick={handleOidcRegister}
             >
               {isOidcLoading ? (
-                <Loader2 className='h-4 w-4 animate-spin' />
+                <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <UserPlus className='h-4 w-4' />
+                <UserPlus className="h-4 w-4" />
               )}
               Register with SSO
             </Button>
@@ -387,16 +387,11 @@ export function RegisterForm({
 
         {/* OIDC Only Mode (no local auth, no social) */}
         {!localAuthEnabled && !showSocialLogin && oidcAuthEnabled && (
-          <Button
-            className='mt-2'
-            disabled={isLoading}
-            type='button'
-            onClick={handleOidcRegister}
-          >
+          <Button className="mt-2" disabled={isLoading} type="button" onClick={handleOidcRegister}>
             {isOidcLoading ? (
-              <Loader2 className='h-4 w-4 animate-spin' />
+              <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <UserPlus className='h-4 w-4' />
+              <UserPlus className="h-4 w-4" />
             )}
             Register with SSO
           </Button>

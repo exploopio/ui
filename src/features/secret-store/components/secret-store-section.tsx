@@ -1,7 +1,7 @@
-'use client';
+'use client'
 
-import * as React from 'react';
-import { useState, useMemo, useCallback } from 'react';
+import * as React from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import {
   Plus,
   KeyRound,
@@ -19,27 +19,22 @@ import {
   Terminal,
   Clock,
   AlertTriangle,
-} from 'lucide-react';
-import { toast } from 'sonner';
+} from 'lucide-react'
+import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/api/error-handler'
 
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+} from '@/components/ui/dropdown-menu'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -47,7 +42,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from '@/components/ui/table'
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -56,17 +51,12 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+} from '@/components/ui/alert-dialog'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
-import { AddCredentialDialog } from './add-credential-dialog';
-import { EditCredentialDialog } from './edit-credential-dialog';
-import { Can, Permission } from '@/lib/permissions';
+import { AddCredentialDialog } from './add-credential-dialog'
+import { EditCredentialDialog } from './edit-credential-dialog'
+import { Can, Permission } from '@/lib/permissions'
 
 // Note: Using CredentialsWrite/CredentialsRead permissions for secret store.
 // The backend uses scans:credentials:* but the frontend maps to findings:credentials:*.
@@ -74,14 +64,14 @@ import {
   useSecretStoreCredentials,
   useDeleteSecretStoreCredential,
   invalidateSecretStoreCache,
-} from '@/lib/api/secret-store-hooks';
-import type { SecretStoreCredential, CredentialType } from '@/lib/api/secret-store-types';
+} from '@/lib/api/secret-store-hooks'
+import type { SecretStoreCredential, CredentialType } from '@/lib/api/secret-store-types'
 import {
   CREDENTIAL_TYPE_DISPLAY_NAMES,
   isCredentialExpired,
   isCredentialExpiringSoon,
   formatLastUsed,
-} from '@/lib/api/secret-store-types';
+} from '@/lib/api/secret-store-types'
 
 const CREDENTIAL_TYPE_ICONS: Record<CredentialType, React.ElementType> = {
   api_key: Key,
@@ -93,7 +83,7 @@ const CREDENTIAL_TYPE_ICONS: Record<CredentialType, React.ElementType> = {
   azure_service_principal: Cloud,
   github_app: GitBranch,
   gitlab_token: GitBranch,
-};
+}
 
 function CredentialStatusBadge({ credential }: { credential: SecretStoreCredential }) {
   if (isCredentialExpired(credential)) {
@@ -102,7 +92,7 @@ function CredentialStatusBadge({ credential }: { credential: SecretStoreCredenti
         <AlertCircle className="h-3 w-3" />
         Expired
       </Badge>
-    );
+    )
   }
   if (isCredentialExpiringSoon(credential)) {
     return (
@@ -110,80 +100,80 @@ function CredentialStatusBadge({ credential }: { credential: SecretStoreCredenti
         <AlertTriangle className="h-3 w-3" />
         Expiring Soon
       </Badge>
-    );
+    )
   }
   return (
     <Badge variant="outline" className="gap-1 border-green-500 text-green-600">
       Active
     </Badge>
-  );
+  )
 }
 
 export function SecretStoreSection() {
   // Dialog states
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [addDialogOpen, setAddDialogOpen] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 
   // Selected credential for dialogs
-  const [selectedCredential, setSelectedCredential] = useState<SecretStoreCredential | null>(null);
+  const [selectedCredential, setSelectedCredential] = useState<SecretStoreCredential | null>(null)
 
   // Filter states
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState('')
 
   // API data
-  const { data: credentialsData, error, isLoading, mutate } = useSecretStoreCredentials();
+  const { data: credentialsData, error, isLoading, mutate } = useSecretStoreCredentials()
   const credentials: SecretStoreCredential[] = React.useMemo(
     () => credentialsData?.items ?? [],
     [credentialsData?.items]
-  );
+  )
 
   // Delete mutation
   const { trigger: deleteCredential, isMutating: isDeleting } = useDeleteSecretStoreCredential(
     selectedCredential?.id || ''
-  );
+  )
 
   // Filter credentials
   const filteredCredentials = useMemo(() => {
-    if (!searchQuery) return credentials;
-    const query = searchQuery.toLowerCase();
+    if (!searchQuery) return credentials
+    const query = searchQuery.toLowerCase()
     return credentials.filter(
       (c) =>
         c.name.toLowerCase().includes(query) ||
         c.description?.toLowerCase().includes(query) ||
         c.credential_type.toLowerCase().includes(query)
-    );
-  }, [credentials, searchQuery]);
+    )
+  }, [credentials, searchQuery])
 
   // Handlers
   const handleRefresh = useCallback(async () => {
-    await invalidateSecretStoreCache();
-    await mutate();
-    toast.success('Credentials refreshed');
-  }, [mutate]);
+    await invalidateSecretStoreCache()
+    await mutate()
+    toast.success('Credentials refreshed')
+  }, [mutate])
 
   const handleEditCredential = useCallback((credential: SecretStoreCredential) => {
-    setSelectedCredential(credential);
-    setEditDialogOpen(true);
-  }, []);
+    setSelectedCredential(credential)
+    setEditDialogOpen(true)
+  }, [])
 
   const handleDeleteClick = useCallback((credential: SecretStoreCredential) => {
-    setSelectedCredential(credential);
-    setDeleteDialogOpen(true);
-  }, []);
+    setSelectedCredential(credential)
+    setDeleteDialogOpen(true)
+  }, [])
 
   const handleDeleteConfirm = useCallback(async () => {
-    if (!selectedCredential) return;
+    if (!selectedCredential) return
     try {
-      await deleteCredential();
-      toast.success(`Credential "${selectedCredential.name}" deleted`);
-      await invalidateSecretStoreCache();
-      setDeleteDialogOpen(false);
-      setSelectedCredential(null);
+      await deleteCredential()
+      toast.success(`Credential "${selectedCredential.name}" deleted`)
+      await invalidateSecretStoreCache()
+      setDeleteDialogOpen(false)
+      setSelectedCredential(null)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete credential');
+      toast.error(getErrorMessage(err, 'Failed to delete credential'))
     }
-  }, [selectedCredential, deleteCredential]);
+  }, [selectedCredential, deleteCredential])
 
   if (error) {
     return (
@@ -200,7 +190,7 @@ export function SecretStoreSection() {
           Retry
         </Button>
       </div>
-    );
+    )
   }
 
   return (
@@ -226,12 +216,7 @@ export function SecretStoreSection() {
                 )}
               </div>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleRefresh}
-                  disabled={isLoading}
-                >
+                <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={isLoading}>
                   {isLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
@@ -289,7 +274,7 @@ export function SecretStoreSection() {
                 </TableHeader>
                 <TableBody>
                   {filteredCredentials.map((credential) => {
-                    const Icon = CREDENTIAL_TYPE_ICONS[credential.credential_type] || Key;
+                    const Icon = CREDENTIAL_TYPE_ICONS[credential.credential_type] || Key
                     return (
                       <TableRow key={credential.id}>
                         <TableCell>
@@ -331,7 +316,9 @@ export function SecretStoreSection() {
                           </span>
                         </TableCell>
                         <TableCell>
-                          <Can permission={[Permission.CredentialsWrite, Permission.CredentialsWrite]}>
+                          <Can
+                            permission={[Permission.CredentialsWrite, Permission.CredentialsWrite]}
+                          >
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="icon">
@@ -340,7 +327,9 @@ export function SecretStoreSection() {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <Can permission={Permission.CredentialsWrite}>
-                                  <DropdownMenuItem onClick={() => handleEditCredential(credential)}>
+                                  <DropdownMenuItem
+                                    onClick={() => handleEditCredential(credential)}
+                                  >
                                     <Pencil className="mr-2 h-4 w-4" />
                                     Edit
                                   </DropdownMenuItem>
@@ -360,7 +349,7 @@ export function SecretStoreSection() {
                           </Can>
                         </TableCell>
                       </TableRow>
-                    );
+                    )
                   })}
                 </TableBody>
               </Table>
@@ -409,18 +398,14 @@ export function SecretStoreSection() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Credential</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete <strong>{selectedCredential?.name}</strong>?
-              Template sources using this credential will no longer be able to authenticate.
-              This action cannot be undone.
+              Are you sure you want to delete <strong>{selectedCredential?.name}</strong>? Template
+              sources using this credential will no longer be able to authenticate. This action
+              cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <Button
-              variant="destructive"
-              onClick={handleDeleteConfirm}
-              disabled={isDeleting}
-            >
+            <Button variant="destructive" onClick={handleDeleteConfirm} disabled={isDeleting}>
               {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Delete
             </Button>
@@ -428,5 +413,5 @@ export function SecretStoreSection() {
         </AlertDialogContent>
       </AlertDialog>
     </>
-  );
+  )
 }

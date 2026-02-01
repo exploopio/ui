@@ -17,6 +17,7 @@ import {
   Bot,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/api/error-handler'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -179,7 +180,7 @@ export function CapabilitiesSection() {
       setSelectedCapability(null)
       setForceDelete(false)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete capability')
+      toast.error(getErrorMessage(err, 'Failed to delete capability'))
     }
   }, [selectedCapability, deleteCapability, forceDelete, selectedUsageStats])
 

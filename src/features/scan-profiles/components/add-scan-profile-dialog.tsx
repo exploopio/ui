@@ -1,12 +1,13 @@
-'use client';
+'use client'
 
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/api/error-handler'
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -14,7 +15,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from '@/components/ui/dialog'
 import {
   Form,
   FormControl,
@@ -23,42 +24,38 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+} from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
+} from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
+import { Separator } from '@/components/ui/separator'
 
 import {
   createScanProfileSchema,
   type CreateScanProfileFormData,
   INTENSITY_OPTIONS,
   TOOL_OPTIONS,
-} from '../schemas/scan-profile-schema';
-import { useCreateScanProfile, invalidateScanProfilesCache } from '@/lib/api/scan-profile-hooks';
-import type { ToolConfig } from '@/lib/api/scan-profile-types';
+} from '../schemas/scan-profile-schema'
+import { useCreateScanProfile, invalidateScanProfilesCache } from '@/lib/api/scan-profile-hooks'
+import type { ToolConfig } from '@/lib/api/scan-profile-types'
 
 interface AddScanProfileDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSuccess?: () => void;
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onSuccess?: () => void
 }
 
-export function AddScanProfileDialog({
-  open,
-  onOpenChange,
-  onSuccess,
-}: AddScanProfileDialogProps) {
-  const [enabledTools, setEnabledTools] = useState<Record<string, boolean>>({});
+export function AddScanProfileDialog({ open, onOpenChange, onSuccess }: AddScanProfileDialogProps) {
+  const [enabledTools, setEnabledTools] = useState<Record<string, boolean>>({})
 
   const form = useForm<CreateScanProfileFormData>({
     resolver: zodResolver(createScanProfileSchema),
@@ -71,53 +68,53 @@ export function AddScanProfileDialog({
       is_default: false,
       tags: [],
     },
-  });
+  })
 
-  const { trigger: createProfile, isMutating } = useCreateScanProfile();
+  const { trigger: createProfile, isMutating } = useCreateScanProfile()
 
   const handleToolToggle = (toolValue: string, checked: boolean) => {
     setEnabledTools((prev) => ({
       ...prev,
       [toolValue]: checked,
-    }));
-  };
+    }))
+  }
 
   const onSubmit = async (data: CreateScanProfileFormData) => {
     // Build tools config from enabled tools
-    const tools_config: Record<string, ToolConfig> = {};
+    const tools_config: Record<string, ToolConfig> = {}
     Object.entries(enabledTools).forEach(([tool, enabled]) => {
       if (enabled) {
         tools_config[tool] = {
           enabled: true,
           severity: 'medium',
           timeout: 300,
-        };
+        }
       }
-    });
+    })
 
     try {
       await createProfile({
         ...data,
         tools_config,
-      });
-      toast.success(`Profile "${data.name}" created`);
-      await invalidateScanProfilesCache();
-      form.reset();
-      setEnabledTools({});
-      onOpenChange(false);
-      onSuccess?.();
+      })
+      toast.success(`Profile "${data.name}" created`)
+      await invalidateScanProfilesCache()
+      form.reset()
+      setEnabledTools({})
+      onOpenChange(false)
+      onSuccess?.()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to create profile');
+      toast.error(getErrorMessage(err, 'Failed to create profile'))
     }
-  };
+  }
 
   const handleClose = (isOpen: boolean) => {
     if (!isOpen) {
-      form.reset();
-      setEnabledTools({});
+      form.reset()
+      setEnabledTools({})
     }
-    onOpenChange(isOpen);
-  };
+    onOpenChange(isOpen)
+  }
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -272,10 +269,7 @@ export function AddScanProfileDialog({
                       }
                     />
                     <div className="grid gap-0.5 leading-none">
-                      <Label
-                        htmlFor={tool.value}
-                        className="cursor-pointer text-sm font-medium"
-                      >
+                      <Label htmlFor={tool.value} className="cursor-pointer text-sm font-medium">
                         {tool.label}
                       </Label>
                       <p className="text-xs text-muted-foreground">{tool.description}</p>
@@ -295,9 +289,7 @@ export function AddScanProfileDialog({
                 <FormItem className="flex items-center justify-between rounded-lg border p-3">
                   <div className="space-y-0.5">
                     <FormLabel>Set as Default</FormLabel>
-                    <FormDescription>
-                      Use this profile as the default for new scans
-                    </FormDescription>
+                    <FormDescription>Use this profile as the default for new scans</FormDescription>
                   </div>
                   <FormControl>
                     <Switch checked={field.value} onCheckedChange={field.onChange} />
@@ -324,5 +316,5 @@ export function AddScanProfileDialog({
         </Form>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

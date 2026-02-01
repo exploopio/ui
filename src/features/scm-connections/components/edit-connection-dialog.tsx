@@ -36,6 +36,7 @@ import {
   useTestIntegrationApi,
   invalidateSCMIntegrationsCache,
 } from '@/features/integrations'
+import { getErrorMessage } from '@/lib/api/error-handler'
 
 // Helper to get scmOrganization from either Integration or SCMConnection
 function getScmOrganization(connection: Integration | SCMConnection): string {
@@ -154,7 +155,7 @@ export function EditConnectionDialog({
       onOpenChange(false)
       onSuccess?.()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update connection')
+      toast.error(getErrorMessage(error, 'Failed to update connection'))
     }
   }
 

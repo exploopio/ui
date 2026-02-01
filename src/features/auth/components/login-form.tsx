@@ -17,6 +17,7 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2, LogIn } from 'lucide-react'
 import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/api/error-handler'
 
 import { cn } from '@/lib/utils'
 import { isLocalAuthEnabled, isOidcAuthEnabled, isLocalAuthOnly } from '@/lib/env'
@@ -200,7 +201,7 @@ export function LoginForm({
     } catch (error) {
       setIsOidcLoading(false)
       console.error('OIDC login redirect error:', error)
-      toast.error('Failed to initiate login. Please try again.')
+      toast.error(getErrorMessage(error, 'Failed to initiate login. Please try again.'))
     }
   }
 

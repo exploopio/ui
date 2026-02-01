@@ -1,14 +1,14 @@
-'use client';
+'use client'
 
-import * as React from 'react';
-import { useState, useCallback } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Loader2, Upload, FileCode2, AlertTriangle, CheckCircle } from 'lucide-react';
-import { toast } from 'sonner';
+import * as React from 'react'
+import { useState, useCallback } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { Loader2, Upload, FileCode2, AlertTriangle, CheckCircle } from 'lucide-react'
+import { toast } from 'sonner'
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -16,7 +16,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from '@/components/ui/dialog'
 import {
   Form,
   FormControl,
@@ -25,24 +25,24 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+} from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+} from '@/components/ui/select'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
 import {
   useCreateScannerTemplate,
   useValidateScannerTemplate,
   invalidateScannerTemplatesCache,
-} from '@/lib/api/scanner-template-hooks';
-import type { TemplateType, TemplateValidationResult } from '@/lib/api/scanner-template-types';
+} from '@/lib/api/scanner-template-hooks'
+import type { TemplateType, TemplateValidationResult } from '@/lib/api/scanner-template-types'
 import {
   TEMPLATE_TYPES,
   TEMPLATE_TYPE_DISPLAY_NAMES,
@@ -51,7 +51,8 @@ import {
   TEMPLATE_TYPE_MAX_SIZES,
   encodeTemplateContent,
   formatTemplateSize,
-} from '@/lib/api/scanner-template-types';
+} from '@/lib/api/scanner-template-types'
+import { getErrorMessage } from '@/lib/api/error-handler'
 
 // Form schema
 const formSchema = z.object({
@@ -60,14 +61,14 @@ const formSchema = z.object({
   description: z.string().max(1000, 'Description is too long').optional(),
   content: z.string().min(1, 'Template content is required'),
   tags: z.string().optional(),
-});
+})
 
-type FormValues = z.infer<typeof formSchema>;
+type FormValues = z.infer<typeof formSchema>
 
 interface AddScannerTemplateDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSuccess?: () => void;
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onSuccess?: () => void
 }
 
 export function AddScannerTemplateDialog({
@@ -75,12 +76,12 @@ export function AddScannerTemplateDialog({
   onOpenChange,
   onSuccess,
 }: AddScannerTemplateDialogProps) {
-  const [validationResult, setValidationResult] = useState<TemplateValidationResult | null>(null);
-  const [isValidating, setIsValidating] = useState(false);
-  const [fileName, setFileName] = useState<string | null>(null);
+  const [validationResult, setValidationResult] = useState<TemplateValidationResult | null>(null)
+  const [isValidating, setIsValidating] = useState(false)
+  const [fileName, setFileName] = useState<string | null>(null)
 
-  const { trigger: createTemplate, isMutating: isCreating } = useCreateScannerTemplate();
-  const { trigger: validateTemplate } = useValidateScannerTemplate();
+  const { trigger: createTemplate, isMutating: isCreating } = useCreateScannerTemplate()
+  const { trigger: validateTemplate } = useValidateScannerTemplate()
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -91,108 +92,129 @@ export function AddScannerTemplateDialog({
       content: '',
       tags: '',
     },
-  });
+  })
 
-  const selectedType = form.watch('template_type');
-  const content = form.watch('content');
+  const selectedType = form.watch('template_type')
+  const content = form.watch('content')
 
   // Reset form when dialog closes
   React.useEffect(() => {
     if (!open) {
-      form.reset();
-      setValidationResult(null);
-      setFileName(null);
+      form.reset()
+      setValidationResult(null)
+      setFileName(null)
     }
-  }, [open, form]);
+  }, [open, form])
 
   // Validate content
-  const validateContent = useCallback(async (content: string, type: TemplateType) => {
-    if (!content || !type) return;
+  const validateContent = useCallback(
+    async (content: string, type: TemplateType) => {
+      if (!content || !type) return
 
-    setIsValidating(true);
-    try {
-      const result = await validateTemplate({
-        template_type: type,
-        content: encodeTemplateContent(content),
-      });
-      setValidationResult(result ?? null);
-    } catch (_err) {
-      setValidationResult({
-        valid: false,
-        errors: [{ field: 'content', message: 'Failed to validate template', code: 'VALIDATION_ERROR' }],
-        rule_count: 0,
-      });
-    } finally {
-      setIsValidating(false);
-    }
-  }, [validateTemplate]);
+      setIsValidating(true)
+      try {
+        const result = await validateTemplate({
+          template_type: type,
+          content: encodeTemplateContent(content),
+        })
+        setValidationResult(result ?? null)
+      } catch (_err) {
+        setValidationResult({
+          valid: false,
+          errors: [
+            { field: 'content', message: 'Failed to validate template', code: 'VALIDATION_ERROR' },
+          ],
+          rule_count: 0,
+        })
+      } finally {
+        setIsValidating(false)
+      }
+    },
+    [validateTemplate]
+  )
 
   // Handle file upload
-  const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleFileUpload = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0]
+      if (!file) return
 
-    // Check file size
-    const type = selectedType as TemplateType;
-    if (type && file.size > TEMPLATE_TYPE_MAX_SIZES[type]) {
-      toast.error(`File too large. Maximum size for ${TEMPLATE_TYPE_DISPLAY_NAMES[type]} is ${formatTemplateSize(TEMPLATE_TYPE_MAX_SIZES[type])}`);
-      return;
-    }
-
-    // Read file content
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const text = event.target?.result as string;
-      form.setValue('content', text);
-      setFileName(file.name);
-
-      // Auto-fill name if empty
-      if (!form.getValues('name')) {
-        const baseName = file.name.replace(/\.(yaml|yml|toml)$/i, '');
-        form.setValue('name', baseName);
+      // Check file size
+      const type = selectedType as TemplateType
+      if (type && file.size > TEMPLATE_TYPE_MAX_SIZES[type]) {
+        toast.error(
+          `File too large. Maximum size for ${TEMPLATE_TYPE_DISPLAY_NAMES[type]} is ${formatTemplateSize(TEMPLATE_TYPE_MAX_SIZES[type])}`
+        )
+        return
       }
 
-      // Auto-validate
-      if (selectedType) {
-        await validateContent(text, selectedType);
+      // Read file content
+      const reader = new FileReader()
+      reader.onload = async (event) => {
+        const text = event.target?.result as string
+        form.setValue('content', text)
+        setFileName(file.name)
+
+        // Auto-fill name if empty
+        if (!form.getValues('name')) {
+          const baseName = file.name.replace(/\.(yaml|yml|toml)$/i, '')
+          form.setValue('name', baseName)
+        }
+
+        // Auto-validate
+        if (selectedType) {
+          await validateContent(text, selectedType)
+        }
       }
-    };
-    reader.readAsText(file);
-  }, [form, selectedType, validateContent]);
+      reader.readAsText(file)
+    },
+    [form, selectedType, validateContent]
+  )
 
   // Handle type change
-  const handleTypeChange = useCallback(async (type: TemplateType) => {
-    form.setValue('template_type', type);
-    if (content) {
-      await validateContent(content, type);
-    }
-  }, [form, content, validateContent]);
+  const handleTypeChange = useCallback(
+    async (type: TemplateType) => {
+      form.setValue('template_type', type)
+      if (content) {
+        await validateContent(content, type)
+      }
+    },
+    [form, content, validateContent]
+  )
 
   // Submit form
-  const onSubmit = useCallback(async (values: FormValues) => {
-    // Require validation before submit
-    if (!validationResult?.valid) {
-      toast.error('Please fix validation errors before uploading');
-      return;
-    }
+  const onSubmit = useCallback(
+    async (values: FormValues) => {
+      // Require validation before submit
+      if (!validationResult?.valid) {
+        toast.error('Please fix validation errors before uploading')
+        return
+      }
 
-    try {
-      await createTemplate({
-        name: values.name,
-        template_type: values.template_type,
-        description: values.description || undefined,
-        content: encodeTemplateContent(values.content),
-        tags: values.tags ? values.tags.split(',').map(t => t.trim()).filter(Boolean) : undefined,
-      });
+      try {
+        await createTemplate({
+          name: values.name,
+          template_type: values.template_type,
+          description: values.description || undefined,
+          content: encodeTemplateContent(values.content),
+          tags: values.tags
+            ? values.tags
+                .split(',')
+                .map((t) => t.trim())
+                .filter(Boolean)
+            : undefined,
+        })
 
-      toast.success(`Template "${values.name}" created successfully`);
-      await invalidateScannerTemplatesCache();
-      onOpenChange(false);
-      onSuccess?.();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to create template');
-    }
-  }, [createTemplate, validationResult, onOpenChange, onSuccess]);
+        toast.success(`Template "${values.name}" created successfully`)
+        await invalidateScannerTemplatesCache()
+        onOpenChange(false)
+        onSuccess?.()
+      } catch (err) {
+        toast.error(getErrorMessage(err, 'Failed to create template'))
+      }
+    },
+    [createTemplate, validationResult, onOpenChange, onSuccess]
+  )
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -290,7 +312,11 @@ export function AddScannerTemplateDialog({
                       <div className="flex items-center gap-2">
                         <Input
                           type="file"
-                          accept={selectedType ? TEMPLATE_TYPE_EXTENSIONS[selectedType] : '.yaml,.yml,.toml'}
+                          accept={
+                            selectedType
+                              ? TEMPLATE_TYPE_EXTENSIONS[selectedType]
+                              : '.yaml,.yml,.toml'
+                          }
                           onChange={handleFileUpload}
                           className="hidden"
                           id="template-file"
@@ -311,7 +337,8 @@ export function AddScannerTemplateDialog({
                       </div>
                       {selectedType && (
                         <FormDescription>
-                          Accepted: {TEMPLATE_TYPE_EXTENSIONS[selectedType]} (max {formatTemplateSize(TEMPLATE_TYPE_MAX_SIZES[selectedType])})
+                          Accepted: {TEMPLATE_TYPE_EXTENSIONS[selectedType]} (max{' '}
+                          {formatTemplateSize(TEMPLATE_TYPE_MAX_SIZES[selectedType])})
                         </FormDescription>
                       )}
                       {field.value && (
@@ -321,9 +348,9 @@ export function AddScannerTemplateDialog({
                           rows={6}
                           value={field.value}
                           onChange={(e) => {
-                            field.onChange(e.target.value);
-                            setFileName(null);
-                            setValidationResult(null);
+                            field.onChange(e.target.value)
+                            setFileName(null)
+                            setValidationResult(null)
                           }}
                         />
                       )}
@@ -359,13 +386,15 @@ export function AddScannerTemplateDialog({
               </Alert>
             )}
 
-            {validationResult && !isValidating && (
-              validationResult.valid ? (
+            {validationResult &&
+              !isValidating &&
+              (validationResult.valid ? (
                 <Alert className="border-green-500/30 bg-green-500/10">
                   <CheckCircle className="h-4 w-4 text-green-500" />
                   <AlertTitle className="text-green-500">Valid Template</AlertTitle>
                   <AlertDescription>
-                    Found {validationResult.rule_count} {validationResult.rule_count === 1 ? 'rule' : 'rules'}
+                    Found {validationResult.rule_count}{' '}
+                    {validationResult.rule_count === 1 ? 'rule' : 'rules'}
                   </AlertDescription>
                 </Alert>
               ) : (
@@ -375,13 +404,14 @@ export function AddScannerTemplateDialog({
                   <AlertDescription>
                     <ul className="mt-2 list-inside list-disc">
                       {validationResult.errors?.map((error, i) => (
-                        <li key={i}>{error.field}: {error.message}</li>
+                        <li key={i}>
+                          {error.field}: {error.message}
+                        </li>
                       ))}
                     </ul>
                   </AlertDescription>
                 </Alert>
-              )
-            )}
+              ))}
 
             <DialogFooter>
               <Button
@@ -392,10 +422,7 @@ export function AddScannerTemplateDialog({
               >
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                disabled={isCreating || !validationResult?.valid}
-              >
+              <Button type="submit" disabled={isCreating || !validationResult?.valid}>
                 {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Upload Template
               </Button>
@@ -404,5 +431,5 @@ export function AddScannerTemplateDialog({
         </Form>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

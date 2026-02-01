@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/api/error-handler'
 import {
   Sheet,
   SheetContent,
@@ -224,6 +225,7 @@ export function FindingDetailDrawer({
       setSeverity(null)
       setAssignee(undefined)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Only reset on finding.id change, not other fields
   }, [finding?.id])
 
   // Keyboard shortcuts handler
@@ -329,7 +331,7 @@ export function FindingDetailDrawer({
     } catch (error) {
       // Revert on error
       setStatus(previousStatus)
-      toast.error('Failed to update status')
+      toast.error(getErrorMessage(error, 'Failed to update status'))
       console.error('Status update error:', error)
     }
   }
@@ -363,7 +365,7 @@ export function FindingDetailDrawer({
     } catch (error) {
       // Revert on error
       setSeverity(previousSeverity)
-      toast.error('Failed to update severity')
+      toast.error(getErrorMessage(error, 'Failed to update severity'))
       console.error('Severity update error:', error)
     }
   }
@@ -414,7 +416,7 @@ export function FindingDetailDrawer({
     } catch (error) {
       // Revert on error
       setAssignee(previousAssignee)
-      toast.error(user ? 'Failed to assign' : 'Failed to unassign')
+      toast.error(getErrorMessage(error, user ? 'Failed to assign' : 'Failed to unassign'))
       console.error('Assignee update error:', error)
     }
   }

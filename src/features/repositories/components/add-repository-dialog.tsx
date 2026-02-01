@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { GitBranch, Plus, Upload, Loader2, X, Link2, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/api/error-handler'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -151,7 +152,7 @@ export function AddRepositoryDialog({ open, onOpenChange, onSuccess }: AddReposi
       onOpenChange(false)
       onSuccess?.()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to add repository')
+      toast.error(getErrorMessage(error, 'Failed to add repository'))
     }
   }
 
@@ -212,7 +213,7 @@ export function AddRepositoryDialog({ open, onOpenChange, onSuccess }: AddReposi
       handleClose()
       onSuccess?.()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to import repositories')
+      toast.error(getErrorMessage(error, 'Failed to import repositories'))
     } finally {
       setIsImporting(false)
     }

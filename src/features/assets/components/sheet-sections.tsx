@@ -22,6 +22,7 @@ import { Input } from '@/components/ui/input'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/api/error-handler'
 import type { AssetType } from '../types/asset.types'
 import { ASSET_TYPE_LABELS } from '../types/asset.types'
 
@@ -349,8 +350,8 @@ export function SecretValueField({
       setIsCopied(true)
       toast.success('Secret copied to clipboard')
       setTimeout(() => setIsCopied(false), 2000)
-    } catch {
-      toast.error('Failed to copy to clipboard')
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to copy to clipboard'))
     }
   }
 

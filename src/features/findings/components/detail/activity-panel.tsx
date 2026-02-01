@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { memo, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { MarkdownPreview } from '@/components/ui/markdown-editor'
@@ -67,7 +66,6 @@ const ACTIVITY_ICONS: Record<ActivityType, React.ReactNode> = {
 export function ActivityPanel({
   activities,
   onAddComment,
-  total,
   hasMore,
   isLoadingMore,
   onLoadMore,

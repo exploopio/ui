@@ -1,13 +1,14 @@
-'use client';
+'use client'
 
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Loader2, GitBranch, Database, Globe, KeyRound } from 'lucide-react';
-import { toast } from 'sonner';
+import { useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { Loader2, GitBranch, Database, Globe, KeyRound } from 'lucide-react'
+import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/api/error-handler'
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -15,7 +16,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from '@/components/ui/dialog'
 import {
   Form,
   FormControl,
@@ -24,30 +25,30 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+} from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+} from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
+import { Separator } from '@/components/ui/separator'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 import {
   useCreateTemplateSource,
   invalidateTemplateSourcesCache,
-} from '@/lib/api/template-source-hooks';
-import { useSecretStoreCredentials } from '@/lib/api/secret-store-hooks';
+} from '@/lib/api/template-source-hooks'
+import { useSecretStoreCredentials } from '@/lib/api/secret-store-hooks'
 import {
   SOURCE_TYPE_DISPLAY_NAMES,
   SOURCE_TYPE_DESCRIPTIONS,
-} from '@/lib/api/template-source-types';
-import type { SourceType, CreateTemplateSourceRequest } from '@/lib/api/template-source-types';
+} from '@/lib/api/template-source-types'
+import type { SourceType, CreateTemplateSourceRequest } from '@/lib/api/template-source-types'
 
 // Form schema
 const formSchema = z.object({
@@ -74,34 +75,34 @@ const formSchema = z.object({
   http_url: z.string().optional(),
   http_auth_type: z.enum(['none', 'bearer', 'basic', 'api_key']).optional(),
   http_timeout: z.number().optional(),
-});
+})
 
-type FormData = z.infer<typeof formSchema>;
+type FormData = z.infer<typeof formSchema>
 
 interface AddTemplateSourceDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSuccess?: () => void;
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onSuccess?: () => void
 }
 
 const SOURCE_TYPE_ICONS: Record<SourceType, React.ElementType> = {
   git: GitBranch,
   s3: Database,
   http: Globe,
-};
+}
 
 const TEMPLATE_TYPE_OPTIONS = [
   { value: 'nuclei', label: 'Nuclei', description: 'YAML vulnerability templates' },
   { value: 'semgrep', label: 'Semgrep', description: 'YAML SAST rules' },
   { value: 'gitleaks', label: 'Gitleaks', description: 'TOML secret patterns' },
-];
+]
 
 export function AddTemplateSourceDialog({
   open,
   onOpenChange,
   onSuccess,
 }: AddTemplateSourceDialogProps) {
-  const [sourceType, setSourceType] = useState<SourceType>('git');
+  const [sourceType, setSourceType] = useState<SourceType>('git')
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -119,11 +120,11 @@ export function AddTemplateSourceDialog({
       http_auth_type: 'none',
       http_timeout: 30,
     },
-  });
+  })
 
-  const { trigger: createSource, isMutating } = useCreateTemplateSource();
-  const { data: credentialsData } = useSecretStoreCredentials();
-  const credentials = credentialsData?.items ?? [];
+  const { trigger: createSource, isMutating } = useCreateTemplateSource()
+  const { data: credentialsData } = useSecretStoreCredentials()
+  const credentials = credentialsData?.items ?? []
 
   const onSubmit = async (data: FormData) => {
     const request: CreateTemplateSourceRequest = {
@@ -134,7 +135,7 @@ export function AddTemplateSourceDialog({
       auto_sync_on_scan: data.auto_sync_on_scan,
       cache_ttl_minutes: data.cache_ttl_minutes,
       credential_id: data.credential_id || undefined,
-    };
+    }
 
     // Add source-specific config
     if (data.source_type === 'git' && data.git_url) {
@@ -143,7 +144,7 @@ export function AddTemplateSourceDialog({
         branch: data.git_branch || 'main',
         path: data.git_path || '',
         auth_type: data.git_auth_type || 'none',
-      };
+      }
     } else if (data.source_type === 's3' && data.s3_bucket) {
       request.s3_config = {
         bucket: data.s3_bucket,
@@ -152,40 +153,40 @@ export function AddTemplateSourceDialog({
         auth_type: data.s3_auth_type || 'keys',
         role_arn: data.s3_role_arn,
         external_id: data.s3_external_id,
-      };
+      }
     } else if (data.source_type === 'http' && data.http_url) {
       request.http_config = {
         url: data.http_url,
         auth_type: data.http_auth_type || 'none',
         timeout: data.http_timeout,
-      };
+      }
     }
 
     try {
-      await createSource(request);
-      toast.success(`Source "${data.name}" created`);
-      await invalidateTemplateSourcesCache();
-      form.reset();
-      setSourceType('git');
-      onOpenChange(false);
-      onSuccess?.();
+      await createSource(request)
+      toast.success(`Source "${data.name}" created`)
+      await invalidateTemplateSourcesCache()
+      form.reset()
+      setSourceType('git')
+      onOpenChange(false)
+      onSuccess?.()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to create source');
+      toast.error(getErrorMessage(err, 'Failed to create source'))
     }
-  };
+  }
 
   const handleClose = (isOpen: boolean) => {
     if (!isOpen) {
-      form.reset();
-      setSourceType('git');
+      form.reset()
+      setSourceType('git')
     }
-    onOpenChange(isOpen);
-  };
+    onOpenChange(isOpen)
+  }
 
   const handleSourceTypeChange = (value: SourceType) => {
-    setSourceType(value);
-    form.setValue('source_type', value);
-  };
+    setSourceType(value)
+    form.setValue('source_type', value)
+  }
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -294,24 +295,25 @@ export function AddTemplateSourceDialog({
             {/* Source Type Selection */}
             <div className="space-y-4">
               <h4 className="text-sm font-medium">Source Type</h4>
-              <Tabs value={sourceType} onValueChange={(v) => handleSourceTypeChange(v as SourceType)}>
+              <Tabs
+                value={sourceType}
+                onValueChange={(v) => handleSourceTypeChange(v as SourceType)}
+              >
                 <TabsList className="grid w-full grid-cols-3">
                   {(['git', 's3', 'http'] as SourceType[]).map((type) => {
-                    const Icon = SOURCE_TYPE_ICONS[type];
+                    const Icon = SOURCE_TYPE_ICONS[type]
                     return (
                       <TabsTrigger key={type} value={type} className="gap-2">
                         <Icon className="h-4 w-4" />
                         {SOURCE_TYPE_DISPLAY_NAMES[type]}
                       </TabsTrigger>
-                    );
+                    )
                   })}
                 </TabsList>
 
                 {/* Git Config */}
                 <TabsContent value="git" className="space-y-4 pt-4">
-                  <p className="text-sm text-muted-foreground">
-                    {SOURCE_TYPE_DESCRIPTIONS.git}
-                  </p>
+                  <p className="text-sm text-muted-foreground">{SOURCE_TYPE_DESCRIPTIONS.git}</p>
                   <FormField
                     control={form.control}
                     name="git_url"
@@ -348,9 +350,7 @@ export function AddTemplateSourceDialog({
                           <FormControl>
                             <Input placeholder="templates/nuclei/" {...field} />
                           </FormControl>
-                          <FormDescription>
-                            Subdirectory within the repo
-                          </FormDescription>
+                          <FormDescription>Subdirectory within the repo</FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -383,9 +383,7 @@ export function AddTemplateSourceDialog({
 
                 {/* S3 Config */}
                 <TabsContent value="s3" className="space-y-4 pt-4">
-                  <p className="text-sm text-muted-foreground">
-                    {SOURCE_TYPE_DESCRIPTIONS.s3}
-                  </p>
+                  <p className="text-sm text-muted-foreground">{SOURCE_TYPE_DESCRIPTIONS.s3}</p>
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
@@ -423,9 +421,7 @@ export function AddTemplateSourceDialog({
                         <FormControl>
                           <Input placeholder="templates/nuclei/" {...field} />
                         </FormControl>
-                        <FormDescription>
-                          Object key prefix to filter templates
-                        </FormDescription>
+                        <FormDescription>Object key prefix to filter templates</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -485,9 +481,7 @@ export function AddTemplateSourceDialog({
 
                 {/* HTTP Config */}
                 <TabsContent value="http" className="space-y-4 pt-4">
-                  <p className="text-sm text-muted-foreground">
-                    {SOURCE_TYPE_DESCRIPTIONS.http}
-                  </p>
+                  <p className="text-sm text-muted-foreground">{SOURCE_TYPE_DESCRIPTIONS.http}</p>
                   <FormField
                     control={form.control}
                     name="http_url"
@@ -553,8 +547,8 @@ export function AddTemplateSourceDialog({
 
             {/* Credentials */}
             {(sourceType === 'git' && form.watch('git_auth_type') !== 'none') ||
-             (sourceType === 's3') ||
-             (sourceType === 'http' && form.watch('http_auth_type') !== 'none') ? (
+            sourceType === 's3' ||
+            (sourceType === 'http' && form.watch('http_auth_type') !== 'none') ? (
               <div className="space-y-4">
                 <h4 className="text-sm font-medium flex items-center gap-2">
                   <KeyRound className="h-4 w-4" />
@@ -638,5 +632,5 @@ export function AddTemplateSourceDialog({
         </Form>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

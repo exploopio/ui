@@ -63,7 +63,6 @@ import type {
   ApiFinding,
   FindingApiFilters,
   Severity as ApiSeverity,
-  FindingStatus as ApiFindingStatus,
 } from '@/features/findings/api/finding-api.types'
 import type { Finding, FindingStatus, FindingUser } from '@/features/findings'
 import type { Severity } from '@/features/shared/types'

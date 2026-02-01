@@ -21,6 +21,7 @@ import {
   Ban,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/api/error-handler'
 
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -284,7 +285,7 @@ export function AgentsSection({ typeFilter }: AgentsSectionProps) {
       setDeleteDialogOpen(false)
       setSelectedAgent(null)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete agent')
+      toast.error(getErrorMessage(err, 'Failed to delete agent'))
     }
   }, [selectedAgent, deleteAgentTrigger])
 
@@ -309,7 +310,7 @@ export function AgentsSection({ typeFilter }: AgentsSectionProps) {
       setBulkDeleteDialogOpen(false)
       setRowSelection({})
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete agents')
+      toast.error(getErrorMessage(err, 'Failed to delete agents'))
     }
   }, [rowSelection, bulkDeleteAgentsTrigger])
 
@@ -326,7 +327,7 @@ export function AgentsSection({ typeFilter }: AgentsSectionProps) {
           setSelectedAgent(updatedAgent)
         }
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Failed to activate agent')
+        toast.error(getErrorMessage(err, 'Failed to activate agent'))
       }
     },
     [activateAgentTrigger, mutate]
@@ -345,7 +346,7 @@ export function AgentsSection({ typeFilter }: AgentsSectionProps) {
           setSelectedAgent(updatedAgent)
         }
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Failed to deactivate agent')
+        toast.error(getErrorMessage(err, 'Failed to deactivate agent'))
       }
     },
     [deactivateAgentTrigger, mutate]
@@ -373,7 +374,7 @@ export function AgentsSection({ typeFilter }: AgentsSectionProps) {
         setSelectedAgent(updatedAgent)
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to revoke agent')
+      toast.error(getErrorMessage(err, 'Failed to revoke agent'))
     } finally {
       setIsRevoking(false)
     }

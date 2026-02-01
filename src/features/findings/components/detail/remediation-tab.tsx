@@ -72,7 +72,8 @@ export function RemediationTab({ remediation, finding }: RemediationTabProps) {
   const recommendation = apiRemed?.recommendation || remediation.description
 
   // Build repository code URL for "View in Repository" link
-  const repositoryCodeUrl = useMemo(() => {
+  // TODO: Use this URL in the UI to link to the repository
+  const _repositoryCodeUrl = useMemo(() => {
     // Use repositoryUrl directly, or fall back to asset URL
     const repoUrl = finding?.repositoryUrl || finding?.assets?.[0]?.url
     return buildRepositoryCodeUrl({

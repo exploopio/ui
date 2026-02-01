@@ -1,11 +1,12 @@
-'use client';
+'use client'
 
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Loader2, Copy } from 'lucide-react';
-import { toast } from 'sonner';
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { Loader2, Copy } from 'lucide-react'
+import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/api/error-handler'
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -13,7 +14,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from '@/components/ui/dialog'
 import {
   Form,
   FormControl,
@@ -21,21 +22,21 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
+} from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
 
 import {
   cloneScanProfileSchema,
   type CloneScanProfileFormData,
-} from '../schemas/scan-profile-schema';
-import { useCloneScanProfile, invalidateScanProfilesCache } from '@/lib/api/scan-profile-hooks';
-import type { ScanProfile } from '@/lib/api/scan-profile-types';
+} from '../schemas/scan-profile-schema'
+import { useCloneScanProfile, invalidateScanProfilesCache } from '@/lib/api/scan-profile-hooks'
+import type { ScanProfile } from '@/lib/api/scan-profile-types'
 
 interface CloneScanProfileDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  profile: ScanProfile;
-  onSuccess?: () => void;
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  profile: ScanProfile
+  onSuccess?: () => void
 }
 
 export function CloneScanProfileDialog({
@@ -49,29 +50,29 @@ export function CloneScanProfileDialog({
     defaultValues: {
       new_name: `${profile.name} (Copy)`,
     },
-  });
+  })
 
-  const { trigger: cloneProfile, isMutating } = useCloneScanProfile(profile.id);
+  const { trigger: cloneProfile, isMutating } = useCloneScanProfile(profile.id)
 
   const onSubmit = async (data: CloneScanProfileFormData) => {
     try {
-      await cloneProfile(data);
-      toast.success(`Profile cloned as "${data.new_name}"`);
-      await invalidateScanProfilesCache();
-      form.reset();
-      onOpenChange(false);
-      onSuccess?.();
+      await cloneProfile(data)
+      toast.success(`Profile cloned as "${data.new_name}"`)
+      await invalidateScanProfilesCache()
+      form.reset()
+      onOpenChange(false)
+      onSuccess?.()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to clone profile');
+      toast.error(getErrorMessage(err, 'Failed to clone profile'))
     }
-  };
+  }
 
   const handleClose = (isOpen: boolean) => {
     if (!isOpen) {
-      form.reset({ new_name: `${profile.name} (Copy)` });
+      form.reset({ new_name: `${profile.name} (Copy)` })
     }
-    onOpenChange(isOpen);
-  };
+    onOpenChange(isOpen)
+  }
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -120,5 +121,5 @@ export function CloneScanProfileDialog({
         </Form>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

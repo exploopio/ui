@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/api/error-handler'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -134,7 +135,7 @@ export function EditCapabilityDialog({
       onOpenChange(false)
       onSuccess?.()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to update capability')
+      toast.error(getErrorMessage(err, 'Failed to update capability'))
     } finally {
       setIsSubmitting(false)
     }

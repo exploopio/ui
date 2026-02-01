@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/api/error-handler'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -131,7 +132,7 @@ export function CreateCapabilityDialog({
       onOpenChange(false)
       onSuccess?.()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to create capability')
+      toast.error(getErrorMessage(err, 'Failed to create capability'))
     } finally {
       setIsSubmitting(false)
     }

@@ -1,13 +1,13 @@
-'use client';
+'use client'
 
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Loader2, Eye, EyeOff, GitBranch, Cloud, Lock, Key, Terminal } from 'lucide-react';
-import { toast } from 'sonner';
+import { useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { Loader2, Eye, EyeOff, GitBranch, Cloud, Lock, Key, Terminal } from 'lucide-react'
+import { toast } from 'sonner'
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -15,7 +15,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from '@/components/ui/dialog'
 import {
   Form,
   FormControl,
@@ -24,22 +24,26 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+} from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Separator } from '@/components/ui/separator'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 import {
   useCreateSecretStoreCredential,
   invalidateSecretStoreCache,
-} from '@/lib/api/secret-store-hooks';
+} from '@/lib/api/secret-store-hooks'
 import {
   CREDENTIAL_TYPE_DISPLAY_NAMES,
   CREDENTIAL_TYPE_DESCRIPTIONS,
   CREDENTIAL_TYPES,
-} from '@/lib/api/secret-store-types';
-import type { CredentialType, CreateSecretStoreCredentialRequest } from '@/lib/api/secret-store-types';
+} from '@/lib/api/secret-store-types'
+import type {
+  CredentialType,
+  CreateSecretStoreCredentialRequest,
+} from '@/lib/api/secret-store-types'
+import { getErrorMessage } from '@/lib/api/error-handler'
 
 // Form schema - matches backend credential types
 const formSchema = z.object({
@@ -72,14 +76,14 @@ const formSchema = z.object({
   github_private_key: z.string().optional(),
   // GitLab Token
   gitlab_token: z.string().optional(),
-});
+})
 
-type FormData = z.infer<typeof formSchema>;
+type FormData = z.infer<typeof formSchema>
 
 interface AddCredentialDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSuccess?: () => void;
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onSuccess?: () => void
 }
 
 const CREDENTIAL_TYPE_ICONS: Record<CredentialType, React.ElementType> = {
@@ -92,17 +96,11 @@ const CREDENTIAL_TYPE_ICONS: Record<CredentialType, React.ElementType> = {
   azure_service_principal: Cloud,
   github_app: GitBranch,
   gitlab_token: GitBranch,
-};
+}
 
-
-
-export function AddCredentialDialog({
-  open,
-  onOpenChange,
-  onSuccess,
-}: AddCredentialDialogProps) {
-  const [credentialType, setCredentialType] = useState<CredentialType>('bearer_token');
-  const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
+export function AddCredentialDialog({ open, onOpenChange, onSuccess }: AddCredentialDialogProps) {
+  const [credentialType, setCredentialType] = useState<CredentialType>('bearer_token')
+  const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({})
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -111,13 +109,13 @@ export function AddCredentialDialog({
       description: '',
       credential_type: 'bearer_token',
     },
-  });
+  })
 
-  const { trigger: createCredential, isMutating } = useCreateSecretStoreCredential();
+  const { trigger: createCredential, isMutating } = useCreateSecretStoreCredential()
 
   const toggleShowSecret = (field: string) => {
-    setShowSecrets((prev) => ({ ...prev, [field]: !prev[field] }));
-  };
+    setShowSecrets((prev) => ({ ...prev, [field]: !prev[field] }))
+  }
 
   const onSubmit = async (data: FormData) => {
     // Build request with flat credential data structure (matching backend)
@@ -126,83 +124,83 @@ export function AddCredentialDialog({
       description: data.description || undefined,
       credential_type: data.credential_type,
       expires_at: data.expires_at || undefined,
-    };
+    }
 
     // Add credential-specific data as flat fields
     switch (data.credential_type) {
       case 'api_key':
-        request.api_key = { key: data.api_key_value || '' };
-        break;
+        request.api_key = { key: data.api_key_value || '' }
+        break
       case 'basic_auth':
         request.basic_auth = {
           username: data.basic_username || '',
           password: data.basic_password || '',
-        };
-        break;
+        }
+        break
       case 'bearer_token':
-        request.bearer_token = { token: data.bearer_token || '' };
-        break;
+        request.bearer_token = { token: data.bearer_token || '' }
+        break
       case 'ssh_key':
         request.ssh_key = {
           private_key: data.ssh_private_key || '',
           passphrase: data.ssh_passphrase || undefined,
-        };
-        break;
+        }
+        break
       case 'aws_role':
         request.aws_role = {
           role_arn: data.aws_role_arn || '',
           external_id: data.aws_external_id || undefined,
-        };
-        break;
+        }
+        break
       case 'gcp_service_account':
-        request.gcp_service_account = { json_key: data.gcp_json_key || '' };
-        break;
+        request.gcp_service_account = { json_key: data.gcp_json_key || '' }
+        break
       case 'azure_service_principal':
         request.azure_service_principal = {
           tenant_id: data.azure_tenant_id || '',
           client_id: data.azure_client_id || '',
           client_secret: data.azure_client_secret || '',
-        };
-        break;
+        }
+        break
       case 'github_app':
         request.github_app = {
           app_id: data.github_app_id || '',
           installation_id: data.github_installation_id || '',
           private_key: data.github_private_key || '',
-        };
-        break;
+        }
+        break
       case 'gitlab_token':
-        request.gitlab_token = { token: data.gitlab_token || '' };
-        break;
+        request.gitlab_token = { token: data.gitlab_token || '' }
+        break
     }
 
     try {
-      await createCredential(request);
-      toast.success(`Credential "${data.name}" created`);
-      await invalidateSecretStoreCache();
-      form.reset();
-      setCredentialType('bearer_token');
-      setShowSecrets({});
-      onOpenChange(false);
-      onSuccess?.();
+      await createCredential(request)
+      toast.success(`Credential "${data.name}" created`)
+      await invalidateSecretStoreCache()
+      form.reset()
+      setCredentialType('bearer_token')
+      setShowSecrets({})
+      onOpenChange(false)
+      onSuccess?.()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to create credential');
+      toast.error(getErrorMessage(err, 'Failed to create credential'))
     }
-  };
+  }
 
   const handleClose = (isOpen: boolean) => {
     if (!isOpen) {
-      form.reset();
-      setCredentialType('bearer_token');
-      setShowSecrets({});
+      form.reset()
+      setCredentialType('bearer_token')
+      setShowSecrets({})
     }
-    onOpenChange(isOpen);
-  };
+    onOpenChange(isOpen)
+  }
 
   const handleCredentialTypeChange = (value: CredentialType) => {
-    setCredentialType(value);
-    form.setValue('credential_type', value);
-  };
+    setCredentialType(value)
+    form.setValue('credential_type', value)
+  }
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -273,16 +271,19 @@ export function AddCredentialDialog({
             {/* Credential Type Selection */}
             <div className="space-y-4">
               <h4 className="text-sm font-medium">Credential Type</h4>
-              <Tabs value={credentialType} onValueChange={(v) => handleCredentialTypeChange(v as CredentialType)}>
+              <Tabs
+                value={credentialType}
+                onValueChange={(v) => handleCredentialTypeChange(v as CredentialType)}
+              >
                 <TabsList className="grid w-full grid-cols-5">
                   {CREDENTIAL_TYPES.map((type) => {
-                    const Icon = CREDENTIAL_TYPE_ICONS[type];
+                    const Icon = CREDENTIAL_TYPE_ICONS[type]
                     return (
                       <TabsTrigger key={type} value={type} className="text-xs">
                         <Icon className="mr-1 h-3 w-3" />
                         {CREDENTIAL_TYPE_DISPLAY_NAMES[type].split(' ')[0]}
                       </TabsTrigger>
-                    );
+                    )
                   })}
                 </TabsList>
 
@@ -361,15 +362,9 @@ export function AddCredentialDialog({
                       <FormItem>
                         <FormLabel>Passphrase (optional)</FormLabel>
                         <FormControl>
-                          <Input
-                            type="password"
-                            placeholder="Key passphrase"
-                            {...field}
-                          />
+                          <Input type="password" placeholder="Key passphrase" {...field} />
                         </FormControl>
-                        <FormDescription>
-                          Only required if your key is encrypted
-                        </FormDescription>
+                        <FormDescription>Only required if your key is encrypted</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -523,5 +518,5 @@ export function AddCredentialDialog({
         </Form>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

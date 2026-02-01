@@ -1,7 +1,7 @@
-'use client';
+'use client'
 
-import { useState, useMemo, useCallback } from 'react';
-import { SortingState } from '@tanstack/react-table';
+import { useState, useMemo, useCallback } from 'react'
+import { SortingState } from '@tanstack/react-table'
 import {
   Plus,
   Wrench,
@@ -15,26 +15,20 @@ import {
   Trash2,
   Globe,
   Code2,
-} from 'lucide-react';
-import { toast } from 'sonner';
+} from 'lucide-react'
+import { toast } from 'sonner'
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+} from '@/components/ui/dropdown-menu'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -43,21 +37,17 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { Can, Permission } from '@/lib/permissions';
+} from '@/components/ui/alert-dialog'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { Can, Permission } from '@/lib/permissions'
 
-import { AddToolDialog } from './add-tool-dialog';
-import { ToolCard } from './tool-card';
-import { ToolTable } from './tool-table';
-import { ToolStatsCards } from './tool-stats-cards';
-import { ToolDetailSheet } from './tool-detail-sheet';
-import { ToolCategoryIcon } from './tool-category-icon';
-import { CATEGORY_OPTIONS } from '../schemas/tool-schema';
+import { AddToolDialog } from './add-tool-dialog'
+import { ToolCard } from './tool-card'
+import { ToolTable } from './tool-table'
+import { ToolStatsCards } from './tool-stats-cards'
+import { ToolDetailSheet } from './tool-detail-sheet'
+import { ToolCategoryIcon } from './tool-category-icon'
+import { CATEGORY_OPTIONS } from '../schemas/tool-schema'
 
 import {
   usePlatformTools,
@@ -65,43 +55,44 @@ import {
   useDeleteCustomTool,
   invalidatePlatformToolsCache,
   invalidateCustomToolsCache,
-} from '@/lib/api/tool-hooks';
-import { useAllToolCategories, getCategoryNameById } from '@/lib/api/tool-category-hooks';
-import { customToolEndpoints } from '@/lib/api/endpoints';
-import { post } from '@/lib/api/client';
-import type { Tool, ToolListFilters } from '@/lib/api/tool-types';
+} from '@/lib/api/tool-hooks'
+import { useAllToolCategories, getCategoryNameById } from '@/lib/api/tool-category-hooks'
+import { customToolEndpoints } from '@/lib/api/endpoints'
+import { post } from '@/lib/api/client'
+import type { Tool, ToolListFilters } from '@/lib/api/tool-types'
+import { getErrorMessage } from '@/lib/api/error-handler'
 
-type ViewMode = 'grid' | 'table';
-type MainTab = 'platform' | 'custom';
-type CategoryFilter = 'all' | string; // Category name (e.g., 'sast', 'sca')
+type ViewMode = 'grid' | 'table'
+type MainTab = 'platform' | 'custom'
+type CategoryFilter = 'all' | string // Category name (e.g., 'sast', 'sca')
 
 interface ToolsSectionProps {
-  onToolSelect?: (toolId: string | null) => void;
-  selectedToolId?: string | null;
+  onToolSelect?: (toolId: string | null) => void
+  selectedToolId?: string | null
 }
 
 export function ToolsSection({ onToolSelect, selectedToolId }: ToolsSectionProps) {
   // Dialog states
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [detailSheetOpen, setDetailSheetOpen] = useState(false);
+  const [addDialogOpen, setAddDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [detailSheetOpen, setDetailSheetOpen] = useState(false)
 
   // Selected tool for dialogs
-  const [selectedTool, setSelectedTool] = useState<Tool | null>(null);
+  const [selectedTool, setSelectedTool] = useState<Tool | null>(null)
   // Tool being edited (null = create mode)
-  const [editingTool, setEditingTool] = useState<Tool | null>(null);
+  const [editingTool, setEditingTool] = useState<Tool | null>(null)
 
   // View and filter states
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
-  const [mainTab, setMainTab] = useState<MainTab>('platform');
-  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
-  const [statsFilter, setStatsFilter] = useState<string | null>(null);
-  const [filters, _setFilters] = useState<ToolListFilters>({});
-  const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState<ViewMode>('grid')
+  const [mainTab, setMainTab] = useState<MainTab>('platform')
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all')
+  const [statsFilter, setStatsFilter] = useState<string | null>(null)
+  const [filters, _setFilters] = useState<ToolListFilters>({})
+  const [searchQuery, setSearchQuery] = useState('')
 
   // Table states
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
+  const [sorting, setSorting] = useState<SortingState>([])
+  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({})
 
   // API data - Platform tools
   const {
@@ -109,7 +100,7 @@ export function ToolsSection({ onToolSelect, selectedToolId }: ToolsSectionProps
     error: platformError,
     isLoading: isPlatformLoading,
     mutate: mutatePlatform,
-  } = usePlatformTools(filters);
+  } = usePlatformTools(filters)
 
   // API data - Custom tools
   const {
@@ -117,10 +108,10 @@ export function ToolsSection({ onToolSelect, selectedToolId }: ToolsSectionProps
     error: customError,
     isLoading: isCustomLoading,
     mutate: mutateCustom,
-  } = useCustomTools(filters);
+  } = useCustomTools(filters)
 
   // API data - Tool categories (from database)
-  const { data: categoriesData } = useAllToolCategories();
+  const { data: categoriesData } = useAllToolCategories()
 
   // Categories list - use API data if available, fallback to static options
   const categoryOptions = useMemo(() => {
@@ -130,171 +121,169 @@ export function ToolsSection({ onToolSelect, selectedToolId }: ToolsSectionProps
         label: cat.display_name,
         icon: cat.icon,
         color: cat.color,
-      }));
+      }))
     }
     // Fallback to static options
-    return CATEGORY_OPTIONS;
-  }, [categoriesData]);
+    return CATEGORY_OPTIONS
+  }, [categoriesData])
 
   // All tools combined for stats (platform + custom)
   const allTools = useMemo(() => {
-    const platform = platformToolsData?.items || [];
-    const custom = customToolsData?.items || [];
-    return [...platform, ...custom];
-  }, [platformToolsData, customToolsData]);
+    const platform = platformToolsData?.items || []
+    const custom = customToolsData?.items || []
+    return [...platform, ...custom]
+  }, [platformToolsData, customToolsData])
 
   // Current data based on active tab (for list display)
   const tools = useMemo(() => {
     if (mainTab === 'platform') {
-      return platformToolsData?.items || [];
+      return platformToolsData?.items || []
     }
-    return customToolsData?.items || [];
-  }, [mainTab, platformToolsData, customToolsData]);
+    return customToolsData?.items || []
+  }, [mainTab, platformToolsData, customToolsData])
 
-  const isLoading = mainTab === 'platform' ? isPlatformLoading : isCustomLoading;
-  const error = mainTab === 'platform' ? platformError : customError;
+  const isLoading = mainTab === 'platform' ? isPlatformLoading : isCustomLoading
+  const error = mainTab === 'platform' ? platformError : customError
 
   // Delete mutation (only for custom tools)
   const { trigger: deleteCustomTool, isMutating: isDeleting } = useDeleteCustomTool(
     selectedTool?.id || ''
-  );
+  )
 
   // Activation state tracking
-  const [_isActivating, setIsActivating] = useState(false);
+  const [_isActivating, setIsActivating] = useState(false)
 
   // Filter tools based on category and stats filter
   const filteredTools = useMemo(() => {
-    let result = [...tools];
+    let result = [...tools]
 
     // Filter by category (look up category name from category_id)
     if (categoryFilter !== 'all') {
       result = result.filter((t) => {
-        const categoryName = getCategoryNameById(categoriesData?.items, t.category_id);
-        return categoryName === categoryFilter;
-      });
+        const categoryName = getCategoryNameById(categoriesData?.items, t.category_id)
+        return categoryName === categoryFilter
+      })
     }
 
     // Filter by stats card click
     if (statsFilter) {
-      const [filterType, filterValue] = statsFilter.split(':');
+      const [filterType, filterValue] = statsFilter.split(':')
       if (filterType === 'status') {
-        result = result.filter((t) =>
-          filterValue === 'active' ? t.is_active : !t.is_active
-        );
+        result = result.filter((t) => (filterValue === 'active' ? t.is_active : !t.is_active))
       } else if (filterType === 'has_update') {
-        result = result.filter((t) => t.has_update);
+        result = result.filter((t) => t.has_update)
       } else if (filterType === 'type') {
-        result = result.filter((t) =>
-          filterValue === 'builtin' ? t.is_builtin : !t.is_builtin
-        );
+        result = result.filter((t) => (filterValue === 'builtin' ? t.is_builtin : !t.is_builtin))
       }
     }
 
     // Filter by search
     if (searchQuery) {
-      const query = searchQuery.toLowerCase();
+      const query = searchQuery.toLowerCase()
       result = result.filter(
         (t) =>
           t.name.toLowerCase().includes(query) ||
           t.display_name.toLowerCase().includes(query) ||
           t.description?.toLowerCase().includes(query)
-      );
+      )
     }
 
-    return result;
-  }, [tools, categoryFilter, statsFilter, searchQuery, categoriesData]);
+    return result
+  }, [tools, categoryFilter, statsFilter, searchQuery, categoriesData])
 
   // Handlers
   const handleRefresh = useCallback(async () => {
     if (mainTab === 'platform') {
-      await invalidatePlatformToolsCache();
-      await mutatePlatform();
+      await invalidatePlatformToolsCache()
+      await mutatePlatform()
     } else {
-      await invalidateCustomToolsCache();
-      await mutateCustom();
+      await invalidateCustomToolsCache()
+      await mutateCustom()
     }
-    toast.success('Tools refreshed');
-  }, [mainTab, mutatePlatform, mutateCustom]);
+    toast.success('Tools refreshed')
+  }, [mainTab, mutatePlatform, mutateCustom])
 
   const handleSearch = useCallback((e: React.FormEvent) => {
-    e.preventDefault();
-  }, []);
+    e.preventDefault()
+  }, [])
 
   const handleViewTool = useCallback((tool: Tool) => {
-    setSelectedTool(tool);
-    setDetailSheetOpen(true);
-  }, []);
+    setSelectedTool(tool)
+    setDetailSheetOpen(true)
+  }, [])
 
   const handleEditTool = useCallback((tool: Tool) => {
-    setEditingTool(tool);
-    setDetailSheetOpen(false);
-    setAddDialogOpen(true);
-  }, []);
+    setEditingTool(tool)
+    setDetailSheetOpen(false)
+    setAddDialogOpen(true)
+  }, [])
 
   const handleDeleteClick = useCallback((tool: Tool) => {
-    setSelectedTool(tool);
-    setDetailSheetOpen(false);
-    setDeleteDialogOpen(true);
-  }, []);
+    setSelectedTool(tool)
+    setDetailSheetOpen(false)
+    setDeleteDialogOpen(true)
+  }, [])
 
   const handleDeleteConfirm = useCallback(async () => {
-    if (!selectedTool) return;
+    if (!selectedTool) return
     try {
-      await deleteCustomTool();
-      toast.success(`Tool "${selectedTool.display_name}" deleted`);
-      await invalidateCustomToolsCache();
-      setDeleteDialogOpen(false);
-      setSelectedTool(null);
+      await deleteCustomTool()
+      toast.success(`Tool "${selectedTool.display_name}" deleted`)
+      await invalidateCustomToolsCache()
+      setDeleteDialogOpen(false)
+      setSelectedTool(null)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete tool');
+      toast.error(getErrorMessage(err, 'Failed to delete tool'))
     }
-  }, [selectedTool, deleteCustomTool]);
+  }, [selectedTool, deleteCustomTool])
 
   const handleActivateTool = useCallback(
     async (tool: Tool) => {
-      setIsActivating(true);
+      setIsActivating(true)
       try {
-        await post(customToolEndpoints.activate(tool.id), {});
-        toast.success(`Tool "${tool.display_name}" activated`);
+        await post(customToolEndpoints.activate(tool.id), {})
+        toast.success(`Tool "${tool.display_name}" activated`)
         // Update selectedTool state to reflect the change immediately
         if (selectedTool?.id === tool.id) {
-          setSelectedTool({ ...tool, is_active: true });
+          setSelectedTool({ ...tool, is_active: true })
         }
-        await invalidateCustomToolsCache();
-        await mutateCustom();
+        await invalidateCustomToolsCache()
+        await mutateCustom()
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Failed to activate tool');
+        toast.error(getErrorMessage(err, 'Failed to activate tool'))
       } finally {
-        setIsActivating(false);
+        setIsActivating(false)
       }
     },
     [mutateCustom, selectedTool]
-  );
+  )
 
   const handleDeactivateTool = useCallback(
     async (tool: Tool) => {
-      setIsActivating(true);
+      setIsActivating(true)
       try {
-        await post(customToolEndpoints.deactivate(tool.id), {});
-        toast.success(`Tool "${tool.display_name}" deactivated`);
+        await post(customToolEndpoints.deactivate(tool.id), {})
+        toast.success(`Tool "${tool.display_name}" deactivated`)
         // Update selectedTool state to reflect the change immediately
         if (selectedTool?.id === tool.id) {
-          setSelectedTool({ ...tool, is_active: false });
+          setSelectedTool({ ...tool, is_active: false })
         }
-        await invalidateCustomToolsCache();
-        await mutateCustom();
+        await invalidateCustomToolsCache()
+        await mutateCustom()
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Failed to deactivate tool');
+        toast.error(getErrorMessage(err, 'Failed to deactivate tool'))
       } finally {
-        setIsActivating(false);
+        setIsActivating(false)
       }
     },
     [mutateCustom, selectedTool]
-  );
+  )
 
   const handleExport = useCallback(() => {
     const csv = [
-      ['Name', 'Display Name', 'Category', 'Install Method', 'Version', 'Active', 'Built-in'].join(','),
+      ['Name', 'Display Name', 'Category', 'Install Method', 'Version', 'Active', 'Built-in'].join(
+        ','
+      ),
       ...tools.map((t) =>
         [
           t.name,
@@ -306,25 +295,25 @@ export function ToolsSection({ onToolSelect, selectedToolId }: ToolsSectionProps
           t.is_builtin ? 'Yes' : 'No',
         ].join(',')
       ),
-    ].join('\n');
+    ].join('\n')
 
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${mainTab}-tools.csv`;
-    link.click();
-    toast.success('Tools exported');
-  }, [tools, mainTab, categoriesData]);
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${mainTab}-tools.csv`
+    link.click()
+    toast.success('Tools exported')
+  }, [tools, mainTab, categoriesData])
 
   // Handle tab change - reset filters
   const handleMainTabChange = useCallback((tab: string) => {
-    setMainTab(tab as MainTab);
-    setCategoryFilter('all');
-    setStatsFilter(null);
-    setSearchQuery('');
-    setRowSelection({});
-  }, []);
+    setMainTab(tab as MainTab)
+    setCategoryFilter('all')
+    setStatsFilter(null)
+    setSearchQuery('')
+    setRowSelection({})
+  }, [])
 
   if (error) {
     return (
@@ -341,11 +330,11 @@ export function ToolsSection({ onToolSelect, selectedToolId }: ToolsSectionProps
           Retry
         </Button>
       </div>
-    );
+    )
   }
 
   // Check if we're in custom tools mode for conditional rendering
-  const isCustomToolsMode = mainTab === 'custom';
+  const isCustomToolsMode = mainTab === 'custom'
 
   return (
     <>
@@ -378,11 +367,7 @@ export function ToolsSection({ onToolSelect, selectedToolId }: ToolsSectionProps
               </div>
 
               {/* Center: Main Tabs (Platform / Custom) */}
-              <Tabs
-                value={mainTab}
-                onValueChange={handleMainTabChange}
-                className="w-auto"
-              >
+              <Tabs value={mainTab} onValueChange={handleMainTabChange} className="w-auto">
                 <TabsList>
                   <TabsTrigger value="platform" className="gap-1.5">
                     <Globe className="h-4 w-4" />
@@ -397,12 +382,7 @@ export function ToolsSection({ onToolSelect, selectedToolId }: ToolsSectionProps
 
               {/* Right: Actions */}
               <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleRefresh}
-                  disabled={isLoading}
-                >
+                <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={isLoading}>
                   {isLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
@@ -451,7 +431,11 @@ export function ToolsSection({ onToolSelect, selectedToolId }: ToolsSectionProps
                   <TabsList className="inline-flex w-max gap-1 overflow-x-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-muted">
                     <TabsTrigger value="all">All</TabsTrigger>
                     {categoryOptions.map((cat) => (
-                      <TabsTrigger key={cat.value} value={cat.value} className="gap-1 whitespace-nowrap">
+                      <TabsTrigger
+                        key={cat.value}
+                        value={cat.value}
+                        className="gap-1 whitespace-nowrap"
+                      >
                         <ToolCategoryIcon category={cat.value} className="h-3.5 w-3.5" />
                         {cat.label}
                       </TabsTrigger>
@@ -544,9 +528,7 @@ export function ToolsSection({ onToolSelect, selectedToolId }: ToolsSectionProps
                       tool={tool}
                       categories={categoriesData?.items}
                       selected={selectedToolId === tool.id}
-                      onSelect={() =>
-                        onToolSelect?.(selectedToolId === tool.id ? null : tool.id)
-                      }
+                      onSelect={() => onToolSelect?.(selectedToolId === tool.id ? null : tool.id)}
                       onView={handleViewTool}
                       onEdit={isCustomToolsMode ? handleEditTool : undefined}
                       onDelete={isCustomToolsMode ? handleDeleteClick : undefined}
@@ -583,8 +565,8 @@ export function ToolsSection({ onToolSelect, selectedToolId }: ToolsSectionProps
                   {searchQuery || categoryFilter !== 'all' || statsFilter
                     ? 'No tools match your search criteria. Try adjusting your filters.'
                     : mainTab === 'platform'
-                    ? 'No platform tools available yet.'
-                    : 'Add a custom tool to start scanning and collecting data.'}
+                      ? 'No platform tools available yet.'
+                      : 'Add a custom tool to start scanning and collecting data.'}
                 </p>
                 {!searchQuery && categoryFilter === 'all' && !statsFilter && isCustomToolsMode && (
                   <Can permission={Permission.ToolsWrite}>
@@ -605,9 +587,9 @@ export function ToolsSection({ onToolSelect, selectedToolId }: ToolsSectionProps
         <AddToolDialog
           open={addDialogOpen}
           onOpenChange={(open) => {
-            setAddDialogOpen(open);
+            setAddDialogOpen(open)
             // Clear editing tool when dialog closes
-            if (!open) setEditingTool(null);
+            if (!open) setEditingTool(null)
           }}
           onSuccess={handleRefresh}
           tool={editingTool}
@@ -636,17 +618,13 @@ export function ToolsSection({ onToolSelect, selectedToolId }: ToolsSectionProps
             <AlertDialogHeader>
               <AlertDialogTitle>Delete Tool</AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to delete <strong>{selectedTool?.display_name}</strong>?
-                This action cannot be undone.
+                Are you sure you want to delete <strong>{selectedTool?.display_name}</strong>? This
+                action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-              <Button
-                variant="destructive"
-                onClick={handleDeleteConfirm}
-                disabled={isDeleting}
-              >
+              <Button variant="destructive" onClick={handleDeleteConfirm} disabled={isDeleting}>
                 {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Delete
               </Button>
@@ -655,5 +633,5 @@ export function ToolsSection({ onToolSelect, selectedToolId }: ToolsSectionProps
         </AlertDialog>
       )}
     </>
-  );
+  )
 }

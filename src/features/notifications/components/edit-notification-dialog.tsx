@@ -45,6 +45,7 @@ import {
 } from '@/features/integrations/types/integration.types'
 import { useTenantEventTypes } from '@/features/integrations/api/use-event-types'
 import { cn } from '@/lib/utils'
+import { getErrorMessage } from '@/lib/api/error-handler'
 
 // Template presets for different use cases
 const TEMPLATE_PRESETS = [
@@ -364,7 +365,7 @@ export function EditNotificationDialog({
       handleClose()
       await onSuccess?.()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update notification channel')
+      toast.error(getErrorMessage(error, 'Failed to update notification channel'))
     }
   }
 

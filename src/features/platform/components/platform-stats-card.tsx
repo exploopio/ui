@@ -15,7 +15,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
-import { Server, Cloud, Crown, Zap, AlertCircle, CheckCircle, Clock } from 'lucide-react'
+import { Server, Cloud, Crown, Zap, CheckCircle, Clock } from 'lucide-react'
 import { usePlatformUsage } from '@/lib/api/platform-hooks'
 import { TierBadge, MaxTierBadge } from './tier-badge'
 import type { PlatformAgentTier, TierStats } from '@/lib/api/platform-types'

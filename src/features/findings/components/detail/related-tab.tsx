@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Link2, Copy, Eye, ExternalLink, Plus, Hash, Repeat, Fingerprint } from 'lucide-react'
+import { Link2, Copy, Eye, ExternalLink, Plus, Repeat, Fingerprint } from 'lucide-react'
 import type { FindingDetail, RelatedFinding } from '../../types'
 import { FINDING_STATUS_CONFIG } from '../../types'
 import { SeverityBadge } from '@/features/shared'

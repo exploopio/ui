@@ -33,6 +33,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Loader2, Check, ChevronsUpDown, AlertCircle, Code, Globe, Box, Cloud } from 'lucide-react'
 import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/api/error-handler'
 import { cn } from '@/lib/utils'
 import { useAssets } from '@/features/assets/hooks/use-assets'
 import { useCreateFindingApi, invalidateFindingsCache } from '../api/use-findings-api'
@@ -197,9 +198,7 @@ export function CreateFindingDialog({ open, onOpenChange, onSuccess }: CreateFin
       onOpenChange(false)
       onSuccess?.()
     } catch (error) {
-      toast.error('Failed to create finding', {
-        description: error instanceof Error ? error.message : 'Unknown error',
-      })
+      toast.error(getErrorMessage(error, 'Failed to create finding'))
     }
   }
 

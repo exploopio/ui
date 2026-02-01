@@ -13,6 +13,7 @@ import {
   ChevronUp,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/api/error-handler'
 import { useTenant } from '@/context/tenant-provider'
 import { useCVEEnrichment } from '@/features/threat-intel/hooks'
 import { EPSSScoreBadge } from '@/features/shared/components/epss-score-badge'
@@ -153,7 +154,7 @@ export function FindingHeader({
     } catch (error) {
       // Revert on error
       setStatus(previousStatus)
-      toast.error('Failed to update status')
+      toast.error(getErrorMessage(error, 'Failed to update status'))
       console.error('Status update error:', error)
     }
   }
@@ -187,7 +188,7 @@ export function FindingHeader({
     } catch (error) {
       // Revert on error
       setSeverity(previousSeverity)
-      toast.error('Failed to update severity')
+      toast.error(getErrorMessage(error, 'Failed to update severity'))
       console.error('Severity update error:', error)
     }
   }
@@ -275,7 +276,7 @@ export function FindingHeader({
     } catch (error) {
       // Revert on error
       setAssignee(previousAssignee)
-      toast.error(userId ? 'Failed to assign' : 'Failed to unassign')
+      toast.error(getErrorMessage(error, userId ? 'Failed to assign' : 'Failed to unassign'))
       console.error('Assignee update error:', error)
     }
   }

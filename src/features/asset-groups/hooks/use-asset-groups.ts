@@ -10,6 +10,7 @@
 import { useMemo } from 'react'
 import { toast } from 'sonner'
 import { env } from '@/lib/env'
+import { getErrorMessage } from '@/lib/api/error-handler'
 import {
   useAssetGroupsApi,
   useAssetGroupApi,
@@ -353,9 +354,7 @@ export function useCreateAssetGroup(): MutationResult<CreateAssetGroupInput> {
           description: input.name,
         })
       } catch (error) {
-        toast.error('Failed to create asset group', {
-          description: error instanceof Error ? error.message : 'Unknown error',
-        })
+        toast.error(getErrorMessage(error, 'Failed to create asset group'))
         throw error
       }
     } else {
@@ -390,9 +389,7 @@ export function useUpdateAssetGroup(groupId: string): MutationResult<UpdateAsset
         await invalidateAssetGroupsCache()
         toast.success('Asset group updated')
       } catch (error) {
-        toast.error('Failed to update asset group', {
-          description: error instanceof Error ? error.message : 'Unknown error',
-        })
+        toast.error(getErrorMessage(error, 'Failed to update asset group'))
         throw error
       }
     } else {
@@ -420,9 +417,7 @@ export function useDeleteAssetGroup(groupId: string): MutationResult {
         await invalidateAssetGroupsCache()
         toast.success('Asset group deleted')
       } catch (error) {
-        toast.error('Failed to delete asset group', {
-          description: error instanceof Error ? error.message : 'Unknown error',
-        })
+        toast.error(getErrorMessage(error, 'Failed to delete asset group'))
         throw error
       }
     } else {
@@ -454,9 +449,7 @@ export function useRemoveAssetsFromGroup(groupId: string): MutationResult<string
         await invalidateAssetGroupsCache()
         toast.success(`Removed ${assetIds.length} assets from group`)
       } catch (error) {
-        toast.error('Failed to remove assets', {
-          description: error instanceof Error ? error.message : 'Unknown error',
-        })
+        toast.error(getErrorMessage(error, 'Failed to remove assets'))
         throw error
       }
     } else {
@@ -488,9 +481,7 @@ export function useAddAssetsToGroup(groupId: string): MutationResult<string[]> {
         await invalidateAssetGroupsCache()
         toast.success(`Added ${assetIds.length} assets to group`)
       } catch (error) {
-        toast.error('Failed to add assets', {
-          description: error instanceof Error ? error.message : 'Unknown error',
-        })
+        toast.error(getErrorMessage(error, 'Failed to add assets'))
         throw error
       }
     } else {
@@ -533,9 +524,7 @@ export function useBulkAssetGroupOperations() {
         await invalidateAssetGroupsCache()
         toast.success(`Updated ${groupIds.length} groups`)
       } catch (error) {
-        toast.error('Failed to update groups', {
-          description: error instanceof Error ? error.message : 'Unknown error',
-        })
+        toast.error(getErrorMessage(error, 'Failed to update groups'))
         throw error
       }
     } else {
@@ -551,9 +540,7 @@ export function useBulkAssetGroupOperations() {
         await invalidateAssetGroupsCache()
         toast.success(`Deleted ${groupIds.length} groups`)
       } catch (error) {
-        toast.error('Failed to delete groups', {
-          description: error instanceof Error ? error.message : 'Unknown error',
-        })
+        toast.error(getErrorMessage(error, 'Failed to delete groups'))
         throw error
       }
     } else {

@@ -82,11 +82,11 @@ function transformApiToFindingDetail(api: ApiFinding): FindingDetail {
   }
 
   // Build location string for display (file:line:col)
-  let locationDisplay = api.file_path || ''
+  let _locationDisplay = api.file_path || ''
   if (api.start_line) {
-    locationDisplay = `${locationDisplay}:${api.start_line}`
+    _locationDisplay = `${_locationDisplay}:${api.start_line}`
     if (api.start_column) {
-      locationDisplay = `${locationDisplay}:${api.start_column}`
+      _locationDisplay = `${_locationDisplay}:${api.start_column}`
     }
   }
 

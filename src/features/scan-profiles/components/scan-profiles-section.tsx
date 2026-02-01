@@ -1,7 +1,7 @@
-'use client';
+'use client'
 
-import * as React from 'react';
-import { useState, useMemo, useCallback } from 'react';
+import * as React from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import {
   Plus,
   Settings2,
@@ -14,27 +14,22 @@ import {
   Pencil,
   Trash2,
   MoreHorizontal,
-} from 'lucide-react';
-import { toast } from 'sonner';
+} from 'lucide-react'
+import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/api/error-handler'
 
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+} from '@/components/ui/dropdown-menu'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -42,7 +37,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from '@/components/ui/table'
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -51,115 +46,116 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+} from '@/components/ui/alert-dialog'
 
-import { AddScanProfileDialog } from './add-scan-profile-dialog';
-import { EditScanProfileDialog } from './edit-scan-profile-dialog';
-import { CloneScanProfileDialog } from './clone-scan-profile-dialog';
-import { Can, Permission } from '@/lib/permissions';
+import { AddScanProfileDialog } from './add-scan-profile-dialog'
+import { EditScanProfileDialog } from './edit-scan-profile-dialog'
+import { CloneScanProfileDialog } from './clone-scan-profile-dialog'
+import { Can, Permission } from '@/lib/permissions'
 import {
   useScanProfiles,
   useDeleteScanProfile,
   useSetDefaultScanProfile,
   invalidateScanProfilesCache,
-} from '@/lib/api/scan-profile-hooks';
-import type { ScanProfile } from '@/lib/api/scan-profile-types';
-import { INTENSITY_OPTIONS } from '../schemas/scan-profile-schema';
+} from '@/lib/api/scan-profile-hooks'
+import type { ScanProfile } from '@/lib/api/scan-profile-types'
+import { INTENSITY_OPTIONS } from '../schemas/scan-profile-schema'
 
 export function ScanProfilesSection() {
   // Dialog states
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [cloneDialogOpen, setCloneDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [addDialogOpen, setAddDialogOpen] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [cloneDialogOpen, setCloneDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 
   // Selected profile for dialogs
-  const [selectedProfile, setSelectedProfile] = useState<ScanProfile | null>(null);
+  const [selectedProfile, setSelectedProfile] = useState<ScanProfile | null>(null)
 
   // Filter states
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState('')
 
   // API data
-  const { data: profilesData, error, isLoading, mutate } = useScanProfiles();
+  const { data: profilesData, error, isLoading, mutate } = useScanProfiles()
   const profiles: ScanProfile[] = React.useMemo(
     () => profilesData?.items ?? [],
     [profilesData?.items]
-  );
+  )
 
   // Delete mutation
   const { trigger: deleteProfile, isMutating: isDeleting } = useDeleteScanProfile(
     selectedProfile?.id || ''
-  );
+  )
 
   // Set default mutation
   const { trigger: setDefaultProfile, isMutating: isSettingDefault } = useSetDefaultScanProfile(
     selectedProfile?.id || ''
-  );
+  )
 
   // Filter profiles
   const filteredProfiles = useMemo(() => {
-    if (!searchQuery) return profiles;
-    const query = searchQuery.toLowerCase();
+    if (!searchQuery) return profiles
+    const query = searchQuery.toLowerCase()
     return profiles.filter(
-      (p) =>
-        p.name.toLowerCase().includes(query) ||
-        p.description?.toLowerCase().includes(query)
-    );
-  }, [profiles, searchQuery]);
+      (p) => p.name.toLowerCase().includes(query) || p.description?.toLowerCase().includes(query)
+    )
+  }, [profiles, searchQuery])
 
   // Handlers
   const handleRefresh = useCallback(async () => {
-    await invalidateScanProfilesCache();
-    await mutate();
-    toast.success('Scan profiles refreshed');
-  }, [mutate]);
+    await invalidateScanProfilesCache()
+    await mutate()
+    toast.success('Scan profiles refreshed')
+  }, [mutate])
 
   const handleEditProfile = useCallback((profile: ScanProfile) => {
-    setSelectedProfile(profile);
-    setEditDialogOpen(true);
-  }, []);
+    setSelectedProfile(profile)
+    setEditDialogOpen(true)
+  }, [])
 
   const handleCloneProfile = useCallback((profile: ScanProfile) => {
-    setSelectedProfile(profile);
-    setCloneDialogOpen(true);
-  }, []);
+    setSelectedProfile(profile)
+    setCloneDialogOpen(true)
+  }, [])
 
   const handleDeleteClick = useCallback((profile: ScanProfile) => {
-    setSelectedProfile(profile);
-    setDeleteDialogOpen(true);
-  }, []);
+    setSelectedProfile(profile)
+    setDeleteDialogOpen(true)
+  }, [])
 
   const handleDeleteConfirm = useCallback(async () => {
-    if (!selectedProfile) return;
+    if (!selectedProfile) return
     try {
-      await deleteProfile();
-      toast.success(`Profile "${selectedProfile.name}" deleted`);
-      await invalidateScanProfilesCache();
-      setDeleteDialogOpen(false);
-      setSelectedProfile(null);
+      await deleteProfile()
+      toast.success(`Profile "${selectedProfile.name}" deleted`)
+      await invalidateScanProfilesCache()
+      setDeleteDialogOpen(false)
+      setSelectedProfile(null)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete profile');
+      toast.error(getErrorMessage(err, 'Failed to delete profile'))
     }
-  }, [selectedProfile, deleteProfile]);
+  }, [selectedProfile, deleteProfile])
 
-  const handleSetDefault = useCallback(async (profile: ScanProfile) => {
-    setSelectedProfile(profile);
-    try {
-      await setDefaultProfile();
-      toast.success(`"${profile.name}" set as default profile`);
-      await invalidateScanProfilesCache();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to set default profile');
-    }
-  }, [setDefaultProfile]);
+  const handleSetDefault = useCallback(
+    async (profile: ScanProfile) => {
+      setSelectedProfile(profile)
+      try {
+        await setDefaultProfile()
+        toast.success(`"${profile.name}" set as default profile`)
+        await invalidateScanProfilesCache()
+      } catch (err) {
+        toast.error(getErrorMessage(err, 'Failed to set default profile'))
+      }
+    },
+    [setDefaultProfile]
+  )
 
   const getIntensityLabel = (intensity: string) => {
-    return INTENSITY_OPTIONS.find((i) => i.value === intensity)?.label || intensity;
-  };
+    return INTENSITY_OPTIONS.find((i) => i.value === intensity)?.label || intensity
+  }
 
   const getEnabledToolsCount = (profile: ScanProfile) => {
-    return Object.values(profile.tools_config || {}).filter((t) => t.enabled).length;
-  };
+    return Object.values(profile.tools_config || {}).filter((t) => t.enabled).length
+  }
 
   if (error) {
     return (
@@ -176,7 +172,7 @@ export function ScanProfilesSection() {
           Retry
         </Button>
       </div>
-    );
+    )
   }
 
   return (
@@ -192,9 +188,7 @@ export function ScanProfilesSection() {
                 </div>
                 <div>
                   <CardTitle>Scan Profiles</CardTitle>
-                  <CardDescription>
-                    Reusable scan configurations with tool settings
-                  </CardDescription>
+                  <CardDescription>Reusable scan configurations with tool settings</CardDescription>
                 </div>
                 {!isLoading && profiles.length > 0 && (
                   <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
@@ -203,12 +197,7 @@ export function ScanProfilesSection() {
                 )}
               </div>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleRefresh}
-                  disabled={isLoading}
-                >
+                <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={isLoading}>
                   {isLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
@@ -278,22 +267,16 @@ export function ScanProfilesSection() {
                                   Default
                                 </Badge>
                               )}
-                              {profile.is_system && (
-                                <Badge variant="outline">System</Badge>
-                              )}
+                              {profile.is_system && <Badge variant="outline">System</Badge>}
                             </div>
                             {profile.description && (
-                              <p className="text-sm text-muted-foreground">
-                                {profile.description}
-                              </p>
+                              <p className="text-sm text-muted-foreground">{profile.description}</p>
                             )}
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">
-                          {getIntensityLabel(profile.intensity)}
-                        </Badge>
+                        <Badge variant="outline">{getIntensityLabel(profile.intensity)}</Badge>
                       </TableCell>
                       <TableCell>
                         <span className="text-sm text-muted-foreground">
@@ -306,7 +289,9 @@ export function ScanProfilesSection() {
                         </span>
                       </TableCell>
                       <TableCell>
-                        <Can permission={[Permission.ScanProfilesWrite, Permission.ScanProfilesDelete]}>
+                        <Can
+                          permission={[Permission.ScanProfilesWrite, Permission.ScanProfilesDelete]}
+                        >
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon">
@@ -409,17 +394,13 @@ export function ScanProfilesSection() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Scan Profile</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete <strong>{selectedProfile?.name}</strong>?
-              This action cannot be undone.
+              Are you sure you want to delete <strong>{selectedProfile?.name}</strong>? This action
+              cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <Button
-              variant="destructive"
-              onClick={handleDeleteConfirm}
-              disabled={isDeleting}
-            >
+            <Button variant="destructive" onClick={handleDeleteConfirm} disabled={isDeleting}>
               {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Delete
             </Button>
@@ -427,5 +408,5 @@ export function ScanProfilesSection() {
         </AlertDialogContent>
       </AlertDialog>
     </>
-  );
+  )
 }

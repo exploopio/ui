@@ -12,6 +12,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/api/error-handler'
 
 import { useAuthStore } from '@/stores/auth-store'
 import { redirectToLogin } from '@/lib/keycloak/client'
@@ -66,7 +67,7 @@ export function useAuth(): UseAuthReturn {
       setIsLoading(false)
       console.error('Login redirect error:', error)
       toast.dismiss()
-      toast.error('Failed to initiate login. Please try again.')
+      toast.error(getErrorMessage(error, 'Failed to initiate login. Please try again.'))
     }
   }, [])
 
@@ -74,24 +75,27 @@ export function useAuth(): UseAuthReturn {
    * Logout user
    * Clears auth state and redirects
    */
-  const logout = useCallback((postLogoutRedirectUri?: string) => {
-    setIsLoading(true)
-    toast.loading(AUTH_INFO_MESSAGES.LOGGING_OUT)
+  const logout = useCallback(
+    (postLogoutRedirectUri?: string) => {
+      setIsLoading(true)
+      toast.loading(AUTH_INFO_MESSAGES.LOGGING_OUT)
 
-    try {
-      // Clear auth state
-      storeLogout(postLogoutRedirectUri || DEFAULT_LOGOUT_REDIRECT)
+      try {
+        // Clear auth state
+        storeLogout(postLogoutRedirectUri || DEFAULT_LOGOUT_REDIRECT)
 
-      // Show success message
-      toast.dismiss()
-      toast.success(AUTH_SUCCESS_MESSAGES.LOGOUT)
-    } catch (error) {
-      setIsLoading(false)
-      console.error('Logout error:', error)
-      toast.dismiss()
-      toast.error('Failed to logout. Please try again.')
-    }
-  }, [storeLogout])
+        // Show success message
+        toast.dismiss()
+        toast.success(AUTH_SUCCESS_MESSAGES.LOGOUT)
+      } catch (error) {
+        setIsLoading(false)
+        console.error('Logout error:', error)
+        toast.dismiss()
+        toast.error(getErrorMessage(error, 'Failed to logout. Please try again.'))
+      }
+    },
+    [storeLogout]
+  )
 
   /**
    * Refresh authentication token
@@ -131,26 +135,35 @@ export function useAuth(): UseAuthReturn {
   /**
    * Check if user has a specific role
    */
-  const hasRole = useCallback((role: string): boolean => {
-    if (!user) return false
-    return user.roles.includes(role)
-  }, [user])
+  const hasRole = useCallback(
+    (role: string): boolean => {
+      if (!user) return false
+      return user.roles.includes(role)
+    },
+    [user]
+  )
 
   /**
    * Check if user has any of the specified roles
    */
-  const hasAnyRole = useCallback((roles: string[]): boolean => {
-    if (!user) return false
-    return roles.some(role => user.roles.includes(role))
-  }, [user])
+  const hasAnyRole = useCallback(
+    (roles: string[]): boolean => {
+      if (!user) return false
+      return roles.some((role) => user.roles.includes(role))
+    },
+    [user]
+  )
 
   /**
    * Check if user has all of the specified roles
    */
-  const hasAllRoles = useCallback((roles: string[]): boolean => {
-    if (!user) return false
-    return roles.every(role => user.roles.includes(role))
-  }, [user])
+  const hasAllRoles = useCallback(
+    (roles: string[]): boolean => {
+      if (!user) return false
+      return roles.every((role) => user.roles.includes(role))
+    },
+    [user]
+  )
 
   /**
    * Auto-refresh token before expiry

@@ -1,7 +1,7 @@
-'use client';
+'use client'
 
-import * as React from 'react';
-import { useState, useMemo, useCallback } from 'react';
+import * as React from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import {
   Plus,
   FileCode2,
@@ -22,27 +22,21 @@ import {
   Cloud,
   Globe,
   Database,
-} from 'lucide-react';
-import { toast } from 'sonner';
+} from 'lucide-react'
+import { toast } from 'sonner'
 
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+} from '@/components/ui/dropdown-menu'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -50,7 +44,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from '@/components/ui/table'
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -59,31 +53,31 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+} from '@/components/ui/alert-dialog'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/select'
 
-import { AddScannerTemplateDialog } from './add-scanner-template-dialog';
-import { Can, Permission } from '@/lib/permissions';
+import { AddScannerTemplateDialog } from './add-scanner-template-dialog'
+import { Can, Permission } from '@/lib/permissions'
 import {
   useScannerTemplates,
   useDeleteScannerTemplate,
   useDeprecateScannerTemplate,
   useTemplateUsage,
   invalidateScannerTemplatesCache,
-} from '@/lib/api/scanner-template-hooks';
-import type { ScannerTemplate, TemplateType, TemplateStatus, SyncSource } from '@/lib/api/scanner-template-types';
+} from '@/lib/api/scanner-template-hooks'
+import type {
+  ScannerTemplate,
+  TemplateType,
+  TemplateStatus,
+  SyncSource,
+} from '@/lib/api/scanner-template-types'
 import {
   TEMPLATE_TYPE_DISPLAY_NAMES,
   TEMPLATE_STATUS_DISPLAY_NAMES,
@@ -91,8 +85,9 @@ import {
   isManuallyUploadedTemplate,
   getUsagePercentage,
   formatStorageSize,
-} from '@/lib/api/scanner-template-types';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+} from '@/lib/api/scanner-template-types'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { getErrorMessage } from '@/lib/api/error-handler'
 
 function TemplateStatusBadge({ status }: { status: TemplateStatus }) {
   const colorMap: Record<TemplateStatus, string> = {
@@ -100,24 +95,24 @@ function TemplateStatusBadge({ status }: { status: TemplateStatus }) {
     pending_review: 'bg-yellow-100 text-yellow-700',
     deprecated: 'bg-gray-100 text-gray-500',
     revoked: 'bg-red-100 text-red-700',
-  };
+  }
 
   const IconMap: Record<TemplateStatus, React.ElementType> = {
     active: CheckCircle,
     pending_review: FileWarning,
     deprecated: Archive,
     revoked: XCircle,
-  };
+  }
 
-  const Icon = IconMap[status];
-  const className = colorMap[status];
+  const Icon = IconMap[status]
+  const className = colorMap[status]
 
   return (
     <Badge variant="outline" className={`gap-1 ${className}`}>
       <Icon className="h-3 w-3" />
       {TEMPLATE_STATUS_DISPLAY_NAMES[status]}
     </Badge>
-  );
+  )
 }
 
 function TemplateTypeBadge({ type }: { type: TemplateType }) {
@@ -125,28 +120,31 @@ function TemplateTypeBadge({ type }: { type: TemplateType }) {
     nuclei: 'bg-purple-100 text-purple-700',
     semgrep: 'bg-blue-100 text-blue-700',
     gitleaks: 'bg-orange-100 text-orange-700',
-  };
+  }
 
   return (
     <Badge variant="outline" className={colorMap[type]}>
       {TEMPLATE_TYPE_DISPLAY_NAMES[type]}
     </Badge>
-  );
+  )
 }
 
 function TemplateSourceBadge({ template }: { template: ScannerTemplate }) {
-  const isManual = isManuallyUploadedTemplate(template);
-  const syncSource = template.sync_source || (isManual ? 'manual' : undefined);
+  const isManual = isManuallyUploadedTemplate(template)
+  const syncSource = template.sync_source || (isManual ? 'manual' : undefined)
 
-  const sourceConfig: Record<SyncSource, { icon: React.ElementType; label: string; className: string }> = {
+  const sourceConfig: Record<
+    SyncSource,
+    { icon: React.ElementType; label: string; className: string }
+  > = {
     manual: { icon: Upload, label: 'Uploaded', className: 'bg-slate-100 text-slate-700' },
     git: { icon: GitBranch, label: 'Git', className: 'bg-emerald-100 text-emerald-700' },
     s3: { icon: Cloud, label: 'S3', className: 'bg-amber-100 text-amber-700' },
     http: { icon: Globe, label: 'HTTP', className: 'bg-sky-100 text-sky-700' },
-  };
+  }
 
-  const config = syncSource ? sourceConfig[syncSource] : sourceConfig.manual;
-  const Icon = config.icon;
+  const config = syncSource ? sourceConfig[syncSource] : sourceConfig.manual
+  const Icon = config.icon
 
   return (
     <TooltipProvider>
@@ -161,24 +159,35 @@ function TemplateSourceBadge({ template }: { template: ScannerTemplate }) {
           {isManual ? (
             <p>Uploaded directly and stored in database</p>
           ) : (
-            <p>Synced from {config.label} source{template.source_path ? `: ${template.source_path}` : ''}</p>
+            <p>
+              Synced from {config.label} source
+              {template.source_path ? `: ${template.source_path}` : ''}
+            </p>
           )}
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
-  );
+  )
 }
 
 function UsageProgress({ current, max, label }: { current: number; max: number; label: string }) {
-  const percentage = getUsagePercentage(current, max);
-  const isWarning = percentage >= 80;
-  const isDanger = percentage >= 95;
+  const percentage = getUsagePercentage(current, max)
+  const isWarning = percentage >= 80
+  const isDanger = percentage >= 95
 
   return (
     <div className="space-y-1">
       <div className="flex justify-between text-xs">
         <span className="text-muted-foreground">{label}</span>
-        <span className={isDanger ? 'text-red-600 font-medium' : isWarning ? 'text-amber-600' : 'text-muted-foreground'}>
+        <span
+          className={
+            isDanger
+              ? 'text-red-600 font-medium'
+              : isWarning
+                ? 'text-amber-600'
+                : 'text-muted-foreground'
+          }
+        >
           {current} / {max}
         </span>
       </div>
@@ -191,19 +200,27 @@ function UsageProgress({ current, max, label }: { current: number; max: number; 
         />
       </div>
     </div>
-  );
+  )
 }
 
 function StorageUsageProgress({ current, max }: { current: number; max: number }) {
-  const percentage = getUsagePercentage(current, max);
-  const isWarning = percentage >= 80;
-  const isDanger = percentage >= 95;
+  const percentage = getUsagePercentage(current, max)
+  const isWarning = percentage >= 80
+  const isDanger = percentage >= 95
 
   return (
     <div className="space-y-1">
       <div className="flex justify-between text-xs">
         <span className="text-muted-foreground">Storage</span>
-        <span className={isDanger ? 'text-red-600 font-medium' : isWarning ? 'text-amber-600' : 'text-muted-foreground'}>
+        <span
+          className={
+            isDanger
+              ? 'text-red-600 font-medium'
+              : isWarning
+                ? 'text-amber-600'
+                : 'text-muted-foreground'
+          }
+        >
           {formatStorageSize(current)} / {formatStorageSize(max)}
         </span>
       </div>
@@ -216,109 +233,112 @@ function StorageUsageProgress({ current, max }: { current: number; max: number }
         />
       </div>
     </div>
-  );
+  )
 }
 
 export function ScannerTemplatesSection() {
   // Dialog states
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deprecateDialogOpen, setDeprecateDialogOpen] = useState(false);
+  const [addDialogOpen, setAddDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deprecateDialogOpen, setDeprecateDialogOpen] = useState(false)
 
   // Selected template for dialogs
-  const [selectedTemplate, setSelectedTemplate] = useState<ScannerTemplate | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<ScannerTemplate | null>(null)
 
   // Filter states
-  const [searchQuery, setSearchQuery] = useState('');
-  const [typeFilter, setTypeFilter] = useState<TemplateType | 'all'>('all');
-  const [statusFilter, setStatusFilter] = useState<TemplateStatus | 'all'>('all');
+  const [searchQuery, setSearchQuery] = useState('')
+  const [typeFilter, setTypeFilter] = useState<TemplateType | 'all'>('all')
+  const [statusFilter, setStatusFilter] = useState<TemplateStatus | 'all'>('all')
 
   // API data
-  const filters = useMemo(() => ({
-    template_type: typeFilter !== 'all' ? typeFilter : undefined,
-    status: statusFilter !== 'all' ? statusFilter : undefined,
-    search: searchQuery || undefined,
-    per_page: 100,
-  }), [typeFilter, statusFilter, searchQuery]);
+  const filters = useMemo(
+    () => ({
+      template_type: typeFilter !== 'all' ? typeFilter : undefined,
+      status: statusFilter !== 'all' ? statusFilter : undefined,
+      search: searchQuery || undefined,
+      per_page: 100,
+    }),
+    [typeFilter, statusFilter, searchQuery]
+  )
 
-  const { data: templatesData, error, isLoading, mutate } = useScannerTemplates(filters);
+  const { data: templatesData, error, isLoading, mutate } = useScannerTemplates(filters)
   const templates: ScannerTemplate[] = useMemo(
     () => templatesData?.items ?? [],
     [templatesData?.items]
-  );
+  )
 
   // Usage/quota data
-  const { data: usageData } = useTemplateUsage();
+  const { data: usageData } = useTemplateUsage()
 
   // Mutations
   const { trigger: deleteTemplate, isMutating: isDeleting } = useDeleteScannerTemplate(
     selectedTemplate?.id || ''
-  );
+  )
   const { trigger: deprecateTemplate, isMutating: isDeprecating } = useDeprecateScannerTemplate(
     selectedTemplate?.id || ''
-  );
+  )
 
   // Handlers
   const handleRefresh = useCallback(async () => {
-    await invalidateScannerTemplatesCache();
-    await mutate();
-    toast.success('Templates refreshed');
-  }, [mutate]);
+    await invalidateScannerTemplatesCache()
+    await mutate()
+    toast.success('Templates refreshed')
+  }, [mutate])
 
   const handleDeleteClick = useCallback((template: ScannerTemplate) => {
-    setSelectedTemplate(template);
-    setDeleteDialogOpen(true);
-  }, []);
+    setSelectedTemplate(template)
+    setDeleteDialogOpen(true)
+  }, [])
 
   const handleDeleteConfirm = useCallback(async () => {
-    if (!selectedTemplate) return;
+    if (!selectedTemplate) return
     try {
-      await deleteTemplate();
-      toast.success(`Template "${selectedTemplate.name}" deleted`);
-      await invalidateScannerTemplatesCache();
-      setDeleteDialogOpen(false);
-      setSelectedTemplate(null);
+      await deleteTemplate()
+      toast.success(`Template "${selectedTemplate.name}" deleted`)
+      await invalidateScannerTemplatesCache()
+      setDeleteDialogOpen(false)
+      setSelectedTemplate(null)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete template');
+      toast.error(getErrorMessage(err, 'Failed to delete template'))
     }
-  }, [selectedTemplate, deleteTemplate]);
+  }, [selectedTemplate, deleteTemplate])
 
   const handleDeprecateClick = useCallback((template: ScannerTemplate) => {
-    setSelectedTemplate(template);
-    setDeprecateDialogOpen(true);
-  }, []);
+    setSelectedTemplate(template)
+    setDeprecateDialogOpen(true)
+  }, [])
 
   const handleDeprecateConfirm = useCallback(async () => {
-    if (!selectedTemplate) return;
+    if (!selectedTemplate) return
     try {
-      await deprecateTemplate();
-      toast.success(`Template "${selectedTemplate.name}" deprecated`);
-      await invalidateScannerTemplatesCache();
-      setDeprecateDialogOpen(false);
-      setSelectedTemplate(null);
+      await deprecateTemplate()
+      toast.success(`Template "${selectedTemplate.name}" deprecated`)
+      await invalidateScannerTemplatesCache()
+      setDeprecateDialogOpen(false)
+      setSelectedTemplate(null)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to deprecate template');
+      toast.error(getErrorMessage(err, 'Failed to deprecate template'))
     }
-  }, [selectedTemplate, deprecateTemplate]);
+  }, [selectedTemplate, deprecateTemplate])
 
   const handleDownload = useCallback(async (template: ScannerTemplate) => {
     try {
-      const response = await fetch(`/api/v1/scanner-templates/${template.id}/download`);
-      if (!response.ok) throw new Error('Failed to download');
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = template.name;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      toast.success(`Downloaded "${template.name}"`);
+      const response = await fetch(`/api/v1/scanner-templates/${template.id}/download`)
+      if (!response.ok) throw new Error('Failed to download')
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = template.name
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+      toast.success(`Downloaded "${template.name}"`)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to download template');
+      toast.error(getErrorMessage(err, 'Failed to download template'))
     }
-  }, []);
+  }, [])
 
   if (error) {
     return (
@@ -335,7 +355,7 @@ export function ScannerTemplatesSection() {
           Retry
         </Button>
       </div>
-    );
+    )
   }
 
   return (
@@ -361,12 +381,7 @@ export function ScannerTemplatesSection() {
                 )}
               </div>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleRefresh}
-                  disabled={isLoading}
-                >
+                <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={isLoading}>
                   {isLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
@@ -440,7 +455,10 @@ export function ScannerTemplatesSection() {
                 />
               </div>
               <div className="flex items-center gap-2">
-                <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as TemplateType | 'all')}>
+                <Select
+                  value={typeFilter}
+                  onValueChange={(v) => setTypeFilter(v as TemplateType | 'all')}
+                >
                   <SelectTrigger className="w-[150px]">
                     <Filter className="mr-2 h-4 w-4" />
                     <SelectValue placeholder="All Types" />
@@ -454,7 +472,10 @@ export function ScannerTemplatesSection() {
                     ))}
                   </SelectContent>
                 </Select>
-                <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as TemplateStatus | 'all')}>
+                <Select
+                  value={statusFilter}
+                  onValueChange={(v) => setStatusFilter(v as TemplateStatus | 'all')}
+                >
                   <SelectTrigger className="w-[150px]">
                     <SelectValue placeholder="All Statuses" />
                   </SelectTrigger>
@@ -536,9 +557,7 @@ export function ScannerTemplatesSection() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <span className="text-sm text-muted-foreground">
-                          v{template.version}
-                        </span>
+                        <span className="text-sm text-muted-foreground">v{template.version}</span>
                       </TableCell>
                       <TableCell>
                         <TemplateStatusBadge status={template.status} />
@@ -621,17 +640,13 @@ export function ScannerTemplatesSection() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Scanner Template</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete <strong>{selectedTemplate?.name}</strong>?
-              This action cannot be undone.
+              Are you sure you want to delete <strong>{selectedTemplate?.name}</strong>? This action
+              cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <Button
-              variant="destructive"
-              onClick={handleDeleteConfirm}
-              disabled={isDeleting}
-            >
+            <Button variant="destructive" onClick={handleDeleteConfirm} disabled={isDeleting}>
               {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Delete
             </Button>
@@ -651,11 +666,7 @@ export function ScannerTemplatesSection() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeprecating}>Cancel</AlertDialogCancel>
-            <Button
-              variant="secondary"
-              onClick={handleDeprecateConfirm}
-              disabled={isDeprecating}
-            >
+            <Button variant="secondary" onClick={handleDeprecateConfirm} disabled={isDeprecating}>
               {isDeprecating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Deprecate
             </Button>
@@ -663,5 +674,5 @@ export function ScannerTemplatesSection() {
         </AlertDialogContent>
       </AlertDialog>
     </>
-  );
+  )
 }

@@ -1,10 +1,10 @@
-'use client';
+'use client'
 
-import { useState, useMemo, useCallback } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { useState, useMemo, useCallback } from 'react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Dialog,
   DialogContent,
@@ -12,38 +12,33 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { toast } from 'sonner';
-import {
-  Loader2,
-  UserPlus,
-  Search,
-  Mail,
-  Users,
-  Check,
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useTenant } from '@/context/tenant-provider';
-import { useMembers } from '@/features/organization';
-import {
-  type Role,
-  type RoleMember,
-  useBulkAssignRoleMembers,
-} from '@/features/access-control';
+} from '@/components/ui/dialog'
+import { toast } from 'sonner'
+import { Loader2, UserPlus, Search, Mail, Users, Check } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { useTenant } from '@/context/tenant-provider'
+import { useMembers } from '@/features/organization'
+import { type Role, type RoleMember, useBulkAssignRoleMembers } from '@/features/access-control'
+import { getErrorMessage } from '@/lib/api/error-handler'
 
 interface AddMemberToRoleDialogProps {
-  role: Role | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  existingMembers: RoleMember[];
-  onSuccess?: () => void;
+  role: Role | null
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  existingMembers: RoleMember[]
+  onSuccess?: () => void
 }
 
 function getInitials(name: string | undefined, email: string): string {
   if (name) {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2)
   }
-  return email.slice(0, 2).toUpperCase();
+  return email.slice(0, 2).toUpperCase()
 }
 
 export function AddMemberToRoleDialog({
@@ -53,103 +48,106 @@ export function AddMemberToRoleDialog({
   existingMembers,
   onSuccess,
 }: AddMemberToRoleDialogProps) {
-  const { currentTenant, isLoading: isTenantLoading } = useTenant();
-  const { members: tenantMembers, isLoading: isLoadingMembers, isError: isMembersError } = useMembers(currentTenant?.slug);
-  const { bulkAssignMembers, isAssigning } = useBulkAssignRoleMembers(role?.id || null);
+  const { currentTenant, isLoading: isTenantLoading } = useTenant()
+  const {
+    members: tenantMembers,
+    isLoading: isLoadingMembers,
+    isError: isMembersError,
+  } = useMembers(currentTenant?.slug)
+  const { bulkAssignMembers, isAssigning } = useBulkAssignRoleMembers(role?.id || null)
 
   // Combined loading state
-  const isLoading = isTenantLoading || isLoadingMembers || !currentTenant;
+  const isLoading = isTenantLoading || isLoadingMembers || !currentTenant
 
   // State
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set())
 
   // Filter available members (exclude those already in role)
   const existingMemberIds = useMemo(() => {
-    return new Set(existingMembers.map(m => m.user_id));
-  }, [existingMembers]);
+    return new Set(existingMembers.map((m) => m.user_id))
+  }, [existingMembers])
 
   const availableMembers = useMemo(() => {
-    const filtered = tenantMembers.filter(m => !existingMemberIds.has(m.user_id));
+    const filtered = tenantMembers.filter((m) => !existingMemberIds.has(m.user_id))
 
-    if (!searchQuery.trim()) return filtered;
+    if (!searchQuery.trim()) return filtered
 
-    const query = searchQuery.toLowerCase();
-    return filtered.filter(m =>
-      m.name?.toLowerCase().includes(query) ||
-      m.email?.toLowerCase().includes(query)
-    );
-  }, [tenantMembers, existingMemberIds, searchQuery]);
+    const query = searchQuery.toLowerCase()
+    return filtered.filter(
+      (m) => m.name?.toLowerCase().includes(query) || m.email?.toLowerCase().includes(query)
+    )
+  }, [tenantMembers, existingMemberIds, searchQuery])
 
   // Toggle member selection
   const toggleMember = useCallback((userId: string) => {
-    setSelectedUserIds(prev => {
-      const next = new Set(prev);
+    setSelectedUserIds((prev) => {
+      const next = new Set(prev)
       if (next.has(userId)) {
-        next.delete(userId);
+        next.delete(userId)
       } else {
-        next.add(userId);
+        next.add(userId)
       }
-      return next;
-    });
-  }, []);
+      return next
+    })
+  }, [])
 
   // Select all visible
   const selectAll = useCallback(() => {
-    setSelectedUserIds(new Set(availableMembers.map(m => m.user_id)));
-  }, [availableMembers]);
+    setSelectedUserIds(new Set(availableMembers.map((m) => m.user_id)))
+  }, [availableMembers])
 
   // Clear selection
   const clearSelection = useCallback(() => {
-    setSelectedUserIds(new Set());
-  }, []);
+    setSelectedUserIds(new Set())
+  }, [])
 
   // Handle add members using bulk endpoint
   const handleAddMembers = async () => {
-    if (!role || selectedUserIds.size === 0) return;
+    if (!role || selectedUserIds.size === 0) return
 
     try {
       const result = await bulkAssignMembers({
         user_ids: Array.from(selectedUserIds),
-      });
+      })
 
       if (result) {
-        const { success_count, failed_count } = result;
+        const { success_count, failed_count } = result
 
         if (success_count > 0) {
           toast.success(
             success_count === 1
               ? '1 member added to role'
               : `${success_count} members added to role`
-          );
+          )
         }
         if (failed_count > 0) {
-          toast.error(`Failed to add ${failed_count} member(s)`);
+          toast.error(`Failed to add ${failed_count} member(s)`)
         }
 
         if (success_count > 0) {
-          setSelectedUserIds(new Set());
-          setSearchQuery('');
-          onOpenChange(false);
-          onSuccess?.();
+          setSelectedUserIds(new Set())
+          setSearchQuery('')
+          onOpenChange(false)
+          onSuccess?.()
         }
       }
     } catch (error) {
-      console.error('Failed to bulk assign members:', error);
-      toast.error('Failed to add members to role');
+      console.error('Failed to bulk assign members:', error)
+      toast.error(getErrorMessage(error, 'Failed to add members to role'))
     }
-  };
+  }
 
   // Reset state when dialog closes
   const handleOpenChange = (open: boolean) => {
     if (!open) {
-      setSelectedUserIds(new Set());
-      setSearchQuery('');
+      setSelectedUserIds(new Set())
+      setSearchQuery('')
     }
-    onOpenChange(open);
-  };
+    onOpenChange(open)
+  }
 
-  if (!role) return null;
+  if (!role) return null
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -204,28 +202,26 @@ export function AddMemberToRoleDialog({
             ) : isMembersError ? (
               <div className="flex flex-col items-center justify-center py-12 text-center px-4">
                 <Users className="h-8 w-8 text-red-400/50 mb-2" />
-                <p className="text-sm text-red-400">
-                  Failed to load team members
-                </p>
+                <p className="text-sm text-red-400">Failed to load team members</p>
               </div>
             ) : tenantMembers.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center px-4">
                 <Users className="h-8 w-8 text-muted-foreground/50 mb-2" />
-                <p className="text-sm text-muted-foreground">
-                  No team members found
-                </p>
+                <p className="text-sm text-muted-foreground">No team members found</p>
               </div>
             ) : availableMembers.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center px-4">
                 <Users className="h-8 w-8 text-muted-foreground/50 mb-2" />
                 <p className="text-sm text-muted-foreground">
-                  {searchQuery ? 'No members match your search' : 'All team members already have this role'}
+                  {searchQuery
+                    ? 'No members match your search'
+                    : 'All team members already have this role'}
                 </p>
               </div>
             ) : (
               <div className="p-2 space-y-1">
                 {availableMembers.map((member) => {
-                  const isSelected = selectedUserIds.has(member.user_id);
+                  const isSelected = selectedUserIds.has(member.user_id)
                   return (
                     <button
                       key={member.user_id}
@@ -237,12 +233,12 @@ export function AddMemberToRoleDialog({
                           : 'hover:bg-muted/50 border border-transparent'
                       )}
                     >
-                      <div className={cn(
-                        'h-5 w-5 rounded border flex items-center justify-center shrink-0',
-                        isSelected
-                          ? 'bg-primary border-primary'
-                          : 'border-muted-foreground/30'
-                      )}>
+                      <div
+                        className={cn(
+                          'h-5 w-5 rounded border flex items-center justify-center shrink-0',
+                          isSelected ? 'bg-primary border-primary' : 'border-muted-foreground/30'
+                        )}
+                      >
                         {isSelected && <Check className="h-3 w-3 text-primary-foreground" />}
                       </div>
                       <Avatar className="h-8 w-8 shrink-0">
@@ -262,7 +258,7 @@ export function AddMemberToRoleDialog({
                         )}
                       </div>
                     </button>
-                  );
+                  )
                 })}
               </div>
             )}
@@ -273,19 +269,17 @@ export function AddMemberToRoleDialog({
           <Button variant="ghost" onClick={() => handleOpenChange(false)}>
             Cancel
           </Button>
-          <Button
-            onClick={handleAddMembers}
-            disabled={isAssigning || selectedUserIds.size === 0}
-          >
+          <Button onClick={handleAddMembers} disabled={isAssigning || selectedUserIds.size === 0}>
             {isAssigning ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
               <UserPlus className="mr-2 h-4 w-4" />
             )}
-            Add {selectedUserIds.size > 0 ? `${selectedUserIds.size} ` : ''}Member{selectedUserIds.size !== 1 ? 's' : ''}
+            Add {selectedUserIds.size > 0 ? `${selectedUserIds.size} ` : ''}Member
+            {selectedUserIds.size !== 1 ? 's' : ''}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  )
 }
