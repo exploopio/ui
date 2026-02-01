@@ -92,12 +92,8 @@ function clearAuthAndRedirectToLogin() {
 
 export function TenantGate({ children }: TenantGateProps) {
   const { tenants, isLoading, error } = useTenant()
-  const {
-    isBootstrapped,
-    isLoading: bootstrapLoading,
-    data: bootstrapData,
-  } = useBootstrapContextSafe()
-  const { permissions, isLoading: permissionsLoading } = usePermissionsSafe()
+  const { isBootstrapped, data: bootstrapData } = useBootstrapContextSafe()
+  const { permissions } = usePermissionsSafe()
   const hasRedirected = useRef(false)
 
   // Check if tenant cookie exists directly (don't wait for state update)
@@ -176,23 +172,19 @@ export function TenantGate({ children }: TenantGateProps) {
   }
 
   // If user has tenant cookie, wait for ALL data before showing dashboard
-  // This ensures Sidebar and Content render simultaneously (no separate loading states)
+  // Single loading screen approach - provides clean, professional UX
   if (hasTenantCookie) {
-    // Wait for bootstrap AND permissions to be ready
-    // Bootstrap provides the data, PermissionProvider syncs it to state
-    const isBootstrapReady = isBootstrapped && !bootstrapLoading
+    // Check if all data is ready:
+    // 1. Bootstrap completed (isBootstrapped = true)
+    // 2. Permissions synced to PermissionProvider
     const hasBootstrapPermissions =
       bootstrapData?.permissions?.list && bootstrapData.permissions.list.length > 0
     const hasProviderPermissions = permissions.length > 0
 
-    // Still loading if:
-    // 1. Bootstrap is loading, OR
-    // 2. Bootstrap has permissions but PermissionProvider hasn't synced yet
-    const isStillLoading =
-      !isBootstrapReady ||
-      (hasBootstrapPermissions && !hasProviderPermissions && permissionsLoading)
+    // Still loading if bootstrap not done OR permissions not synced yet
+    const isDataReady = isBootstrapped && (!hasBootstrapPermissions || hasProviderPermissions)
 
-    if (isStillLoading) {
+    if (!isDataReady) {
       return <LoadingScreen message="Loading..." />
     }
     return <>{children}</>

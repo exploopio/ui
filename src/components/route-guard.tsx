@@ -29,7 +29,7 @@ import * as React from 'react'
 import { usePathname } from 'next/navigation'
 import { ShieldX, ArrowLeft, Home, Package } from 'lucide-react'
 import { usePermissions } from '@/lib/permissions/hooks'
-import { useBootstrapModules, useBootstrapContext } from '@/context/bootstrap-provider'
+import { useBootstrapModules } from '@/context/bootstrap-provider'
 import { matchRoutePermission } from '@/config/route-permissions'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -58,8 +58,6 @@ export function RouteGuard({ children }: RouteGuardProps) {
   // Use the same permission hook as sidebar for consistency
   const { can } = usePermissions()
   const { moduleIds } = useBootstrapModules()
-  // Use bootstrap as single source of truth for initial data loading
-  const { isBootstrapped, isLoading: bootstrapLoading } = useBootstrapContext()
 
   // Find the route permission config for current pathname
   const routeConfig = React.useMemo(() => {
@@ -109,15 +107,8 @@ export function RouteGuard({ children }: RouteGuardProps) {
     return { hasAccess: true, deniedReason: null }
   }, [routeConfig, can, hasModuleAccess])
 
-  // Show loading state only when bootstrap is actively fetching
-  // Once bootstrapped (even on error), we have all available data to check access
-  // This avoids showing a separate skeleton after TenantGate/Sidebar already rendered
-  const isLoading = !isBootstrapped && bootstrapLoading
-  if (isLoading) {
-    return <RouteGuardLoading />
-  }
-
-  // Show access denied if user doesn't have access
+  // TenantGate already waits for bootstrap + permissions
+  // So when RouteGuard renders, data is ready - just check access
   if (!accessCheck.hasAccess && routeConfig) {
     return (
       <AccessDenied
@@ -136,6 +127,7 @@ export function RouteGuard({ children }: RouteGuardProps) {
 /**
  * Loading state while checking permissions
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function RouteGuardLoading() {
   return (
     <div className="flex flex-1 items-center justify-center p-8">

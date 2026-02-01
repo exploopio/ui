@@ -28,7 +28,7 @@
 import { useMemo } from 'react'
 import { usePermissions } from './hooks'
 import { isRoleAtLeast, type RoleString } from './constants'
-import { useBootstrapModules, useBootstrapContext } from '@/context/bootstrap-provider'
+import { useBootstrapModules } from '@/context/bootstrap-provider'
 import type {
   SidebarData,
   NavGroup,
@@ -231,11 +231,6 @@ function filterNavGroup(group: NavGroup, checks: AccessCheckFunctions): NavGroup
 export function useFilteredSidebarData(sidebarData: SidebarData): FilteredSidebarResult {
   const { can, canAny, isRole, isAnyRole, tenantRole } = usePermissions()
   const { moduleIds, modules } = useBootstrapModules()
-  // Use bootstrap as single source of truth for loading state
-  const { isBootstrapped, isLoading: bootstrapLoading } = useBootstrapContext()
-
-  // Derive loading states from bootstrap
-  const isDataLoading = !isBootstrapped && bootstrapLoading
 
   // Create helper functions for module access
   const moduleHelpers = useMemo(() => {
@@ -274,23 +269,8 @@ export function useFilteredSidebarData(sidebarData: SidebarData): FilteredSideba
   }, [modules, moduleIds])
 
   const result = useMemo(() => {
-    // If bootstrap is still loading, return minimal sidebar (just Dashboard)
-    // This prevents flash of content and provides consistent loading experience
-    if (isDataLoading) {
-      const minimalGroups = sidebarData.navGroups
-        .map((group) => ({
-          ...group,
-          items: group.items.filter((item) => 'url' in item && item.url === '/'),
-        }))
-        .filter((group) => group.items.length > 0)
-
-      return {
-        ...sidebarData,
-        navGroups: minimalGroups,
-      }
-    }
-
-    // Bootstrap done - filter with all data available
+    // TenantGate already waits for bootstrap + permissions
+    // So when Sidebar renders, data is ready - just filter
     const checks: AccessCheckFunctions = {
       can,
       canAny,
@@ -310,15 +290,13 @@ export function useFilteredSidebarData(sidebarData: SidebarData): FilteredSideba
       ...sidebarData,
       navGroups: filteredNavGroups,
     }
-  }, [sidebarData, can, canAny, isRole, isAnyRole, tenantRole, moduleHelpers, isDataLoading])
+  }, [sidebarData, can, canAny, isRole, isAnyRole, tenantRole, moduleHelpers])
 
-  // Loading state is derived from bootstrap
-  const isLoading = isDataLoading
-
+  // TenantGate handles loading - these are always false when Sidebar renders
   return {
     data: result,
-    isLoading,
-    isModulesLoading: isDataLoading,
+    isLoading: false,
+    isModulesLoading: false,
   }
 }
 
