@@ -15,6 +15,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useTenant } from '@/context/tenant-provider'
+import { useBootstrapContextSafe } from '@/context/bootstrap-provider'
+import { usePermissionsSafe } from '@/context/permission-provider'
 import { getCookie, removeCookie } from '@/lib/cookies'
 import { env } from '@/lib/env'
 import { Loader2 } from 'lucide-react'
@@ -90,6 +92,12 @@ function clearAuthAndRedirectToLogin() {
 
 export function TenantGate({ children }: TenantGateProps) {
   const { tenants, isLoading, error } = useTenant()
+  const {
+    isBootstrapped,
+    isLoading: bootstrapLoading,
+    data: bootstrapData,
+  } = useBootstrapContextSafe()
+  const { permissions, isLoading: permissionsLoading } = usePermissionsSafe()
   const hasRedirected = useRef(false)
 
   // Check if tenant cookie exists directly (don't wait for state update)
@@ -167,9 +175,26 @@ export function TenantGate({ children }: TenantGateProps) {
     return <LoadingScreen message="Session expired..." />
   }
 
-  // If user has tenant cookie, show dashboard immediately
-  // No need to wait for tenants API - it will be lazy loaded
+  // If user has tenant cookie, wait for ALL data before showing dashboard
+  // This ensures Sidebar and Content render simultaneously (no separate loading states)
   if (hasTenantCookie) {
+    // Wait for bootstrap AND permissions to be ready
+    // Bootstrap provides the data, PermissionProvider syncs it to state
+    const isBootstrapReady = isBootstrapped && !bootstrapLoading
+    const hasBootstrapPermissions =
+      bootstrapData?.permissions?.list && bootstrapData.permissions.list.length > 0
+    const hasProviderPermissions = permissions.length > 0
+
+    // Still loading if:
+    // 1. Bootstrap is loading, OR
+    // 2. Bootstrap has permissions but PermissionProvider hasn't synced yet
+    const isStillLoading =
+      !isBootstrapReady ||
+      (hasBootstrapPermissions && !hasProviderPermissions && permissionsLoading)
+
+    if (isStillLoading) {
+      return <LoadingScreen message="Loading..." />
+    }
     return <>{children}</>
   }
 

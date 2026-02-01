@@ -28,7 +28,7 @@
 import { useMemo } from 'react'
 import { usePermissions } from './hooks'
 import { isRoleAtLeast, type RoleString } from './constants'
-import { useBootstrapModules } from '@/context/bootstrap-provider'
+import { useBootstrapModules, useBootstrapContext } from '@/context/bootstrap-provider'
 import type {
   SidebarData,
   NavGroup,
@@ -229,16 +229,13 @@ function filterNavGroup(group: NavGroup, checks: AccessCheckFunctions): NavGroup
  * ```
  */
 export function useFilteredSidebarData(sidebarData: SidebarData): FilteredSidebarResult {
-  const {
-    can,
-    canAny,
-    isRole,
-    isAnyRole,
-    tenantRole,
-    permissions,
-    isLoading: permissionsLoading,
-  } = usePermissions()
-  const { moduleIds, modules, isLoading: modulesLoading } = useBootstrapModules()
+  const { can, canAny, isRole, isAnyRole, tenantRole } = usePermissions()
+  const { moduleIds, modules } = useBootstrapModules()
+  // Use bootstrap as single source of truth for loading state
+  const { isBootstrapped, isLoading: bootstrapLoading } = useBootstrapContext()
+
+  // Derive loading states from bootstrap
+  const isDataLoading = !isBootstrapped && bootstrapLoading
 
   // Create helper functions for module access
   const moduleHelpers = useMemo(() => {
@@ -266,27 +263,20 @@ export function useFilteredSidebarData(sidebarData: SidebarData): FilteredSideba
         return moduleIds.includes(moduleId)
       }
 
-      // moduleIds is empty - API failed or still loading
-      if (modulesLoading) {
-        return false // Hide while loading
-      }
-
-      // API returned empty - fail-closed for security
-      // No more Owner/Admin bypass - permissions from API are source of truth
+      // moduleIds is empty - could be:
+      // 1. Bootstrap not finished yet (handled by isDataLoading check)
+      // 2. API returned empty - fail-closed for security
+      // Backend will still enforce authorization
       return false
     }
 
     return { hasModule, getModuleReleaseStatus, isModuleActive }
-  }, [modules, moduleIds, modulesLoading])
+  }, [modules, moduleIds])
 
   const result = useMemo(() => {
-    // Check if we have permission data (user is authenticated)
-    // No more Owner/Admin bypass - permissions from API are source of truth
-    const _hasPermissionData = permissions.length > 0 || tenantRole !== undefined
-
-    // If permissions are still loading, show loading state
-    if (permissionsLoading && permissions.length === 0) {
-      // Return minimal sidebar (just Dashboard) while loading
+    // If bootstrap is still loading, return minimal sidebar (just Dashboard)
+    // This prevents flash of content and provides consistent loading experience
+    if (isDataLoading) {
       const minimalGroups = sidebarData.navGroups
         .map((group) => ({
           ...group,
@@ -300,37 +290,7 @@ export function useFilteredSidebarData(sidebarData: SidebarData): FilteredSideba
       }
     }
 
-    // If modules are still loading, show only items without module restrictions
-    // This prevents flash of all content while modules are being fetched
-    // Exception: Authenticated users (have tenantRole) can see all modules during loading
-    // to provide better UX - backend still enforces authorization
-    if (modulesLoading) {
-      // Filter out items with module restrictions while loading
-      // Hide module-gated items for all users during loading (no bypass)
-      const loadingChecks: AccessCheckFunctions = {
-        can,
-        canAny,
-        isRole,
-        isAnyRole,
-        tenantRole,
-        // While loading: hide module-gated items for everyone
-        hasModule: () => false,
-        // During loading, assume all modules are active and released
-        getModuleReleaseStatus: () => undefined,
-        isModuleActive: () => true,
-      }
-
-      const filteredNavGroups = sidebarData.navGroups
-        .map((group) => filterNavGroup(group, loadingChecks))
-        .filter((group): group is NavGroup => group !== null)
-
-      return {
-        ...sidebarData,
-        navGroups: filteredNavGroups,
-      }
-    }
-
-    // Normal filtering with all data available
+    // Bootstrap done - filter with all data available
     const checks: AccessCheckFunctions = {
       can,
       canAny,
@@ -350,33 +310,15 @@ export function useFilteredSidebarData(sidebarData: SidebarData): FilteredSideba
       ...sidebarData,
       navGroups: filteredNavGroups,
     }
-  }, [
-    sidebarData,
-    can,
-    canAny,
-    isRole,
-    isAnyRole,
-    tenantRole,
-    permissions,
-    permissionsLoading,
-    moduleHelpers,
-    modulesLoading,
-  ])
+  }, [sidebarData, can, canAny, isRole, isAnyRole, tenantRole, moduleHelpers, isDataLoading])
 
-  // Compute overall loading state
-  // No more Owner/Admin bypass - everyone waits for permissions to load
-  const isLoading = useMemo(() => {
-    // Still loading if permissions are being fetched and we have no data
-    if (permissionsLoading && permissions.length === 0) return true
-
-    // Also loading if no tenant role yet (user not authenticated)
-    return tenantRole === undefined
-  }, [permissions, tenantRole, permissionsLoading])
+  // Loading state is derived from bootstrap
+  const isLoading = isDataLoading
 
   return {
     data: result,
     isLoading,
-    isModulesLoading: modulesLoading,
+    isModulesLoading: isDataLoading,
   }
 }
 
