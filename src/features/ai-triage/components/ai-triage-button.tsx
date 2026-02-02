@@ -79,19 +79,27 @@ export function AITriageButton({
     onData: (event) => {
       // Update status from WebSocket event
       if (event.triage?.finding_id === findingId) {
-        setWsStatus(event.triage.status)
+        const newStatus = event.triage.status
+        setWsStatus(newStatus)
 
-        // Handle completion/failure events
-        // Use toast ID to deduplicate (prevent showing same toast from both WebSocket and polling)
-        if (event.type === 'triage_completed') {
+        // Show toast for status transitions
+        if (event.type === 'triage_started') {
+          toast.info('AI Triage Processing', {
+            id: `triage-progress-${findingId}`,
+            description: 'AI is now analyzing this finding...',
+          })
+        } else if (event.type === 'triage_completed') {
+          // Dismiss progress toast
+          toast.dismiss(`triage-progress-${findingId}`)
           toast.success('AI Triage Completed', {
             id: `triage-result-${findingId}`,
             description: 'Analysis is ready to view.',
           })
           onTriageCompleted?.()
-          // Stop polling if it was active
           setShouldPoll(false)
         } else if (event.type === 'triage_failed') {
+          // Dismiss progress toast
+          toast.dismiss(`triage-progress-${findingId}`)
           toast.error('AI Triage Failed', {
             id: `triage-result-${findingId}`,
             description: event.triage.error_message || 'Please try again.',
