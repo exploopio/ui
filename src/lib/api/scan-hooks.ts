@@ -22,7 +22,10 @@ import type {
   UpdateScanConfigRequest,
   TriggerScanRequest,
   CloneScanConfigRequest,
+  BulkActionRequest,
+  BulkActionResponse,
   PipelineRun,
+  PipelineRunWithFiltering,
   ScanSession,
   ScanSessionListResponse,
 } from './scan-types'
@@ -227,6 +230,7 @@ export function useDisableScanConfig(configId: string) {
 
 /**
  * Trigger scan execution
+ * Returns PipelineRunWithFiltering which includes filtering_result for smart filtering
  */
 export function useTriggerScan(configId: string) {
   const { currentTenant } = useTenant()
@@ -234,7 +238,7 @@ export function useTriggerScan(configId: string) {
   return useSWRMutation(
     currentTenant && configId ? scanEndpoints.trigger(configId) : null,
     async (url: string, { arg }: { arg?: TriggerScanRequest }) => {
-      return post<PipelineRun>(url, arg || {})
+      return post<PipelineRunWithFiltering>(url, arg || {})
     }
   )
 }
@@ -249,6 +253,66 @@ export function useCloneScanConfig(configId: string) {
     currentTenant && configId ? scanEndpoints.clone(configId) : null,
     async (url: string, { arg }: { arg: CloneScanConfigRequest }) => {
       return post<ScanConfig>(url, arg)
+    }
+  )
+}
+
+// ============================================
+// BULK OPERATION HOOKS
+// ============================================
+
+/**
+ * Bulk activate scan configs
+ */
+export function useBulkActivateScanConfigs() {
+  const { currentTenant } = useTenant()
+
+  return useSWRMutation(
+    currentTenant ? scanEndpoints.bulkActivate() : null,
+    async (url: string, { arg }: { arg: BulkActionRequest }) => {
+      return post<BulkActionResponse>(url, arg)
+    }
+  )
+}
+
+/**
+ * Bulk pause scan configs
+ */
+export function useBulkPauseScanConfigs() {
+  const { currentTenant } = useTenant()
+
+  return useSWRMutation(
+    currentTenant ? scanEndpoints.bulkPause() : null,
+    async (url: string, { arg }: { arg: BulkActionRequest }) => {
+      return post<BulkActionResponse>(url, arg)
+    }
+  )
+}
+
+/**
+ * Bulk disable scan configs
+ */
+export function useBulkDisableScanConfigs() {
+  const { currentTenant } = useTenant()
+
+  return useSWRMutation(
+    currentTenant ? scanEndpoints.bulkDisable() : null,
+    async (url: string, { arg }: { arg: BulkActionRequest }) => {
+      return post<BulkActionResponse>(url, arg)
+    }
+  )
+}
+
+/**
+ * Bulk delete scan configs
+ */
+export function useBulkDeleteScanConfigs() {
+  const { currentTenant } = useTenant()
+
+  return useSWRMutation(
+    currentTenant ? scanEndpoints.bulkDelete() : null,
+    async (url: string, { arg }: { arg: BulkActionRequest }) => {
+      return post<BulkActionResponse>(url, arg)
     }
   )
 }

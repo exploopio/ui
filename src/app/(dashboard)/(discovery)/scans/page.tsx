@@ -1,6 +1,8 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+import * as React from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
+import Link from 'next/link'
 import {
   ColumnDef,
   flexRender,
@@ -21,6 +23,7 @@ import { Progress } from '@/components/ui/progress'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Switch } from '@/components/ui/switch'
 import {
   Table,
   TableBody,
@@ -80,13 +83,22 @@ import {
   Copy,
   Tag,
   Settings,
+  Loader2,
+  Download,
+  FileJson,
+  FileSpreadsheet,
 } from 'lucide-react'
 import { Can, Permission } from '@/lib/permissions'
+import { exportToCSV, exportToJSON } from '@/lib/utils'
 import {
   useScanConfigs,
   useScanConfigStats,
   useScanSessions,
   useScanSessionStats,
+  useBulkActivateScanConfigs,
+  useBulkPauseScanConfigs,
+  useBulkDisableScanConfigs,
+  useBulkDeleteScanConfigs,
   invalidateScanConfigsCache,
   invalidateScanSessionsCache,
 } from '@/lib/api/scan-hooks'
@@ -100,9 +112,15 @@ import {
   SCAN_TYPE_LABELS,
   SCHEDULE_TYPE_LABELS,
   SCAN_CONFIG_STATUS_LABELS,
+  SCHEDULE_TYPES,
 } from '@/lib/api/scan-types'
-import type { ScanConfig, ScanConfigStatus, ScanType as ApiScanType } from '@/lib/api/scan-types'
-import { PlatformUsageCard, NewScanDialog } from '@/features/scans/components'
+import type {
+  ScanConfig,
+  ScanConfigStatus,
+  ScanType as ApiScanType,
+  ScheduleType,
+} from '@/lib/api/scan-types'
+import { PlatformUsageCard, NewScanDialog, CloneScanDialog } from '@/features/scans/components'
 import { SCAN_RUN_STATUS_LABELS } from '@/lib/api/scan-types'
 
 // ============================================
@@ -125,6 +143,16 @@ const configTypeFilters: { value: ConfigTypeFilter; label: string }[] = [
   { value: 'single', label: 'Single Scanner' },
 ]
 
+type ConfigScheduleFilter = ScheduleType | 'all'
+
+const configScheduleFilters: { value: ConfigScheduleFilter; label: string }[] = [
+  { value: 'all', label: 'All Schedules' },
+  ...SCHEDULE_TYPES.map((type) => ({
+    value: type as ScheduleType,
+    label: SCHEDULE_TYPE_LABELS[type],
+  })),
+]
+
 // ============================================
 // RUNS TAB TYPES
 // ============================================
@@ -134,9 +162,11 @@ type RunStatusFilter = 'all' | ScanRunStatus
 const runStatusFilters: { value: RunStatusFilter; label: string }[] = [
   { value: 'all', label: 'All' },
   { value: 'running', label: 'Running' },
-  { value: 'completed', label: 'Completed' },
+  { value: 'queued', label: 'Queued' },
   { value: 'pending', label: 'Pending' },
+  { value: 'completed', label: 'Completed' },
   { value: 'failed', label: 'Failed' },
+  { value: 'timeout', label: 'Timed Out' },
 ]
 
 // Map API status to UI-friendly status for StatusBadge
@@ -148,6 +178,7 @@ function mapSessionStatusToUI(
       return 'active'
     case 'completed':
       return 'completed'
+    case 'queued':
     case 'pending':
       return 'pending'
     case 'failed':
@@ -171,6 +202,28 @@ function formatDate(dateString?: string): string {
     hour: '2-digit',
     minute: '2-digit',
   })
+}
+
+/**
+ * Format next run time as relative time (e.g., "in 2 days", "in 3 hours")
+ */
+function formatNextRun(nextRunAt?: string): string | null {
+  if (!nextRunAt) return null
+
+  const now = new Date()
+  const nextRun = new Date(nextRunAt)
+  const diffMs = nextRun.getTime() - now.getTime()
+
+  if (diffMs < 0) return 'Overdue'
+
+  const diffMinutes = Math.floor(diffMs / (1000 * 60))
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+
+  if (diffDays > 0) return `in ${diffDays} day${diffDays > 1 ? 's' : ''}`
+  if (diffHours > 0) return `in ${diffHours} hour${diffHours > 1 ? 's' : ''}`
+  if (diffMinutes > 0) return `in ${diffMinutes} min${diffMinutes > 1 ? 's' : ''}`
+  return 'Soon'
 }
 
 // ============================================
@@ -232,16 +285,96 @@ export default function ScansPage() {
 }
 
 // ============================================
+// STATUS TOGGLE CELL (with loading state and debounce)
+// ============================================
+
+interface StatusToggleCellProps {
+  config: ScanConfig
+  onToggle: (action: 'pause' | 'activate', config: ScanConfig) => Promise<void>
+}
+
+function StatusToggleCell({ config, onToggle }: StatusToggleCellProps) {
+  const [isLoading, setIsLoading] = useState(false)
+  const [localStatus, setLocalStatus] = useState(config.status)
+  const debounceRef = React.useRef<NodeJS.Timeout | null>(null)
+
+  // Sync local status with prop when config changes
+  React.useEffect(() => {
+    setLocalStatus(config.status)
+  }, [config.status])
+
+  const handleToggle = async (checked: boolean) => {
+    // Debounce to prevent rapid clicking
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current)
+    }
+
+    const action = checked ? 'activate' : 'pause'
+    const canToggle =
+      (checked && localStatus === 'paused') || (!checked && localStatus === 'active')
+
+    if (!canToggle) return
+
+    // Optimistic update
+    setLocalStatus(checked ? 'active' : 'paused')
+    setIsLoading(true)
+
+    debounceRef.current = setTimeout(async () => {
+      try {
+        await onToggle(action, config)
+      } catch {
+        // Revert on error
+        setLocalStatus(config.status)
+      } finally {
+        setIsLoading(false)
+      }
+    }, 300) // 300ms debounce
+  }
+
+  const isActive = localStatus === 'active'
+  const isDisabled = config.status === 'disabled'
+
+  return (
+    <div className="flex items-center gap-2">
+      <div className="relative">
+        <Switch
+          checked={isActive}
+          onCheckedChange={handleToggle}
+          disabled={isDisabled || isLoading}
+          className="data-[state=checked]:bg-green-500"
+        />
+        {isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+          </div>
+        )}
+      </div>
+      <span className="text-xs text-muted-foreground min-w-[50px]">
+        {isLoading
+          ? 'Saving...'
+          : localStatus === 'active'
+            ? 'Active'
+            : localStatus === 'paused'
+              ? 'Paused'
+              : 'Disabled'}
+      </span>
+    </div>
+  )
+}
+
+// ============================================
 // CONFIG ACTIONS CELL (simplified - no hooks to prevent re-renders)
 // ============================================
 
 interface ConfigActionsCellProps {
   config: ScanConfig
-  onViewDetails: (config: ScanConfig) => void
-  onAction: (action: 'trigger' | 'pause' | 'activate' | 'delete', config: ScanConfig) => void
+  onAction: (
+    action: 'trigger' | 'pause' | 'activate' | 'delete' | 'clone',
+    config: ScanConfig
+  ) => void
 }
 
-function ConfigActionsCell({ config, onViewDetails, onAction }: ConfigActionsCellProps) {
+function ConfigActionsCell({ config, onAction }: ConfigActionsCellProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -250,14 +383,21 @@ function ConfigActionsCell({ config, onViewDetails, onAction }: ConfigActionsCel
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => onViewDetails(config)}>
-          <Eye className="mr-2 h-4 w-4" />
-          View Details
+        <DropdownMenuItem asChild>
+          <Link href={`/scans/${config.id}`} className="flex items-center">
+            <Eye className="mr-2 h-4 w-4" />
+            View Details
+          </Link>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => onAction('trigger', config)}>
           <Play className="mr-2 h-4 w-4" />
           Trigger Scan
         </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onAction('clone', config)}>
+          <Copy className="mr-2 h-4 w-4" />
+          Clone
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
         {config.status === 'active' && (
           <DropdownMenuItem onClick={() => onAction('pause', config)}>
             <Pause className="mr-2 h-4 w-4" />
@@ -292,19 +432,25 @@ function ConfigurationsTab() {
   const [globalFilter, setGlobalFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState<ConfigStatusFilter>('all')
   const [typeFilter, setTypeFilter] = useState<ConfigTypeFilter>('all')
+  const [scheduleFilter, setScheduleFilter] = useState<ConfigScheduleFilter>('all')
+  const [tagFilter, setTagFilter] = useState<string>('')
   const [rowSelection, setRowSelection] = useState({})
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [configToDelete, setConfigToDelete] = useState<ScanConfig | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [cloneDialogOpen, setCloneDialogOpen] = useState(false)
+  const [configToClone, setConfigToClone] = useState<ScanConfig | null>(null)
 
   // Memoize filter object to prevent unnecessary re-renders
   const filters = useMemo(
     () => ({
       status: statusFilter !== 'all' ? statusFilter : undefined,
       scan_type: typeFilter !== 'all' ? typeFilter : undefined,
+      schedule_type: scheduleFilter !== 'all' ? scheduleFilter : undefined,
+      tags: tagFilter || undefined,
       search: globalFilter || undefined,
     }),
-    [statusFilter, typeFilter, globalFilter]
+    [statusFilter, typeFilter, scheduleFilter, tagFilter, globalFilter]
   )
 
   // API hooks with stable configuration
@@ -321,10 +467,28 @@ function ConfigurationsTab() {
   const { data: configsResponse, isLoading: isLoadingConfigs } = useScanConfigs(filters, swrConfig)
   const { data: stats, isLoading: isLoadingStats } = useScanConfigStats(swrConfig)
 
+  // Bulk operation hooks
+  const { trigger: bulkActivate, isMutating: isActivating } = useBulkActivateScanConfigs()
+  const { trigger: bulkPause, isMutating: isPausing } = useBulkPauseScanConfigs()
+  const { trigger: bulkDisable, isMutating: isDisabling } = useBulkDisableScanConfigs()
+  const { trigger: bulkDelete, isMutating: isBulkDeleting } = useBulkDeleteScanConfigs()
+  const isBulkOperating = isActivating || isPausing || isDisabling || isBulkDeleting
+
   // Memoize configs array with stable reference
   const configs = useMemo((): ScanConfig[] => {
     return configsResponse?.items ?? []
   }, [configsResponse?.items])
+
+  // Sync selectedConfig with latest data from API
+  // This ensures the detail popup shows updated status after actions
+  useEffect(() => {
+    if (selectedConfig && configs.length > 0) {
+      const updatedConfig = configs.find((c) => c.id === selectedConfig.id)
+      if (updatedConfig && updatedConfig.status !== selectedConfig.status) {
+        setSelectedConfig(updatedConfig)
+      }
+    }
+  }, [configs, selectedConfig])
 
   // Status counts from stats - memoized with individual deps
   const statusCounts = useMemo(
@@ -353,12 +517,28 @@ function ConfigurationsTab() {
     setSelectedConfig(config)
   }, [])
 
+  // Toggle handler for StatusToggleCell (returns Promise for loading state)
+  const handleToggle = useCallback(async (action: 'pause' | 'activate', config: ScanConfig) => {
+    const endpoint =
+      action === 'pause' ? scanEndpoints.pause(config.id) : scanEndpoints.activate(config.id)
+    await post(endpoint, {})
+    toast.success(`Scan "${config.name}" ${action === 'pause' ? 'paused' : 'activated'}`)
+    await invalidateScanConfigsCache()
+  }, [])
+
   const handleAction = useCallback(
-    async (action: 'trigger' | 'pause' | 'activate' | 'delete', config: ScanConfig) => {
+    async (action: 'trigger' | 'pause' | 'activate' | 'delete' | 'clone', config: ScanConfig) => {
       // For delete, show confirmation dialog first
       if (action === 'delete') {
         setConfigToDelete(config)
         setDeleteConfirmOpen(true)
+        return
+      }
+
+      // For clone, show clone dialog
+      if (action === 'clone') {
+        setConfigToClone(config)
+        setCloneDialogOpen(true)
         return
       }
 
@@ -405,6 +585,79 @@ function ConfigurationsTab() {
       setConfigToDelete(null)
     }
   }, [configToDelete])
+
+  // Get selected scan IDs from table
+  const getSelectedScanIds = useCallback((): string[] => {
+    const selectedRows = Object.keys(rowSelection)
+    return selectedRows
+      .map((rowIndex) => configs[parseInt(rowIndex)]?.id)
+      .filter(Boolean) as string[]
+  }, [rowSelection, configs])
+
+  // Bulk action handlers
+  const handleBulkActivate = useCallback(async () => {
+    const scanIds = getSelectedScanIds()
+    if (scanIds.length === 0) return
+
+    try {
+      const result = await bulkActivate({ scan_ids: scanIds })
+      if (result) {
+        toast.success(result.message)
+        setRowSelection({})
+        await invalidateScanConfigsCache()
+      }
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to activate selected scans'))
+    }
+  }, [bulkActivate, getSelectedScanIds])
+
+  const handleBulkPause = useCallback(async () => {
+    const scanIds = getSelectedScanIds()
+    if (scanIds.length === 0) return
+
+    try {
+      const result = await bulkPause({ scan_ids: scanIds })
+      if (result) {
+        toast.success(result.message)
+        setRowSelection({})
+        await invalidateScanConfigsCache()
+      }
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to pause selected scans'))
+    }
+  }, [bulkPause, getSelectedScanIds])
+
+  const handleBulkDisable = useCallback(async () => {
+    const scanIds = getSelectedScanIds()
+    if (scanIds.length === 0) return
+
+    try {
+      const result = await bulkDisable({ scan_ids: scanIds })
+      if (result) {
+        toast.success(result.message)
+        setRowSelection({})
+        await invalidateScanConfigsCache()
+      }
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to disable selected scans'))
+    }
+  }, [bulkDisable, getSelectedScanIds])
+
+  const handleBulkDelete = useCallback(async () => {
+    const scanIds = getSelectedScanIds()
+    if (scanIds.length === 0) return
+
+    try {
+      const result = await bulkDelete({ scan_ids: scanIds })
+      if (result) {
+        toast.success(result.message)
+        setRowSelection({})
+        await invalidateScanConfigsCache()
+      }
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to delete selected scans'))
+    }
+  }, [bulkDelete, getSelectedScanIds])
 
   // Table columns - memoized to prevent infinite re-renders
   const columns: ColumnDef<ScanConfig>[] = useMemo(
@@ -464,17 +717,7 @@ function ConfigurationsTab() {
       {
         accessorKey: 'status',
         header: 'Status',
-        cell: ({ row }) => (
-          <StatusBadge
-            status={
-              row.original.status === 'active'
-                ? 'active'
-                : row.original.status === 'paused'
-                  ? 'pending'
-                  : 'inactive'
-            }
-          />
-        ),
+        cell: ({ row }) => <StatusToggleCell config={row.original} onToggle={handleToggle} />,
       },
       {
         accessorKey: 'progress',
@@ -537,22 +780,37 @@ function ConfigurationsTab() {
       {
         accessorKey: 'schedule_type',
         header: 'Schedule',
-        cell: ({ row }) => (
-          <span className="text-sm">{SCHEDULE_TYPE_LABELS[row.original.schedule_type]}</span>
-        ),
+        cell: ({ row }) => {
+          const config = row.original
+          const nextRun = formatNextRun(config.next_run_at)
+          const isPaused = config.status === 'paused'
+          const isActive = config.status === 'active'
+          return (
+            <div className="flex flex-col">
+              <span className="text-sm">{SCHEDULE_TYPE_LABELS[config.schedule_type]}</span>
+              {nextRun && isActive && (
+                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  Next: {nextRun}
+                </span>
+              )}
+              {nextRun && isPaused && (
+                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Clock className="h-3 w-3 opacity-50" />
+                  <span className="opacity-70">Next: {nextRun}</span>
+                  <span className="text-[10px] italic">(if activated)</span>
+                </span>
+              )}
+            </div>
+          )
+        },
       },
       {
         id: 'actions',
-        cell: ({ row }) => (
-          <ConfigActionsCell
-            config={row.original}
-            onViewDetails={handleViewDetails}
-            onAction={handleAction}
-          />
-        ),
+        cell: ({ row }) => <ConfigActionsCell config={row.original} onAction={handleAction} />,
       },
     ],
-    [getProgress, handleViewDetails, handleAction]
+    [getProgress, handleAction, handleToggle]
   )
 
   const table = useReactTable({
@@ -573,11 +831,18 @@ function ConfigurationsTab() {
   })
 
   // Active filters count
-  const activeFiltersCount = [statusFilter !== 'all', typeFilter !== 'all'].filter(Boolean).length
+  const activeFiltersCount = [
+    statusFilter !== 'all',
+    typeFilter !== 'all',
+    scheduleFilter !== 'all',
+    tagFilter !== '',
+  ].filter(Boolean).length
 
   const clearFilters = () => {
     setStatusFilter('all')
     setTypeFilter('all')
+    setScheduleFilter('all')
+    setTagFilter('')
   }
 
   return (
@@ -743,6 +1008,37 @@ function ConfigurationsTab() {
                         ))}
                       </div>
                     </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-muted-foreground text-xs uppercase">
+                        Schedule Type
+                      </Label>
+                      <div className="flex flex-wrap gap-2">
+                        {configScheduleFilters.map((filter) => (
+                          <Badge
+                            key={filter.value}
+                            variant={scheduleFilter === filter.value ? 'default' : 'outline'}
+                            className="cursor-pointer"
+                            onClick={() => setScheduleFilter(filter.value)}
+                          >
+                            {filter.label}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-muted-foreground text-xs uppercase">Tags</Label>
+                      <div className="relative">
+                        <Tag className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                        <Input
+                          placeholder="Filter by tag..."
+                          value={tagFilter}
+                          onChange={(e) => setTagFilter(e.target.value)}
+                          className="pl-8 h-8 text-sm"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </PopoverContent>
               </Popover>
@@ -750,27 +1046,41 @@ function ConfigurationsTab() {
               {Object.keys(rowSelection).length > 0 && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      {Object.keys(rowSelection).length} selected
+                    <Button variant="outline" size="sm" disabled={isBulkOperating}>
+                      {isBulkOperating ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        `${Object.keys(rowSelection).length} selected`
+                      )}
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => toast.success('Triggered selected scans')}>
+                    <DropdownMenuItem onClick={handleBulkActivate} disabled={isBulkOperating}>
                       <Play className="mr-2 h-4 w-4" />
-                      Trigger Selected
+                      Activate Selected
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => toast.success('Paused selected scans')}>
+                    <DropdownMenuItem onClick={handleBulkPause} disabled={isBulkOperating}>
                       <Pause className="mr-2 h-4 w-4" />
                       Pause Selected
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      className="text-red-400"
-                      onClick={() => toast.success('Deleted selected scans')}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete Selected
+                    <DropdownMenuItem onClick={handleBulkDisable} disabled={isBulkOperating}>
+                      <XCircle className="mr-2 h-4 w-4" />
+                      Disable Selected
                     </DropdownMenuItem>
+                    <Can permission={Permission.ScansDelete}>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className="text-red-400"
+                        onClick={handleBulkDelete}
+                        disabled={isBulkOperating}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete Selected
+                      </DropdownMenuItem>
+                    </Can>
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
@@ -788,6 +1098,25 @@ function ConfigurationsTab() {
                     onClick={() => setTypeFilter('all')}
                     className="ml-1 hover:text-foreground"
                   >
+                    x
+                  </button>
+                </Badge>
+              )}
+              {scheduleFilter !== 'all' && (
+                <Badge variant="secondary" className="gap-1">
+                  Schedule: {configScheduleFilters.find((f) => f.value === scheduleFilter)?.label}
+                  <button
+                    onClick={() => setScheduleFilter('all')}
+                    className="ml-1 hover:text-foreground"
+                  >
+                    x
+                  </button>
+                </Badge>
+              )}
+              {tagFilter && (
+                <Badge variant="secondary" className="gap-1">
+                  Tag: {tagFilter}
+                  <button onClick={() => setTagFilter('')} className="ml-1 hover:text-foreground">
                     x
                   </button>
                 </Badge>
@@ -829,9 +1158,14 @@ function ConfigurationsTab() {
                       data-state={row.getIsSelected() && 'selected'}
                       className="cursor-pointer"
                       onClick={(e) => {
+                        // Ignore clicks on interactive elements to prevent popup from opening
+                        const target = e.target as HTMLElement
                         if (
-                          (e.target as HTMLElement).closest('[role="checkbox"]') ||
-                          (e.target as HTMLElement).closest('button')
+                          target.closest('[role="checkbox"]') ||
+                          target.closest('button') ||
+                          target.closest('[role="menu"]') ||
+                          target.closest('[role="menuitem"]') ||
+                          target.closest('[data-radix-popper-content-wrapper]')
                         ) {
                           return
                         }
@@ -944,6 +1278,13 @@ function ConfigurationsTab() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Clone Scan Dialog */}
+      <CloneScanDialog
+        scan={configToClone}
+        open={cloneDialogOpen}
+        onOpenChange={setCloneDialogOpen}
+      />
     </>
   )
 }
@@ -1029,8 +1370,8 @@ function ConfigDetailSheet({ config, onClose: _onClose, onDelete }: ConfigDetail
               : 'bg-gradient-to-br from-gray-500/20 via-gray-500/10 to-transparent'
         }`}
       >
-        {/* Status & Type Row */}
-        <div className="flex items-center justify-between mb-3">
+        {/* Status & Type Row - pr-14 to avoid overlap with close button */}
+        <div className="flex items-center justify-between mb-4 pr-14">
           <Badge variant="outline" className="font-medium">
             {SCAN_TYPE_LABELS[config.scan_type]}
           </Badge>
@@ -1045,14 +1386,19 @@ function ConfigDetailSheet({ config, onClose: _onClose, onDelete }: ConfigDetail
           />
         </div>
 
-        {/* Title */}
-        <h2 className="text-xl font-bold mb-1">{config.name}</h2>
+        {/* Title with icon */}
+        <div className="flex items-center gap-3 mb-2">
+          <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+            <Radar className="h-5 w-5 text-primary" />
+          </div>
+          <h2 className="text-xl font-bold line-clamp-2">{config.name}</h2>
+        </div>
         {config.description && (
-          <p className="text-sm text-muted-foreground">{config.description}</p>
+          <p className="text-sm text-muted-foreground pl-[52px]">{config.description}</p>
         )}
 
         {/* Progress Bar */}
-        <div className="mt-4 p-4 rounded-xl bg-background/80 backdrop-blur border">
+        <div className="mt-5 p-4 rounded-xl bg-background/80 backdrop-blur border shadow-sm">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium">Success Rate</span>
             <span
@@ -1088,7 +1434,7 @@ function ConfigDetailSheet({ config, onClose: _onClose, onDelete }: ConfigDetail
         </div>
 
         {/* Quick Actions */}
-        <div className="flex gap-2 mt-4">
+        <div className="flex gap-2 mt-5">
           {config.status === 'active' && (
             <>
               <Button
@@ -1336,16 +1682,71 @@ function ConfigDetailSheet({ config, onClose: _onClose, onDelete }: ConfigDetail
             <h4 className="text-sm font-medium mb-3">Created By</h4>
             <div className="flex items-center gap-3">
               <Avatar className="h-10 w-10">
-                <AvatarFallback>U</AvatarFallback>
+                <AvatarFallback>
+                  {(config.created_by_name || 'S').charAt(0).toUpperCase()}
+                </AvatarFallback>
               </Avatar>
               <div>
-                <p className="font-medium">{config.created_by || 'System'}</p>
+                <p className="font-medium">{config.created_by_name || 'System'}</p>
                 <p className="text-xs text-muted-foreground">{formatDate(config.created_at)}</p>
               </div>
             </div>
           </div>
 
-          {/* Scan ID */}
+          {/* Targets Summary */}
+          {((config.asset_group_ids && config.asset_group_ids.length > 0) ||
+            config.asset_group_id ||
+            (config.targets && config.targets.length > 0)) && (
+            <div className="rounded-xl border p-4 bg-card">
+              <h4 className="text-sm font-medium mb-3">Targets</h4>
+              <div className="space-y-2">
+                {/* Asset Groups */}
+                {config.asset_group_ids && config.asset_group_ids.length > 0 ? (
+                  <div>
+                    <span className="text-xs text-muted-foreground">Asset Groups</span>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {config.asset_group_ids.map((id) => (
+                        <Badge key={id} variant="outline" className="text-xs">
+                          {id.slice(0, 8)}...
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                ) : config.asset_group_id ? (
+                  <div>
+                    <span className="text-xs text-muted-foreground">Asset Group</span>
+                    <div className="mt-1">
+                      <Badge variant="outline" className="text-xs">
+                        {config.asset_group_id.slice(0, 8)}...
+                      </Badge>
+                    </div>
+                  </div>
+                ) : null}
+                {/* Direct Targets */}
+                {config.targets && config.targets.length > 0 && (
+                  <div>
+                    <span className="text-xs text-muted-foreground">
+                      Direct Targets ({config.targets.length})
+                    </span>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {config.targets.slice(0, 5).map((target, i) => (
+                        <Badge key={i} variant="secondary" className="text-xs">
+                          {target.length > 30 ? `${target.slice(0, 30)}...` : target}
+                        </Badge>
+                      ))}
+                      {config.targets.length > 5 && (
+                        <Badge variant="secondary" className="text-xs">
+                          +{config.targets.length - 5} more
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Technical Details */}
           <div className="rounded-xl border p-4 bg-card">
             <h4 className="text-sm font-medium mb-3">Technical Details</h4>
             <div className="space-y-2">
@@ -1359,7 +1760,8 @@ function ConfigDetailSheet({ config, onClose: _onClose, onDelete }: ConfigDetail
                     variant="ghost"
                     size="sm"
                     className="h-6 w-6 p-0"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation()
                       navigator.clipboard.writeText(config.id)
                       toast.success('ID copied to clipboard')
                     }}
@@ -1367,12 +1769,6 @@ function ConfigDetailSheet({ config, onClose: _onClose, onDelete }: ConfigDetail
                     <Copy className="h-3 w-3" />
                   </Button>
                 </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Asset Group</span>
-                <code className="text-xs bg-muted px-2 py-1 rounded truncate max-w-[150px]">
-                  {config.asset_group_id}
-                </code>
               </div>
             </div>
           </div>
@@ -1555,6 +1951,49 @@ function RunsTab() {
       setActioningSessionId(null)
     }
   }, [])
+
+  // Export handlers
+  const handleExportCSV = useCallback(() => {
+    const dataToExport = filteredSessions.length > 0 ? filteredSessions : sessions
+    if (dataToExport.length === 0) {
+      toast.error('No data to export')
+      return
+    }
+
+    const columns = {
+      scanner_name: 'Scanner',
+      scanner_version: 'Version',
+      asset_type: 'Asset Type',
+      asset_value: 'Target',
+      status: 'Status',
+      findings_total: 'Total Findings',
+      findings_new: 'New Findings',
+      findings_fixed: 'Fixed Findings',
+      duration_ms: 'Duration (ms)',
+      started_at: 'Started At',
+      completed_at: 'Completed At',
+      error_message: 'Error',
+    }
+
+    const timestamp = new Date().toISOString().split('T')[0]
+    exportToCSV(dataToExport, `scan-sessions-${timestamp}`, columns)
+    toast.success(`Exported ${dataToExport.length} scan sessions to CSV`)
+  }, [filteredSessions, sessions])
+
+  const handleExportJSON = useCallback(() => {
+    const dataToExport = filteredSessions.length > 0 ? filteredSessions : sessions
+    if (dataToExport.length === 0) {
+      toast.error('No data to export')
+      return
+    }
+
+    const timestamp = new Date().toISOString().split('T')[0]
+    exportToJSON(
+      { sessions: dataToExport, exported_at: new Date().toISOString() },
+      `scan-sessions-${timestamp}`
+    )
+    toast.success(`Exported ${dataToExport.length} scan sessions to JSON`)
+  }, [filteredSessions, sessions])
 
   // Table columns for ScanSession
   const columns: ColumnDef<ScanSession>[] = useMemo(
@@ -1845,7 +2284,7 @@ function RunsTab() {
             </TabsList>
           </Tabs>
 
-          {/* Search */}
+          {/* Search and Export */}
           <div className="flex flex-col gap-4 mb-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="relative flex-1 max-w-sm">
               <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -1857,11 +2296,33 @@ function RunsTab() {
               />
             </div>
 
-            {Object.keys(rowSelection).length > 0 && (
-              <Button variant="outline" size="sm">
-                {Object.keys(rowSelection).length} selected
-              </Button>
-            )}
+            <div className="flex items-center gap-2">
+              {Object.keys(rowSelection).length > 0 && (
+                <Button variant="outline" size="sm">
+                  {Object.keys(rowSelection).length} selected
+                </Button>
+              )}
+
+              {/* Export Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <Download className="h-4 w-4" />
+                    Export
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleExportCSV}>
+                    <FileSpreadsheet className="mr-2 h-4 w-4" />
+                    Export as CSV
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleExportJSON}>
+                    <FileJson className="mr-2 h-4 w-4" />
+                    Export as JSON
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
 
           {/* Table */}

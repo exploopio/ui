@@ -37,7 +37,6 @@ export type AssetType =
   | 'compute'
   | 'storage'
   | 'serverless'
-  | 'cloud' // General cloud resources
   // Infrastructure
   | 'host'
   | 'server' // Physical/virtual servers
@@ -46,8 +45,8 @@ export type AssetType =
   | 'network'
   // Code & CI/CD
   | 'repository' // Git repositories (unified asset type)
-  // Other
-  | 'other' // Miscellaneous assets
+  // Unclassified
+  | 'unclassified' // Assets not yet classified
   // Legacy types (deprecated - kept for backwards compatibility)
   | 'service' // @deprecated - Use application instead
   | 'credential' // @deprecated - Moved to Identities module
@@ -79,7 +78,7 @@ export const ASSET_TYPE_CATEGORIES: Record<
   cloud: {
     label: 'Cloud',
     description: 'Cloud infrastructure and services',
-    types: ['cloud_account', 'compute', 'storage', 'serverless', 'cloud'],
+    types: ['cloud_account', 'compute', 'storage', 'serverless'],
   },
   infrastructure: {
     label: 'Infrastructure',
@@ -199,7 +198,6 @@ export const ASSET_TYPE_LABELS: Record<AssetType, string> = {
   compute: 'Compute',
   storage: 'Storage',
   serverless: 'Serverless',
-  cloud: 'Cloud',
   // Infrastructure
   host: 'Host',
   server: 'Server',
@@ -208,8 +206,8 @@ export const ASSET_TYPE_LABELS: Record<AssetType, string> = {
   network: 'Network',
   // Code & CI/CD
   repository: 'Repository',
-  // Other
-  other: 'Other',
+  // Unclassified
+  unclassified: 'Unclassified',
   // Legacy types (deprecated)
   service: 'Service',
   credential: 'Credential',
@@ -229,14 +227,13 @@ export const ASSET_TYPE_ICONS: Record<AssetType, string> = {
   compute: 'Server',
   storage: 'HardDrive',
   serverless: 'Cpu',
-  cloud: 'Cloud',
   host: 'Server',
   server: 'Server',
   container: 'Boxes',
   database: 'Database',
   network: 'Network',
   repository: 'GitBranch',
-  other: 'Box',
+  unclassified: 'HelpCircle',
   // Legacy types (deprecated)
   service: 'Zap',
   credential: 'KeyRound',
@@ -256,14 +253,13 @@ export const ASSET_TYPE_DESCRIPTIONS: Record<AssetType, string> = {
   compute: 'Virtual machines and instances',
   storage: 'S3 buckets, Azure Blobs, GCS buckets',
   serverless: 'Lambda functions, Cloud Functions, Cloud Run',
-  cloud: 'General cloud resources',
   host: 'Physical and virtual servers',
   server: 'Physical and virtual servers',
   container: 'Docker and Kubernetes workloads',
   database: 'Database instances and clusters',
   network: 'VPCs, firewalls, load balancers',
   repository: 'Source code repositories',
-  other: 'Miscellaneous assets',
+  unclassified: 'Assets not yet classified',
   // Legacy types (deprecated)
   service: 'Network services (SSH, HTTP, DB services)',
   credential: 'Credentials (deprecated - moved to Identities)',
@@ -289,7 +285,6 @@ export const ASSET_TYPE_COLORS: Record<AssetType, { bg: string; text: string }> 
   compute: { bg: 'bg-orange-500/15', text: 'text-orange-600' },
   storage: { bg: 'bg-amber-500/15', text: 'text-amber-600' },
   serverless: { bg: 'bg-violet-500/15', text: 'text-violet-600' },
-  cloud: { bg: 'bg-sky-500/15', text: 'text-sky-600' },
   // Infrastructure
   host: { bg: 'bg-slate-500/15', text: 'text-slate-600' },
   server: { bg: 'bg-slate-500/15', text: 'text-slate-600' },
@@ -298,8 +293,8 @@ export const ASSET_TYPE_COLORS: Record<AssetType, { bg: string; text: string }> 
   network: { bg: 'bg-rose-500/15', text: 'text-rose-600' },
   // Code & CI/CD
   repository: { bg: 'bg-fuchsia-500/15', text: 'text-fuchsia-600' },
-  // Other
-  other: { bg: 'bg-gray-500/15', text: 'text-gray-600' },
+  // Unclassified
+  unclassified: { bg: 'bg-gray-500/15', text: 'text-gray-600' },
   // Legacy types (deprecated)
   service: { bg: 'bg-yellow-500/15', text: 'text-yellow-600' },
   credential: { bg: 'bg-red-500/15', text: 'text-red-600' },

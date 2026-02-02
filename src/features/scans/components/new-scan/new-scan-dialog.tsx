@@ -119,9 +119,15 @@ function mapFormDataToRequest(formData: NewScanFormData): CreateScanConfigReques
   // 2. Combine individual assets and custom targets into targets array
   const allTargets: string[] = []
 
-  // Individual assets would be converted to target values
-  // (For now, assetIds would need to be resolved to their identifiers)
-  // This can be expanded when individual asset selection is implemented
+  // Individual assets - convert asset names to targets
+  if (targets.assetIds.length > 0 && targets.assetNames) {
+    for (const assetId of targets.assetIds) {
+      const assetName = targets.assetNames[assetId]
+      if (assetName) {
+        allTargets.push(assetName)
+      }
+    }
+  }
 
   // Custom targets - add directly
   if (targets.customTargets.length > 0) {
@@ -254,11 +260,13 @@ export function NewScanDialog({ open, onOpenChange, onSubmit }: NewScanDialogPro
       // Map form data to API request format
       const request = mapFormDataToRequest(formData)
 
-      // Validate: must have either asset_group_ids or targets
-      const hasAssetGroups = request.asset_group_ids && request.asset_group_ids.length > 0
-      const hasTargets = request.targets && request.targets.length > 0
-      if (!hasAssetGroups && !hasTargets) {
-        throw new Error('Please select an asset group, individual assets, or enter custom targets.')
+      // Validate the mapped request has targets
+      // This can happen if asset IDs couldn't be resolved to names
+      const requestHasAssetGroups = request.asset_group_ids && request.asset_group_ids.length > 0
+      const requestHasTargets = request.targets && request.targets.length > 0
+      if (!requestHasAssetGroups && !requestHasTargets) {
+        toast.error('Unable to resolve selected assets. Please try selecting them again.')
+        return
       }
 
       // Create the scan configuration

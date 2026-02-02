@@ -83,7 +83,7 @@ export const getDomains = () => getAssetsByType('domain')
 export const getWebsites = () => getAssetsByType('website')
 export const getServices = () => getAssetsByType('service')
 export const getRepositories = () => getAssetsByType('repository')
-export const getCloudAssets = () => getAssetsByType('cloud')
+export const getCloudAssets = () => getAssetsByType('cloud_account')
 export const getCredentials = () => getAssetsByType('credential')
 export const getHosts = () => getAssetsByType('host')
 export const getContainers = () => getAssetsByType('container')
@@ -172,7 +172,7 @@ export const getUngroupedAssetStats = () => {
       website: ungrouped.filter((a) => a.type === 'website').length,
       service: ungrouped.filter((a) => a.type === 'service').length,
       repository: ungrouped.filter((a) => a.type === 'repository').length,
-      cloud: ungrouped.filter((a) => a.type === 'cloud').length,
+      cloud: ungrouped.filter((a) => a.type === 'cloud_account').length,
       credential: ungrouped.filter((a) => a.type === 'credential').length,
       host: ungrouped.filter((a) => a.type === 'host').length,
       container: ungrouped.filter((a) => a.type === 'container').length,

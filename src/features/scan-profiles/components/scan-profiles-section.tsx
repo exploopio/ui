@@ -14,6 +14,8 @@ import {
   Pencil,
   Trash2,
   MoreHorizontal,
+  Sparkles,
+  ChevronDown,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/api/error-handler'
@@ -51,6 +53,7 @@ import {
 import { AddScanProfileDialog } from './add-scan-profile-dialog'
 import { EditScanProfileDialog } from './edit-scan-profile-dialog'
 import { CloneScanProfileDialog } from './clone-scan-profile-dialog'
+import { AddPresetDialog } from './add-preset-dialog'
 import { Can, Permission } from '@/lib/permissions'
 import {
   useScanProfiles,
@@ -64,6 +67,7 @@ import { INTENSITY_OPTIONS } from '../schemas/scan-profile-schema'
 export function ScanProfilesSection() {
   // Dialog states
   const [addDialogOpen, setAddDialogOpen] = useState(false)
+  const [presetDialogOpen, setPresetDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [cloneDialogOpen, setCloneDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -205,10 +209,25 @@ export function ScanProfilesSection() {
                   )}
                 </Button>
                 <Can permission={Permission.ScanProfilesWrite}>
-                  <Button onClick={() => setAddDialogOpen(true)}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Create Profile
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add Profile
+                        <ChevronDown className="ml-2 h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => setAddDialogOpen(true)}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Create Custom Profile
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setPresetDialogOpen(true)}>
+                        <Sparkles className="mr-2 h-4 w-4" />
+                        Add Preset Profile
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </Can>
               </div>
             </div>
@@ -369,6 +388,8 @@ export function ScanProfilesSection() {
         onOpenChange={setAddDialogOpen}
         onSuccess={handleRefresh}
       />
+
+      <AddPresetDialog open={presetDialogOpen} onOpenChange={setPresetDialogOpen} />
 
       {selectedProfile && (
         <>

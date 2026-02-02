@@ -28,7 +28,7 @@ export const deriveAssetClassification = (
   // Determine scope
   let scope: AssetScope = 'internal'
 
-  if (metadata?.cloudProvider || type === 'cloud') {
+  if (metadata?.cloudProvider || type === 'cloud_account') {
     scope = 'cloud'
   } else if (tagsSet.has('vendor') || tagsSet.has('third-party') || nameLC.includes('vendor')) {
     scope = 'vendor'

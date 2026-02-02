@@ -61,8 +61,9 @@ export interface ScanConfig {
   tenant_id: string
   name: string
   description?: string
-  asset_group_id?: string // Now optional
-  targets?: string[] // NEW: direct targets
+  asset_group_id?: string // Legacy single asset group
+  asset_group_ids?: string[] // Multiple asset groups
+  targets?: string[] // Direct targets (individual assets or custom)
   scan_type: ScanType
   pipeline_id?: string
   scanner_name?: string
@@ -80,11 +81,12 @@ export interface ScanConfig {
   status: ScanConfigStatus
   last_run_id?: string
   last_run_at?: string
-  last_run_status?: string
+  last_run_status?: ScanSessionStatus
   total_runs: number
   successful_runs: number
   failed_runs: number
   created_by?: string
+  created_by_name?: string
   created_at: string
   updated_at: string
 }
@@ -163,6 +165,30 @@ export interface CloneScanConfigRequest {
 }
 
 /**
+ * Bulk action request
+ */
+export interface BulkActionRequest {
+  scan_ids: string[]
+}
+
+/**
+ * Bulk action response
+ */
+export interface BulkActionResponse {
+  successful: string[]
+  failed: Array<{
+    id: string
+    error: string
+  }>
+  message: string
+}
+
+/**
+ * Bulk action types
+ */
+export type BulkAction = 'activate' | 'pause' | 'disable' | 'delete'
+
+/**
  * Scan configuration list filters
  */
 export interface ScanConfigListFilters {
@@ -228,11 +254,13 @@ export interface PipelineRun {
  */
 export interface StatusCounts {
   total: number
-  running: number
+  queued: number
   pending: number
+  running: number
   completed: number
   failed: number
   canceled: number
+  timeout: number
 }
 
 /**
@@ -244,8 +272,9 @@ export interface ScanManagementOverview {
   jobs: StatusCounts
 }
 
-// Scan Run status types
-export const SCAN_RUN_STATUSES = [
+// Scan Session/Run status types
+export const SCAN_SESSION_STATUSES = [
+  'queued',
   'pending',
   'running',
   'completed',
@@ -253,15 +282,42 @@ export const SCAN_RUN_STATUSES = [
   'canceled',
   'timeout',
 ] as const
-export type ScanRunStatus = (typeof SCAN_RUN_STATUSES)[number]
+export type ScanSessionStatus = (typeof SCAN_SESSION_STATUSES)[number]
 
-export const SCAN_RUN_STATUS_LABELS: Record<ScanRunStatus, string> = {
+// Alias for backward compatibility
+export const SCAN_RUN_STATUSES = SCAN_SESSION_STATUSES
+export type ScanRunStatus = ScanSessionStatus
+
+export const SCAN_SESSION_STATUS_LABELS: Record<ScanSessionStatus, string> = {
+  queued: 'Queued',
   pending: 'Pending',
   running: 'Running',
   completed: 'Completed',
   failed: 'Failed',
   canceled: 'Canceled',
   timeout: 'Timed Out',
+}
+
+// Alias for backward compatibility
+export const SCAN_RUN_STATUS_LABELS = SCAN_SESSION_STATUS_LABELS
+
+/**
+ * Helper functions for status checking
+ */
+export function isTerminalStatus(status: ScanSessionStatus): boolean {
+  return ['completed', 'failed', 'canceled', 'timeout'].includes(status)
+}
+
+export function isActiveStatus(status: ScanSessionStatus): boolean {
+  return ['queued', 'pending', 'running'].includes(status)
+}
+
+export function isSuccessStatus(status: ScanSessionStatus): boolean {
+  return status === 'completed'
+}
+
+export function isErrorStatus(status: ScanSessionStatus): boolean {
+  return ['failed', 'timeout'].includes(status)
 }
 
 /**
@@ -318,3 +374,41 @@ export interface ScanSessionListResponse {
 
 // Alias for backward compatibility
 export type ScanRunListResponse = ScanSessionListResponse
+
+// ============================================
+// SMART FILTERING (Asset-Scanner Compatibility)
+// ============================================
+
+/**
+ * Skip reason explaining why assets of a certain type were skipped
+ */
+export interface SkipReason {
+  asset_type: string
+  count: number
+  reason: string
+}
+
+/**
+ * Result of smart filtering during scan trigger
+ * Matches backend FilteringResultResponse
+ */
+export interface FilteringResult {
+  total_assets: number
+  scanned_assets: number
+  skipped_assets: number
+  unclassified_assets: number
+  compatibility_percent: number
+  scanned_by_type?: Record<string, number>
+  skipped_by_type?: Record<string, number>
+  skip_reasons?: SkipReason[]
+  was_filtered: boolean
+  tool_name?: string
+  supported_targets?: string[]
+}
+
+/**
+ * Extended PipelineRun with filtering result
+ */
+export interface PipelineRunWithFiltering extends PipelineRun {
+  filtering_result?: FilteringResult
+}

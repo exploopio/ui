@@ -1,7 +1,7 @@
 /**
  * Basic Info Step
  *
- * Step 1: Scan name, mode (single/workflow) and type selection
+ * Step 1: Scan name and type selection (simplified UI)
  */
 
 'use client'
@@ -17,16 +17,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import {
   Radar,
   GitBranch,
   Clock,
   Layers,
   ChevronRight,
+  ChevronDown,
   Sparkles,
   Server,
   Cloud,
 } from 'lucide-react'
+import { useState } from 'react'
 import type { ScanType, ScanMode, AgentPreference, NewScanFormData } from '../../types'
 import {
   SCAN_TYPE_CONFIG,
@@ -49,9 +52,10 @@ const categoryColors: Record<string, string> = {
 
 export function BasicInfoStep({ data, onChange }: BasicInfoStepProps) {
   const selectedWorkflow = mockWorkflows.find((w) => w.id === data.workflowId)
+  const [advancedOpen, setAdvancedOpen] = useState(false)
 
   return (
-    <div className="space-y-6 p-4">
+    <div className="space-y-5 px-4 sm:px-6 py-4">
       {/* Scan Name */}
       <div className="space-y-2">
         <Label htmlFor="scan-name">
@@ -65,139 +69,7 @@ export function BasicInfoStep({ data, onChange }: BasicInfoStepProps) {
         />
       </div>
 
-      {/* Scan Mode Selection */}
-      <div className="space-y-3">
-        <Label>
-          Scan Mode <span className="text-destructive">*</span>
-        </Label>
-        <RadioGroup
-          value={data.mode}
-          onValueChange={(value: ScanMode) =>
-            onChange({
-              mode: value,
-              workflowId: value === 'single' ? undefined : data.workflowId,
-            })
-          }
-          className="grid grid-cols-1 gap-3 sm:grid-cols-2"
-        >
-          <div
-            className={`flex items-start space-x-3 rounded-lg border p-4 transition-colors cursor-pointer ${
-              data.mode === 'single'
-                ? 'border-primary bg-primary/5'
-                : 'border-border hover:border-primary/50'
-            }`}
-          >
-            <RadioGroupItem value="single" id="mode-single" className="mt-1" />
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <Radar className="h-4 w-4 text-primary" />
-                <Label htmlFor="mode-single" className="cursor-pointer font-medium">
-                  {SCAN_MODE_CONFIG.single.label}
-                </Label>
-              </div>
-              <p className="text-muted-foreground text-xs mt-1">
-                {SCAN_MODE_CONFIG.single.description}
-              </p>
-            </div>
-          </div>
-          <div
-            className={`flex items-start space-x-3 rounded-lg border p-4 transition-colors cursor-pointer ${
-              data.mode === 'workflow'
-                ? 'border-primary bg-primary/5'
-                : 'border-border hover:border-primary/50'
-            }`}
-          >
-            <RadioGroupItem value="workflow" id="mode-workflow" className="mt-1" />
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <GitBranch className="h-4 w-4 text-primary" />
-                <Label htmlFor="mode-workflow" className="cursor-pointer font-medium">
-                  {SCAN_MODE_CONFIG.workflow.label}
-                </Label>
-              </div>
-              <p className="text-muted-foreground text-xs mt-1">
-                {SCAN_MODE_CONFIG.workflow.description}
-              </p>
-            </div>
-          </div>
-        </RadioGroup>
-      </div>
-
-      {/* Agent Preference Selection */}
-      <div className="space-y-3">
-        <Label>
-          Agent Preference <span className="text-destructive">*</span>
-        </Label>
-        <p className="text-xs text-muted-foreground">Choose which agent should execute this scan</p>
-        <RadioGroup
-          value={data.agentPreference}
-          onValueChange={(value: AgentPreference) => onChange({ agentPreference: value })}
-          className="grid grid-cols-1 gap-3 sm:grid-cols-3"
-        >
-          <div
-            className={`flex items-start space-x-3 rounded-lg border p-3 transition-colors cursor-pointer ${
-              data.agentPreference === 'auto'
-                ? 'border-primary bg-primary/5'
-                : 'border-border hover:border-primary/50'
-            }`}
-          >
-            <RadioGroupItem value="auto" id="agent-auto" className="mt-1" />
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-primary" />
-                <Label htmlFor="agent-auto" className="cursor-pointer font-medium text-sm">
-                  {AGENT_PREFERENCE_CONFIG.auto.label}
-                </Label>
-              </div>
-              <p className="text-muted-foreground text-xs mt-1">
-                {AGENT_PREFERENCE_CONFIG.auto.description}
-              </p>
-            </div>
-          </div>
-          <div
-            className={`flex items-start space-x-3 rounded-lg border p-3 transition-colors cursor-pointer ${
-              data.agentPreference === 'tenant'
-                ? 'border-primary bg-primary/5'
-                : 'border-border hover:border-primary/50'
-            }`}
-          >
-            <RadioGroupItem value="tenant" id="agent-tenant" className="mt-1" />
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <Server className="h-4 w-4 text-primary" />
-                <Label htmlFor="agent-tenant" className="cursor-pointer font-medium text-sm">
-                  {AGENT_PREFERENCE_CONFIG.tenant.label}
-                </Label>
-              </div>
-              <p className="text-muted-foreground text-xs mt-1">
-                {AGENT_PREFERENCE_CONFIG.tenant.description}
-              </p>
-            </div>
-          </div>
-          <div
-            className={`flex items-start space-x-3 rounded-lg border p-3 transition-colors cursor-pointer ${
-              data.agentPreference === 'platform'
-                ? 'border-primary bg-primary/5'
-                : 'border-border hover:border-primary/50'
-            }`}
-          >
-            <RadioGroupItem value="platform" id="agent-platform" className="mt-1" />
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <Cloud className="h-4 w-4 text-primary" />
-                <Label htmlFor="agent-platform" className="cursor-pointer font-medium text-sm">
-                  {AGENT_PREFERENCE_CONFIG.platform.label}
-                </Label>
-              </div>
-              <p className="text-muted-foreground text-xs mt-1">
-                {AGENT_PREFERENCE_CONFIG.platform.description}
-              </p>
-            </div>
-          </div>
-        </RadioGroup>
-      </div>
-
-      {/* Single Scan: Scan Type Selection */}
+      {/* Scan Type Selection - Main content for single mode */}
       {data.mode === 'single' && (
         <div className="space-y-3">
           <Label>
@@ -206,19 +78,20 @@ export function BasicInfoStep({ data, onChange }: BasicInfoStepProps) {
           <RadioGroup
             value={data.type}
             onValueChange={(value: ScanType) => onChange({ type: value })}
-            className="space-y-3"
+            className="space-y-2"
           >
             {(Object.keys(SCAN_TYPE_CONFIG) as ScanType[]).map((type) => (
               <div
                 key={type}
-                className={`flex items-start space-x-3 rounded-lg border p-4 transition-colors ${
+                className={`flex items-center space-x-3 rounded-lg border p-3 transition-colors cursor-pointer ${
                   data.type === type
                     ? 'border-primary bg-primary/5'
                     : 'border-border hover:border-primary/50'
                 }`}
+                onClick={() => onChange({ type })}
               >
-                <RadioGroupItem value={type} id={`type-${type}`} className="mt-1" />
-                <div className="flex-1">
+                <RadioGroupItem value={type} id={`type-${type}`} />
+                <div className="flex-1 min-w-0">
                   <Label htmlFor={`type-${type}`} className="cursor-pointer font-medium">
                     {SCAN_TYPE_CONFIG[type].label}
                   </Label>
@@ -264,30 +137,32 @@ export function BasicInfoStep({ data, onChange }: BasicInfoStepProps) {
 
           {/* Selected Workflow Details */}
           {selectedWorkflow && (
-            <div className="rounded-lg border bg-card p-4 space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="font-medium">{selectedWorkflow.name}</h4>
-                  <p className="text-sm text-muted-foreground">{selectedWorkflow.description}</p>
+            <div className="rounded-lg border bg-card p-4 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <h4 className="font-medium truncate">{selectedWorkflow.name}</h4>
+                  <p className="text-sm text-muted-foreground line-clamp-2">
+                    {selectedWorkflow.description}
+                  </p>
                 </div>
-                <Badge className={categoryColors[selectedWorkflow.category]}>
+                <Badge className={`shrink-0 ${categoryColors[selectedWorkflow.category]}`}>
                   {selectedWorkflow.category}
                 </Badge>
               </div>
 
               {/* Estimated Duration */}
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Clock className="h-4 w-4" />
-                <span>Estimated duration: {selectedWorkflow.estimatedDuration}</span>
+                <Clock className="h-4 w-4 shrink-0" />
+                <span>Estimated: {selectedWorkflow.estimatedDuration}</span>
               </div>
 
               {/* Workflow Steps */}
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm font-medium">
-                  <Layers className="h-4 w-4" />
-                  <span>Workflow Steps ({selectedWorkflow.steps.length})</span>
+                  <Layers className="h-4 w-4 shrink-0" />
+                  <span>Steps ({selectedWorkflow.steps.length})</span>
                 </div>
-                <div className="rounded-lg bg-muted/50 p-3">
+                <div className="rounded-lg bg-muted/50 p-2">
                   <div className="flex flex-wrap items-center gap-1">
                     {selectedWorkflow.steps.map((step, index) => (
                       <div key={step.id} className="flex items-center">
@@ -306,6 +181,89 @@ export function BasicInfoStep({ data, onChange }: BasicInfoStepProps) {
           )}
         </div>
       )}
+
+      {/* Advanced Options - Collapsible */}
+      <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
+        <CollapsibleTrigger className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-full py-2 border-t">
+          <ChevronDown
+            className={`h-4 w-4 transition-transform ${advancedOpen ? 'rotate-180' : ''}`}
+          />
+          <span>Advanced Options</span>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-4 pt-3">
+          {/* Scan Mode */}
+          <div className="space-y-2">
+            <Label className="text-sm">Scan Mode</Label>
+            <RadioGroup
+              value={data.mode}
+              onValueChange={(value: ScanMode) =>
+                onChange({
+                  mode: value,
+                  workflowId: value === 'single' ? undefined : data.workflowId,
+                })
+              }
+              className="flex flex-wrap gap-3"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="single" id="mode-single" />
+                <Label htmlFor="mode-single" className="cursor-pointer text-sm font-normal">
+                  <span className="flex items-center gap-1.5">
+                    <Radar className="h-3.5 w-3.5" />
+                    {SCAN_MODE_CONFIG.single.label}
+                  </span>
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="workflow" id="mode-workflow" />
+                <Label htmlFor="mode-workflow" className="cursor-pointer text-sm font-normal">
+                  <span className="flex items-center gap-1.5">
+                    <GitBranch className="h-3.5 w-3.5" />
+                    {SCAN_MODE_CONFIG.workflow.label}
+                  </span>
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
+
+          {/* Agent Preference - Compact */}
+          <div className="space-y-2">
+            <Label className="text-sm">Agent Preference</Label>
+            <RadioGroup
+              value={data.agentPreference}
+              onValueChange={(value: AgentPreference) => onChange({ agentPreference: value })}
+              className="flex flex-wrap gap-3"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="auto" id="agent-auto" />
+                <Label htmlFor="agent-auto" className="cursor-pointer text-sm font-normal">
+                  <span className="flex items-center gap-1.5">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    {AGENT_PREFERENCE_CONFIG.auto.label}
+                  </span>
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="tenant" id="agent-tenant" />
+                <Label htmlFor="agent-tenant" className="cursor-pointer text-sm font-normal">
+                  <span className="flex items-center gap-1.5">
+                    <Server className="h-3.5 w-3.5" />
+                    {AGENT_PREFERENCE_CONFIG.tenant.label}
+                  </span>
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="platform" id="agent-platform" />
+                <Label htmlFor="agent-platform" className="cursor-pointer text-sm font-normal">
+                  <span className="flex items-center gap-1.5">
+                    <Cloud className="h-3.5 w-3.5" />
+                    {AGENT_PREFERENCE_CONFIG.platform.label}
+                  </span>
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   )
 }

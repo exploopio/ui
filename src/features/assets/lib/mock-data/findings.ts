@@ -373,7 +373,7 @@ const cloudFindings: AssetFinding[] = [
     description: 'The S3 bucket has public access enabled, exposing files to the internet.',
     assetId: 'cloud-004',
     assetName: 'aws-prod-s3-assets',
-    assetType: 'cloud',
+    assetType: 'cloud_account',
     rule: 'AWS-S3-001',
     benchmark: 'CIS AWS',
     remediation: 'Enable S3 Block Public Access settings at the bucket level.',

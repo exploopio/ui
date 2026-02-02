@@ -54,13 +54,7 @@ const NETWORK_ASSET_TYPES: AssetType[] = [
   'application',
 ]
 const CONTAINER_ASSET_TYPES: AssetType[] = ['container']
-const CLOUD_ASSET_TYPES: AssetType[] = [
-  'cloud_account',
-  'compute',
-  'storage',
-  'serverless',
-  'cloud',
-]
+const CLOUD_ASSET_TYPES: AssetType[] = ['cloud_account', 'compute', 'storage', 'serverless']
 
 const SEVERITY_OPTIONS = Object.entries(SEVERITY_CONFIG)
   .filter(([key]) => key !== 'none')

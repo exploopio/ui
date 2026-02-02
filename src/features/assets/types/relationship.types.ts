@@ -176,7 +176,6 @@ export const EXTENDED_ASSET_TYPE_LABELS: Record<ExtendedAssetType, string> = {
   compute: 'Compute',
   storage: 'Storage',
   serverless: 'Serverless',
-  cloud: 'Cloud Resource',
   // Base asset types - Infrastructure
   host: 'Host',
   server: 'Server',
@@ -185,8 +184,8 @@ export const EXTENDED_ASSET_TYPE_LABELS: Record<ExtendedAssetType, string> = {
   network: 'Network',
   // Base asset types - Code
   repository: 'Repository',
-  // Other
-  other: 'Other',
+  // Unclassified
+  unclassified: 'Unclassified',
   // Legacy base types (deprecated)
   service: 'Service',
   credential: 'Credential',
@@ -281,11 +280,11 @@ export const VALID_RELATIONSHIP_CONSTRAINTS: Record<RelationshipType, Relationsh
   runs_on: [
     {
       sourceTypes: ['service', 'api', 'website'],
-      targetTypes: ['host', 'container', 'k8s_workload', 'cloud'],
+      targetTypes: ['host', 'container', 'k8s_workload', 'cloud_account'],
     },
     {
       sourceTypes: ['database'],
-      targetTypes: ['host', 'container', 'cloud'],
+      targetTypes: ['host', 'container', 'cloud_account'],
     },
     {
       sourceTypes: ['k8s_workload'],
@@ -296,15 +295,15 @@ export const VALID_RELATIONSHIP_CONSTRAINTS: Record<RelationshipType, Relationsh
   hosted_on: [
     {
       sourceTypes: ['website', 'api'],
-      targetTypes: ['cloud', 'host', 'k8s_cluster'],
+      targetTypes: ['cloud_account', 'host', 'k8s_cluster'],
     },
     {
       sourceTypes: ['domain'],
-      targetTypes: ['cloud'], // DNS hosting
+      targetTypes: ['cloud_account'], // DNS hosting
     },
     {
       sourceTypes: ['database'],
-      targetTypes: ['cloud', 'host'],
+      targetTypes: ['cloud_account', 'host'],
     },
   ],
 
@@ -342,14 +341,14 @@ export const VALID_RELATIONSHIP_CONSTRAINTS: Record<RelationshipType, Relationsh
     },
     {
       sourceTypes: ['network'],
-      targetTypes: ['host', 'cloud', 'load_balancer'],
+      targetTypes: ['host', 'cloud_account', 'load_balancer'],
     },
   ],
 
   connected_to: [
     {
       sourceTypes: ['service', 'api', 'host', 'database'],
-      targetTypes: ['service', 'api', 'host', 'database', 'cloud'],
+      targetTypes: ['service', 'api', 'host', 'database', 'cloud_account'],
     },
     {
       sourceTypes: ['k8s_workload'],
@@ -371,7 +370,7 @@ export const VALID_RELATIONSHIP_CONSTRAINTS: Record<RelationshipType, Relationsh
   sends_data_to: [
     {
       sourceTypes: ['service', 'api', 'website', 'mobile'],
-      targetTypes: ['database', 'api', 'service', 'cloud'],
+      targetTypes: ['database', 'api', 'service', 'cloud_account'],
     },
     {
       sourceTypes: ['database'],
@@ -396,7 +395,7 @@ export const VALID_RELATIONSHIP_CONSTRAINTS: Record<RelationshipType, Relationsh
 
   manages: [
     {
-      sourceTypes: ['cloud'],
+      sourceTypes: ['cloud_account'],
       targetTypes: ['host', 'database', 'k8s_cluster', 'network', 'load_balancer'],
     },
     {
@@ -408,7 +407,7 @@ export const VALID_RELATIONSHIP_CONSTRAINTS: Record<RelationshipType, Relationsh
   virtualized_by: [
     {
       sourceTypes: ['host'],
-      targetTypes: ['cloud', 'host'],
+      targetTypes: ['cloud_account', 'host'],
     },
     {
       sourceTypes: ['container'],
@@ -429,14 +428,14 @@ export const VALID_RELATIONSHIP_CONSTRAINTS: Record<RelationshipType, Relationsh
 
   provides_dr_for: [
     {
-      sourceTypes: ['database', 'host', 'cloud'],
-      targetTypes: ['database', 'host', 'cloud'],
+      sourceTypes: ['database', 'host', 'cloud_account'],
+      targetTypes: ['database', 'host', 'cloud_account'],
     },
   ],
 
   load_balances: [
     {
-      sourceTypes: ['load_balancer', 'service', 'cloud'],
+      sourceTypes: ['load_balancer', 'service', 'cloud_account'],
       targetTypes: ['host', 'k8s_workload', 'service', 'container'],
     },
   ],
@@ -448,7 +447,7 @@ export const VALID_RELATIONSHIP_CONSTRAINTS: Record<RelationshipType, Relationsh
         'website',
         'service',
         'repository',
-        'cloud',
+        'cloud_account',
         'host',
         'database',
         'api',
@@ -462,11 +461,11 @@ export const VALID_RELATIONSHIP_CONSTRAINTS: Record<RelationshipType, Relationsh
   deployed_to: [
     {
       sourceTypes: ['repository', 'container_image'],
-      targetTypes: ['k8s_cluster', 'k8s_workload', 'cloud', 'host'],
+      targetTypes: ['k8s_cluster', 'k8s_workload', 'cloud_account', 'host'],
     },
     {
       sourceTypes: ['service', 'api'],
-      targetTypes: ['k8s_cluster', 'cloud'],
+      targetTypes: ['k8s_cluster', 'cloud_account'],
     },
   ],
 }

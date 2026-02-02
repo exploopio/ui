@@ -354,9 +354,19 @@ export type {
   ScanConfigListFilters,
   ScanConfigStatsData,
   ScanRunStatus,
+  ScanSessionStatus,
 } from './scan-types'
 
-export { SCAN_RUN_STATUSES, SCAN_RUN_STATUS_LABELS } from './scan-types'
+export {
+  SCAN_RUN_STATUSES,
+  SCAN_RUN_STATUS_LABELS,
+  SCAN_SESSION_STATUSES,
+  SCAN_SESSION_STATUS_LABELS,
+  isTerminalStatus,
+  isActiveStatus,
+  isSuccessStatus,
+  isErrorStatus,
+} from './scan-types'
 
 // ============================================
 // FINDING HOOKS (with typed responses)
@@ -781,7 +791,13 @@ export {
   isUnlimited,
   TEMPLATE_MODE_DISPLAY_NAMES,
   TEMPLATE_MODE_DESCRIPTIONS,
+  // Preset profiles
+  PRESET_PROFILES,
+  PRESET_PROFILE_TYPES,
+  getPresetProfileRequest,
 } from './scan-profile-types'
+
+export type { PresetProfileType, PresetProfile } from './scan-profile-types'
 
 // ============================================
 // SCAN PROFILE ENDPOINTS

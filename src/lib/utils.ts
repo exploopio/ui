@@ -1,6 +1,6 @@
-import { clsx, type ClassValue } from "clsx"
-import { twMerge } from "tailwind-merge"
-import { nanoid } from "nanoid"
+import { clsx, type ClassValue } from 'clsx'
+import { twMerge } from 'tailwind-merge'
+import { nanoid } from 'nanoid'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -120,4 +120,90 @@ export function getPageNumbers(currentPage: number, totalPages: number) {
   }
 
   return rangeWithDots
+}
+
+// =============================================================================
+// DATA EXPORT UTILITIES
+// =============================================================================
+
+/**
+ * Export data to CSV format and trigger download
+ * @param data - Array of objects to export
+ * @param filename - Name of the file (without extension)
+ * @param columns - Optional custom column mapping { key: label }
+ */
+export function exportToCSV<T extends object>(
+  data: T[],
+  filename: string,
+  columns?: Record<string, string>
+): void {
+  if (data.length === 0) {
+    console.warn('No data to export')
+    return
+  }
+
+  // Get headers from columns mapping or first data item
+  const headers = columns ? Object.keys(columns) : Object.keys(data[0] as object)
+  const headerLabels = columns ? Object.values(columns) : headers
+
+  // Build CSV content
+  const csvRows: string[] = []
+
+  // Header row
+  csvRows.push(headerLabels.map(escapeCSVField).join(','))
+
+  // Data rows
+  for (const item of data) {
+    const values = headers.map((key) => {
+      const value = (item as Record<string, unknown>)[key]
+      if (value === null || value === undefined) return ''
+      if (typeof value === 'object') return JSON.stringify(value)
+      return String(value)
+    })
+    csvRows.push(values.map(escapeCSVField).join(','))
+  }
+
+  const csvContent = csvRows.join('\n')
+  downloadFile(csvContent, `${filename}.csv`, 'text/csv;charset=utf-8;')
+}
+
+/**
+ * Export data to JSON format and trigger download
+ * @param data - Data to export (array or object)
+ * @param filename - Name of the file (without extension)
+ */
+export function exportToJSON<T>(data: T, filename: string): void {
+  const jsonContent = JSON.stringify(data, null, 2)
+  downloadFile(jsonContent, `${filename}.json`, 'application/json')
+}
+
+/**
+ * Escape a CSV field value (handle commas, quotes, newlines)
+ */
+function escapeCSVField(value: string): string {
+  // If value contains comma, quote, or newline, wrap in quotes and escape internal quotes
+  if (/[",\n\r]/.test(value)) {
+    return `"${value.replace(/"/g, '""')}"`
+  }
+  return value
+}
+
+/**
+ * Trigger file download in browser
+ */
+function downloadFile(content: string, filename: string, mimeType: string): void {
+  const blob = new Blob([content], { type: mimeType })
+  const url = URL.createObjectURL(blob)
+
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.style.display = 'none'
+
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+
+  // Clean up the URL object
+  URL.revokeObjectURL(url)
 }

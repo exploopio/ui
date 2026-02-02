@@ -24,7 +24,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Sheet, SheetContent, SheetTitle, SheetHeader, SheetDescription } from '@/components/ui/sheet'
+import {
+  Sheet,
+  SheetContent,
+  SheetTitle,
+  SheetHeader,
+  SheetDescription,
+} from '@/components/ui/sheet'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   SearchIcon,
@@ -48,18 +54,29 @@ import {
 } from '@/lib/api'
 import { Separator } from '@/components/ui/separator'
 
-// Status filter type
-type StatusFilter = 'all' | 'pending' | 'running' | 'completed' | 'failed' | 'canceled'
+// Status filter type - matches ScanSessionStatus
+type StatusFilter =
+  | 'all'
+  | 'queued'
+  | 'pending'
+  | 'running'
+  | 'completed'
+  | 'failed'
+  | 'canceled'
+  | 'timeout'
 
 const statusFilters: { value: StatusFilter; label: string }[] = [
   { value: 'all', label: 'All' },
   { value: 'running', label: 'Running' },
-  { value: 'completed', label: 'Completed' },
+  { value: 'queued', label: 'Queued' },
   { value: 'pending', label: 'Pending' },
+  { value: 'completed', label: 'Completed' },
   { value: 'failed', label: 'Failed' },
+  { value: 'timeout', label: 'Timed Out' },
 ]
 
-const statusConfig: Record<string, { color: string; bgColor: string }> = {
+const statusConfig: Record<string, { color: string; bgColor: string; icon?: string }> = {
+  queued: { color: 'text-purple-400', bgColor: 'bg-purple-500/20' },
   pending: { color: 'text-yellow-400', bgColor: 'bg-yellow-500/20' },
   running: { color: 'text-blue-400', bgColor: 'bg-blue-500/20' },
   completed: { color: 'text-green-400', bgColor: 'bg-green-500/20' },
@@ -97,7 +114,11 @@ export function ScanSessionsTab() {
   const perPage = 20
 
   // Fetch real data
-  const { data: sessionsData, isLoading: loadingSessions, error } = useScanSessions({
+  const {
+    data: sessionsData,
+    isLoading: loadingSessions,
+    error,
+  } = useScanSessions({
     status: statusFilter !== 'all' ? statusFilter : undefined,
     page,
     per_page: perPage,
@@ -113,11 +134,13 @@ export function ScanSessionsTab() {
   const statusCounts = useMemo(() => {
     const counts = {
       all: stats?.total || 0,
+      queued: stats?.by_status?.queued || 0,
+      pending: stats?.by_status?.pending || 0,
       running: stats?.by_status?.running || 0,
       completed: stats?.by_status?.completed || 0,
-      pending: stats?.by_status?.pending || 0,
       failed: stats?.by_status?.failed || 0,
       canceled: stats?.by_status?.canceled || 0,
+      timeout: stats?.by_status?.timeout || 0,
     }
     return counts
   }, [stats])
@@ -197,7 +220,7 @@ export function ScanSessionsTab() {
               {(bySev.high || 0) > 0 && (
                 <Badge className="bg-orange-500 px-1.5 text-xs">H {bySev.high}</Badge>
               )}
-              {((bySev.medium || 0) + (bySev.low || 0)) > 0 && (
+              {(bySev.medium || 0) + (bySev.low || 0) > 0 && (
                 <Badge variant="secondary" className="px-1.5 text-xs">
                   +{(bySev.medium || 0) + (bySev.low || 0)}
                 </Badge>
@@ -465,12 +488,7 @@ export function ScanSessionsTab() {
               {totalSessions} sessions
             </p>
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage(1)}
-                disabled={page === 1}
-              >
+              <Button variant="outline" size="sm" onClick={() => setPage(1)} disabled={page === 1}>
                 <ChevronsLeft className="h-4 w-4" />
               </Button>
               <Button
@@ -536,9 +554,7 @@ function SessionDetailView({ session }: { session: ScanSession }) {
         <Badge className={`${config.bgColor} ${config.color} border-0`}>
           {SCAN_RUN_STATUS_LABELS[session.status] || session.status}
         </Badge>
-        {session.scanner_version && (
-          <Badge variant="outline">v{session.scanner_version}</Badge>
-        )}
+        {session.scanner_version && <Badge variant="outline">v{session.scanner_version}</Badge>}
       </div>
 
       <Separator />
@@ -573,15 +589,11 @@ function SessionDetailView({ session }: { session: ScanSession }) {
             {(bySev.critical || 0) > 0 && (
               <Badge className="bg-red-600">Critical: {bySev.critical}</Badge>
             )}
-            {(bySev.high || 0) > 0 && (
-              <Badge className="bg-orange-500">High: {bySev.high}</Badge>
-            )}
+            {(bySev.high || 0) > 0 && <Badge className="bg-orange-500">High: {bySev.high}</Badge>}
             {(bySev.medium || 0) > 0 && (
               <Badge className="bg-yellow-500">Medium: {bySev.medium}</Badge>
             )}
-            {(bySev.low || 0) > 0 && (
-              <Badge variant="secondary">Low: {bySev.low}</Badge>
-            )}
+            {(bySev.low || 0) > 0 && <Badge variant="secondary">Low: {bySev.low}</Badge>}
           </div>
         )}
       </div>

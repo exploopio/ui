@@ -1609,6 +1609,30 @@ export const scanEndpoints = {
    */
   clone: (scanId: string) => `${API_BASE.SCANS}/${scanId}/clone`,
 
+  // ============================================
+  // BULK OPERATIONS
+  // ============================================
+
+  /**
+   * Bulk activate scans
+   */
+  bulkActivate: () => `${API_BASE.SCANS}/bulk/activate`,
+
+  /**
+   * Bulk pause scans
+   */
+  bulkPause: () => `${API_BASE.SCANS}/bulk/pause`,
+
+  /**
+   * Bulk disable scans
+   */
+  bulkDisable: () => `${API_BASE.SCANS}/bulk/disable`,
+
+  /**
+   * Bulk delete scans
+   */
+  bulkDelete: () => `${API_BASE.SCANS}/bulk/delete`,
+
   /**
    * List runs for a scan
    */

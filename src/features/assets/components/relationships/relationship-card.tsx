@@ -52,7 +52,6 @@ const EXTENDED_ASSET_TYPE_COLORS: Record<ExtendedAssetType, { bg: string; text: 
   compute: { bg: 'bg-orange-500/20', text: 'text-orange-500' },
   storage: { bg: 'bg-amber-500/20', text: 'text-amber-500' },
   serverless: { bg: 'bg-violet-500/20', text: 'text-violet-500' },
-  cloud: { bg: 'bg-cyan-500/20', text: 'text-cyan-500' },
   // Infrastructure
   host: { bg: 'bg-slate-500/20', text: 'text-slate-500' },
   server: { bg: 'bg-slate-400/20', text: 'text-slate-400' },
@@ -61,8 +60,8 @@ const EXTENDED_ASSET_TYPE_COLORS: Record<ExtendedAssetType, { bg: string; text: 
   network: { bg: 'bg-gray-500/20', text: 'text-gray-500' },
   // Code & CI/CD
   repository: { bg: 'bg-orange-500/20', text: 'text-orange-500' },
-  // Other
-  other: { bg: 'bg-gray-400/20', text: 'text-gray-400' },
+  // Unclassified
+  unclassified: { bg: 'bg-gray-400/20', text: 'text-gray-400' },
   // Legacy types (deprecated)
   service: { bg: 'bg-purple-500/20', text: 'text-purple-500' },
   credential: { bg: 'bg-red-500/20', text: 'text-red-500' },

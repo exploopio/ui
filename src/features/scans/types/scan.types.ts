@@ -304,6 +304,8 @@ export interface ScanTargets {
   type: TargetType
   assetGroupIds: string[]
   assetIds: string[]
+  /** Asset names mapped by ID - used to convert to targets when submitting */
+  assetNames: Record<string, string>
   customTargets: string[] // domains, IPs
 }
 
@@ -311,6 +313,7 @@ export const DEFAULT_TARGETS: ScanTargets = {
   type: 'asset_groups',
   assetGroupIds: [],
   assetIds: [],
+  assetNames: {},
   customTargets: [],
 }
 
@@ -431,4 +434,123 @@ export interface ScanStats {
   scheduledScans: number
   totalFindings: number
   averageDuration: number
+}
+
+// ============================================
+// SMART FILTERING (Asset-Scanner Compatibility)
+// ============================================
+
+/**
+ * Skip reason explaining why assets of a certain type were skipped
+ */
+export interface SkipReason {
+  assetType: string
+  count: number
+  reason: string
+}
+
+/**
+ * Result of smart filtering during scan trigger
+ * Shows which assets were scanned vs skipped based on tool compatibility
+ */
+export interface FilteringResult {
+  /** Total assets in the scan scope */
+  totalAssets: number
+  /** Assets that were scanned (compatible with tool) */
+  scannedAssets: number
+  /** Assets that were skipped (incompatible with tool) */
+  skippedAssets: number
+  /** Assets with type "unclassified" - cannot match any scanner */
+  unclassifiedAssets: number
+  /** Percentage of compatible assets (0-100) */
+  compatibilityPercent: number
+  /** Breakdown of scanned assets by type */
+  scannedByType?: Record<string, number>
+  /** Breakdown of skipped assets by type */
+  skippedByType?: Record<string, number>
+  /** Detailed reasons for skipping each asset type */
+  skipReasons?: SkipReason[]
+  /** Whether filtering was actually applied */
+  wasFiltered: boolean
+  /** Name of the tool that performed filtering */
+  toolName?: string
+  /** Target types supported by the tool */
+  supportedTargets?: string[]
+}
+
+/**
+ * Preview of asset compatibility before scan creation
+ * Used to warn users about incompatible assets in the selected group
+ */
+export interface AssetCompatibilityPreview {
+  /** Total assets in selected asset group(s) */
+  totalAssets: number
+  /** Assets compatible with the selected tool */
+  compatibleAssets: number
+  /** Assets incompatible with the selected tool */
+  incompatibleAssets: number
+  /** Unclassified assets that cannot be matched */
+  unclassifiedAssets: number
+  /** Percentage of compatible assets (0-100) */
+  compatibilityPercent: number
+  /** Breakdown by asset type with compatibility status */
+  assetTypeBreakdown?: AssetTypeCompatibility[]
+  /** Tool name for context */
+  toolName?: string
+  /** Target types supported by the tool */
+  supportedTargets?: string[]
+}
+
+/**
+ * Asset type compatibility info for preview
+ */
+export interface AssetTypeCompatibility {
+  assetType: string
+  count: number
+  isCompatible: boolean
+  reason?: string
+}
+
+/**
+ * Compatibility status for UI display
+ */
+export type CompatibilityStatus = 'full' | 'partial' | 'none'
+
+/**
+ * Get compatibility status from percentage
+ */
+export function getCompatibilityStatus(percent: number): CompatibilityStatus {
+  if (percent >= 100) return 'full'
+  if (percent > 0) return 'partial'
+  return 'none'
+}
+
+/**
+ * Get color config for compatibility status
+ */
+export const COMPATIBILITY_STATUS_CONFIG: Record<
+  CompatibilityStatus,
+  { label: string; color: string; bgColor: string; textColor: string; icon: string }
+> = {
+  full: {
+    label: 'Fully Compatible',
+    color: 'green',
+    bgColor: 'bg-green-500/15',
+    textColor: 'text-green-600',
+    icon: 'CheckCircle',
+  },
+  partial: {
+    label: 'Partially Compatible',
+    color: 'yellow',
+    bgColor: 'bg-yellow-500/15',
+    textColor: 'text-yellow-600',
+    icon: 'AlertTriangle',
+  },
+  none: {
+    label: 'Not Compatible',
+    color: 'red',
+    bgColor: 'bg-red-500/15',
+    textColor: 'text-red-600',
+    icon: 'XCircle',
+  },
 }

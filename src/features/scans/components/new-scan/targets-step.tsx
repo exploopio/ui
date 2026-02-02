@@ -268,7 +268,15 @@ export function TargetsStep({ data, onChange }: TargetsStepProps) {
       ? [...data.targets.assetIds, asset.id]
       : data.targets.assetIds.filter((id) => id !== asset.id)
 
-    // Update metadata map
+    // Update assetNames map for converting to targets later
+    const newAssetNames = { ...data.targets.assetNames }
+    if (checked) {
+      newAssetNames[asset.id] = asset.name
+    } else {
+      delete newAssetNames[asset.id]
+    }
+
+    // Update metadata map for UI display
     if (checked) {
       setSelectedAssetsMeta((prev) => new Map(prev).set(asset.id, asset))
     } else {
@@ -283,6 +291,7 @@ export function TargetsStep({ data, onChange }: TargetsStepProps) {
       targets: {
         ...data.targets,
         assetIds: newAssetIds,
+        assetNames: newAssetNames,
       },
     })
   }
@@ -294,10 +303,15 @@ export function TargetsStep({ data, onChange }: TargetsStepProps) {
       return newMap
     })
 
+    // Remove from assetNames map too
+    const newAssetNames = { ...data.targets.assetNames }
+    delete newAssetNames[assetId]
+
     onChange({
       targets: {
         ...data.targets,
         assetIds: data.targets.assetIds.filter((id) => id !== assetId),
+        assetNames: newAssetNames,
       },
     })
   }
