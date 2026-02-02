@@ -123,9 +123,17 @@ function buildTriageHistoryEndpoint(findingId: string, limit?: number, offset?: 
 // FETCHERS
 // ============================================
 
-async function fetchTriageResult(url: string): Promise<AITriageResult> {
-  const response = await get<ApiTriageResult>(url)
-  return transformTriageResult(response)
+async function fetchTriageResult(url: string): Promise<AITriageResult | null> {
+  try {
+    const response = await get<ApiTriageResult>(url)
+    return transformTriageResult(response)
+  } catch (error: unknown) {
+    // 404 means no triage exists yet - return null instead of throwing
+    if (error && typeof error === 'object' && 'statusCode' in error && error.statusCode === 404) {
+      return null
+    }
+    throw error
+  }
 }
 
 async function fetchTriageHistory(url: string): Promise<TriageHistoryResponse> {
@@ -150,13 +158,22 @@ async function postTriage(
 
 /**
  * Hook to get the latest triage result for a finding
+ *
+ * Note: Returns null data (not error) when no triage exists yet (404).
+ * This is expected behavior - first triage hasn't been run.
  */
 export function useTriageResult(findingId: string | null, config?: SWRConfiguration) {
   const { currentTenant } = useTenant()
   const key = currentTenant && findingId ? buildTriageEndpoint(findingId) : null
 
-  return useSWR<AITriageResult>(key, fetchTriageResult, {
+  return useSWR<AITriageResult | null>(key, fetchTriageResult, {
     ...defaultConfig,
+    // Don't show error toast for 404 (no triage exists yet - expected)
+    onError: (error: { statusCode?: number }) => {
+      if (error.statusCode !== 404) {
+        handleApiError(error, { showToast: true, logError: true })
+      }
+    },
     ...config,
   })
 }
