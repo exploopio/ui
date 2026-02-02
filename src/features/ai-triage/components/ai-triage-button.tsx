@@ -3,25 +3,51 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { Bot, Loader2, CheckCircle, AlertCircle } from 'lucide-react'
+import { Sparkles, Loader2, AlertCircle, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
+import { cn } from '@/lib/utils'
+import { useHasModule } from '@/features/integrations/api/use-tenant-modules'
+import { useTriageChannel } from '@/hooks/use-websocket'
 import { useRequestTriage, useTriageResult } from '../api'
 import type { TriageStatus } from '../types'
+
+/** WebSocket triage event structure from backend */
+interface WSTriageEvent {
+  type: 'triage_pending' | 'triage_started' | 'triage_completed' | 'triage_failed'
+  triage: {
+    id: string
+    finding_id: string
+    tenant_id: string
+    status: TriageStatus
+    error_message?: string
+  }
+}
+
+/** Module ID for AI Triage feature */
+const AI_TRIAGE_MODULE = 'ai_triage'
 
 interface AITriageButtonProps {
   findingId: string
   currentStatus?: TriageStatus | null
   onTriageRequested?: () => void
   onTriageCompleted?: () => void
-  variant?: 'default' | 'outline' | 'ghost' | 'secondary'
+  variant?: 'default' | 'outline' | 'ghost' | 'secondary' | 'ai'
   size?: 'default' | 'sm' | 'lg' | 'icon'
   className?: string
   disabled?: boolean
+  /** If true, always show button regardless of module access (for testing) */
+  forceShow?: boolean
 }
 
 /**
- * AI Triage Button with automatic polling for status updates.
- * When triage is requested, automatically polls for completion using exponential backoff.
+ * AI Triage Button with real-time WebSocket updates.
+ *
+ * This button automatically checks if the tenant has the `ai_triage` module enabled.
+ * Module availability is controlled by the `is_active` field in the modules table.
+ * If not enabled, the button will not render (returns null).
+ *
+ * When triage is requested, receives real-time updates via WebSocket channel `triage:{finding_id}`.
+ * Falls back to polling if WebSocket is not connected.
  */
 export function AITriageButton({
   findingId,
@@ -32,29 +58,71 @@ export function AITriageButton({
   size = 'default',
   className,
   disabled,
+  forceShow = false,
 }: AITriageButtonProps) {
   const [isRequesting, setIsRequesting] = useState(false)
   const [shouldPoll, setShouldPoll] = useState(false)
   const [pollInterval, setPollInterval] = useState(2000)
+  const [wsStatus, setWsStatus] = useState<TriageStatus | null>(null)
   const pollCountRef = useRef(0)
   const previousStatusRef = useRef<TriageStatus | null>(null)
 
+  // Check if tenant has AI Triage module enabled (module is_active checked by backend)
+  const { hasModule: hasAITriageModule, isLoading: isCheckingModule } =
+    useHasModule(AI_TRIAGE_MODULE)
+
   const { trigger: requestTriage } = useRequestTriage(findingId)
 
-  // Poll for result when shouldPoll is true
-  const { data: triageResult, mutate } = useTriageResult(findingId, {
-    refreshInterval: shouldPoll ? pollInterval : 0,
+  // Subscribe to WebSocket triage channel for real-time updates
+  const { isSubscribed: wsConnected } = useTriageChannel<WSTriageEvent>(findingId, {
+    enabled: true,
+    onData: (event) => {
+      // Update status from WebSocket event
+      if (event.triage?.finding_id === findingId) {
+        setWsStatus(event.triage.status)
+
+        // Handle completion/failure events
+        // Use toast ID to deduplicate (prevent showing same toast from both WebSocket and polling)
+        if (event.type === 'triage_completed') {
+          toast.success('AI Triage Completed', {
+            id: `triage-result-${findingId}`,
+            description: 'Analysis is ready to view.',
+          })
+          onTriageCompleted?.()
+          // Stop polling if it was active
+          setShouldPoll(false)
+        } else if (event.type === 'triage_failed') {
+          toast.error('AI Triage Failed', {
+            id: `triage-result-${findingId}`,
+            description: event.triage.error_message || 'Please try again.',
+          })
+          onTriageCompleted?.()
+          setShouldPoll(false)
+        }
+      }
+    },
   })
 
-  // Get current status from polling result or initial prop
-  const currentStatus = triageResult?.status ?? initialStatus
+  // Only fetch triage result when:
+  // 1. Actively polling after user requested triage (and WebSocket not connected), OR
+  // 2. Initial status indicates triage is in progress (from activity data)
+  const isInitiallyInProgress = initialStatus === 'pending' || initialStatus === 'processing'
+  const shouldFetch = (shouldPoll && !wsConnected) || isInitiallyInProgress
+
+  // Poll for result only when needed (no initial fetch!)
+  const { data: triageResult, mutate } = useTriageResult(shouldFetch ? findingId : null, {
+    refreshInterval: shouldPoll && !wsConnected ? pollInterval : 0,
+  })
+
+  // Get current status: WebSocket > polling result > initial prop
+  const currentStatus = wsStatus ?? triageResult?.status ?? initialStatus
 
   const isTriageInProgress = currentStatus === 'pending' || currentStatus === 'processing'
   const isDisabled = disabled || isRequesting || isTriageInProgress
 
-  // Exponential backoff for polling
+  // Exponential backoff for polling (only when WebSocket not connected)
   useEffect(() => {
-    if (!shouldPoll || !isTriageInProgress) {
+    if (!shouldPoll || !isTriageInProgress || wsConnected) {
       pollCountRef.current = 0
       setPollInterval(2000)
       return
@@ -64,31 +132,60 @@ export function AITriageButton({
     const nextInterval = Math.min(2000 * Math.pow(1.5, pollCountRef.current), 10000)
     setPollInterval(nextInterval)
     pollCountRef.current += 1
-  }, [shouldPoll, isTriageInProgress, triageResult])
+  }, [shouldPoll, isTriageInProgress, triageResult, wsConnected])
 
-  // Detect completion and notify
+  // Detect completion from polling result (fallback when WebSocket not connected)
   useEffect(() => {
-    if (previousStatusRef.current === 'processing' && currentStatus === 'completed') {
-      toast.success('AI Triage Completed', {
-        description: 'Analysis is ready to view.',
-      })
-      setShouldPoll(false)
-      onTriageCompleted?.()
-    } else if (previousStatusRef.current === 'processing' && currentStatus === 'failed') {
-      toast.error('AI Triage Failed', {
-        description: triageResult?.errorMessage || 'Please try again.',
-      })
+    // Skip if WebSocket is connected (it handles notifications)
+    if (wsConnected) return
+
+    const prevStatus = previousStatusRef.current
+    const isNewCompletion = currentStatus === 'completed' && prevStatus !== 'completed'
+    const isNewFailure = currentStatus === 'failed' && prevStatus !== 'failed'
+
+    // Stop polling immediately when triage is done
+    if (shouldPoll && (currentStatus === 'completed' || currentStatus === 'failed')) {
       setShouldPoll(false)
     }
-    previousStatusRef.current = currentStatus ?? null
-  }, [currentStatus, triageResult?.errorMessage, onTriageCompleted])
 
-  // Start polling when status becomes pending/processing
+    // Notify completion when transitioning TO completed/failed
+    // Use toast ID to deduplicate (prevent showing same toast from both WebSocket and polling)
+    if (isNewCompletion) {
+      if (prevStatus === 'pending' || prevStatus === 'processing') {
+        toast.success('AI Triage Completed', {
+          id: `triage-result-${findingId}`,
+          description: 'Analysis is ready to view.',
+        })
+      }
+      onTriageCompleted?.()
+    } else if (isNewFailure) {
+      if (prevStatus === 'pending' || prevStatus === 'processing') {
+        toast.error('AI Triage Failed', {
+          id: `triage-result-${findingId}`,
+          description: triageResult?.errorMessage || 'Please try again.',
+        })
+      }
+      onTriageCompleted?.()
+    }
+
+    previousStatusRef.current = currentStatus ?? null
+  }, [currentStatus, triageResult?.errorMessage, onTriageCompleted, shouldPoll, wsConnected])
+
+  // Start polling when status becomes pending/processing (only if WebSocket not connected)
   useEffect(() => {
-    if (isTriageInProgress && !shouldPoll) {
+    if (isTriageInProgress && !shouldPoll && !wsConnected) {
       setShouldPoll(true)
     }
-  }, [isTriageInProgress, shouldPoll])
+    // Stop polling when WebSocket becomes connected
+    if (shouldPoll && wsConnected) {
+      setShouldPoll(false)
+    }
+  }, [isTriageInProgress, shouldPoll, wsConnected])
+
+  // Clear WebSocket status when finding changes
+  useEffect(() => {
+    setWsStatus(null)
+  }, [findingId])
 
   const handleClick = useCallback(async () => {
     if (isDisabled) return
@@ -96,7 +193,8 @@ export function AITriageButton({
     setIsRequesting(true)
     // Reset polling state
     pollCountRef.current = 0
-    setPollInterval(2000)
+    setPollInterval(3000) // Start with 3s interval
+    setWsStatus(null) // Clear previous WebSocket status
 
     try {
       const result = await requestTriage({ mode: 'quick' })
@@ -105,7 +203,10 @@ export function AITriageButton({
         toast.success('AI Triage Started', {
           description: "Analysis has been queued. We'll notify you when it completes.",
         })
-        setShouldPoll(true) // Start polling
+        // Only start polling if WebSocket is not connected
+        if (!wsConnected) {
+          setShouldPoll(true)
+        }
         previousStatusRef.current = 'pending'
         onTriageRequested?.()
         // Refresh immediately to get pending status
@@ -118,7 +219,7 @@ export function AITriageButton({
     } finally {
       setIsRequesting(false)
     }
-  }, [isDisabled, requestTriage, onTriageRequested, mutate])
+  }, [isDisabled, requestTriage, onTriageRequested, mutate, wsConnected])
 
   const getButtonContent = () => {
     if (isRequesting || currentStatus === 'processing') {
@@ -142,7 +243,7 @@ export function AITriageButton({
     if (currentStatus === 'completed') {
       return (
         <>
-          <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
+          <RotateCcw className="h-4 w-4 mr-2" />
           Re-analyze
         </>
       )
@@ -151,15 +252,15 @@ export function AITriageButton({
     if (currentStatus === 'failed') {
       return (
         <>
-          <AlertCircle className="h-4 w-4 mr-2 text-red-500" />
-          Retry Triage
+          <AlertCircle className="h-4 w-4 mr-2" />
+          Retry
         </>
       )
     }
 
     return (
       <>
-        <Bot className="h-4 w-4 mr-2" />
+        <Sparkles className="h-4 w-4 mr-2" />
         AI Triage
       </>
     )
@@ -178,14 +279,58 @@ export function AITriageButton({
     return 'Analyze this finding with AI to get severity assessment, risk score, and remediation guidance'
   }
 
+  // Determine button styling based on state and variant
+  const getButtonStyles = () => {
+    // Use AI gradient style for 'ai' variant or when variant is default/outline and not yet triaged
+    const useAIStyle = variant === 'ai' || (variant === 'outline' && !currentStatus)
+
+    if (useAIStyle && !isDisabled) {
+      // AI-themed gradient: purple to blue
+      return cn(
+        'bg-gradient-to-r from-violet-600 to-indigo-600',
+        'hover:from-violet-500 hover:to-indigo-500',
+        'text-white border-0',
+        'shadow-sm hover:shadow-md hover:shadow-violet-500/25',
+        'transition-all duration-200',
+        className
+      )
+    }
+
+    if (currentStatus === 'completed') {
+      return cn(
+        'border-green-500/50 text-green-600 hover:bg-green-50 dark:hover:bg-green-950/30',
+        className
+      )
+    }
+
+    if (currentStatus === 'failed') {
+      return cn(
+        'border-red-500/50 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30',
+        className
+      )
+    }
+
+    return className
+  }
+
+  // Don't render if module is not enabled (unless forceShow is true)
+  if (!forceShow && !isCheckingModule && !hasAITriageModule) {
+    return null
+  }
+
+  // Show subtle loading state while checking module access
+  if (!forceShow && isCheckingModule) {
+    return null // Don't show anything while checking - prevents flash
+  }
+
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
-            variant={variant}
+            variant={variant === 'ai' ? 'default' : variant}
             size={size}
-            className={className}
+            className={getButtonStyles()}
             onClick={handleClick}
             disabled={isDisabled}
           >

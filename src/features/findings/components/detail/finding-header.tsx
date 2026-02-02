@@ -18,6 +18,7 @@ import { useTenant } from '@/context/tenant-provider'
 import { useCVEEnrichment } from '@/features/threat-intel/hooks'
 import { EPSSScoreBadge } from '@/features/shared/components/epss-score-badge'
 import { KEVIndicatorBadge } from '@/features/shared/components/kev-indicator-badge'
+import { AITriageButton } from '@/features/ai-triage/components'
 import {
   useUpdateFindingStatusApi,
   useUpdateFindingSeverityApi,
@@ -64,6 +65,8 @@ interface FindingHeaderProps {
   onStatusChange?: (status: FindingStatus) => void
   onSeverityChange?: (severity: Severity) => void
   onAssigneeChange?: (assigneeId: string | null) => void
+  /** Callback when AI triage completes (via WebSocket or polling) */
+  onTriageCompleted?: () => void
 }
 
 export function FindingHeader({
@@ -71,6 +74,7 @@ export function FindingHeader({
   onStatusChange,
   onSeverityChange,
   onAssigneeChange,
+  onTriageCompleted,
 }: FindingHeaderProps) {
   const [status, setStatus] = useState<FindingStatus>(finding.status)
   const [severity, setSeverity] = useState<Severity>(finding.severity)
@@ -347,7 +351,7 @@ export function FindingHeader({
             </div>
 
             {/* Status + Severity + Assignee */}
-            <div className="flex items-center gap-1.5 text-sm">
+            <div className="flex items-center gap-1.5 text-sm flex-wrap">
               <StatusSelect
                 value={status}
                 onChange={handleStatusChange}
@@ -382,6 +386,13 @@ export function FindingHeader({
                 variant="ghost"
                 showFullName
                 placeholder="Assign"
+              />
+              {/* AI Triage Button - Mobile */}
+              <AITriageButton
+                findingId={finding.id}
+                variant="ai"
+                size="sm"
+                onTriageCompleted={onTriageCompleted}
               />
             </div>
 
@@ -563,6 +574,17 @@ export function FindingHeader({
             variant="ghost"
             showFullName
             placeholder="Unassigned"
+          />
+
+          {/* Divider */}
+          <div className="h-4 w-px bg-border" />
+
+          {/* AI Triage Button */}
+          <AITriageButton
+            findingId={finding.id}
+            variant="ai"
+            size="sm"
+            onTriageCompleted={onTriageCompleted}
           />
 
           {/* Discovered Date - inline */}

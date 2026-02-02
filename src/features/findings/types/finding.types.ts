@@ -295,6 +295,8 @@ export interface Remediation {
 export type ActivityType =
   | 'created'
   | 'ai_triage'
+  | 'ai_triage_requested'
+  | 'ai_triage_failed'
   | 'status_changed'
   | 'severity_changed'
   | 'assigned'
@@ -360,6 +362,16 @@ export const ACTIVITY_TYPE_CONFIG: Record<
     label: 'AI Analysis',
     icon: 'bot',
     color: 'text-purple-400',
+  },
+  ai_triage_requested: {
+    label: 'AI Analysis Requested',
+    icon: 'bot',
+    color: 'text-purple-400',
+  },
+  ai_triage_failed: {
+    label: 'AI Analysis Failed',
+    icon: 'bot',
+    color: 'text-red-400',
   },
   status_changed: {
     label: 'Status Changed',

@@ -79,7 +79,7 @@ const nextConfig: NextConfig = {
               "style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com", // Google Fonts stylesheets
               "img-src 'self' data: https:",
               "font-src 'self' data: https://fonts.gstatic.com", // Google Fonts files
-              "connect-src 'self' http://localhost:* https://*.rediver.io", // API calls (dev: localhost, prod: rediver.io)
+              "connect-src 'self' http://localhost:* ws://localhost:* wss://localhost:* https://*.exploop.io wss://*.exploop.io http://exploopio.local:* ws://exploopio.local:* http://*.exploop.local ws://*.exploop.local", // API + WebSocket calls
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",

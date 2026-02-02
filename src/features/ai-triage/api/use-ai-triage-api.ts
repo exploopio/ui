@@ -9,6 +9,8 @@ import { handleApiError } from '@/lib/api/error-handler'
 import { useTenant } from '@/context/tenant-provider'
 import type {
   AITriageResult,
+  AIConfig,
+  AIMode,
   RequestTriageInput,
   RequestTriageResponse,
   TriageHistoryResponse,
@@ -22,6 +24,7 @@ import type {
   ApiRequestTriageResponse,
   ApiTriageHistoryResponse,
   ApiRequestTriageInput,
+  ApiAIConfigResponse,
 } from './ai-triage-api.types'
 
 // ============================================
@@ -196,4 +199,59 @@ export function useRequestTriage(findingId: string | null) {
  */
 export function getTriageCacheKey(findingId: string): string {
   return buildTriageEndpoint(findingId)
+}
+
+// ============================================
+// AI CONFIG HOOK
+// ============================================
+
+const AI_CONFIG_ENDPOINT = '/api/v1/ai-triage/config'
+
+/**
+ * Transform API AI config to domain type
+ */
+function transformAIConfig(api: ApiAIConfigResponse): AIConfig {
+  return {
+    mode: api.mode as AIMode,
+    provider: api.provider,
+    model: api.model,
+    isEnabled: api.is_enabled,
+    autoTriageEnabled: api.auto_triage_enabled,
+    autoTriageSeverities: api.auto_triage_severities,
+    monthlyTokenLimit: api.monthly_token_limit,
+    tokensUsedThisMonth: api.tokens_used_this_month,
+  }
+}
+
+/**
+ * Fetch AI config from API
+ */
+async function fetchAIConfig(url: string): Promise<AIConfig> {
+  const response = await get<ApiAIConfigResponse>(url)
+  return transformAIConfig(response)
+}
+
+/**
+ * Hook to get the current AI configuration for the tenant
+ *
+ * Returns mode, provider, model, and whether AI is enabled
+ *
+ * @example
+ * ```tsx
+ * const { data: config, isLoading } = useAIConfig()
+ * if (config) {
+ *   console.log(`Using ${config.provider} (${config.model})`)
+ * }
+ * ```
+ */
+export function useAIConfig(config?: SWRConfiguration) {
+  const { currentTenant } = useTenant()
+  const key = currentTenant ? AI_CONFIG_ENDPOINT : null
+
+  return useSWR<AIConfig>(key, fetchAIConfig, {
+    ...defaultConfig,
+    // Cache for longer since config changes rarely
+    dedupingInterval: 60000, // 1 minute
+    ...config,
+  })
 }

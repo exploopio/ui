@@ -2,11 +2,11 @@
 
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   ExternalLink,
   FileText,
   AlertTriangle,
-  Info,
   Shield,
   FolderCode,
   Scan,
@@ -20,78 +20,68 @@ import {
   XCircle,
   Network,
   Building2,
+  Bot,
 } from 'lucide-react'
-import type { FindingDetail } from '../../types'
+import type { FindingDetail, Activity } from '../../types'
 import { SEVERITY_CONFIG } from '../../types'
 import { CodeHighlighter } from './code-highlighter'
 import { Copy, Check } from 'lucide-react'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
+import { cn } from '@/lib/utils'
 
 interface OverviewTabProps {
   finding: FindingDetail
+  /** Activities from finding detail - used to show AI triage summary */
+  activities?: Activity[]
 }
 
-export function OverviewTab({ finding }: OverviewTabProps) {
-  // Parse AI Triage if exists
-  const aiTriageActivity = finding.activities.find((a) => a.type === 'ai_triage')
-  let aiTriage = null
-  if (aiTriageActivity && typeof aiTriageActivity.content === 'string') {
-    try {
-      aiTriage = JSON.parse(aiTriageActivity.content)
-    } catch {
-      // ignore parse errors
+/**
+ * Extract AI triage data from activity changes
+ */
+interface AITriageActivityData {
+  triageResultId?: string
+  severity?: string
+  riskScore?: number
+  priorityRank?: number
+  riskLevel?: string
+  confidence?: string
+  recommendation?: string
+  createdAt: string
+}
+
+export function OverviewTab({ finding, activities = [] }: OverviewTabProps) {
+  // Find the most recent ai_triage activity (no API call needed!)
+  const aiTriageActivity = useMemo(() => {
+    const triageActivities = activities.filter((a) => a.type === 'ai_triage')
+    // Sort by createdAt desc to get most recent
+    return triageActivities.sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    )[0]
+  }, [activities])
+
+  // Extract AI triage data from activity metadata
+  // Data from api.changes is spread into metadata by the mapper
+  const aiTriageData: AITriageActivityData | null = useMemo(() => {
+    if (!aiTriageActivity?.metadata) return null
+
+    const m = aiTriageActivity.metadata as Record<string, unknown>
+
+    return {
+      triageResultId: (m.triage_result_id as string) || undefined,
+      severity: (m.severity as string) || undefined,
+      riskScore: m.risk_score as number | undefined,
+      priorityRank: m.priority_rank as number | undefined,
+      riskLevel: (m.ai_risk_level as string) || undefined,
+      confidence: (m.ai_confidence as string) || undefined,
+      recommendation: (m.ai_recommendation as string) || undefined,
+      createdAt: aiTriageActivity.createdAt,
     }
-  }
+  }, [aiTriageActivity])
 
   return (
     <div className="space-y-6">
-      {/* AI Triage Summary */}
-      {aiTriage && (
-        <div className="rounded-lg border border-purple-500/20 bg-purple-500/5 p-4">
-          <div className="mb-3 flex items-center gap-2">
-            <div className="flex h-6 w-6 items-center justify-center rounded bg-purple-500/20">
-              <Info className="h-4 w-4 text-purple-400" />
-            </div>
-            <h3 className="font-semibold">AI Triage Analysis</h3>
-          </div>
-
-          <p className="text-muted-foreground mb-4 text-sm">{aiTriage.summary}</p>
-
-          <div className="mb-4 grid grid-cols-2 gap-2 sm:gap-4 md:grid-cols-4">
-            <div>
-              <p className="text-muted-foreground text-xs">Risk Level</p>
-              <p
-                className={`font-medium capitalize ${SEVERITY_CONFIG[aiTriage.risk as keyof typeof SEVERITY_CONFIG]?.textColor || ''}`}
-              >
-                {aiTriage.risk}
-              </p>
-            </div>
-            <div>
-              <p className="text-muted-foreground text-xs">CVSS Score</p>
-              <p className="font-medium">{aiTriage.cvss}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground text-xs">Exploitability</p>
-              <p className="font-medium capitalize">{aiTriage.exploitability}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground text-xs">Affected Assets</p>
-              <p className="font-medium">{aiTriage.affectedAssets}</p>
-            </div>
-          </div>
-
-          {aiTriage.recommendations && aiTriage.recommendations.length > 0 && (
-            <div>
-              <p className="text-muted-foreground mb-2 text-xs">AI Recommendations</p>
-              <ul className="list-inside list-disc space-y-1 text-sm">
-                {aiTriage.recommendations.map((rec: string, index: number) => (
-                  <li key={index}>{rec}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-      )}
+      {/* AI Triage Summary - from activity data (no API call!) */}
+      {aiTriageData && <AITriageSummaryCard data={aiTriageData} />}
 
       {/* Description */}
       <div>
@@ -688,5 +678,111 @@ function CodeSnippetSection({ finding }: { finding: FindingDetail }) {
       </div>
       <Separator />
     </>
+  )
+}
+
+/**
+ * AI Triage Summary Card - displays AI analysis from activity data
+ * No API call needed - data comes from activities already loaded
+ */
+function AITriageSummaryCard({ data }: { data: AITriageActivityData }) {
+  const getRiskScoreColor = (score: number) => {
+    if (score >= 80) return 'text-red-500'
+    if (score >= 60) return 'text-orange-500'
+    if (score >= 40) return 'text-yellow-500'
+    return 'text-green-500'
+  }
+
+  const getSeverityColor = (severity: string) => {
+    const lower = severity?.toLowerCase()
+    if (lower === 'critical') return 'bg-red-500/20 text-red-400 border-red-500/30'
+    if (lower === 'high') return 'bg-orange-500/20 text-orange-400 border-orange-500/30'
+    if (lower === 'medium') return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+    if (lower === 'low') return 'bg-green-500/20 text-green-400 border-green-500/30'
+    return 'bg-slate-500/20 text-slate-400 border-slate-500/30'
+  }
+
+  const getConfidenceColor = (confidence: string) => {
+    const lower = confidence?.toLowerCase()
+    if (lower === 'high') return 'text-green-400'
+    if (lower === 'medium') return 'text-yellow-400'
+    return 'text-red-400'
+  }
+
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  }
+
+  return (
+    <Card className="border-purple-500/20 bg-purple-500/5">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Bot className="h-4 w-4 text-purple-400" />
+            <span className="text-purple-400">AI Analysis</span>
+          </CardTitle>
+          <span className="text-xs text-muted-foreground">{formatDate(data.createdAt)}</span>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Summary/Recommendation */}
+        {data.recommendation && <p className="text-sm leading-relaxed">{data.recommendation}</p>}
+
+        {/* Key Metrics */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {/* Severity */}
+          {data.severity && (
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">Severity</p>
+              <Badge className={cn('capitalize', getSeverityColor(data.severity))}>
+                {data.severity}
+              </Badge>
+            </div>
+          )}
+
+          {/* Risk Score */}
+          {data.riskScore !== undefined && (
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">Risk Score</p>
+              <span className={cn('text-lg font-bold', getRiskScoreColor(data.riskScore))}>
+                {data.riskScore}
+                <span className="text-xs text-muted-foreground font-normal">/100</span>
+              </span>
+            </div>
+          )}
+
+          {/* Priority Rank */}
+          {data.priorityRank !== undefined && (
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">Priority</p>
+              <span className="text-lg font-bold">
+                {data.priorityRank}
+                <span className="text-xs text-muted-foreground font-normal">/100</span>
+              </span>
+            </div>
+          )}
+
+          {/* Confidence */}
+          {data.confidence && (
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">Confidence</p>
+              <span
+                className={cn(
+                  'text-sm font-medium capitalize',
+                  getConfidenceColor(data.confidence)
+                )}
+              >
+                {data.confidence}
+              </span>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   )
 }

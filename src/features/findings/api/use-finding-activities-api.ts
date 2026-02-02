@@ -108,6 +108,8 @@ function mapActivityType(apiType: string): ActivityType {
     sla_warning: 'status_changed',
     sla_breach: 'status_changed',
     ai_triage: 'ai_triage',
+    ai_triage_requested: 'ai_triage_requested',
+    ai_triage_failed: 'ai_triage_failed',
   }
   return typeMap[apiType] || 'status_changed'
 }
@@ -143,9 +145,11 @@ function mapActivity(api: ApiFindingActivity): Activity {
   const assigneeId = changes.assignee_id as string | undefined
   const previousAssigneeName = changes.previous_assignee_name as string | undefined
 
-  // Merge assignment data into metadata for UI consumption
+  // Merge all changes + assignment data into metadata for UI consumption
+  // This includes AI triage data (severity, risk_score, ai_recommendation, etc.)
   const metadata = {
     ...api.source_metadata,
+    ...changes, // Include all changes data (for ai_triage and other activity types)
     assigneeName,
     assigneeEmail,
     assigneeId,

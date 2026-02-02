@@ -29,6 +29,7 @@ import {
   ChevronDown,
   ChevronUp,
   Loader2,
+  AlertTriangle,
 } from 'lucide-react'
 import type { Activity, ActivityType } from '../../types'
 import { ACTIVITY_TYPE_CONFIG, FINDING_STATUS_CONFIG, SEVERITY_CONFIG } from '../../types'
@@ -47,6 +48,8 @@ interface ActivityPanelProps {
 const ACTIVITY_ICONS: Record<ActivityType, React.ReactNode> = {
   created: <PlusCircle className="h-4 w-4" />,
   ai_triage: <Bot className="h-4 w-4" />,
+  ai_triage_requested: <Bot className="h-4 w-4" />,
+  ai_triage_failed: <AlertTriangle className="h-4 w-4" />,
   status_changed: <ArrowRightLeft className="h-4 w-4" />,
   severity_changed: <Gauge className="h-4 w-4" />,
   assigned: <UserPlus className="h-4 w-4" />,
@@ -223,30 +226,71 @@ export function ActivityPanel({
           </div>
         )
 
+      case 'ai_triage_requested':
+        // User requested AI triage - just show who requested it
+        // The actual result (success/failure) is shown by subsequent ai_triage or ai_triage_failed activity
+        return (
+          <p className="text-sm text-muted-foreground">
+            Requested AI-assisted triage for this finding.
+          </p>
+        )
+
       case 'ai_triage':
-        let aiData = null
-        try {
-          aiData = activity.content ? JSON.parse(activity.content) : null
-        } catch {
-          // ignore
+        // AI triage data is in activity.metadata (from changes JSONB)
+        const aiMeta = activity.metadata as Record<string, unknown> | undefined
+        const severity = aiMeta?.severity as string | undefined
+        const riskScore = aiMeta?.risk_score as number | undefined
+        const riskLevel = aiMeta?.ai_risk_level as string | undefined
+        const confidence = aiMeta?.ai_confidence as string | undefined
+        const priorityRank = aiMeta?.priority_rank as number | undefined
+        const recommendation = aiMeta?.ai_recommendation as string | undefined
+
+        const getSeverityColor = (sev: string) => {
+          const lower = sev?.toLowerCase()
+          if (lower === 'critical') return 'border-red-500/50 text-red-400'
+          if (lower === 'high') return 'border-orange-500/50 text-orange-400'
+          if (lower === 'medium') return 'border-yellow-500/50 text-yellow-400'
+          return 'border-green-500/50 text-green-400'
         }
 
         return (
-          <div className="bg-purple-500/10 space-y-2 rounded-lg border border-purple-500/20 p-3">
+          <div className="bg-purple-500/10 space-y-3 rounded-lg border border-purple-500/20 p-3">
             <div className="flex items-center gap-2">
               <Bot className="h-4 w-4 text-purple-400" />
               <span className="text-sm font-medium text-purple-400">AI Analysis Complete</span>
             </div>
-            {aiData && (
-              <>
-                <p className="text-sm">{aiData.summary}</p>
-                <div className="flex flex-wrap gap-2 text-xs">
-                  <Badge variant="outline">Risk: {aiData.risk}</Badge>
-                  <Badge variant="outline">CVSS: {aiData.cvss}</Badge>
-                  <Badge variant="outline">Exploitability: {aiData.exploitability}</Badge>
-                </div>
-              </>
-            )}
+            {recommendation && <p className="text-sm leading-relaxed">{recommendation}</p>}
+            <div className="flex flex-wrap gap-2 text-xs">
+              {severity && (
+                <Badge variant="outline" className={getSeverityColor(severity)}>
+                  Severity: {severity}
+                </Badge>
+              )}
+              {riskScore !== undefined && (
+                <Badge variant="outline">Risk Score: {riskScore}/100</Badge>
+              )}
+              {priorityRank !== undefined && (
+                <Badge variant="outline">Priority: {priorityRank}/100</Badge>
+              )}
+              {confidence && <Badge variant="outline">Confidence: {confidence}</Badge>}
+            </div>
+          </div>
+        )
+
+      case 'ai_triage_failed':
+        // AI triage failed - show error state
+        const failedMeta = activity.metadata as Record<string, unknown> | undefined
+        const errorMessage = failedMeta?.error_message as string | undefined
+
+        return (
+          <div className="bg-red-500/10 space-y-2 rounded-lg border border-red-500/20 p-3">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-red-400" />
+              <span className="text-sm font-medium text-red-400">AI Analysis Failed</span>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {errorMessage || 'The AI triage process encountered an error. Please try again.'}
+            </p>
           </div>
         )
 

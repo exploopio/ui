@@ -63,3 +63,17 @@ export interface ApiTriageHistoryResponse {
 export interface ApiRequestTriageInput {
   mode?: 'quick' | 'detailed'
 }
+
+/**
+ * API response for AI config
+ */
+export interface ApiAIConfigResponse {
+  mode: string
+  provider: string
+  model: string
+  is_enabled: boolean
+  auto_triage_enabled: boolean
+  auto_triage_severities?: string[]
+  monthly_token_limit: number
+  tokens_used_this_month: number
+}

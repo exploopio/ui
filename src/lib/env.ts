@@ -77,6 +77,16 @@ export const env = {
     url: getEnvVar('BACKEND_API_URL', 'http://localhost:8080'),
     /** Request timeout in milliseconds */
     timeout: parseInt(getEnvVar('API_TIMEOUT', '30000'), 10),
+    /**
+     * WebSocket base URL for direct backend connection.
+     * WebSocket cannot go through Next.js proxy due to HTTP upgrade requirements.
+     * In development: Set to backend URL (e.g., http://localhost:8080)
+     * In production: Usually same as app URL if nginx routes /api/v1/ws to backend
+     *
+     * Falls back to NEXT_PUBLIC_SSE_BASE_URL for backward compatibility.
+     */
+    wsBaseUrl:
+      getEnvVar('NEXT_PUBLIC_WS_BASE_URL', '') || getEnvVar('NEXT_PUBLIC_SSE_BASE_URL', ''),
   },
 
   // Keycloak Configuration (only used when authProvider is 'oidc' or 'hybrid')

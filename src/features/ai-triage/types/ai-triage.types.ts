@@ -144,3 +144,42 @@ export interface TriageHistoryResponse {
   limit: number
   offset: number
 }
+
+/**
+ * AI mode for the tenant
+ */
+export type AIMode = 'platform' | 'byok' | 'agent' | 'disabled'
+
+/**
+ * AI configuration info returned from the API
+ */
+export interface AIConfig {
+  mode: AIMode
+  provider: string
+  model: string
+  isEnabled: boolean
+  autoTriageEnabled: boolean
+  autoTriageSeverities?: string[]
+  monthlyTokenLimit: number
+  tokensUsedThisMonth: number
+}
+
+/**
+ * Provider display names
+ */
+export const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
+  claude: 'Claude',
+  openai: 'OpenAI',
+  gemini: 'Gemini',
+  agent: 'Self-hosted',
+}
+
+/**
+ * Mode display names
+ */
+export const MODE_DISPLAY_NAMES: Record<AIMode, string> = {
+  platform: 'Platform AI',
+  byok: 'Your API Key',
+  agent: 'Self-hosted',
+  disabled: 'Disabled',
+}

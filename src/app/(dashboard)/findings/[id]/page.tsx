@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Main } from '@/components/layout'
 import { Button } from '@/components/ui/button'
@@ -7,12 +8,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable'
+import { useSWRConfig } from 'swr'
 import { useFindingApi, useAddFindingCommentApi } from '@/features/findings/api/use-findings-api'
 import { useFindingActivitiesInfinite } from '@/features/findings/api/use-finding-activities-api'
+import { useActivityStream } from '@/features/findings/hooks/use-activity-stream'
+import { getTriageCacheKey } from '@/features/ai-triage/api'
 import type { ApiFinding } from '@/features/findings/api/finding-api.types'
 import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/api/error-handler'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Wifi, WifiOff } from 'lucide-react'
 import type {
   FindingDetail,
   FindingStatus,
@@ -21,6 +25,7 @@ import type {
   SecretType,
   ComplianceFramework,
   ComplianceResult,
+  ActivityType,
 } from '@/features/findings/types'
 import type { Severity } from '@/features/shared/types'
 import {
@@ -356,8 +361,9 @@ export default function FindingDetailPage() {
   const params = useParams()
   const router = useRouter()
   const id = params.id as string
+  const { mutate } = useSWRConfig()
 
-  const { data: apiFinding, error, isLoading } = useFindingApi(id)
+  const { data: apiFinding, error, isLoading, mutate: mutateFinding } = useFindingApi(id)
   const { trigger: addComment } = useAddFindingCommentApi(id)
   const {
     activities: apiActivities,
@@ -368,14 +374,56 @@ export default function FindingDetailPage() {
     mutate: mutateActivities,
   } = useFindingActivitiesInfinite(id)
 
+  // AI triage activity types that indicate triage completion
+  const triageActivityTypes: ActivityType[] = ['ai_triage', 'ai_triage_failed']
+
+  // Callback when AI triage completes - invalidate triage cache and refresh finding
+  const handleTriageCompleted = () => {
+    // Invalidate triage result cache to get fresh data
+    if (id) {
+      mutate(getTriageCacheKey(id))
+    }
+    // Also refresh the finding to get updated isTriaged flag
+    mutateFinding()
+    // Refresh activities to show the triage activity
+    mutateActivities()
+  }
+
+  // Real-time activity stream via SSE
+  const { realtimeActivities, status: streamStatus } = useActivityStream(id, {
+    // When we receive a new activity, check if it's a triage event
+    onActivity: (activity) => {
+      // Refresh activities to update total count
+      mutateActivities()
+
+      // If this is an AI triage activity, trigger triage completion handlers
+      if (triageActivityTypes.includes(activity.type)) {
+        handleTriageCompleted()
+      }
+    },
+  })
+
   // Transform API data to FindingDetail format
   // Asset info now comes from api.asset (enriched by backend), no need for separate fetch
   const finding = apiFinding ? transformApiToFindingDetail(apiFinding) : null
 
-  // Activities from backend include all events: status changes, comments, assignments, etc.
-  // Comments are included as activity_type='comment_added' with full content in changes.content
-  // No need for separate /comments API call - everything is in activities
-  const allActivities = apiActivities.length > 0 ? apiActivities : finding ? finding.activities : []
+  // Merge real-time activities with fetched activities (deduplicate by ID)
+  // Real-time activities take priority (shown first, newest)
+  const allActivities = useMemo(() => {
+    const fetchedActivities =
+      apiActivities.length > 0 ? apiActivities : finding ? finding.activities : []
+
+    // If no real-time activities, just return fetched
+    if (realtimeActivities.length === 0) {
+      return fetchedActivities
+    }
+
+    // Deduplicate: real-time activities take precedence
+    const realtimeIds = new Set(realtimeActivities.map((a) => a.id))
+    const uniqueFetched = fetchedActivities.filter((a) => !realtimeIds.has(a.id))
+
+    return [...realtimeActivities, ...uniqueFetched]
+  }, [apiActivities, finding, realtimeActivities])
 
   // Handler for adding new comments
   const handleAddComment = async (content: string, _isInternal: boolean) => {
@@ -444,7 +492,7 @@ export default function FindingDetailPage() {
           <Card className="flex h-full flex-col overflow-hidden pb-4 gap-0">
             {/* Finding Header */}
             <CardHeader className="flex-shrink-0 pb-1">
-              <FindingHeader finding={finding} />
+              <FindingHeader finding={finding} onTriageCompleted={handleTriageCompleted} />
             </CardHeader>
 
             {/* Tabs */}
@@ -502,7 +550,7 @@ export default function FindingDetailPage() {
 
               <CardContent className="min-h-0 flex-1 overflow-y-auto p-6">
                 <TabsContent value="overview" className="m-0 mt-0">
-                  <OverviewTab finding={finding} />
+                  <OverviewTab finding={finding} activities={allActivities} />
                 </TabsContent>
                 <TabsContent value="evidence" className="m-0 mt-0">
                   <EvidenceTab evidence={finding.evidence} finding={finding} />
@@ -529,7 +577,30 @@ export default function FindingDetailPage() {
           <Card className="h-full overflow-hidden py-1">
             <div className="flex h-full flex-col">
               <CardHeader className="flex-shrink-0 border-b [.border-b]:pb-3 py-1">
-                <CardTitle className="text-base">Activity ({activitiesTotal})</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base">
+                    Activity ({activitiesTotal + realtimeActivities.length})
+                  </CardTitle>
+                  {/* Real-time connection indicator */}
+                  <div
+                    className="flex items-center gap-1"
+                    title={
+                      streamStatus === 'connected'
+                        ? 'Real-time updates active'
+                        : streamStatus === 'connecting'
+                          ? 'Connecting...'
+                          : 'Real-time updates offline'
+                    }
+                  >
+                    {streamStatus === 'connected' ? (
+                      <Wifi className="h-3.5 w-3.5 text-green-500" />
+                    ) : streamStatus === 'connecting' ? (
+                      <Wifi className="h-3.5 w-3.5 text-yellow-500 animate-pulse" />
+                    ) : (
+                      <WifiOff className="h-3.5 w-3.5 text-muted-foreground" />
+                    )}
+                  </div>
+                </div>
               </CardHeader>
               <div className="relative flex-1">
                 <div className="absolute inset-0 overflow-hidden">
