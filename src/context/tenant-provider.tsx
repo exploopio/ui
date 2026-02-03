@@ -70,32 +70,56 @@ interface TenantProviderProps {
   children: React.ReactNode
 }
 
+// Helper to read tenant from cookie synchronously (for initial state)
+function readTenantFromCookie(): { tenant: CurrentTenant | null; hasCookie: boolean } {
+  if (typeof window === 'undefined') {
+    return { tenant: null, hasCookie: false }
+  }
+  const tenantCookie = getCookie(TENANT_COOKIE)
+  if (tenantCookie) {
+    try {
+      const parsed = JSON.parse(tenantCookie) as CurrentTenant
+      return { tenant: parsed, hasCookie: true }
+    } catch {
+      // Old cookie format - will be cleared in useEffect
+      return { tenant: null, hasCookie: false }
+    }
+  }
+  return { tenant: null, hasCookie: false }
+}
+
 export function TenantProvider({ children }: TenantProviderProps) {
   const router = useRouter()
   const { mutate: globalMutate } = useSWRConfig()
+
+  // Start with null, read from cookie in useLayoutEffect to avoid hydration mismatch
   const [currentTenant, setCurrentTenant] = React.useState<CurrentTenant | null>(null)
   const [isSwitching, setIsSwitching] = React.useState(false)
   const [hasTenantCookie, setHasTenantCookie] = React.useState<boolean | null>(null)
   // Track if dropdown has been opened (trigger eager fetch when user wants to switch)
   const [shouldEagerFetch, setShouldEagerFetch] = React.useState(false)
+  // Track if initial read has been done
+  const initialReadDoneRef = React.useRef(false)
 
-  // Read current tenant from cookie on mount
-  React.useEffect(() => {
-    const tenantCookie = getCookie(TENANT_COOKIE)
-    if (tenantCookie) {
-      try {
-        const parsed = JSON.parse(tenantCookie) as CurrentTenant
-        setCurrentTenant(parsed)
-        setHasTenantCookie(true)
-      } catch {
-        // Old cookie format might be just a tenant ID string (not JSON)
-        // Clear the cookie so backend can set a new one with proper format
+  // Read tenant from cookie on mount (client-side only)
+  // This runs immediately after hydration, before paint
+  React.useLayoutEffect(() => {
+    if (initialReadDoneRef.current) return
+    initialReadDoneRef.current = true
+
+    const { tenant, hasCookie } = readTenantFromCookie()
+    console.log('[TenantProvider] Initial read:', { tenant: tenant?.id, hasCookie })
+    setCurrentTenant(tenant)
+    setHasTenantCookie(hasCookie)
+
+    // Handle invalid cookie format
+    if (!tenant && hasCookie) {
+      const tenantCookie = getCookie(TENANT_COOKIE)
+      if (tenantCookie) {
         console.warn('[TenantProvider] Invalid tenant cookie format, clearing cookie')
         removeCookie(TENANT_COOKIE)
         setHasTenantCookie(false)
       }
-    } else {
-      setHasTenantCookie(false)
     }
   }, [])
 

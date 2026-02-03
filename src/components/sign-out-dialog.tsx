@@ -14,6 +14,7 @@ import { useAuthStore } from '@/stores/auth-store'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { isLocalAuthOnly } from '@/lib/env'
 import { localLogoutAction } from '@/features/auth/actions/local-auth-actions'
+import { clearWebSocketToken } from '@/context/websocket-provider'
 
 // ============================================
 // TYPES
@@ -41,11 +42,7 @@ interface SignOutDialogProps {
 // COMPONENT
 // ============================================
 
-export function SignOutDialog({
-  open,
-  onOpenChange,
-  redirectTo,
-}: SignOutDialogProps) {
+export function SignOutDialog({ open, onOpenChange, redirectTo }: SignOutDialogProps) {
   const logout = useAuthStore((state) => state.logout)
   const clearAuth = useAuthStore((state) => state.clearAuth)
   const [isPending, startTransition] = useTransition()
@@ -59,9 +56,10 @@ export function SignOutDialog({
     // Close dialog first
     onOpenChange(false)
 
-    // Clear localStorage user data
+    // Clear localStorage user data and WebSocket token cache
     try {
       localStorage.removeItem('app_user')
+      clearWebSocketToken()
     } catch {
       // Ignore localStorage errors
     }
@@ -86,13 +84,13 @@ export function SignOutDialog({
     <ConfirmDialog
       open={open}
       onOpenChange={onOpenChange}
-      title='Sign out'
-      desc='Are you sure you want to sign out? You will need to sign in again to access your account.'
+      title="Sign out"
+      desc="Are you sure you want to sign out? You will need to sign in again to access your account."
       confirmText={isPending ? 'Signing out...' : 'Sign out'}
-      cancelBtnText='Cancel'
+      cancelBtnText="Cancel"
       destructive
       handleConfirm={handleSignOut}
-      className='sm:max-w-sm'
+      className="sm:max-w-sm"
     />
   )
 }
@@ -119,9 +117,10 @@ export function SignOutButton({
   const [isPending, startTransition] = useTransition()
 
   const handleClick = () => {
-    // Clear localStorage user data
+    // Clear localStorage user data and WebSocket token cache
     try {
       localStorage.removeItem('app_user')
+      clearWebSocketToken()
     } catch {
       // Ignore localStorage errors
     }
@@ -139,7 +138,7 @@ export function SignOutButton({
 
   return (
     <button onClick={handleClick} className={className} disabled={isPending}>
-      {isPending ? 'Signing out...' : (children || 'Sign out')}
+      {isPending ? 'Signing out...' : children || 'Sign out'}
     </button>
   )
 }

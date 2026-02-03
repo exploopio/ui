@@ -111,6 +111,12 @@ export const authEndpoints = {
    */
   createFirstTeam: () => `${API_BASE.AUTH}/create-first-team`,
 
+  /**
+   * Get short-lived WebSocket token for cross-origin WebSocket connections
+   * Required when frontend and backend are on different ports (development)
+   */
+  wsToken: () => `${API_BASE.AUTH}/ws-token`,
+
   // ============================================
   // SOCIAL/OAUTH AUTH
   // ============================================

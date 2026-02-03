@@ -26,6 +26,24 @@ interface WSTriageEvent {
 /** Module ID for AI Triage feature */
 const AI_TRIAGE_MODULE = 'ai_triage'
 
+/** Max age in minutes for a triage job to be considered "stuck" */
+const STUCK_JOB_TIMEOUT_MINUTES = 5
+
+/**
+ * Check if a triage job is stuck (pending/processing for too long)
+ * This handles cases where the worker crashed or job was never processed
+ */
+function isTriageStuck(result: { status: string; createdAt: string } | null | undefined): boolean {
+  if (!result) return false
+  if (result.status !== 'pending' && result.status !== 'processing') return false
+
+  const createdAt = new Date(result.createdAt)
+  const now = new Date()
+  const ageMinutes = (now.getTime() - createdAt.getTime()) / (1000 * 60)
+
+  return ageMinutes > STUCK_JOB_TIMEOUT_MINUTES
+}
+
 interface AITriageButtonProps {
   findingId: string
   currentStatus?: TriageStatus | null
@@ -127,8 +145,28 @@ export function AITriageButton({
     revalidateOnMount: true,
   })
 
+  // Check if triage job is stuck (pending/processing for too long)
+  const isStuck = isTriageStuck(triageResult)
+
   // Get current status: WebSocket > polling result > initial prop
-  const currentStatus = wsStatus ?? triageResult?.status ?? initialStatus
+  // If job is stuck, treat it as if there's no active triage (allow re-trigger)
+  const rawStatus = wsStatus ?? triageResult?.status ?? initialStatus
+  const currentStatus = isStuck ? null : rawStatus
+
+  // Debug logging for triage status
+  useEffect(() => {
+    if (triageResult) {
+      console.log('[AITriageButton] Status:', {
+        findingId,
+        apiStatus: triageResult.status,
+        wsStatus,
+        currentStatus,
+        isStuck,
+        createdAt: triageResult.createdAt,
+        wsConnected,
+      })
+    }
+  }, [findingId, triageResult, wsStatus, currentStatus, isStuck, wsConnected])
 
   const isTriageInProgress = currentStatus === 'pending' || currentStatus === 'processing'
   const isDisabled = disabled || isRequesting || isTriageInProgress
